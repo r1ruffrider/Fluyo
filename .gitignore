@@ -13,6 +13,7 @@ coverage/
 # Runtime output
 *.log
 npm-debug.log*
+results.sarif
 
 # Local databases and generated data
 *.db
