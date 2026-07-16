@@ -1,0 +1,27 @@
+{
+  "name": "@fluyo/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fluyo Next.js web application",
+  "scripts": {
+    "build": "next build",
+    "dev": "node scripts/run-next.mjs dev",
+    "lint": "eslint . --max-warnings=0",
+    "start": "node scripts/run-next.mjs start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fluyo/shared": "0.1.0",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.2",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "4.3.2"
+  }
+}
