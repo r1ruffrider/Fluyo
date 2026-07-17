@@ -1,0 +1,31 @@
+# Dependencies and build output
+node_modules/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime output
+*.log
+npm-debug.log*
+results.sarif
+
+# Local databases and generated data
+*.db
+*.db-journal
+infrastructure/docker/data/
+
+# IDE and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+~$*
+
+# Tool-specific temporary worktrees
+.claude/worktrees/

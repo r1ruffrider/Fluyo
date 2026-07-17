@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+coverage/
+results.sarif
+package-lock.json
+landing/
+docs/BUSINESS_PLAN.md
+docs/~$*
