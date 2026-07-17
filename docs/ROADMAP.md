@@ -9,17 +9,17 @@ Goal: establish a runnable web application, backend API, shared package, local P
 - [x] npm-workspaces monorepo installs successfully.
 - [x] `apps/web` builds and displays backend availability.
 - [x] `apps/api` builds and serves `/api/v1/health`.
-- [ ] **Requires local Docker verification:** `/api/v1/health/database` returns HTTP 200 and a safe success response against PostgreSQL.
+- [x] `/api/v1/health/database` returns HTTP 200 and a safe success response against PostgreSQL.
 - [x] `packages/shared` is consumed by both applications and its test passes.
-- [ ] **Requires local Docker verification:** the initial Prisma migration applies successfully to the Docker PostgreSQL database.
-- [ ] **Requires local Docker verification:** the database seed inserts the `platform.foundation` `SystemMetadata` record.
-- [ ] **Requires local Docker verification:** the Docker Compose PostgreSQL container becomes healthy.
+- [x] The initial Prisma migration applies successfully to the Docker PostgreSQL database.
+- [x] The database seed inserts the `platform.foundation` `SystemMetadata` record.
+- [x] The Docker Compose PostgreSQL container becomes healthy.
 - [x] Lint, typecheck, tests, production builds, and format check pass.
 - [x] GitHub Actions CI workflow is present and passes local syntax/format validation.
 
 Application verification note (2026-07-16): the workspace install, Prisma Client generation and schema validation, shared package, API liveness endpoint, tests, linting, type checking, production builds, formatting, and CI workflow configuration were verified independently of local infrastructure.
 
-Infrastructure verification note (2026-07-16): Docker, another container runtime, and a local PostgreSQL service are unavailable in the execution environment. The API database endpoint's safe HTTP 503 failure path was verified. The four unchecked items above require local Docker verification before this branch may merge into `main`; no successful Docker execution is claimed.
+Infrastructure verification note (2026-07-17): Docker Desktop 4.82.0, Docker CLI and Engine 29.6.1, Docker Compose 5.3.0, and WSL 2.7.10 were verified locally. The repository's PostgreSQL 17 Docker container reached healthy status, the committed initial Prisma migration applied successfully, the seed completed, and a read-only query confirmed the `platform.foundation` `SystemMetadata` record with value `sprint-1`. The connected API database-health endpoint returned HTTP 200 with the safe `database: reachable` response, and the web application returned HTTP 200 while reporting the API available.
 
 Explicitly excluded: authentication, billing, AI, lessons, user profiles, and mobile applications.
 
