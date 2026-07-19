@@ -8,6 +8,6 @@ import { SupabaseJwtService } from "./supabase-jwt.service";
 @Module({
   controllers: [AuthController],
   providers: [supabaseJwksProvider, SupabaseJwtService, SupabaseJwtGuard],
-  exports: [SupabaseJwtGuard],
+  exports: [SupabaseJwtGuard, SupabaseJwtService],
 })
 export class AuthModule {}
