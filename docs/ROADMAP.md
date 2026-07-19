@@ -36,13 +36,20 @@ Goal: establish Supabase Auth, trusted JWT validation, provider-neutral identity
 - [x] Missing and invalid credentials return a safe HTTP 401 error envelope.
 - [x] Negative tests cover missing and malformed credentials plus missing-expiration, expired, wrong-signature, wrong-issuer, wrong-audience, and invalid-subject tokens.
 - [x] A minimal `user_profiles` table is keyed by verified Supabase UUID and exposes protected self-service read/update operations.
-- [ ] **Requires local PostgreSQL verification:** the Sprint 2 profile migration applies successfully against PostgreSQL.
+- [x] The Sprint 2 profile migration applies successfully against local PostgreSQL.
 - [x] No local credential, Auth-directory, role, billing, entitlement, lesson, progress, translation, or mobile schema is introduced.
 - [x] ADR, architecture, API, database, security, setup, and product documentation describe the implemented identity boundary.
 - [x] Lint, typecheck, tests, production builds, formatting, audit, and diff checks pass.
-- [ ] **Requires configured Supabase verification:** a real non-production project using asymmetric signing keys completes sign-up, confirmation when enabled, sign-in, recovery email, password update, protected API/profile access, refresh, and sign-out end to end.
+- [x] A real non-production Supabase project completes sign-up, email confirmation, sign-in, persisted and refreshed sessions, protected web/API/profile access, UUID-keyed profile ownership, safe failure handling, sign-out, and disposable-account cleanup.
+- [ ] **Requires recovery re-verification:** the provider accepted and logged the recovery email, but the disposable inbox did not receive it before the project's built-in two-email-per-hour limit was exhausted; password-reset completion therefore remains unverified.
 
 Application verification note (2026-07-19): Prisma Client generation and schema validation, lint, strict type checking, 26 tests, production builds, formatting, the high-severity audit threshold, and `git diff --check` passed against the current working tree. JWT tests use ephemeral asymmetric key pairs and cover successful identity normalization plus negative signature, claim, and credential cases. Docker Desktop is currently unavailable, so the new profile migration remains an explicit local PostgreSQL check. No live Supabase project or user token was used, so registration, email delivery, recovery, session refresh, and authenticated profile access still require configured-provider verification.
+
+Infrastructure verification note (2026-07-20): Docker Engine 29.6.1 and Docker Compose 5.3.0 were available, PostgreSQL 17 reached healthy status, Prisma reported both migrations applied, and the `user_profiles` UUID primary-key structure was verified against the local database.
+
+Live identity verification note (2026-07-20): an approved non-production Supabase project with asymmetric signing completed registration, confirmation, application login, cookie-session persistence, provider token refresh, protected `/account`, `/api/v1/auth/me`, and `/api/v1/profiles/me` access, profile creation keyed to the verified Supabase UUID, ownership-injection rejection, safe unauthenticated and invalid-token responses, logout, and protected-route redirection. The disposable Supabase user and its local profile were deleted after verification. Supabase logged the accepted recovery request and `mail.send` event, but the disposable inbox did not receive the message; later attempts reached the documented project email rate limit, so recovery-link handling and the final password update are not marked verified.
+
+Final verification rerun (2026-07-20): lint, strict type checking, 27 tests across 10 test files, production builds, formatting, the high-severity audit threshold, and `git diff --check` passed. Two moderate transitive PostCSS advisories remain; the available automated fix would install a breaking Next.js version.
 
 ## Sprint 3 — Billing
 
