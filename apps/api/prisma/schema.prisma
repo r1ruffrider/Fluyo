@@ -16,3 +16,13 @@ model SystemMetadata {
 
   @@map("system_metadata")
 }
+
+model UserProfile {
+  id          String    @id @db.Uuid
+  displayName String?   @map("display_name") @db.VarChar(80)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@map("user_profiles")
+}

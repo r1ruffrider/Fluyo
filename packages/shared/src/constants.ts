@@ -5,3 +5,11 @@ export const HEALTH_PATHS = {
   service: "/health",
   database: "/health/database",
 } as const;
+
+export const IDENTITY_PATHS = {
+  current: "/auth/me",
+} as const;
+
+export const PROFILE_PATHS = {
+  current: "/profiles/me",
+} as const;

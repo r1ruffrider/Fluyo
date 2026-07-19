@@ -18,6 +18,30 @@ Fluyo uses PostgreSQL with Prisma ORM. The API owns database access; the web app
 
 The database table is `system_metadata`. No user, subscription, entitlement, payment, course, or lesson tables exist in Sprint 1.
 
+## Sprint 2 Identity and Profile Boundary
+
+Supabase Auth is the identity system of record. Sprint 2 does not copy Supabase Auth users, credentials, sessions, or verified email state into Fluyo's PostgreSQL schema.
+
+- Credentials, Auth sessions, and provider metadata remain owned by Supabase Auth.
+- The trusted user identifier is the UUID `sub` claim from a verified Supabase access token.
+- The API carries that identifier through the provider-neutral `AuthenticatedIdentity` request context.
+- `user_profiles.id` is the verified Supabase user UUID. The API never accepts this owner ID from clients.
+- Billing, entitlement, lesson, progress, and mobile identity tables remain out of scope.
+
+### `UserProfile`
+
+The `user_profiles` table contains only application-owned profile data.
+
+| Field         | Database column | Type          | Rule                                     |
+| ------------- | --------------- | ------------- | ---------------------------------------- |
+| `id`          | `id`            | UUID          | Primary key; verified Supabase user UUID |
+| `displayName` | `display_name`  | varchar(80)   | Optional, user-editable display value    |
+| `createdAt`   | `created_at`    | `timestamptz` | Created automatically                    |
+| `updatedAt`   | `updated_at`    | `timestamptz` | Maintained by Prisma                     |
+| `deletedAt`   | `deleted_at`    | `timestamptz` | Nullable soft-deletion marker            |
+
+There is intentionally no database foreign key to Supabase's internal Auth schema. Profile reconciliation and account-deletion orchestration remain future lifecycle work. The table contains no email, password, role, subscription, entitlement, RevenueCat, lesson, progress, translation, or mobile fields.
+
 ## Local Operation
 
 Start PostgreSQL, apply migrations, and seed from the repository root:
@@ -41,4 +65,4 @@ The seed is idempotent and upserts one record with key `platform.foundation`.
 
 ## Retention and Recovery
 
-Sprint 1 stores no customer or product data. The Docker named volume is for local development only and is deleted by the documented reset command. Production backup, recovery-point, recovery-time, and retention policies must be defined before production data is stored.
+The Docker named volume is for local development only and is deleted by the documented reset command. The minimal profile is user-owned personal data and must be included in production backup, deletion, export, and retention policies before production accounts are accepted. Production recovery-point and recovery-time objectives remain a deployment prerequisite.

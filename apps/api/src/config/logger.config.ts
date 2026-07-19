@@ -18,6 +18,7 @@ export function createLoggerConfig(): Params {
       redact: {
         paths: [
           "req.headers.authorization",
+          "req.headers.apikey",
           "req.headers.cookie",
           "res.headers.set-cookie",
           "DATABASE_URL",

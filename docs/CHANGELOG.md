@@ -13,7 +13,12 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - PostgreSQL, Prisma schema, initial migration, and idempotent seed.
 - Local Docker Compose database environment.
 - ESLint, Prettier, strict type checking, tests, production builds, and GitHub Actions CI.
+- Supabase SSR email/password authentication, PKCE callbacks, session refresh, and password recovery for the Next.js app.
+- NestJS bearer-token identity guard with JWKS, issuer, audience, expiration, algorithm, and subject validation.
+- Provider-neutral authenticated identity contract and protected current-identity endpoint.
+- Negative authentication tests, safe API error envelopes, and identity architecture decision record.
+- Server-protected account route and a minimal self-owned profile keyed by verified Supabase identity.
 
 ### Deferred
 
-- Authentication, billing, AI, lessons, user profiles, and mobile applications.
+- Live Supabase-project verification, social sign-in, MFA, expanded profiles, billing, AI, lessons, translation, and mobile applications.

@@ -42,9 +42,21 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   }
 
   const databaseUrl = readString(config, "DATABASE_URL");
+  const supabaseUrl = readUrl(config, "SUPABASE_URL");
+  const supabaseJwksUrl = readUrl(
+    config,
+    "SUPABASE_JWKS_URL",
+    `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
+  );
 
   if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
     throw new Error("DATABASE_URL must use the PostgreSQL protocol");
+  }
+
+  if (nodeEnv === "production") {
+    if (!supabaseUrl.startsWith("https://") || !supabaseJwksUrl.startsWith("https://")) {
+      throw new Error("Supabase URLs must use HTTPS in production");
+    }
   }
 
   return {
@@ -53,5 +65,8 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     API_PORT: readPort(config, "API_PORT", 4000),
     WEB_ORIGIN: readUrl(config, "WEB_ORIGIN", "http://localhost:3000"),
     DATABASE_URL: databaseUrl,
+    SUPABASE_URL: supabaseUrl,
+    SUPABASE_JWKS_URL: supabaseJwksUrl,
+    SUPABASE_JWT_AUDIENCE: readString(config, "SUPABASE_JWT_AUDIENCE", "authenticated"),
   };
 }
