@@ -7,6 +7,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum BillingInterval {
+  MONTHLY @map("monthly")
+  ANNUAL  @map("annual")
+}
+
+enum StripeSubscriptionStatus {
+  TRIALING           @map("trialing")
+  ACTIVE             @map("active")
+  PAST_DUE           @map("past_due")
+  CANCELED           @map("canceled")
+  UNPAID             @map("unpaid")
+  INCOMPLETE         @map("incomplete")
+  INCOMPLETE_EXPIRED @map("incomplete_expired")
+  PAUSED             @map("paused")
+}
+
+enum EntitlementSource {
+  STRIPE     @map("stripe")
+  MANUAL     @map("manual")
+  REVENUECAT @map("revenuecat")
+}
+
+enum EntitlementStatus {
+  ACTIVE   @map("active")
+  CANCELED @map("canceled")
+  EXPIRED  @map("expired")
+}
+
 model SystemMetadata {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   key       String   @unique
@@ -18,11 +46,72 @@ model SystemMetadata {
 }
 
 model UserProfile {
-  id          String    @id @db.Uuid
-  displayName String?   @map("display_name") @db.VarChar(80)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id                    String    @id @db.Uuid
+  displayName           String?   @map("display_name") @db.VarChar(80)
+  subscriptionTier      String    @default("free") @map("subscription_tier") @db.VarChar(50)
+  revenuecatAppUserId   String?   @map("revenuecat_app_user_id")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@map("user_profiles")
+}
+
+model StripeCustomer {
+  userId           String               @id @map("user_id") @db.Uuid
+  stripeCustomerId String               @unique @map("stripe_customer_id")
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  subscriptions    StripeSubscription[]
+
+  @@unique([stripeCustomerId, userId], map: "stripe_customers_customer_user_key")
+  @@map("stripe_customers")
+}
+
+model StripeSubscription {
+  id                   String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String                   @map("user_id") @db.Uuid
+  stripeSubscriptionId String                   @unique @map("stripe_subscription_id")
+  stripeCustomerId     String                   @map("stripe_customer_id")
+  planKey              String                   @map("plan_key") @db.VarChar(100)
+  stripeProductId      String                   @map("stripe_product_id")
+  stripePriceId        String                   @map("stripe_price_id")
+  billingInterval      BillingInterval          @map("billing_interval")
+  status               StripeSubscriptionStatus
+  currentPeriodStart   DateTime?                @map("current_period_start") @db.Timestamptz(6)
+  currentPeriodEnd     DateTime?                @map("current_period_end") @db.Timestamptz(6)
+  trialEnd             DateTime?                @map("trial_end") @db.Timestamptz(6)
+  cancelAtPeriodEnd    Boolean                  @default(false) @map("cancel_at_period_end")
+  canceledAt           DateTime?                @map("canceled_at") @db.Timestamptz(6)
+  createdAt            DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer             StripeCustomer           @relation(fields: [stripeCustomerId, userId], references: [stripeCustomerId, userId], onDelete: Cascade)
+
+  @@index([userId], map: "stripe_subscriptions_user_id_idx")
+  @@index([stripeCustomerId], map: "stripe_subscriptions_customer_id_idx")
+  @@map("stripe_subscriptions")
+}
+
+model Entitlement {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  entitlementKey  String            @map("entitlement_key") @db.VarChar(100)
+  source          EntitlementSource @default(MANUAL)
+  sourceReference String?           @map("source_reference")
+  status          EntitlementStatus @default(ACTIVE)
+  startsAt        DateTime?         @map("starts_at") @db.Timestamptz(6)
+  endsAt          DateTime?         @map("ends_at") @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([userId, entitlementKey, source], map: "entitlements_user_key_source_key")
+  @@index([userId, status], map: "entitlements_user_status_idx")
+  @@map("entitlements")
+}
+
+model StripeWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@map("stripe_webhook_events")
 }

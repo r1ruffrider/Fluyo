@@ -1,12 +1,15 @@
 import { Test } from "@nestjs/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { BillingPlanCatalogService } from "./billing/billing-plan-catalog.service";
+import { EntitlementsService } from "./billing/entitlements.service";
+
 describe("AppModule", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("resolves the profile authorization dependencies", async () => {
+  it("resolves the identity, profile, and billing-foundation dependencies", async () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("DATABASE_URL", "postgresql://fluyo:fluyo@localhost:5432/fluyo");
     vi.stubEnv("SUPABASE_URL", "https://identity.example.com");
@@ -17,6 +20,8 @@ describe("AppModule", () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
     expect(moduleRef).toBeDefined();
+    expect(moduleRef.get(BillingPlanCatalogService)).toBeDefined();
+    expect(moduleRef.get(EntitlementsService)).toBeDefined();
     await moduleRef.close();
   });
 });

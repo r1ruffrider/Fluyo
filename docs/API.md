@@ -2,7 +2,7 @@
 
 ## Status
 
-Sprint 1 implements operational health endpoints. Sprint 2 adds the Supabase bearer-token identity boundary, protected current-identity and self-profile endpoints, and no product APIs.
+Sprint 1 implements operational health endpoints. Sprint 2 adds the Supabase bearer-token identity boundary and protected current-identity and self-profile endpoints. The first Sprint 3 increment adds billing data and service foundations only; it adds no billing HTTP endpoints.
 
 ## Conventions
 
@@ -143,6 +143,8 @@ Request body:
 
 `displayName` must be `null` or a trimmed string containing 1–80 characters. Unknown fields are rejected. The success response (`200 OK`) is the updated profile object shown above without the outer `profile` property.
 
-## Future APIs
+## Future Billing APIs
 
-New APIs must follow `PLATFORM_STANDARDS.md`, include validation and safe error responses, and update this document. Arbitrary-user profile access, billing, lessons, progress, translation, and AI endpoints are not part of Sprint 2.
+Checkout, Customer Portal, webhook intake, and subscription/entitlement summary endpoints are intentionally deferred to later focused Sprint 3 pull requests. When implemented, they must authenticate user-facing operations, select Stripe Prices from the server catalog, verify webhook signatures against the unmodified request body, and expose provider-neutral billing summaries rather than secrets or raw Stripe payloads.
+
+New APIs must follow `PLATFORM_STANDARDS.md`, include validation and safe error responses, and update this document. Lessons, progress, translation, and AI endpoints are not part of the billing foundation.

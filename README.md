@@ -2,7 +2,7 @@
 
 Spanish that flows both ways.
 
-Fluyo is a TypeScript monorepo containing the product web application, backend API, shared contracts, and local platform infrastructure. Sprint 1 establishes the platform foundation. Sprint 2 adds Supabase Auth sessions, a server-verified identity boundary, password recovery, and a minimal self-owned profile; billing, AI, lessons, translation, and mobile applications remain deferred.
+Fluyo is a TypeScript monorepo containing the product web application, backend API, shared contracts, and local platform infrastructure. Sprint 1 establishes the platform foundation. Sprint 2 adds Supabase Auth sessions, a server-verified identity boundary, password recovery, and a minimal self-owned profile. Sprint 3 begins with a Forge-compatible billing and entitlement foundation; Checkout, Portal, webhook transport, billing UI, AI, lessons, translation, and mobile applications remain deferred.
 
 ## Project Structure
 
@@ -61,6 +61,8 @@ For Sprint 2 identity development, replace the Supabase placeholders with one no
 The project must use Supabase asymmetric JWT signing keys. Do not add a service-role key or legacy JWT secret for Sprint 2.
 
 In the Supabase Auth URL configuration, set the local site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL. Use the corresponding HTTPS URLs for each deployed environment.
+
+The billing foundation is disabled by default. `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PORTAL_CONFIGURATION_ID` are server-only variables reserved for later focused Stripe integration pull requests. Do not prefix them with `NEXT_PUBLIC_`. This foundation does not make Stripe network calls and does not yet require live Stripe values.
 
 ## Local PostgreSQL
 
@@ -148,6 +150,12 @@ curl http://localhost:4000/api/v1/auth/me \
 ```
 
 Do not place tokens in documentation, shell history, logs, source files, or committed environment files. See [`docs/SECURITY.md`](docs/SECURITY.md) and [ADR 0001](docs/adr/0001-supabase-identity-boundary.md).
+
+## Billing Foundation
+
+The API contains private Prisma models and server-side services for Stripe customer mapping, normalized subscription projections, provider-neutral entitlements, processed-event idempotency, and an injectable plan catalog. The catalog requires monthly and annual Price mappings and retains a trusted `promotionCodesAllowed` setting, but no concrete Fluyo plans or Stripe Price IDs are committed.
+
+Feature authorization must query active entitlement keys. Neither a profile tier, browser value, Checkout redirect, nor Stripe Price ID grants access. See [ADR 0003](docs/adr/0003-forge-compatible-billing-foundation.md).
 
 ## Quality Commands
 
