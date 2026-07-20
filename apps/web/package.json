@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@fluyo/shared": "0.1.0",
+    "@supabase/ssr": "0.12.3",
+    "@supabase/supabase-js": "2.110.7",
     "next": "16.2.10",
     "react": "19.2.7",
     "react-dom": "19.2.7"

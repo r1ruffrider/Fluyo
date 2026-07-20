@@ -34,6 +34,49 @@ The database health route returns only `reachable` or `unreachable` and never re
 
 Authentication, authorization, billing, entitlements, AI, lessons, user profiles, and mobile applications are outside Sprint 1. Their documented architecture remains a constraint on future work; no placeholder tables or provider integrations are introduced in this foundation.
 
+## Identity and authorization — Sprint 2
+
+Sprint 2 adds Supabase Auth as the identity provider while keeping authentication and authorization distinct. The accepted design is recorded in [ADR 0001](adr/0001-supabase-identity-boundary.md).
+
+```text
+Browser
+  -> Next.js sign-in/sign-up/recovery server action
+  -> Supabase Auth (PKCE and cookie-backed session)
+  -> Next.js root proxy refreshes session cookies
+
+Browser/Next.js
+  -> Authorization: Bearer <Supabase access token>
+  -> NestJS SupabaseJwtGuard
+  -> Supabase JWKS signature + issuer + audience + expiration validation
+  -> provider-neutral AuthenticatedIdentity
+  -> protected controller/service
+```
+
+### Web session boundary
+
+- `@supabase/ssr` owns cookie serialization, refresh-token rotation, and the PKCE exchange.
+- Sign-in, sign-up, callback exchange, password recovery, password update, and sign-out execute in server code.
+- Only the Supabase project URL and publishable key are browser-visible. Service-role keys and signing secrets are not part of this flow.
+- The Next.js root proxy refreshes sessions but is not the final authorization control. Protected operations remain enforced by the API or the data owner.
+
+### API identity boundary
+
+- Public health endpoints do not run the identity guard.
+- `GET /api/v1/auth/me` requires a bearer access token and returns only the normalized user UUID and nullable email.
+- The API accepts asymmetric Supabase tokens using `ES256` or `RS256`. It validates signature, issuer, audience, expiration, and UUID subject against the configured project JWKS.
+- Invalid or missing credentials receive a stable, safe HTTP 401 error envelope. Verification causes, raw claims, and tokens are not returned or logged.
+- Authentication attaches a provider-neutral identity to the request. Future ownership, role, and entitlement services perform authorization separately.
+
+### Data boundary
+
+Supabase Auth is the identity system of record. Fluyo does not copy credentials, sessions, verified email state, or the Auth directory into PostgreSQL.
+
+Sprint 2 adds the minimal application-owned `user_profiles` table recorded in [ADR 0002](adr/0002-minimal-user-profile.md). Its primary key is the verified Supabase user UUID. It contains only a nullable display name, audit timestamps, and a nullable soft-deletion timestamp. Protected self-service API routes derive the owner from `AuthenticatedIdentity`; clients cannot select another profile ID. Billing, roles, entitlements, lessons, progress, translation preferences, and mobile identifiers are not part of this table.
+
+### Protected web route
+
+`/account` verifies the Supabase session on the server before rendering. It obtains the short-lived access token only after verified claims are available, then calls the protected profile API. Redirecting an unauthenticated browser is a user-experience control; NestJS bearer validation and profile ownership remain the security controls.
+
 ## Billing and entitlements — shared with Forge
 
 ### Decision

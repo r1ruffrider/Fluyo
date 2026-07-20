@@ -25,7 +25,31 @@ Explicitly excluded: authentication, billing, AI, lessons, user profiles, and mo
 
 ## Sprint 2 — Identity
 
-Planned: Supabase Auth, JWT validation, user identity boundaries, authorization foundations, and required security documentation. Do not begin until Sprint 1 is verified.
+Goal: establish Supabase Auth, trusted JWT validation, provider-neutral identity, a minimal self-owned profile, and authorization foundations without introducing product schemas.
+
+- [x] Next.js supports email/password sign-up, sign-in, confirmation callback, and sign-out through Supabase Auth.
+- [x] Forgot-password requests and recovery-session password updates use fixed, server-controlled callback destinations and safe responses.
+- [x] Supabase SSR uses PKCE, cookie-backed sessions, and Next.js proxy refresh handling.
+- [x] `/account` is a server-protected example route and never sends the refresh token to NestJS.
+- [x] NestJS protects `GET /api/v1/auth/me` with signature, issuer, audience, expiration, algorithm, and UUID-subject validation.
+- [x] Public health endpoints remain accessible without authentication.
+- [x] Missing and invalid credentials return a safe HTTP 401 error envelope.
+- [x] Negative tests cover missing and malformed credentials plus missing-expiration, expired, wrong-signature, wrong-issuer, wrong-audience, and invalid-subject tokens.
+- [x] A minimal `user_profiles` table is keyed by verified Supabase UUID and exposes protected self-service read/update operations.
+- [x] The Sprint 2 profile migration applies successfully against local PostgreSQL.
+- [x] No local credential, Auth-directory, role, billing, entitlement, lesson, progress, translation, or mobile schema is introduced.
+- [x] ADR, architecture, API, database, security, setup, and product documentation describe the implemented identity boundary.
+- [x] Lint, typecheck, tests, production builds, formatting, audit, and diff checks pass.
+- [x] A real non-production Supabase project completes sign-up, email confirmation, sign-in, persisted and refreshed sessions, protected web/API/profile access, UUID-keyed profile ownership, safe failure handling, sign-out, and disposable-account cleanup.
+- [x] Password recovery is verified end to end through a real provider email: the recovery link opens the application reset flow, the password update succeeds, the old password is rejected, and the new password restores authenticated protected-route access.
+
+Application verification note (2026-07-19): Prisma Client generation and schema validation, lint, strict type checking, 26 tests, production builds, formatting, the high-severity audit threshold, and `git diff --check` passed against the current working tree. JWT tests use ephemeral asymmetric key pairs and cover successful identity normalization plus negative signature, claim, and credential cases. Docker Desktop is currently unavailable, so the new profile migration remains an explicit local PostgreSQL check. No live Supabase project or user token was used, so registration, email delivery, recovery, session refresh, and authenticated profile access still require configured-provider verification.
+
+Infrastructure verification note (2026-07-20): Docker Engine 29.6.1 and Docker Compose 5.3.0 were available, PostgreSQL 17 reached healthy status, Prisma reported both migrations applied, and the `user_profiles` UUID primary-key structure was verified against the local database.
+
+Live identity verification note (2026-07-20): an approved non-production Supabase project with asymmetric signing completed registration, confirmation, application login, cookie-session persistence, provider token refresh, protected `/account`, `/api/v1/auth/me`, and `/api/v1/profiles/me` access, profile creation keyed to the verified Supabase UUID, ownership-injection rejection, safe unauthenticated and invalid-token responses, logout, and protected-route redirection. After the provider email-rate quiet window, a fresh disposable account also completed real recovery-email delivery, recovery-link handling, the application password-reset flow, old-password rejection, new-password login, and protected-session persistence. The disposable Supabase user and inbox were deleted after verification; no local profile row remained to clean up.
+
+Final verification rerun (2026-07-20): lint, strict type checking, 27 tests across 10 test files, production builds, formatting, the high-severity audit threshold, and `git diff --check` passed. Two moderate transitive PostCSS advisories remain; the available automated fix would install a breaking Next.js version.
 
 ## Sprint 3 — Billing
 

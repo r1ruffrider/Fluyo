@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { apiBaseUrl, fetchHealth } from "../lib/api-client";
+import { getVerifiedWebIdentity } from "../lib/supabase/identity";
+import { signOut } from "./auth/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +22,17 @@ async function getBackendStatus(): Promise<{ available: boolean; detail: string 
   }
 }
 
+async function getCurrentIdentity(): Promise<{ email: string | null; id: string } | null> {
+  try {
+    return await getVerifiedWebIdentity();
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
   const backend = await getBackendStatus();
+  const identity = await getCurrentIdentity();
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f1e7] text-[#15123a]">
@@ -30,9 +41,27 @@ export default async function HomePage() {
           <span className="text-2xl font-black tracking-[-0.04em] text-[#1726a5]">
             flu<span className="text-[#ef4d4d]">yo</span>
           </span>
-          <span className="rounded-full border border-[#1726a5]/20 bg-white/60 px-3 py-1 font-mono text-xs uppercase tracking-[0.16em] text-[#1726a5]">
-            Platform foundation
-          </span>
+          <div className="flex items-center gap-3">
+            {identity ? (
+              <>
+                <Link className="text-sm font-bold text-[#1726a5]" href="/account">
+                  Account
+                </Link>
+                <form action={signOut}>
+                  <button className="text-sm font-bold text-[#1726a5]" type="submit">
+                    Sign out
+                  </button>
+                </form>
+              </>
+            ) : (
+              <Link className="text-sm font-bold text-[#1726a5]" href="/login">
+                Sign in
+              </Link>
+            )}
+            <span className="rounded-full border border-[#1726a5]/20 bg-white/60 px-3 py-1 font-mono text-xs uppercase tracking-[0.16em] text-[#1726a5]">
+              Identity foundation
+            </span>
+          </div>
         </header>
 
         <section className="grid flex-1 items-center gap-12 py-16 lg:grid-cols-[1.35fr_0.65fr] lg:py-24">
@@ -41,11 +70,11 @@ export default async function HomePage() {
               Spanish that flows both ways
             </p>
             <h1 className="max-w-3xl text-5xl font-black leading-[0.96] tracking-[-0.055em] sm:text-7xl">
-              The foundation for conversations that flow.
+              A trusted identity for every conversation.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#15123a]/70">
-              Sprint 1 establishes Fluyo&apos;s web, API, shared types, and local data platform.
-              Product experiences arrive in later sprints.
+              Sprint 2 connects Supabase Auth sessions to Fluyo&apos;s server-enforced identity
+              boundary. Profiles and product experiences remain in later sprints.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link
@@ -84,6 +113,16 @@ export default async function HomePage() {
               </div>
             </div>
             <dl className="mt-7 border-t border-[#15123a]/10 pt-5">
+              {identity ? (
+                <div className="mb-5">
+                  <dt className="text-xs font-bold uppercase tracking-[0.14em] text-[#15123a]/45">
+                    Authenticated identity
+                  </dt>
+                  <dd className="mt-2 break-all font-mono text-xs text-[#1726a5]">
+                    {identity.email ?? identity.id}
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-xs font-bold uppercase tracking-[0.14em] text-[#15123a]/45">
                   Health endpoint
@@ -97,7 +136,7 @@ export default async function HomePage() {
         </section>
 
         <footer className="border-t border-[#15123a]/15 pt-6 text-sm text-[#15123a]/50">
-          Fluyo Platform · Sprint 1
+          Fluyo Platform · Sprint 2
         </footer>
       </div>
     </main>
