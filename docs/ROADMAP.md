@@ -53,7 +53,31 @@ Final verification rerun (2026-07-20): lint, strict type checking, 27 tests acro
 
 ## Sprint 3 — Billing
 
-Planned: the canonical Forge-compatible Stripe architecture only after Forge Phase 14 defines the shared physical billing schema. Stripe Checkout, Customer Portal, signed webhooks, coupons, monthly/annual subscriptions, and provider-neutral entitlements remain required. RevenueCat remains deferred to native mobile work.
+Goal: implement Forge-compatible Stripe billing through small reviewable pull requests while allowing Fluyo to own its plan catalog, prices, trials, coupons, free-tier limits, and feature packaging.
+
+### Billing Foundation
+
+- [x] Normalized Stripe customer and subscription projections are defined in Prisma.
+- [x] Provider-neutral entitlement storage and active-entitlement checks are defined.
+- [x] A processed Stripe-event ledger is available for the future idempotent webhook processor.
+- [x] The server-only plan-catalog contract requires monthly and annual Price mappings without exposing Price IDs publicly.
+- [x] Coupon and promotion-code support remains a trusted catalog option with Stripe reserved as the source of truth.
+- [x] Billing environment validation rejects browser/public Stripe keys and requires no live Stripe values while billing is disabled.
+- [x] The migration applies successfully against local PostgreSQL.
+- [x] Unit tests, lint, typecheck, builds, formatting, audit, and diff checks pass.
+- [x] ADR, architecture, API, database, security, setup, and changelog documentation describe the implemented boundary.
+
+Billing Foundation verification note (2026-07-20): Docker PostgreSQL 17 was healthy, Prisma Client generation and schema validation passed, the committed billing migration applied successfully, and Prisma reported all three migrations current. A safe schema query confirmed the four new billing tables and the UUID ownership key on `stripe_customers`. The shared and API suites passed 49 tests across 16 files; lint, strict type checking, production builds, formatting, the high-severity audit threshold, and `git diff --check` also passed. Two moderate transitive PostCSS advisories remain; the available automated fix would install a breaking Next.js version. No live Stripe API call was made or claimed.
+
+### Later Sprint 3 Pull Requests
+
+- [ ] Stripe Checkout creates subscription-mode sessions from the authenticated user, selected plan, and monthly/annual interval.
+- [ ] Stripe Customer Portal sessions use the existing server-owned customer mapping.
+- [ ] A raw-body signed webhook processor synchronizes subscriptions and entitlements transactionally and idempotently.
+- [ ] Subscription and entitlement UI displays synchronized state without granting access from redirects.
+- [ ] Live Stripe test-mode verification covers Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, and reconciliation.
+
+RevenueCat remains reserved for future native mobile applications. The foundation does not implement Checkout Sessions, Portal Sessions, webhook transport, billing HTTP endpoints, a concrete commercial catalog, or billing UI.
 
 ## Sprint 4 — User Dashboard
 

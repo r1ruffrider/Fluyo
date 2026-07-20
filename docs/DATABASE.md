@@ -16,7 +16,7 @@ Fluyo uses PostgreSQL with Prisma ORM. The API owns database access; the web app
 | `createdAt` | `created_at`    | `timestamptz` | Created automatically                |
 | `updatedAt` | `updated_at`    | `timestamptz` | Maintained by Prisma                 |
 
-The database table is `system_metadata`. No user, subscription, entitlement, payment, course, or lesson tables exist in Sprint 1.
+The database table is `system_metadata`. Later migrations add identity and billing foundations without changing this record.
 
 ## Sprint 2 Identity and Profile Boundary
 
@@ -26,21 +26,38 @@ Supabase Auth is the identity system of record. Sprint 2 does not copy Supabase 
 - The trusted user identifier is the UUID `sub` claim from a verified Supabase access token.
 - The API carries that identifier through the provider-neutral `AuthenticatedIdentity` request context.
 - `user_profiles.id` is the verified Supabase user UUID. The API never accepts this owner ID from clients.
-- Billing, entitlement, lesson, progress, and mobile identity tables remain out of scope.
+- Billing and entitlement data remain separate from the identity provider and profile ownership boundary.
 
 ### `UserProfile`
 
-The `user_profiles` table contains only application-owned profile data.
+The `user_profiles` table contains application-owned profile data plus two server-maintained billing compatibility fields.
 
-| Field         | Database column | Type          | Rule                                     |
-| ------------- | --------------- | ------------- | ---------------------------------------- |
-| `id`          | `id`            | UUID          | Primary key; verified Supabase user UUID |
-| `displayName` | `display_name`  | varchar(80)   | Optional, user-editable display value    |
-| `createdAt`   | `created_at`    | `timestamptz` | Created automatically                    |
-| `updatedAt`   | `updated_at`    | `timestamptz` | Maintained by Prisma                     |
-| `deletedAt`   | `deleted_at`    | `timestamptz` | Nullable soft-deletion marker            |
+| Field                 | Database column          | Type          | Rule                                                     |
+| --------------------- | ------------------------ | ------------- | -------------------------------------------------------- |
+| `id`                  | `id`                     | UUID          | Primary key; verified Supabase user UUID                 |
+| `displayName`         | `display_name`           | varchar(80)   | Optional, user-editable display value                    |
+| `subscriptionTier`    | `subscription_tier`      | varchar(50)   | Server-maintained summary/cache; defaults to `free`      |
+| `revenuecatAppUserId` | `revenuecat_app_user_id` | text          | Nullable and reserved for a future native mobile adapter |
+| `createdAt`           | `created_at`             | `timestamptz` | Created automatically                                    |
+| `updatedAt`           | `updated_at`             | `timestamptz` | Maintained by Prisma                                     |
+| `deletedAt`           | `deleted_at`             | `timestamptz` | Nullable soft-deletion marker                            |
 
-There is intentionally no database foreign key to Supabase's internal Auth schema. Profile reconciliation and account-deletion orchestration remain future lifecycle work. The table contains no email, password, role, subscription, entitlement, RevenueCat, lesson, progress, translation, or mobile fields.
+There is intentionally no database foreign key to Supabase's internal Auth schema. Profile reconciliation and account-deletion orchestration remain future lifecycle work. Self-service profile APIs do not expose or accept either billing field.
+
+## Sprint 3 Billing Foundation
+
+The migration `20260720000000_create_billing_foundation` adds a Forge-compatible normalized billing model. PostgreSQL remains private behind NestJS; browsers and Supabase Auth clients cannot access these tables directly.
+
+| Table                   | Responsibility                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `stripe_customers`      | One verified Supabase user UUID to one Stripe Customer ID. Client code cannot create or update this mapping.      |
+| `stripe_subscriptions`  | Local projection of Stripe subscription, product, Price, interval, status, period, trial, and cancellation state. |
+| `entitlements`          | Provider-neutral capability grants with source, status, and optional validity window.                             |
+| `stripe_webhook_events` | Processed Stripe event IDs for future webhook idempotency; recorded only after successful processing.             |
+
+`BillingInterval` stores `monthly` or `annual`. The subscription-status enum preserves Stripe lifecycle states used by the shared access policy. Entitlement sources include `stripe`, `manual`, and a reserved `revenuecat` adapter; adding the enum value does not implement mobile billing.
+
+Billing user IDs deliberately do not reference `user_profiles`: a verified Auth user may enter Checkout before creating a profile. The composite customer relation prevents a subscription from pairing one user's UUID with another user's Stripe Customer ID. Application features query `entitlements`; they do not authorize from `subscription_tier` or a Stripe Price ID.
 
 ## Local Operation
 
@@ -61,8 +78,8 @@ The seed is idempotent and upserts one record with key `platform.foundation`.
 - Review naming, constraints, indexes, locking, backfills, and forward recovery.
 - Generate the Prisma client after schema changes.
 - Never edit an applied migration; create a new migration.
-- Billing tables must wait for and then reuse Forge's canonical billing schema.
+- Billing model changes must preserve Forge-compatible customer, subscription, event-ledger, and entitlement contracts; commercial catalog differences do not require schema forks.
 
 ## Retention and Recovery
 
-The Docker named volume is for local development only and is deleted by the documented reset command. The minimal profile is user-owned personal data and must be included in production backup, deletion, export, and retention policies before production accounts are accepted. Production recovery-point and recovery-time objectives remain a deployment prerequisite.
+The Docker named volume is for local development only and is deleted by the documented reset command. Profiles, Stripe mappings, subscription projections, entitlements, and event-ledger records require documented production backup, deletion, export, reconciliation, and retention policies before production billing is enabled. Production recovery-point and recovery-time objectives remain a deployment prerequisite.

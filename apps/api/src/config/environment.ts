@@ -34,6 +34,29 @@ function readUrl(config: Record<string, unknown>, key: string, defaultValue?: st
   }
 }
 
+function readBoolean(config: Record<string, unknown>, key: string, defaultValue: boolean): boolean {
+  const value = config[key];
+
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  if (value === true || value === "true") {
+    return true;
+  }
+
+  if (value === false || value === "false") {
+    return false;
+  }
+
+  throw new Error(`${key} must be true or false`);
+}
+
+function readOptionalString(config: Record<string, unknown>, key: string): string | undefined {
+  const value = config[key];
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+}
+
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
   const nodeEnv = readString(config, "NODE_ENV", "development");
 
@@ -48,6 +71,10 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     "SUPABASE_JWKS_URL",
     `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
   );
+  const billingEnabled = readBoolean(config, "BILLING_ENABLED", false);
+  const stripeSecretKey = readOptionalString(config, "STRIPE_SECRET_KEY");
+  const stripeWebhookSecret = readOptionalString(config, "STRIPE_WEBHOOK_SECRET");
+  const stripePortalConfigurationId = readOptionalString(config, "STRIPE_PORTAL_CONFIGURATION_ID");
 
   if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
     throw new Error("DATABASE_URL must use the PostgreSQL protocol");
@@ -59,6 +86,28 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     }
   }
 
+  if (billingEnabled) {
+    if (!stripeSecretKey) {
+      throw new Error("Missing required environment variable: STRIPE_SECRET_KEY");
+    }
+
+    if (!/^(?:rk|sk)_(?:test|live)_/u.test(stripeSecretKey)) {
+      throw new Error("STRIPE_SECRET_KEY must be a Stripe restricted or secret API key");
+    }
+
+    if (!stripeWebhookSecret) {
+      throw new Error("Missing required environment variable: STRIPE_WEBHOOK_SECRET");
+    }
+
+    if (!stripeWebhookSecret.startsWith("whsec_")) {
+      throw new Error("STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret");
+    }
+  }
+
+  if (stripePortalConfigurationId && !stripePortalConfigurationId.startsWith("bpc_")) {
+    throw new Error("STRIPE_PORTAL_CONFIGURATION_ID must be a Stripe Portal configuration ID");
+  }
+
   return {
     ...config,
     NODE_ENV: nodeEnv,
@@ -68,5 +117,9 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     SUPABASE_URL: supabaseUrl,
     SUPABASE_JWKS_URL: supabaseJwksUrl,
     SUPABASE_JWT_AUDIENCE: readString(config, "SUPABASE_JWT_AUDIENCE", "authenticated"),
+    BILLING_ENABLED: billingEnabled,
+    STRIPE_SECRET_KEY: stripeSecretKey,
+    STRIPE_WEBHOOK_SECRET: stripeWebhookSecret,
+    STRIPE_PORTAL_CONFIGURATION_ID: stripePortalConfigurationId,
   };
 }

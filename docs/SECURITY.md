@@ -2,7 +2,7 @@
 
 ## Current Scope
 
-Sprint 1 exposes unauthenticated operational health endpoints. Sprint 2 adds Supabase Auth web sessions, password recovery, a bearer-token boundary for protected API routes, and a minimal self-owned profile. It does not implement product data, billing, AI, lessons, progress, translation, or mobile identity.
+Sprint 1 exposes unauthenticated operational health endpoints. Sprint 2 adds Supabase Auth web sessions, password recovery, a bearer-token boundary for protected API routes, and a minimal self-owned profile. The Sprint 3 billing foundation adds private billing projections, entitlements, server-only configuration validation, and repositories with no public billing routes or Stripe network calls.
 
 ## Identity Threat Model
 
@@ -37,6 +37,10 @@ Sprint 1 exposes unauthenticated operational health endpoints. Sprint 2 adds Sup
 | Profile ownership override          | Self-profile routes derive the UUID from the verified token and accept no client-selected owner ID.                                    |
 | Account enumeration during recovery | Recovery requests return the same success state regardless of whether Supabase reports an account.                                     |
 | Open redirect through Auth links    | Confirmation and recovery callbacks use fixed server-controlled destinations only.                                                     |
+| Customer-mapping ownership override | Stripe customer mappings live in a separate API-owned table and always use the verified user UUID.                                     |
+| Client-selected price or discount   | A validated server catalog resolves plan and interval to Price IDs; Stripe will remain authoritative for coupon validity and math.     |
+| Duplicate webhook processing        | A primary-keyed event ledger is prepared for the later signed webhook processor; no webhook transport is claimed in this foundation.   |
+| Tier-string authorization bypass    | Protected features must query active provider-neutral entitlements; profile summaries and client UI are not authorization controls.    |
 
 ## Secret Handling
 
@@ -45,6 +49,7 @@ Sprint 1 exposes unauthenticated operational health endpoints. Sprint 2 adds Sup
 - `DATABASE_URL` and all future privileged keys are server-only.
 - Variables prefixed with `NEXT_PUBLIC_` are public browser configuration and must never contain secrets.
 - The Supabase project URL and publishable key are public configuration. Supabase secret/service-role keys and JWT signing secrets must never use `NEXT_PUBLIC_` prefixes or enter browser bundles.
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PORTAL_CONFIGURATION_ID` are server-only. Billing startup validation is opt-in until the later integration PRs, and no Stripe value uses a `NEXT_PUBLIC_` prefix.
 
 ## API Controls
 
@@ -68,7 +73,7 @@ Sprint 1 exposes unauthenticated operational health endpoints. Sprint 2 adds Sup
 
 ## Authorization
 
-Authentication answers who the caller is. Authorization remains a separate server-side decision. Sprint 2 supplies `AuthenticatedIdentity`; it does not define application roles, administrative access, resource ownership policies, or paid entitlements. Future protected services must consume the verified UUID and deny access by default when ownership or entitlement cannot be established.
+Authentication answers who the caller is. Authorization remains a separate server-side decision. Sprint 2 supplies `AuthenticatedIdentity`; Sprint 3 adds a provider-neutral active-entitlement query. Future protected services must consume the verified UUID and deny access by default when ownership or entitlement cannot be established.
 
 The profile API demonstrates ownership authorization: `GET /profiles/me` and `PUT /profiles/me` use only the UUID attached by the JWT guard. The request body cannot select another user. Display names are presentation data and are never roles, identity proof, or entitlement input.
 
@@ -85,13 +90,15 @@ Automated tests cover valid tokens and negative cases for missing credentials, m
 
 Live verification requires a configured non-production Supabase project using asymmetric signing keys. Test accounts must use sanctioned Auth APIs and must never be inserted directly into Supabase's internal Auth tables.
 
+Billing-foundation tests cover catalog validation and Price-ID non-disclosure, subscription access-status normalization, time-bounded entitlement lookup, customer mapping, event-ledger behavior, and server-only environment validation. They do not claim live Stripe Checkout, Portal, or webhook verification.
+
 ## Dependencies and CI
 
 Pull requests must pass linting, strict type checking, tests, production builds, and formatting checks. Dependency and secret scanning should be enabled in repository settings and expanded in later hardening sprints.
 
 ## Future Security Work
 
-Before production launch, configure ingress rate limiting, alerting for repeated authentication failures, session and account-deletion retention behavior, live recovery-flow tests, profile export/deletion handling, and a tested signing-key rotation procedure. Billing, storage, AI, and mobile work require their own threat models and authorization tests.
+Before production launch, configure ingress rate limiting, alerting for repeated authentication failures, session and account-deletion retention behavior, profile and billing-data export/deletion handling, Stripe reconciliation, webhook replay operations, and a tested signing-key rotation procedure. Checkout, Portal, signed webhook transport, storage, AI, and mobile work require their own threat-model updates and authorization tests.
 
 ## Reporting
 

@@ -18,7 +18,9 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - Provider-neutral authenticated identity contract and protected current-identity endpoint.
 - Negative authentication tests, safe API error envelopes, and identity architecture decision record.
 - Server-protected account route and a minimal self-owned profile keyed by verified Supabase identity.
+- Forge-compatible billing data foundation with Stripe customer mapping, normalized subscription projections, provider-neutral entitlements, and an event idempotency ledger.
+- Server-only monthly/annual plan-catalog contracts, promotion-code capability, Stripe environment validation, billing tests, and ADR 0003.
 
 ### Deferred
 
-- Live Supabase-project verification, social sign-in, MFA, expanded profiles, billing, AI, lessons, translation, and mobile applications.
+- Social sign-in, MFA, expanded profiles, Stripe Checkout, Customer Portal, signed webhook transport, billing UI, AI, lessons, translation, and mobile applications.

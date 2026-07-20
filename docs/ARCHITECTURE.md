@@ -16,8 +16,8 @@ The existing `landing/` page remains a standalone marketing artifact. It is not 
 
 - **Web:** React and Next.js render the initial product shell. A reusable server-side API client reads `NEXT_PUBLIC_API_URL` and checks the API health endpoint without making the build depend on a running backend.
 - **API:** NestJS owns the versioned `/api/v1` boundary, validates its environment at startup, limits CORS to the configured web origin, and emits structured request logs with correlation IDs.
-- **Shared package:** `@fluyo/shared` is the only source for health response interfaces, service identifiers, API prefix, and health paths used by both applications.
-- **Database:** PostgreSQL is accessed only through the API's Prisma integration. The initial schema contains `SystemMetadata` only; no product, identity, billing, lesson, or entitlement data exists yet.
+- **Shared package:** `@fluyo/shared` owns provider-neutral contracts shared by the applications, including health, identity, profile, and published billing-catalog types.
+- **Database:** PostgreSQL is accessed only through the API's Prisma integration. It contains platform metadata, the minimal application profile, and the Sprint 3 billing projection and entitlement foundation. No lesson, progress, AI, or translation data exists yet.
 - **Local infrastructure:** Docker Compose runs PostgreSQL with a health check and persistent named volume. Node applications run directly on the host during local development.
 
 ### Foundation request flow
@@ -30,9 +30,9 @@ Browser -> Next.js web -> NestJS /api/v1/health -> health response
 
 The database health route returns only `reachable` or `unreachable` and never returns connection strings, credentials, driver errors, or infrastructure details. Failed database checks use HTTP 503 while the general service health endpoint remains available.
 
-### Deferred boundaries
+### Incremental boundaries
 
-Authentication, authorization, billing, entitlements, AI, lessons, user profiles, and mobile applications are outside Sprint 1. Their documented architecture remains a constraint on future work; no placeholder tables or provider integrations are introduced in this foundation.
+Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. Sprint 3 starts with inert billing data and service contracts; Checkout, Portal, webhook transport, billing UI, AI, lessons, translation, and mobile applications remain separate milestones.
 
 ## Identity and authorization — Sprint 2
 
@@ -71,21 +71,21 @@ Browser/Next.js
 
 Supabase Auth is the identity system of record. Fluyo does not copy credentials, sessions, verified email state, or the Auth directory into PostgreSQL.
 
-Sprint 2 adds the minimal application-owned `user_profiles` table recorded in [ADR 0002](adr/0002-minimal-user-profile.md). Its primary key is the verified Supabase user UUID. It contains only a nullable display name, audit timestamps, and a nullable soft-deletion timestamp. Protected self-service API routes derive the owner from `AuthenticatedIdentity`; clients cannot select another profile ID. Billing, roles, entitlements, lessons, progress, translation preferences, and mobile identifiers are not part of this table.
+Sprint 2 added the minimal application-owned `user_profiles` table recorded in [ADR 0002](adr/0002-minimal-user-profile.md). Its primary key is the verified Supabase user UUID. Sprint 3 adds a non-authoritative `subscription_tier` summary and reserves `revenuecat_app_user_id`; paid authorization still comes from normalized entitlements, not profile fields. Protected self-service profile routes continue to expose only user-editable profile data and derive the owner from `AuthenticatedIdentity`.
 
 ### Protected web route
 
 `/account` verifies the Supabase session on the server before rendering. It obtains the short-lived access token only after verified claims are available, then calls the protected profile API. Redirecting an unauthenticated browser is a user-experience control; NestJS bearer validation and profile ownership remain the security controls.
 
-## Billing and entitlements — shared with Forge
+## Billing and entitlements — compatible with Forge
 
 ### Decision
 
-Fluyo must use the exact same web billing patterns and physical billing data model as Forge. This is a shared architecture contract, not a suggestion. Do not implement a Fluyo-specific billing service, custom checkout, custom coupon engine, or parallel subscription schema.
+Forge defines the proven billing architecture; Fluyo defines its own commercial catalog. Both products must remain compatible at the customer-mapping, subscription-projection, webhook-idempotency, and entitlement boundaries. Do not implement a second payment provider, custom checkout, local coupon engine, or incompatible entitlement system.
 
-Forge's monetization phase is the source of truth. It specifies Stripe monthly and annual subscriptions, coupons, Stripe Customer Portal, entitlement-based access, and RevenueCat/native in-app purchases deferred to the mobile phase. Forge already establishes the shared profile fields `subscription_tier` (default `free`) and nullable `revenuecat_app_user_id`.
+Forge's monetization implementation is the reference for Stripe Checkout, Customer Portal, signature verification, event idempotency, customer mapping, entitlement synchronization, server-side Price selection, and security boundaries. Fluyo may independently choose plan names, prices, packaging, trial length, promotion-code availability, free-tier limits, and feature gates.
 
-Forge's complete billing migration has not yet landed. When it does, Fluyo must reuse the same migrations, table and column names, enum values, constraints, indexes, webhook event ledger, generated database types, and service-layer shapes. Do not finalize look-alike Fluyo tables independently. If Fluyo implementation starts first, extract and approve the canonical schema for both repositories before either repository ships billing.
+The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces without creating Checkout Sessions, Portal Sessions, a webhook route, or Stripe network calls. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
 
 ### Provider responsibilities
 
@@ -105,7 +105,7 @@ Forge's complete billing migration has not yet landed. When it does, Fluyo must 
 - Price IDs are server configuration and are selected through a server-side allowlist. The client may request a published plan and interval, but it may not submit an arbitrary Stripe Price ID.
 - Coupons are accepted through Stripe Checkout promotion-code support or applied by trusted server-side rules using Stripe coupon/promotion-code identifiers.
 - One Stripe Customer is associated with one authenticated application user. Reuse the existing customer rather than creating a new customer for every Checkout Session.
-- Fluyo's Free, Plus, Pro, Family, and Classroom packaging may differ from Forge's catalog, but both repositories use the same billing schema, lifecycle, and entitlement representation.
+- Fluyo's plan names and packaging may differ from Forge's catalog, but both repositories use compatible billing lifecycle and entitlement representations.
 
 ### Checkout flow
 
@@ -138,7 +138,7 @@ The Stripe webhook endpoint is the only path that turns Stripe billing events in
 
 ### Shared data-model contract
 
-The logical model is identical in both repositories:
+The normalized model is compatible across both repositories:
 
 1. **Profile summary.** The user profile retains Forge's `subscription_tier` field, defaulting to `free`, as a convenient display/cache value. It is not the fine-grained authorization source. The nullable `revenuecat_app_user_id` field remains reserved until mobile billing is introduced.
 2. **Stripe customer mapping.** A durable one-to-one mapping connects the authenticated user ID to a Stripe Customer ID.
@@ -146,13 +146,26 @@ The logical model is identical in both repositories:
 4. **Entitlements.** Normalized entitlement rows answer whether a user can access a product or capability. They support product-scoped access and bundle/All-Access grants without scattering tier comparisons through application code.
 5. **Webhook ledger.** Processed Stripe event IDs provide idempotency and an operational audit trail.
 
-The items above describe responsibilities, not permission to invent Fluyo-specific table names. The physical schema must be copied from the canonical Forge billing migration and kept migration-compatible across both repositories. Any future schema change must be applied to both repositories as the same shared billing-model revision.
+Compatibility means the same modules could consume either product's normalized subscription, customer mapping, webhook ledger, and entitlement interfaces while receiving a different plan catalog. Physical database security may reflect each application's runtime: Forge uses Supabase RLS, while Fluyo keeps PostgreSQL private behind NestJS and enforces authorization in its API.
+
+### Sprint 3 Billing Foundation status
+
+The first Sprint 3 increment contains only:
+
+- Prisma models for `stripe_customers`, `stripe_subscriptions`, `entitlements`, and `stripe_webhook_events`;
+- the profile summary and reserved future RevenueCat identifier;
+- an injectable server-side plan-catalog contract requiring monthly and annual Price mappings;
+- provider-neutral active-entitlement queries and the shared subscription access-status policy;
+- server-side customer-mapping and processed-event ledger repositories; and
+- opt-in validation for server-only Stripe configuration.
+
+No billing HTTP endpoint, Stripe SDK call, Checkout Session, Portal Session, webhook receiver, subscription UI, or concrete commercial plan is implemented in this increment. The event ledger is storage prepared for a later signed webhook processor; its presence does not claim that events are currently received.
 
 ### Entitlement rules
 
 - Gate paid features through a shared entitlement service or database function, not checks such as `subscription_tier === "pro"` distributed through UI components.
 - Entitlement keys are stable product capabilities. Stripe Price IDs and RevenueCat product IDs map to those keys at the billing boundary and do not leak into feature code.
-- Active, trialing, grace-period, past-due, canceled, refunded, and expired behavior follows the same normalized policy in Forge and Fluyo.
+- `trialing`, `active`, and `past_due` subscription states grant access under the current shared policy. Other stored states do not grant access. Webhook synchronization will materialize this policy into entitlement rows in a later PR.
 - Bundle entitlements expand into the applicable product entitlements using the shared model. Fluyo may use this for plan bundles; Forge uses it for per-track and All-Access access.
 - The backend enforces entitlements for protected operations. The client may use the same state to hide or explain unavailable UI, but client checks are not security controls.
 
@@ -180,8 +193,8 @@ When native mobile billing is added:
 
 Before Fluyo billing can ship, verify all of the following against Forge:
 
-- identical billing migrations and generated database types;
-- identical Checkout, Portal, webhook, reconciliation, and entitlement service patterns;
+- compatible normalized customer, subscription, webhook-ledger, and entitlement interfaces;
+- identical Checkout, Portal, webhook verification, reconciliation, and entitlement synchronization patterns;
 - the same subscription-status normalization and grace-period policy;
 - the same webhook event coverage and idempotency behavior;
 - monthly and annual Prices mapped to provider-neutral entitlements;
