@@ -9,6 +9,8 @@ const BASE_ENVIRONMENT = {
 };
 const TEST_STRIPE_SECRET_KEY = ["rk", "test", "placeholder"].join("_");
 const TEST_STRIPE_WEBHOOK_SECRET = ["whsec", "placeholder"].join("_");
+const TEST_MONTHLY_PRICE = ["price", "monthly", "placeholder"].join("_");
+const TEST_ANNUAL_PRICE = ["price", "annual", "placeholder"].join("_");
 
 describe("validateEnvironment", () => {
   it("keeps billing disabled without requiring Stripe credentials", () => {
@@ -25,11 +27,14 @@ describe("validateEnvironment", () => {
         ...BASE_ENVIRONMENT,
         BILLING_ENABLED: "true",
         STRIPE_SECRET_KEY: TEST_STRIPE_SECRET_KEY,
-        STRIPE_WEBHOOK_SECRET: TEST_STRIPE_WEBHOOK_SECRET,
+        STRIPE_PRICE_FLUYO_PLUS_MONTHLY: TEST_MONTHLY_PRICE,
+        STRIPE_PRICE_FLUYO_PLUS_ANNUAL: TEST_ANNUAL_PRICE,
         STRIPE_PORTAL_CONFIGURATION_ID: "bpc_placeholder",
       }),
     ).toMatchObject({
       BILLING_ENABLED: true,
+      STRIPE_PRICE_FLUYO_PLUS_MONTHLY: TEST_MONTHLY_PRICE,
+      STRIPE_PRICE_FLUYO_PLUS_ANNUAL: TEST_ANNUAL_PRICE,
       STRIPE_PORTAL_CONFIGURATION_ID: "bpc_placeholder",
     });
   });
@@ -45,9 +50,45 @@ describe("validateEnvironment", () => {
       validateEnvironment({
         ...BASE_ENVIRONMENT,
         BILLING_ENABLED: "true",
-        STRIPE_SECRET_KEY: "pk_test_not_server_side",
-        STRIPE_WEBHOOK_SECRET: TEST_STRIPE_WEBHOOK_SECRET,
+        STRIPE_SECRET_KEY: ["pk", "test", "not-server-side"].join("_"),
+        STRIPE_PRICE_FLUYO_PLUS_MONTHLY: TEST_MONTHLY_PRICE,
+        STRIPE_PRICE_FLUYO_PLUS_ANNUAL: TEST_ANNUAL_PRICE,
       }),
     ).toThrow("restricted or secret API key");
+  });
+
+  it("requires both server-controlled Checkout Price IDs", () => {
+    expect(() =>
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        BILLING_ENABLED: "true",
+        STRIPE_SECRET_KEY: TEST_STRIPE_SECRET_KEY,
+      }),
+    ).toThrow("STRIPE_PRICE_FLUYO_PLUS_MONTHLY");
+
+    expect(() =>
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        BILLING_ENABLED: "true",
+        STRIPE_SECRET_KEY: TEST_STRIPE_SECRET_KEY,
+        STRIPE_PRICE_FLUYO_PLUS_MONTHLY: TEST_MONTHLY_PRICE,
+      }),
+    ).toThrow("STRIPE_PRICE_FLUYO_PLUS_ANNUAL");
+  });
+
+  it("validates optional future-provider configuration when supplied", () => {
+    expect(() =>
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        STRIPE_WEBHOOK_SECRET: "not-a-webhook-secret",
+      }),
+    ).toThrow("webhook signing secret");
+
+    expect(
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        STRIPE_WEBHOOK_SECRET: TEST_STRIPE_WEBHOOK_SECRET,
+      }),
+    ).toMatchObject({ STRIPE_WEBHOOK_SECRET: TEST_STRIPE_WEBHOOK_SECRET });
   });
 });

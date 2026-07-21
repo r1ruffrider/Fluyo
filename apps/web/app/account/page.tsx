@@ -33,11 +33,16 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           <Link className="font-bold text-[#1726a5]" href="/">
             &larr; Back to Fluyo
           </Link>
-          <form action={signOut}>
-            <button className="font-bold text-[#1726a5]" type="submit">
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-4">
+            <Link className="font-bold text-[#1726a5]" href="/pricing">
+              Pricing
+            </Link>
+            <form action={signOut}>
+              <button className="font-bold text-[#1726a5]" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
         <section className="mt-8 rounded-3xl border border-[#15123a]/10 bg-white/80 p-7 shadow-[0_20px_60px_rgba(23,38,165,0.1)]">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#ef4d4d]">

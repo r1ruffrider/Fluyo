@@ -32,7 +32,7 @@ The database health route returns only `reachable` or `unreachable` and never re
 
 ### Incremental boundaries
 
-Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. Sprint 3 starts with inert billing data and service contracts; Checkout, Portal, webhook transport, billing UI, AI, lessons, translation, and mobile applications remain separate milestones.
+Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. The billing foundation added normalized data and service contracts; the next increment adds Checkout initiation while Portal, webhook transport, synchronized subscription UI, AI, lessons, translation, and mobile applications remain separate milestones.
 
 ## Identity and authorization — Sprint 2
 
@@ -85,7 +85,7 @@ Forge defines the proven billing architecture; Fluyo defines its own commercial 
 
 Forge's monetization implementation is the reference for Stripe Checkout, Customer Portal, signature verification, event idempotency, customer mapping, entitlement synchronization, server-side Price selection, and security boundaries. Fluyo may independently choose plan names, prices, packaging, trial length, promotion-code availability, free-tier limits, and feature gates.
 
-The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces without creating Checkout Sessions, Portal Sessions, a webhook route, or Stripe network calls. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
+The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces. The Checkout increment uses those interfaces for Stripe Customer mapping and server-controlled Price selection without adding Portal Sessions, a webhook route, or entitlement synchronization. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
 
 ### Provider responsibilities
 
@@ -148,9 +148,9 @@ The normalized model is compatible across both repositories:
 
 Compatibility means the same modules could consume either product's normalized subscription, customer mapping, webhook ledger, and entitlement interfaces while receiving a different plan catalog. Physical database security may reflect each application's runtime: Forge uses Supabase RLS, while Fluyo keeps PostgreSQL private behind NestJS and enforces authorization in its API.
 
-### Sprint 3 Billing Foundation status
+### Billing increment status
 
-The first Sprint 3 increment contains only:
+The Billing Foundation increment contains:
 
 - Prisma models for `stripe_customers`, `stripe_subscriptions`, `entitlements`, and `stripe_webhook_events`;
 - the profile summary and reserved future RevenueCat identifier;
@@ -159,7 +159,16 @@ The first Sprint 3 increment contains only:
 - server-side customer-mapping and processed-event ledger repositories; and
 - opt-in validation for server-only Stripe configuration.
 
-No billing HTTP endpoint, Stripe SDK call, Checkout Session, Portal Session, webhook receiver, subscription UI, or concrete commercial plan is implemented in this increment. The event ledger is storage prepared for a later signed webhook processor; its presence does not claim that events are currently received.
+The Stripe Checkout increment adds:
+
+- the authenticated `POST /api/v1/billing/checkout-sessions` endpoint;
+- one server-configured Fluyo Plus plan with monthly and annual Stripe Price mappings;
+- existing Stripe Customer reuse or new customer creation persisted through the normalized mapping;
+- Stripe-hosted subscription Checkout with promotion codes, automatic tax, and configured return URLs;
+- verified user and internal plan metadata on both the Checkout Session and future subscription; and
+- a public pricing page whose upgrade action sends only the internal plan key and billing interval to the API.
+
+The browser cannot supply Stripe Customer IDs, Price IDs, coupon IDs, success URLs, or cancel URLs. The Checkout success redirect is informational only and cannot mutate subscription or entitlement state. No Portal Session, webhook receiver, subscription synchronization, or feature gate is implemented in this increment. The event ledger remains storage prepared for a later signed webhook processor; its presence does not claim that events are currently received.
 
 ### Entitlement rules
 

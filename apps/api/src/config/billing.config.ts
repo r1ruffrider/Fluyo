@@ -11,6 +11,8 @@ export const billingConfig = registerAs("billing", () => ({
   enabled: process.env.BILLING_ENABLED === "true",
   stripeApiVersion: STRIPE_API_VERSION,
   stripeSecretKey: optionalEnvironmentValue("STRIPE_SECRET_KEY"),
+  stripePriceFluyoPlusMonthly: optionalEnvironmentValue("STRIPE_PRICE_FLUYO_PLUS_MONTHLY"),
+  stripePriceFluyoPlusAnnual: optionalEnvironmentValue("STRIPE_PRICE_FLUYO_PLUS_ANNUAL"),
   stripeWebhookSecret: optionalEnvironmentValue("STRIPE_WEBHOOK_SECRET"),
   stripePortalConfigurationId: optionalEnvironmentValue("STRIPE_PORTAL_CONFIGURATION_ID"),
 }));

@@ -1,1 +1,2 @@
 export const BILLING_PLAN_DEFINITIONS = Symbol("BILLING_PLAN_DEFINITIONS");
+export const STRIPE_CLIENT = Symbol("STRIPE_CLIENT");
