@@ -6,6 +6,7 @@ export const FLUYO_PLUS_PLAN_KEY = "fluyo_plus";
 
 export const BILLING_PATHS = {
   checkoutSessions: "/billing/checkout-sessions",
+  portalSessions: "/billing/portal-sessions",
 } as const;
 
 export interface CreateCheckoutSessionRequest {
@@ -14,6 +15,10 @@ export interface CreateCheckoutSessionRequest {
 }
 
 export interface CreateCheckoutSessionResponse {
+  url: string;
+}
+
+export interface CreatePortalSessionResponse {
   url: string;
 }
 

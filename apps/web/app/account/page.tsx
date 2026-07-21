@@ -34,6 +34,9 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             &larr; Back to Fluyo
           </Link>
           <div className="flex items-center gap-4">
+            <Link className="font-bold text-[#1726a5]" href="/billing">
+              Billing
+            </Link>
             <Link className="font-bold text-[#1726a5]" href="/pricing">
               Pricing
             </Link>

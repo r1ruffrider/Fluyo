@@ -8,6 +8,7 @@ import { BillingPlanCatalogService } from "./billing-plan-catalog.service";
 import { EntitlementsService } from "./entitlements.service";
 import { stripeClientProvider } from "./stripe-client.provider";
 import { StripeCheckoutService } from "./stripe-checkout.service";
+import { StripeCustomerPortalService } from "./stripe-customer-portal.service";
 import { StripeCustomerMappingsService } from "./stripe-customer-mappings.service";
 import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.service";
 
@@ -20,6 +21,7 @@ import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.s
     BillingPlanCatalogService,
     EntitlementsService,
     StripeCheckoutService,
+    StripeCustomerPortalService,
     StripeCustomerMappingsService,
     StripeWebhookEventLedgerService,
   ],
@@ -27,6 +29,7 @@ import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.s
     BillingPlanCatalogService,
     EntitlementsService,
     StripeCheckoutService,
+    StripeCustomerPortalService,
     StripeCustomerMappingsService,
     StripeWebhookEventLedgerService,
   ],
