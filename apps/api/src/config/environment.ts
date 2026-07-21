@@ -73,6 +73,8 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   );
   const billingEnabled = readBoolean(config, "BILLING_ENABLED", false);
   const stripeSecretKey = readOptionalString(config, "STRIPE_SECRET_KEY");
+  const stripePriceFluyoPlusMonthly = readOptionalString(config, "STRIPE_PRICE_FLUYO_PLUS_MONTHLY");
+  const stripePriceFluyoPlusAnnual = readOptionalString(config, "STRIPE_PRICE_FLUYO_PLUS_ANNUAL");
   const stripeWebhookSecret = readOptionalString(config, "STRIPE_WEBHOOK_SECRET");
   const stripePortalConfigurationId = readOptionalString(config, "STRIPE_PORTAL_CONFIGURATION_ID");
 
@@ -95,13 +97,26 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
       throw new Error("STRIPE_SECRET_KEY must be a Stripe restricted or secret API key");
     }
 
-    if (!stripeWebhookSecret) {
-      throw new Error("Missing required environment variable: STRIPE_WEBHOOK_SECRET");
+    if (!stripePriceFluyoPlusMonthly) {
+      throw new Error("Missing required environment variable: STRIPE_PRICE_FLUYO_PLUS_MONTHLY");
     }
 
-    if (!stripeWebhookSecret.startsWith("whsec_")) {
-      throw new Error("STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret");
+    if (!stripePriceFluyoPlusAnnual) {
+      throw new Error("Missing required environment variable: STRIPE_PRICE_FLUYO_PLUS_ANNUAL");
     }
+  }
+
+  for (const [name, priceId] of [
+    ["STRIPE_PRICE_FLUYO_PLUS_MONTHLY", stripePriceFluyoPlusMonthly],
+    ["STRIPE_PRICE_FLUYO_PLUS_ANNUAL", stripePriceFluyoPlusAnnual],
+  ] as const) {
+    if (priceId && !priceId.startsWith("price_")) {
+      throw new Error(`${name} must be a Stripe Price ID`);
+    }
+  }
+
+  if (stripeWebhookSecret && !stripeWebhookSecret.startsWith("whsec_")) {
+    throw new Error("STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret");
   }
 
   if (stripePortalConfigurationId && !stripePortalConfigurationId.startsWith("bpc_")) {
@@ -119,6 +134,8 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     SUPABASE_JWT_AUDIENCE: readString(config, "SUPABASE_JWT_AUDIENCE", "authenticated"),
     BILLING_ENABLED: billingEnabled,
     STRIPE_SECRET_KEY: stripeSecretKey,
+    STRIPE_PRICE_FLUYO_PLUS_MONTHLY: stripePriceFluyoPlusMonthly,
+    STRIPE_PRICE_FLUYO_PLUS_ANNUAL: stripePriceFluyoPlusAnnual,
     STRIPE_WEBHOOK_SECRET: stripeWebhookSecret,
     STRIPE_PORTAL_CONFIGURATION_ID: stripePortalConfigurationId,
   };

@@ -71,13 +71,15 @@ Billing Foundation verification note (2026-07-20): Docker PostgreSQL 17 was heal
 
 ### Later Sprint 3 Pull Requests
 
-- [ ] Stripe Checkout creates subscription-mode sessions from the authenticated user, selected plan, and monthly/annual interval.
+- [x] Stripe Checkout creates subscription-mode sessions from the authenticated user, selected plan, and monthly/annual interval.
 - [ ] Stripe Customer Portal sessions use the existing server-owned customer mapping.
 - [ ] A raw-body signed webhook processor synchronizes subscriptions and entitlements transactionally and idempotently.
 - [ ] Subscription and entitlement UI displays synchronized state without granting access from redirects.
 - [ ] Live Stripe test-mode verification covers Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, and reconciliation.
 
-RevenueCat remains reserved for future native mobile applications. The foundation does not implement Checkout Sessions, Portal Sessions, webhook transport, billing HTTP endpoints, a concrete commercial catalog, or billing UI.
+Checkout implementation verification note (2026-07-21): server-controlled monthly and annual catalog resolution, authenticated endpoint enforcement, Stripe Customer creation and reuse, subscription-mode Session construction, promotion-code configuration, safe provider failures, and pricing-page compilation were verified by automated tests and production builds. No live Stripe test-mode purchase was performed or claimed; the broader live billing lifecycle check remains open.
+
+RevenueCat remains reserved for future native mobile applications. Checkout now provides only purchase initiation; Customer Portal, webhook transport, subscription synchronization, feature gating, and native billing remain unimplemented.
 
 ## Sprint 4 — User Dashboard
 

@@ -42,6 +42,9 @@ export default async function HomePage() {
             flu<span className="text-[#ef4d4d]">yo</span>
           </span>
           <div className="flex items-center gap-3">
+            <Link className="text-sm font-bold text-[#1726a5]" href="/pricing">
+              Pricing
+            </Link>
             {identity ? (
               <>
                 <Link className="text-sm font-bold text-[#1726a5]" href="/account">
