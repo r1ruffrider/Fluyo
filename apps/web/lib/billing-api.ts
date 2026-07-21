@@ -2,9 +2,20 @@ import {
   BILLING_PATHS,
   type CreateCheckoutSessionRequest,
   type CreateCheckoutSessionResponse,
+  type CreatePortalSessionResponse,
 } from "@fluyo/shared";
 
 import { apiBaseUrl } from "./api-client";
+
+function requireStripeUrl(value: string, hostname: string): string {
+  const url = new URL(value);
+
+  if (url.protocol !== "https:" || url.hostname !== hostname) {
+    throw new Error("Billing provider returned an unsafe redirect URL");
+  }
+
+  return url.toString();
+}
 
 export async function createCheckoutSession(
   accessToken: string,
@@ -27,11 +38,26 @@ export async function createCheckoutSession(
   }
 
   const data = (await response.json()) as CreateCheckoutSessionResponse;
-  const checkoutUrl = new URL(data.url);
+  return requireStripeUrl(data.url, "checkout.stripe.com");
+}
 
-  if (checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com") {
-    throw new Error("Checkout returned an unsafe redirect URL");
+export async function createPortalSession(accessToken: string): Promise<string> {
+  const response = await fetch(`${apiBaseUrl}${BILLING_PATHS.portalSessions}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({}),
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Customer Portal request failed with status ${response.status}`);
   }
 
-  return checkoutUrl.toString();
+  const data = (await response.json()) as CreatePortalSessionResponse;
+  return requireStripeUrl(data.url, "billing.stripe.com");
 }

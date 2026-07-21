@@ -32,7 +32,7 @@ The database health route returns only `reachable` or `unreachable` and never re
 
 ### Incremental boundaries
 
-Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. The billing foundation added normalized data and service contracts; the next increment adds Checkout initiation while Portal, webhook transport, synchronized subscription UI, AI, lessons, translation, and mobile applications remain separate milestones.
+Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. The billing foundation added normalized data and service contracts; focused increments now provide Checkout initiation and Customer Portal handoff while webhook transport, synchronized subscription UI, AI, lessons, translation, and mobile applications remain separate milestones.
 
 ## Identity and authorization — Sprint 2
 
@@ -85,7 +85,7 @@ Forge defines the proven billing architecture; Fluyo defines its own commercial 
 
 Forge's monetization implementation is the reference for Stripe Checkout, Customer Portal, signature verification, event idempotency, customer mapping, entitlement synchronization, server-side Price selection, and security boundaries. Fluyo may independently choose plan names, prices, packaging, trial length, promotion-code availability, free-tier limits, and feature gates.
 
-The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces. The Checkout increment uses those interfaces for Stripe Customer mapping and server-controlled Price selection without adding Portal Sessions, a webhook route, or entitlement synchronization. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
+The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces. Checkout uses those interfaces for Stripe Customer mapping and server-controlled Price selection; Customer Portal reuses the mapping for Stripe-hosted self-service. Neither increment adds a webhook route or entitlement synchronization. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
 
 ### Provider responsibilities
 
@@ -168,7 +168,15 @@ The Stripe Checkout increment adds:
 - verified user and internal plan metadata on both the Checkout Session and future subscription; and
 - a public pricing page whose upgrade action sends only the internal plan key and billing interval to the API.
 
-The browser cannot supply Stripe Customer IDs, Price IDs, coupon IDs, success URLs, or cancel URLs. The Checkout success redirect is informational only and cannot mutate subscription or entitlement state. No Portal Session, webhook receiver, subscription synchronization, or feature gate is implemented in this increment. The event ledger remains storage prepared for a later signed webhook processor; its presence does not claim that events are currently received.
+The Customer Portal increment adds:
+
+- the authenticated `POST /api/v1/billing/portal-sessions` endpoint;
+- server-side lookup of the verified user's existing Stripe Customer mapping;
+- safe rejection when no mapped billing account exists;
+- Stripe Portal Session creation using an optional server-owned Portal configuration and fixed `/billing` return URL; and
+- a protected billing page with one handoff action instead of local subscription-management controls.
+
+The browser cannot supply Stripe Customer IDs, Price IDs, coupon IDs, success URLs, cancel URLs, or Portal return URLs. Checkout and Portal redirects are informational only and cannot mutate subscription or entitlement state. No webhook receiver, subscription synchronization, locally implemented billing management, or feature gate exists in these increments. The event ledger remains storage prepared for a later signed webhook processor; its presence does not claim that events are currently received.
 
 ### Entitlement rules
 
