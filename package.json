@@ -9,17 +9,19 @@
     "apps/web"
   ],
   "scripts": {
+    "audit:policy": "node scripts/check-npm-audit.mjs",
     "build": "npm run build --workspace @fluyo/shared && npm run build --workspace @fluyo/api && npm run build --workspace @fluyo/web",
     "dev": "npm run build --workspace @fluyo/shared && dotenv -e .env -- concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm run dev --workspace @fluyo/api\" \"npm run dev --workspace @fluyo/web\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run lint --workspace @fluyo/shared && npm run lint --workspace @fluyo/api && npm run lint --workspace @fluyo/web",
+    "lint": "eslint scripts --max-warnings=0 && npm run lint --workspace @fluyo/shared && npm run lint --workspace @fluyo/api && npm run lint --workspace @fluyo/web",
     "postinstall": "npm run prisma:generate",
     "prisma:generate": "npm run prisma:generate --workspace @fluyo/api",
     "prisma:validate": "npm run prisma:validate --workspace @fluyo/api",
     "db:migrate": "dotenv -e .env -- npm run prisma:migrate --workspace @fluyo/api",
     "db:seed": "dotenv -e .env -- npm run prisma:seed --workspace @fluyo/api",
-    "test": "npm run test --workspace @fluyo/shared && npm run test --workspace @fluyo/api",
+    "test": "npm run test:audit-policy && npm run test --workspace @fluyo/shared && npm run test --workspace @fluyo/api",
+    "test:audit-policy": "node --test scripts/check-npm-audit.test.mjs",
     "typecheck": "npm run typecheck --workspace @fluyo/shared && npm run typecheck --workspace @fluyo/api && npm run typecheck --workspace @fluyo/web"
   },
   "engines": {

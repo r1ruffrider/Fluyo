@@ -94,7 +94,30 @@ Billing-foundation tests cover catalog validation and Price-ID non-disclosure, s
 
 ## Dependencies and CI
 
-Pull requests must pass linting, strict type checking, tests, production builds, and formatting checks. Dependency and secret scanning should be enabled in repository settings and expanded in later hardening sprints.
+Pull requests run dependency auditing, committed-secret scanning, Prisma validation, linting, strict type checking, tests, production builds, and formatting as independent CI jobs. One failure does not prevent the other controls from reporting their results.
+
+The dependency-audit policy remains fixed at high severity. Temporary exceptions live in `security/npm-audit-exceptions.json` and must match the exact advisory ID, package, vulnerable range, installed version, and dependency node reported by npm. The policy fails when:
+
+- any new high or critical advisory is present;
+- an accepted advisory changes severity, range, installed version, package, or dependency node;
+- an exception expires;
+- an exception has no Fluyo tracking issue; or
+- a stale exception remains after its advisory disappears.
+
+The policy does not use `npm audit fix --force`, broad dependency overrides, severity-threshold changes, advisory ignore files, or `continue-on-error`.
+
+### Temporary Dependency Risk Acceptance
+
+The following exceptions expire after **2026-08-31** and must be reviewed sooner when an upstream supported release becomes available.
+
+| Advisory              | Dependency path                                                                              | Classification                                          | Supported remediation attempted                                                                                                                                     | Tracking                                              |
+| --------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `GHSA-mh99-v99m-4gvg` | ESLint and Next ESLint plugins, plus Nest CLI → `minimatch@3.1.5` → `brace-expansion@1.1.16` | Development-only                                        | Patched compatible 5.x copies. ESLint 10 is not yet supported by required plugins, and current Nest CLI still pins the affected chain.                              | [#8](https://github.com/r1ruffrider/Fluyo/issues/8)   |
+| `GHSA-6g55-p6wh-862q` | `next@16.2.11` → `postcss@8.4.31`                                                            | Production graph; principally build-time CSS processing | Upgraded to Next 16.2.11, whose supported manifest still pins PostCSS 8.4.31.                                                                                       | [#9](https://github.com/r1ruffrider/Fluyo/issues/9)   |
+| `GHSA-r28c-9q8g-f849` | `next@16.2.11` → `postcss@8.4.31`                                                            | Production graph; principally build-time CSS processing | Upgraded to Next 16.2.11, whose supported manifest still pins PostCSS 8.4.31.                                                                                       | [#9](https://github.com/r1ruffrider/Fluyo/issues/9)   |
+| `GHSA-f88m-g3jw-g9cj` | `next@16.2.11` → optional `sharp@0.34.5`                                                     | Optional production image-optimization dependency       | Upgraded to Next 16.2.11, whose supported `^0.34.5` range excludes patched Sharp 0.35.x. Fluyo currently has no `next/image` imports or remote-image configuration. | [#10](https://github.com/r1ruffrider/Fluyo/issues/10) |
+
+`GHSA-qx2v-qp2m-jg93` currently appears as a moderate PostCSS advisory. It is tracked in [#9](https://github.com/r1ruffrider/Fluyo/issues/9) but is not allowlisted because it is below the unchanged high-severity threshold.
 
 ## Future Security Work
 

@@ -20,6 +20,13 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - Server-protected account route and a minimal self-owned profile keyed by verified Supabase identity.
 - Forge-compatible billing data foundation with Stripe customer mapping, normalized subscription projections, provider-neutral entitlements, and an event idempotency ledger.
 - Server-only monthly/annual plan-catalog contracts, promotion-code capability, Stripe environment validation, billing tests, and ADR 0003.
+- Exact-match, expiring dependency-audit exceptions with tracked upstream remediation issues and negative policy tests.
+- Independent CI jobs for dependency auditing, committed-secret scanning, Prisma validation, linting, type checking, tests, builds, and formatting.
+
+### Changed
+
+- Updated Next.js and its ESLint configuration to the 16.2.11 security release.
+- Updated compatible transitive `fast-uri` and `brace-expansion` dependencies to patched releases.
 
 ### Deferred
 
