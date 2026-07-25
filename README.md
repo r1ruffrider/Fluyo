@@ -2,7 +2,7 @@
 
 Spanish that flows both ways.
 
-Fluyo is a TypeScript monorepo containing the product web application, backend API, shared contracts, and local platform infrastructure. Sprint 1 establishes the platform foundation. Sprint 2 adds Supabase Auth sessions, a server-verified identity boundary, password recovery, and a minimal self-owned profile. The current billing increments add a Forge-compatible billing foundation and secure Stripe Checkout initiation. Customer Portal, webhook synchronization, entitlement-gated product UI, AI, lessons, translation, and mobile applications remain deferred.
+Fluyo is a TypeScript monorepo containing the product web application, backend API, shared contracts, and local platform infrastructure. Sprint 1 establishes the platform foundation. Sprint 2 adds Supabase Auth sessions, a server-verified identity boundary, password recovery, and a minimal self-owned profile. The current billing increments add a Forge-compatible billing foundation, Stripe Checkout and Customer Portal handoffs, and signed webhook synchronization. Entitlement-gated product UI, AI, lessons, translation, and mobile applications remain deferred.
 
 ## Project Structure
 
@@ -62,9 +62,9 @@ The project must use Supabase asymmetric JWT signing keys. Do not add a service-
 
 In the Supabase Auth URL configuration, set the local site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL. Use the corresponding HTTPS URLs for each deployed environment.
 
-Billing is disabled by default. To enable Stripe Checkout, configure the server-only `STRIPE_SECRET_KEY`, `STRIPE_PRICE_FLUYO_PLUS_MONTHLY`, and `STRIPE_PRICE_FLUYO_PLUS_ANNUAL` values, then set `BILLING_ENABLED=true`. Checkout startup validation rejects missing or malformed values. Do not prefix any of these values with `NEXT_PUBLIC_`.
+Billing is disabled by default. To enable Stripe billing, configure the server-only `STRIPE_SECRET_KEY`, `STRIPE_PRICE_FLUYO_PLUS_MONTHLY`, `STRIPE_PRICE_FLUYO_PLUS_ANNUAL`, and `STRIPE_WEBHOOK_SECRET` values, then set `BILLING_ENABLED=true`. Startup validation rejects missing or malformed values. Do not prefix any of these values with `NEXT_PUBLIC_`.
 
-`STRIPE_PORTAL_CONFIGURATION_ID` optionally selects a server-owned Stripe Portal configuration; when omitted, Stripe uses the account default. `STRIPE_WEBHOOK_SECRET` remains reserved for the later webhook increment. Neither value is exposed to the browser.
+`STRIPE_PORTAL_CONFIGURATION_ID` optionally selects a server-owned Stripe Portal configuration; when omitted, Stripe uses the account default. The webhook signing secret must be the environment-specific secret for the configured endpoint or local Stripe CLI listener. Neither value is exposed to the browser.
 
 ## Local PostgreSQL
 
@@ -139,6 +139,7 @@ Local URLs use the values in `.env`:
 - Protected profile: `http://localhost:4000/api/v1/profiles/me`
 - Protected Checkout Session creation: `POST http://localhost:4000/api/v1/billing/checkout-sessions`
 - Protected Customer Portal Session creation: `POST http://localhost:4000/api/v1/billing/portal-sessions`
+- Signed Stripe webhook receiver: `POST http://localhost:4000/api/v1/billing/webhooks/stripe`
 
 The home page checks the service health endpoint on the server and displays whether the backend is reachable.
 
@@ -157,7 +158,7 @@ curl http://localhost:4000/api/v1/auth/me \
 
 Do not place tokens in documentation, shell history, logs, source files, or committed environment files. See [`docs/SECURITY.md`](docs/SECURITY.md) and [ADR 0001](docs/adr/0001-supabase-identity-boundary.md).
 
-## Stripe Billing, Checkout, and Customer Portal
+## Stripe Billing, Checkout, Customer Portal, and Webhooks
 
 The API contains private Prisma models and server-side services for Stripe customer mapping, normalized subscription projections, provider-neutral entitlements, processed-event idempotency, and an injectable plan catalog. The configured Fluyo Plus catalog entry maps monthly and annual choices to server-only Stripe Price IDs; no Price ID is accepted from the browser or committed to the repository.
 
@@ -165,7 +166,9 @@ Authenticated users can initiate Stripe-hosted subscription Checkout from `/pric
 
 Users with an existing server-owned Stripe Customer mapping can open Stripe Customer Portal from `/billing`. The API derives the Customer from the verified Supabase identity, applies only server configuration, and returns to the billing page. Stripe owns payment-method changes, invoices, subscription changes, and cancellations; Fluyo does not recreate those controls.
 
-Feature authorization must query active entitlement keys. Neither a profile tier, browser value, Checkout redirect, Portal return, nor Stripe Price ID grants access. Webhook synchronization and subscription-state UI remain later milestones. See [ADR 0003](docs/adr/0003-forge-compatible-billing-foundation.md).
+The Stripe webhook route verifies the `Stripe-Signature` header against the untouched raw request body before accepting an event. Supported Checkout, subscription, and invoice events refresh the current Stripe Subscription, then atomically synchronize customer ownership, the normalized subscription projection, provider-neutral entitlements, and the processed-event ledger. Replayed event IDs do not apply changes twice, and unsupported verified events return safely without mutating billing state.
+
+Feature authorization must query active entitlement keys. Neither a profile tier, browser value, Checkout redirect, Portal return, nor Stripe Price ID grants access. The webhook increment materializes entitlements but does not yet add product feature gates or subscription-state UI. See [ADR 0003](docs/adr/0003-forge-compatible-billing-foundation.md).
 
 ## Quality Commands
 

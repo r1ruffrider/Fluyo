@@ -10,7 +10,7 @@ import { AppModule } from "./app.module";
 import { ApiExceptionFilter } from "./common/errors/api-exception.filter";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   const config = app.get(ConfigService);
 
   app.useLogger(app.get(Logger));

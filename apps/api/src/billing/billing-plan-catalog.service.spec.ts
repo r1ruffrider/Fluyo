@@ -46,6 +46,14 @@ describe("BillingPlanCatalogService", () => {
       stripePriceId: "price_annual_placeholder",
     });
     expect(catalog.resolvePrice("missing", "monthly")).toBeNull();
+    expect(catalog.resolveStripePrice("price_monthly_placeholder")).toEqual({
+      plan: PLAN,
+      price: {
+        interval: "monthly",
+        stripePriceId: "price_monthly_placeholder",
+      },
+    });
+    expect(catalog.resolveStripePrice("price_unknown")).toBeNull();
   });
 
   it("requires monthly and annual prices for every configured paid plan", () => {
@@ -74,5 +82,18 @@ describe("BillingPlanCatalogService", () => {
           },
         ]),
     ).toThrow("invalid Stripe Price ID");
+  });
+
+  it("rejects a Stripe Price ID assigned to multiple plans", () => {
+    expect(
+      () =>
+        new BillingPlanCatalogService([
+          PLAN,
+          {
+            ...PLAN,
+            key: "second_plan",
+          },
+        ]),
+    ).toThrow("Stripe Price IDs must be unique");
   });
 });

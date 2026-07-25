@@ -10,11 +10,14 @@ import { stripeClientProvider } from "./stripe-client.provider";
 import { StripeCheckoutService } from "./stripe-checkout.service";
 import { StripeCustomerPortalService } from "./stripe-customer-portal.service";
 import { StripeCustomerMappingsService } from "./stripe-customer-mappings.service";
+import { StripeWebhookController } from "./stripe-webhook.controller";
 import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.service";
+import { StripeWebhookProcessorService } from "./stripe-webhook-processor.service";
+import { StripeWebhookService } from "./stripe-webhook.service";
 
 @Module({
   imports: [AuthModule, DatabaseModule],
-  controllers: [BillingController],
+  controllers: [BillingController, StripeWebhookController],
   providers: [
     billingPlanDefinitionsProvider,
     stripeClientProvider,
@@ -24,6 +27,8 @@ import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.s
     StripeCustomerPortalService,
     StripeCustomerMappingsService,
     StripeWebhookEventLedgerService,
+    StripeWebhookProcessorService,
+    StripeWebhookService,
   ],
   exports: [
     BillingPlanCatalogService,
@@ -32,6 +37,8 @@ import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.s
     StripeCustomerPortalService,
     StripeCustomerMappingsService,
     StripeWebhookEventLedgerService,
+    StripeWebhookProcessorService,
+    StripeWebhookService,
   ],
 })
 export class BillingModule {}

@@ -20,6 +20,7 @@ export function createLoggerConfig(): Params {
           "req.headers.authorization",
           "req.headers.apikey",
           "req.headers.cookie",
+          "req.headers.stripe-signature",
           "res.headers.set-cookie",
           "DATABASE_URL",
         ],

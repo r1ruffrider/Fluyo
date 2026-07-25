@@ -21,7 +21,7 @@ describe("StripeWebhookEventLedgerService", () => {
     await expect(service.hasProcessed("evt_placeholder")).resolves.toBe(true);
   });
 
-  it("records an event only after a future verified processor succeeds", async () => {
+  it("records an event for the verified processor's transaction", async () => {
     const prisma = createPrismaMock();
     prisma.stripeWebhookEvent.create.mockResolvedValue({ id: "evt_placeholder" });
     const service = new StripeWebhookEventLedgerService(prisma as unknown as PrismaService);

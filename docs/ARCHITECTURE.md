@@ -32,7 +32,7 @@ The database health route returns only `reachable` or `unreachable` and never re
 
 ### Incremental boundaries
 
-Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. The billing foundation added normalized data and service contracts; focused increments now provide Checkout initiation and Customer Portal handoff while webhook transport, synchronized subscription UI, AI, lessons, translation, and mobile applications remain separate milestones.
+Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. The billing foundation added normalized data and service contracts; focused increments now provide Checkout initiation, Customer Portal handoff, and signed webhook synchronization while subscription UI, feature gating, AI, lessons, translation, and mobile applications remain separate milestones.
 
 ## Identity and authorization — Sprint 2
 
@@ -85,7 +85,7 @@ Forge defines the proven billing architecture; Fluyo defines its own commercial 
 
 Forge's monetization implementation is the reference for Stripe Checkout, Customer Portal, signature verification, event idempotency, customer mapping, entitlement synchronization, server-side Price selection, and security boundaries. Fluyo may independently choose plan names, prices, packaging, trial length, promotion-code availability, free-tier limits, and feature gates.
 
-The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces. Checkout uses those interfaces for Stripe Customer mapping and server-controlled Price selection; Customer Portal reuses the mapping for Stripe-hosted self-service. Neither increment adds a webhook route or entitlement synchronization. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
+The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-billing-foundation.md). It establishes the shared normalized model and interfaces. Checkout uses those interfaces for Stripe Customer mapping and server-controlled Price selection; Customer Portal reuses the mapping for Stripe-hosted self-service; and the signed webhook processor makes Stripe authoritative for the local subscription and entitlement projection. Later billing PRs must preserve those boundaries and compare any model evolution with Forge before it ships.
 
 ### Provider responsibilities
 
@@ -127,6 +127,7 @@ The accepted foundation is recorded in [ADR 0003](adr/0003-forge-compatible-bill
 
 The Stripe webhook endpoint is the only path that turns Stripe billing events into local subscription state and entitlements.
 
+- `POST /api/v1/billing/webhooks/stripe` receives the raw request body without Supabase authentication; the Stripe signature is its authentication boundary.
 - Verify the Stripe signature against the unmodified request body before parsing or processing the event.
 - Record Stripe event IDs using the shared Forge event-ledger schema and process each event idempotently.
 - Handle the same event set as Forge, including Checkout completion, subscription creation/update/deletion, successful renewal, and failed payment events.
@@ -176,13 +177,22 @@ The Customer Portal increment adds:
 - Stripe Portal Session creation using an optional server-owned Portal configuration and fixed `/billing` return URL; and
 - a protected billing page with one handoff action instead of local subscription-management controls.
 
-The browser cannot supply Stripe Customer IDs, Price IDs, coupon IDs, success URLs, cancel URLs, or Portal return URLs. Checkout and Portal redirects are informational only and cannot mutate subscription or entitlement state. No webhook receiver, subscription synchronization, locally implemented billing management, or feature gate exists in these increments. The event ledger remains storage prepared for a later signed webhook processor; its presence does not claim that events are currently received.
+The Webhooks and Billing Synchronization increment adds:
+
+- raw-body signature verification at `POST /api/v1/billing/webhooks/stripe`;
+- explicit processing for Checkout completion, subscription creation/update/deletion, invoice payment, and invoice failure events;
+- safe acknowledgement of verified unsupported events;
+- current-subscription retrieval before projection updates to reduce stale and out-of-order delivery risk;
+- event-ledger replay protection; and
+- one Prisma transaction for customer ownership, subscription projection, entitlement synchronization, and the processed-event record.
+
+The browser cannot supply Stripe Customer IDs, Price IDs, coupon IDs, success URLs, cancel URLs, Portal return URLs, subscription state, or entitlement state. Checkout and Portal redirects are informational only and cannot mutate subscription or entitlement state. Webhooks now materialize normalized entitlements, but no locally implemented billing management, product feature gate, premium UI, lesson lock, or RevenueCat adapter exists in this increment.
 
 ### Entitlement rules
 
 - Gate paid features through a shared entitlement service or database function, not checks such as `subscription_tier === "pro"` distributed through UI components.
 - Entitlement keys are stable product capabilities. Stripe Price IDs and RevenueCat product IDs map to those keys at the billing boundary and do not leak into feature code.
-- `trialing`, `active`, and `past_due` subscription states grant access under the current shared policy. Other stored states do not grant access. Webhook synchronization will materialize this policy into entitlement rows in a later PR.
+- `trialing`, `active`, and `past_due` subscription states materialize active entitlement rows under the current shared policy. Other stored states cancel or expire the Stripe-sourced entitlement rows.
 - Bundle entitlements expand into the applicable product entitlements using the shared model. Fluyo may use this for plan bundles; Forge uses it for per-track and All-Access access.
 - The backend enforces entitlements for protected operations. The client may use the same state to hide or explain unavailable UI, but client checks are not security controls.
 

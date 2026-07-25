@@ -104,6 +104,10 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     if (!stripePriceFluyoPlusAnnual) {
       throw new Error("Missing required environment variable: STRIPE_PRICE_FLUYO_PLUS_ANNUAL");
     }
+
+    if (!stripeWebhookSecret) {
+      throw new Error("Missing required environment variable: STRIPE_WEBHOOK_SECRET");
+    }
   }
 
   for (const [name, priceId] of [
