@@ -73,7 +73,7 @@ Billing Foundation verification note (2026-07-20): Docker PostgreSQL 17 was heal
 
 - [x] Stripe Checkout creates subscription-mode sessions from the authenticated user, selected plan, and monthly/annual interval.
 - [x] Stripe Customer Portal sessions use the existing server-owned customer mapping.
-- [ ] A raw-body signed webhook processor synchronizes subscriptions and entitlements transactionally and idempotently.
+- [x] A raw-body signed webhook processor synchronizes subscriptions and entitlements transactionally and idempotently.
 - [ ] Subscription and entitlement UI displays synchronized state without granting access from redirects.
 - [ ] Live Stripe test-mode verification covers Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, and reconciliation.
 
@@ -81,7 +81,9 @@ Checkout implementation verification note (2026-07-21): server-controlled monthl
 
 Customer Portal implementation verification note (2026-07-21): authenticated endpoint enforcement, verified-owner Customer lookup, missing-customer rejection, fixed return URL selection, configured and default Stripe Portal behavior, safe provider failures, and protected billing-page compilation were verified by automated tests and production builds. No live Stripe Portal session or subscription mutation was performed or claimed.
 
-RevenueCat remains reserved for future native mobile applications. Checkout and Customer Portal now provide Stripe-hosted purchase and self-service handoffs; webhook transport, subscription synchronization, feature gating, and native billing remain unimplemented.
+Webhook implementation verification note (2026-07-25): automated tests verify raw-body Stripe signature acceptance and rejection, supported and unsupported event routing, current-subscription retrieval, subscription lifecycle normalization, invoice lifecycle routing, transactional customer/subscription/entitlement/ledger writes, replay suppression, entitlement revocation, and transaction failure propagation. Lint, strict type checking, 91 tests across 25 files, production builds, formatting, and `git diff --check` passed. The high-severity audit threshold currently reports 15 existing dependency advisories; the offered aggregate fix includes breaking dependency changes and was not applied in this focused billing PR. No live Stripe test-mode event delivery or purchase was performed or claimed; the broader live billing lifecycle check remains open.
+
+RevenueCat remains reserved for future native mobile applications. Checkout and Customer Portal provide Stripe-hosted purchase and self-service handoffs, and signed webhooks now synchronize the local billing projection. Feature gating, subscription experience, live billing lifecycle verification, and native billing remain unimplemented.
 
 ## Sprint 4 — User Dashboard
 

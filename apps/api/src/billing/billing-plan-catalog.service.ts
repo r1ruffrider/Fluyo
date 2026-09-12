@@ -18,6 +18,11 @@ export interface BillingPlanDefinition {
   promotionCodesAllowed: boolean;
 }
 
+export interface ResolvedBillingPlanPrice {
+  plan: BillingPlanDefinition;
+  price: BillingPlanPriceDefinition;
+}
+
 function requireUniqueValues(values: readonly string[], label: string): void {
   if (new Set(values).size !== values.length) {
     throw new Error(`${label} must be unique`);
@@ -65,6 +70,7 @@ function validatePlan(plan: BillingPlanDefinition): void {
 @Injectable()
 export class BillingPlanCatalogService {
   private readonly plansByKey: ReadonlyMap<string, BillingPlanDefinition>;
+  private readonly pricesByStripeId: ReadonlyMap<string, ResolvedBillingPlanPrice>;
 
   constructor(
     @Inject(BILLING_PLAN_DEFINITIONS)
@@ -76,6 +82,19 @@ export class BillingPlanCatalogService {
     );
     plans.forEach(validatePlan);
     this.plansByKey = new Map(plans.map((plan) => [plan.key, plan]));
+    const resolvedPrices = plans.flatMap((plan) =>
+      plan.prices.map((price) => ({
+        plan,
+        price,
+      })),
+    );
+    requireUniqueValues(
+      resolvedPrices.map(({ price }) => price.stripePriceId),
+      "Stripe Price IDs",
+    );
+    this.pricesByStripeId = new Map(
+      resolvedPrices.map((resolved) => [resolved.price.stripePriceId, resolved]),
+    );
   }
 
   listPublished(): PublishedBillingPlan[] {
@@ -98,5 +117,9 @@ export class BillingPlanCatalogService {
 
   resolvePlan(planKey: string): BillingPlanDefinition | null {
     return this.plansByKey.get(planKey) ?? null;
+  }
+
+  resolveStripePrice(stripePriceId: string): ResolvedBillingPlanPrice | null {
+    return this.pricesByStripeId.get(stripePriceId) ?? null;
   }
 }

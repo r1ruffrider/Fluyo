@@ -29,6 +29,7 @@ describe("validateEnvironment", () => {
         STRIPE_SECRET_KEY: TEST_STRIPE_SECRET_KEY,
         STRIPE_PRICE_FLUYO_PLUS_MONTHLY: TEST_MONTHLY_PRICE,
         STRIPE_PRICE_FLUYO_PLUS_ANNUAL: TEST_ANNUAL_PRICE,
+        STRIPE_WEBHOOK_SECRET: TEST_STRIPE_WEBHOOK_SECRET,
         STRIPE_PORTAL_CONFIGURATION_ID: "bpc_placeholder",
       }),
     ).toMatchObject({
@@ -76,7 +77,19 @@ describe("validateEnvironment", () => {
     ).toThrow("STRIPE_PRICE_FLUYO_PLUS_ANNUAL");
   });
 
-  it("validates optional future-provider configuration when supplied", () => {
+  it("requires signed webhook configuration when billing is enabled", () => {
+    expect(() =>
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        BILLING_ENABLED: "true",
+        STRIPE_SECRET_KEY: TEST_STRIPE_SECRET_KEY,
+        STRIPE_PRICE_FLUYO_PLUS_MONTHLY: TEST_MONTHLY_PRICE,
+        STRIPE_PRICE_FLUYO_PLUS_ANNUAL: TEST_ANNUAL_PRICE,
+      }),
+    ).toThrow("STRIPE_WEBHOOK_SECRET");
+  });
+
+  it("validates webhook and optional Portal configuration when supplied", () => {
     expect(() =>
       validateEnvironment({
         ...BASE_ENVIRONMENT,
