@@ -14,7 +14,7 @@
     "@fluyo/shared": "0.1.0",
     "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "2.110.7",
-    "next": "16.2.11",
+    "next": "16.3.3",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },
@@ -23,7 +23,7 @@
     "@types/node": "26.1.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "eslint-config-next": "16.2.11",
+    "eslint-config-next": "16.3.3",
     "tailwindcss": "4.3.2"
   }
 }

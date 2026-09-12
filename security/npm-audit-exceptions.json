@@ -1,58 +1,5 @@
 {
   "schemaVersion": 1,
   "minimumSeverity": "high",
-  "exceptions": [
-    {
-      "advisoryId": "GHSA-mh99-v99m-4gvg",
-      "package": "brace-expansion",
-      "severity": "high",
-      "vulnerableRange": "<=5.0.7",
-      "nodes": ["node_modules/brace-expansion"],
-      "installedVersions": ["1.1.16"],
-      "classification": "development-only",
-      "dependencyPath": "eslint and eslint-config-next plugins, plus @nestjs/cli -> fork-ts-checker-webpack-plugin -> minimatch@3.1.5 -> brace-expansion@1.1.16",
-      "attemptedRemediation": "Patched compatible brace-expansion 5.x copies; ESLint 10 remains unsupported by required plugins and current Nest CLI still pins the affected minimatch chain.",
-      "trackingIssue": "https://github.com/r1ruffrider/Fluyo/issues/8",
-      "expiresOn": "2026-08-31"
-    },
-    {
-      "advisoryId": "GHSA-6g55-p6wh-862q",
-      "package": "postcss",
-      "severity": "high",
-      "vulnerableRange": "<=8.5.11",
-      "nodes": ["node_modules/next/node_modules/postcss"],
-      "installedVersions": ["8.4.31"],
-      "classification": "production-build-time",
-      "dependencyPath": "next@16.2.11 -> postcss@8.4.31",
-      "attemptedRemediation": "Upgraded to the official Next.js 16.2.11 security release; that supported release still pins postcss 8.4.31.",
-      "trackingIssue": "https://github.com/r1ruffrider/Fluyo/issues/9",
-      "expiresOn": "2026-08-31"
-    },
-    {
-      "advisoryId": "GHSA-r28c-9q8g-f849",
-      "package": "postcss",
-      "severity": "high",
-      "vulnerableRange": "<=8.5.17",
-      "nodes": ["node_modules/next/node_modules/postcss"],
-      "installedVersions": ["8.4.31"],
-      "classification": "production-build-time",
-      "dependencyPath": "next@16.2.11 -> postcss@8.4.31",
-      "attemptedRemediation": "Upgraded to the official Next.js 16.2.11 security release; that supported release still pins postcss 8.4.31.",
-      "trackingIssue": "https://github.com/r1ruffrider/Fluyo/issues/9",
-      "expiresOn": "2026-08-31"
-    },
-    {
-      "advisoryId": "GHSA-f88m-g3jw-g9cj",
-      "package": "sharp",
-      "severity": "high",
-      "vulnerableRange": "<0.35.0",
-      "nodes": ["node_modules/sharp"],
-      "installedVersions": ["0.34.5"],
-      "classification": "production-optional",
-      "dependencyPath": "next@16.2.11 -> optional sharp@0.34.5",
-      "attemptedRemediation": "Upgraded to the official Next.js 16.2.11 security release; its supported sharp range remains ^0.34.5 and excludes patched 0.35.x.",
-      "trackingIssue": "https://github.com/r1ruffrider/Fluyo/issues/10",
-      "expiresOn": "2026-08-31"
-    }
-  ]
+  "exceptions": []
 }
