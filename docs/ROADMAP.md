@@ -74,8 +74,10 @@ Billing Foundation verification note (2026-07-20): Docker PostgreSQL 17 was heal
 - [x] Stripe Checkout creates subscription-mode sessions from the authenticated user, selected plan, and monthly/annual interval.
 - [x] Stripe Customer Portal sessions use the existing server-owned customer mapping.
 - [x] A raw-body signed webhook processor synchronizes subscriptions and entitlements transactionally and idempotently.
-- [ ] Subscription and entitlement UI displays synchronized state without granting access from redirects.
+- [x] Subscription and entitlement UI displays synchronized state without granting access from redirects.
 - [ ] Live Stripe test-mode verification covers Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, and reconciliation, including a real signed webhook delivery through the running application rather than test fixtures ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)).
+
+Subscription and entitlement UI verification note (2026-09-16): a protected `GET /api/v1/billing/status` endpoint reports the caller's normalized subscription summary and active entitlements, selecting the access-granting subscription when more than one local record exists and tie-breaking by the most recently updated record. The `/billing` page renders plan, status, renewal/trial/cancellation date, and entitlement keys purely from this server-verified response; it reads no query parameters and grants no access itself. Lint and strict type checking passed across all workspaces; the API workspace's 98 tests across 25 files (7 new), the shared workspace's 1 test, and 6 dependency-audit-policy tests all passed, and production builds succeeded. No live Stripe test-mode verification was performed or claimed; that item remains open.
 
 Checkout implementation verification note (2026-07-21): server-controlled monthly and annual catalog resolution, authenticated endpoint enforcement, Stripe Customer creation and reuse, subscription-mode Session construction, promotion-code configuration, safe provider failures, and pricing-page compilation were verified by automated tests and production builds. No live Stripe test-mode purchase was performed or claimed; the broader live billing lifecycle check remains open.
 
@@ -85,7 +87,7 @@ Webhook implementation verification note (2026-07-25): automated tests verify ra
 
 Dependency remediation note (2026-09-12): the 15 dependency advisories noted above, along with the four temporary exceptions carried since the billing-foundation PR, were resolved with real upgrades and `overrides` (Next.js to its 16.3.3 security release, plus scoped fixes for `sharp`, `postcss`, `brace-expansion`, `multer`, and `deepmerge-ts`) rather than by renewing or extending any exception. `security/npm-audit-exceptions.json` now holds zero exceptions. A second review of the webhook implementation traced the non-duplicate transaction-failure path to a genuine HTTP 500 (so Stripe retries rather than silently losing the event) and confirmed the webhook route's only protection is Stripe's own signature check, since this API applies auth guards per route and none is applied here. The one path still unverified is a real Stripe-signed delivery through the running application rather than a test fixture, tracked in [#12](https://github.com/r1ruffrider/Fluyo/issues/12).
 
-RevenueCat remains reserved for future native mobile applications. Checkout and Customer Portal provide Stripe-hosted purchase and self-service handoffs, and signed webhooks now synchronize the local billing projection. Feature gating, subscription experience, live billing lifecycle verification, and native billing remain unimplemented.
+RevenueCat remains reserved for future native mobile applications. Checkout and Customer Portal provide Stripe-hosted purchase and self-service handoffs, signed webhooks synchronize the local billing projection, and the status endpoint/UI expose it for display. Feature gating, subscription experience beyond the status summary, live billing lifecycle verification, and native billing remain unimplemented.
 
 ## Sprint 4 — User Dashboard
 

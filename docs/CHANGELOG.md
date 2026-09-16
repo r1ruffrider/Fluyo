@@ -23,6 +23,8 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - Authenticated Stripe Checkout session creation for monthly/annual plans and Stripe Customer Portal handoff using the existing server-owned customer mapping.
 - Raw-body signed Stripe webhook processor (`POST /api/v1/billing/webhooks/stripe`) making Stripe events the authoritative source for subscription and entitlement state: signature verification, checkout completion, subscription lifecycle, invoice lifecycle, transactional event-ledger idempotency, and concurrent replay protection.
 - Independent CI jobs for dependency auditing, committed-secret scanning, Prisma validation, linting, type checking, tests, builds, and formatting.
+- A protected `GET /api/v1/billing/status` endpoint reporting the caller's normalized subscription summary and active entitlements.
+- A `/billing` subscription-status card showing synchronized plan, status, renewal/trial/cancellation date, and entitlement keys without granting access from redirects.
 
 ### Changed
 
@@ -32,6 +34,6 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 
 ### Deferred
 
-- Social sign-in, MFA, expanded profiles, feature gating, subscription-experience UI, billing history, RevenueCat, mobile billing, AI, lessons, translation, and mobile applications.
+- Social sign-in, MFA, expanded profiles, feature gating, subscription-experience UI beyond the status summary, billing history, RevenueCat, mobile billing, AI, lessons, translation, and mobile applications.
 - Live Stripe test-mode verification of the full billing lifecycle, including a real signed webhook delivery through the running application rather than test fixtures ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)).
 - A scheduled (cron) re-run of the dependency-audit policy, independent of push/PR triggers.

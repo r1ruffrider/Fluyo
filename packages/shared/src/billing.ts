@@ -7,7 +7,21 @@ export const FLUYO_PLUS_PLAN_KEY = "fluyo_plus";
 export const BILLING_PATHS = {
   checkoutSessions: "/billing/checkout-sessions",
   portalSessions: "/billing/portal-sessions",
+  status: "/billing/status",
 } as const;
+
+export const BILLING_SUBSCRIPTION_STATUSES = [
+  "trialing",
+  "active",
+  "past_due",
+  "canceled",
+  "unpaid",
+  "incomplete",
+  "incomplete_expired",
+  "paused",
+] as const;
+
+export type BillingSubscriptionStatus = (typeof BILLING_SUBSCRIPTION_STATUSES)[number];
 
 export interface CreateCheckoutSessionRequest {
   planKey: string;
@@ -36,4 +50,20 @@ export interface ActiveEntitlement {
   key: string;
   startsAt: string | null;
   endsAt: string | null;
+}
+
+export interface BillingSubscriptionSummary {
+  planKey: string;
+  displayName: string;
+  status: BillingSubscriptionStatus;
+  billingInterval: BillingInterval;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  trialEnd: string | null;
+  accessGranted: boolean;
+}
+
+export interface BillingStatusResponse {
+  subscription: BillingSubscriptionSummary | null;
+  entitlements: ActiveEntitlement[];
 }

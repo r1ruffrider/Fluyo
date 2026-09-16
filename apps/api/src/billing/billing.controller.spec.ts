@@ -5,8 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupabaseJwtGuard } from "../auth/supabase-jwt.guard";
 import { SupabaseJwtService } from "../auth/supabase-jwt.service";
 import { BillingController } from "./billing.controller";
+import { EntitlementsService } from "./entitlements.service";
 import { StripeCheckoutService } from "./stripe-checkout.service";
 import { StripeCustomerPortalService } from "./stripe-customer-portal.service";
+import { SubscriptionStatusService } from "./subscription-status.service";
 
 const IDENTITY = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -28,6 +30,8 @@ describe("BillingController integration", () => {
     const createPortalSession = vi.fn().mockResolvedValue({
       url: "https://billing.stripe.com/p/session/example",
     });
+    const getCurrent = vi.fn().mockResolvedValue(null);
+    const listActive = vi.fn().mockResolvedValue([]);
     const moduleRef = await Test.createTestingModule({
       controllers: [BillingController],
       providers: [
@@ -38,6 +42,8 @@ describe("BillingController integration", () => {
           provide: StripeCustomerPortalService,
           useValue: { createSession: createPortalSession },
         },
+        { provide: SubscriptionStatusService, useValue: { getCurrent } },
+        { provide: EntitlementsService, useValue: { listActive } },
       ],
     }).compile();
 
@@ -55,8 +61,11 @@ describe("BillingController integration", () => {
     return {
       createCheckoutSession,
       createPortalSession,
+      getCurrent,
+      listActive,
       checkoutEndpoint: `http://127.0.0.1:${address.port}/billing/checkout-sessions`,
       portalEndpoint: `http://127.0.0.1:${address.port}/billing/portal-sessions`,
+      statusEndpoint: `http://127.0.0.1:${address.port}/billing/status`,
     };
   }
 
@@ -136,5 +145,54 @@ describe("BillingController integration", () => {
 
     expect(response.status).toBe(400);
     expect(fixture.createPortalSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects unauthenticated status requests", async () => {
+    const fixture = await startApplication(vi.fn());
+    const response = await fetch(fixture.statusEndpoint);
+
+    expect(response.status).toBe(401);
+    expect(fixture.getCurrent).not.toHaveBeenCalled();
+    expect(fixture.listActive).not.toHaveBeenCalled();
+  });
+
+  it("returns the verified caller's subscription and entitlement summary", async () => {
+    const verify = vi.fn().mockResolvedValue(IDENTITY);
+    const fixture = await startApplication(verify);
+    const subscription = {
+      planKey: "fluyo_plus",
+      displayName: "Fluyo Plus",
+      status: "active",
+      billingInterval: "monthly",
+      currentPeriodEnd: "2026-08-20T12:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      trialEnd: null,
+      accessGranted: true,
+    };
+    const entitlements = [{ key: "practice.unlimited", startsAt: null, endsAt: null }];
+    fixture.getCurrent.mockResolvedValue(subscription);
+    fixture.listActive.mockResolvedValue(entitlements);
+
+    const response = await fetch(fixture.statusEndpoint, {
+      headers: { authorization: "Bearer verified-token" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ subscription, entitlements });
+    expect(verify).toHaveBeenCalledWith("verified-token");
+    expect(fixture.getCurrent).toHaveBeenCalledWith(IDENTITY.id);
+    expect(fixture.listActive).toHaveBeenCalledWith(IDENTITY.id);
+  });
+
+  it("reports no subscription for a caller who never started billing", async () => {
+    const verify = vi.fn().mockResolvedValue(IDENTITY);
+    const fixture = await startApplication(verify);
+
+    const response = await fetch(fixture.statusEndpoint, {
+      headers: { authorization: "Bearer verified-token" },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ subscription: null, entitlements: [] });
   });
 });

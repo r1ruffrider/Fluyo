@@ -2,7 +2,7 @@
 
 ## Status
 
-Sprint 1 implements operational health endpoints. Sprint 2 adds the Supabase bearer-token identity boundary and protected current-identity and self-profile endpoints. The first Sprint 3 increment adds billing data and service foundations only; it adds no billing HTTP endpoints.
+Sprint 1 implements operational health endpoints. Sprint 2 adds the Supabase bearer-token identity boundary and protected current-identity and self-profile endpoints. Sprint 3 adds protected Stripe Checkout, Customer Portal, a signed webhook receiver, and a protected subscription/entitlement status endpoint.
 
 ## Conventions
 
@@ -143,8 +143,39 @@ Request body:
 
 `displayName` must be `null` or a trimmed string containing 1–80 characters. Unknown fields are rejected. The success response (`200 OK`) is the updated profile object shown above without the outer `profile` property.
 
+### `GET /billing/status`
+
+Returns the authenticated caller's current subscription summary and active entitlements. This endpoint is protected. It never grants access itself; it only reports the state already synchronized by the Stripe webhook processor.
+
+Request:
+
+```http
+GET /api/v1/billing/status HTTP/1.1
+Authorization: Bearer <access-token>
+```
+
+Success response (`200 OK`) for a caller with a subscription:
+
+```json
+{
+  "subscription": {
+    "planKey": "fluyo_plus",
+    "displayName": "Fluyo Plus",
+    "status": "active",
+    "billingInterval": "monthly",
+    "currentPeriodEnd": "2026-08-20T12:00:00.000Z",
+    "cancelAtPeriodEnd": false,
+    "trialEnd": null,
+    "accessGranted": true
+  },
+  "entitlements": [{ "key": "practice.unlimited", "startsAt": null, "endsAt": null }]
+}
+```
+
+`subscription` is `null` when the caller has never started billing. `status` is one of `trialing`, `active`, `past_due`, `canceled`, `unpaid`, `incomplete`, `incomplete_expired`, or `paused`. `accessGranted` mirrors the shared `trialing`/`active`/`past_due` access policy and is display data only; product features must still query active entitlements directly rather than trust this field or any client value. When a caller holds more than one local subscription record, the response reports the access-granting one, tie-broken by the most recently updated record. No Stripe customer, subscription, or Price identifier is returned.
+
 ## Future Billing APIs
 
-Checkout, Customer Portal, webhook intake, and subscription/entitlement summary endpoints are intentionally deferred to later focused Sprint 3 pull requests. When implemented, they must authenticate user-facing operations, select Stripe Prices from the server catalog, verify webhook signatures against the unmodified request body, and expose provider-neutral billing summaries rather than secrets or raw Stripe payloads.
+Live Stripe test-mode lifecycle verification remains open. Subscription-experience gating beyond this status summary, lessons, progress, translation, and AI endpoints are not part of the billing foundation.
 
-New APIs must follow `PLATFORM_STANDARDS.md`, include validation and safe error responses, and update this document. Lessons, progress, translation, and AI endpoints are not part of the billing foundation.
+New APIs must follow `PLATFORM_STANDARDS.md`, include validation and safe error responses, and update this document.
