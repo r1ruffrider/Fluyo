@@ -180,8 +180,11 @@ describe("BillingController integration", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ subscription, entitlements });
     expect(verify).toHaveBeenCalledWith("verified-token");
-    expect(fixture.getCurrent).toHaveBeenCalledWith(IDENTITY.id);
     expect(fixture.listActive).toHaveBeenCalledWith(IDENTITY.id);
+    // The controller must feed the caller's own fetched entitlements into
+    // subscription resolution, not call each service with independently
+    // arbitrary data: `accessGranted` depends on this wiring.
+    expect(fixture.getCurrent).toHaveBeenCalledWith(IDENTITY.id, entitlements);
   });
 
   it("reports no subscription for a caller who never started billing", async () => {
@@ -194,5 +197,6 @@ describe("BillingController integration", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ subscription: null, entitlements: [] });
+    expect(fixture.getCurrent).toHaveBeenCalledWith(IDENTITY.id, []);
   });
 });

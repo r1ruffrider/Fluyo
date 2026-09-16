@@ -1,10 +1,9 @@
-import type { BillingSubscriptionSummary } from "@fluyo/shared";
+import type { ActiveEntitlement, BillingSubscriptionSummary } from "@fluyo/shared";
 import type { BillingInterval, StripeSubscriptionStatus } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../database/prisma.service";
 import { BillingPlanCatalogService } from "./billing-plan-catalog.service";
-import { subscriptionGrantsAccess } from "./subscription-access";
 
 const STATUS_LABELS: Record<StripeSubscriptionStatus, BillingSubscriptionSummary["status"]> = {
   TRIALING: "trialing",
@@ -49,7 +48,10 @@ export class SubscriptionStatusService {
     private readonly catalog: BillingPlanCatalogService,
   ) {}
 
-  async getCurrent(userId: string): Promise<BillingSubscriptionSummary | null> {
+  async getCurrent(
+    userId: string,
+    entitlements: readonly ActiveEntitlement[],
+  ): Promise<BillingSubscriptionSummary | null> {
     const subscriptions = await this.prisma.stripeSubscription.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
@@ -79,7 +81,10 @@ export class SubscriptionStatusService {
       currentPeriodEnd: current.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: current.cancelAtPeriodEnd,
       trialEnd: current.trialEnd?.toISOString() ?? null,
-      accessGranted: subscriptionGrantsAccess(current.status),
+      // Sourced from the entitlement table, not `current.status`: the two
+      // can briefly diverge (webhook lag, a manual revocation), and
+      // entitlements are the authorization source of truth (ADR 0003).
+      accessGranted: entitlements.length > 0,
     };
   }
 

@@ -48,10 +48,8 @@ export class BillingController {
   async getStatus(
     @CurrentIdentity() identity: AuthenticatedIdentity,
   ): Promise<BillingStatusResponse> {
-    const [subscription, entitlements] = await Promise.all([
-      this.subscriptionStatus.getCurrent(identity.id),
-      this.entitlements.listActive(identity.id),
-    ]);
+    const entitlements = await this.entitlements.listActive(identity.id);
+    const subscription = await this.subscriptionStatus.getCurrent(identity.id, entitlements);
 
     return { subscription, entitlements };
   }
