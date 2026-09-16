@@ -1,5 +1,6 @@
 import {
   BILLING_PATHS,
+  type BillingStatusResponse,
   type CreateCheckoutSessionRequest,
   type CreateCheckoutSessionResponse,
   type CreatePortalSessionResponse,
@@ -60,4 +61,21 @@ export async function createPortalSession(accessToken: string): Promise<string> 
 
   const data = (await response.json()) as CreatePortalSessionResponse;
   return requireStripeUrl(data.url, "billing.stripe.com");
+}
+
+export async function fetchBillingStatus(accessToken: string): Promise<BillingStatusResponse> {
+  const response = await fetch(`${apiBaseUrl}${BILLING_PATHS.status}`, {
+    cache: "no-store",
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${accessToken}`,
+    },
+    signal: AbortSignal.timeout(2_500),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Billing status request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as BillingStatusResponse;
 }

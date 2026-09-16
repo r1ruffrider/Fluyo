@@ -14,6 +14,7 @@ import { StripeWebhookController } from "./stripe-webhook.controller";
 import { StripeWebhookEventLedgerService } from "./stripe-webhook-event-ledger.service";
 import { StripeWebhookProcessorService } from "./stripe-webhook-processor.service";
 import { StripeWebhookService } from "./stripe-webhook.service";
+import { SubscriptionStatusService } from "./subscription-status.service";
 
 @Module({
   imports: [AuthModule, DatabaseModule],
@@ -29,6 +30,7 @@ import { StripeWebhookService } from "./stripe-webhook.service";
     StripeWebhookEventLedgerService,
     StripeWebhookProcessorService,
     StripeWebhookService,
+    SubscriptionStatusService,
   ],
   exports: [
     BillingPlanCatalogService,
@@ -39,6 +41,7 @@ import { StripeWebhookService } from "./stripe-webhook.service";
     StripeWebhookEventLedgerService,
     StripeWebhookProcessorService,
     StripeWebhookService,
+    SubscriptionStatusService,
   ],
 })
 export class BillingModule {}
