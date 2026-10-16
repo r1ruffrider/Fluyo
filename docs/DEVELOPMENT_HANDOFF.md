@@ -5,10 +5,10 @@
 The original startup and billing blockers below were resolved later on October 16. The
 authenticated [issue #12 billing run](https://github.com/r1ruffrider/Fluyo/pull/19)
 and its [full evidence report](https://github.com/r1ruffrider/Fluyo/blob/codex/stripe-cancel-at-projection/docs/BILLING_VERIFICATION_2026-10-16.md)
-now show real test-mode Checkout, signed webhooks, Customer ownership, ACTIVE and TRIALING
-projection, payment failure and recovery, Portal cancellation, entitlement revocation, and
-duplicate-event handling. The test subscription was left CANCELED with no active grants.
-The configured monthly and annual Prices were both verified in the test account.
+now show real monthly and annual test-mode Checkout, a redeemed one-use promotion,
+signed webhooks, Customer ownership, ACTIVE and TRIALING projection, payment failure and
+recovery, Portal cancellation, entitlement revocation, and duplicate-event handling.
+Both test subscriptions were left CANCELED with no active grants.
 
 The API and PostgreSQL health endpoints return 200. Next.js 16.3.8 Turbopack later
 panicked on the first billing request in Windows, so the verified browser run uses
@@ -17,16 +17,16 @@ development default. [Draft PR #17](https://github.com/r1ruffrider/Fluyo/pull/17
 patches the critical shell-quote dependency; a separate high braces advisory remains
 without a patched upstream release. [Draft PR #19](https://github.com/r1ruffrider/Fluyo/pull/19)
 fixes scheduled-cancellation projection and the canceled date shown in billing.
-All four PRs remain draft and unmerged.
+[Draft PR #20](https://github.com/r1ruffrider/Fluyo/pull/20) corrects stale Checkout
+return copy and links to the current billing status. All five PRs remain draft and unmerged.
 
 Current local verification has 108 passing tests, with schema, lint, typecheck,
 formatting, production build, and production-only audit passing. The eight required CI
-jobs remain in place. Seven pass on each current PR; the full dependency-audit job
-fails on the inherited advisory or advisories. Marlon confirmed that `past_due`
-retains grace-period access under ADR 0003. Issue #12's conflicting wording was
-corrected; the issue remains open until draft PR #19's UI fix is merged. Annual Checkout,
-promotion redemption, automatic time-advanced renewal, and a second-user ownership
-attempt remain unattempted.
+jobs remain in place. Completed CI runs have seven passing jobs per PR; the full
+dependency audit fails on the inherited advisory or advisories. Marlon confirmed that
+`past_due` retains grace-period access under ADR 0003. Issue #12's conflicting wording
+was corrected; the issue remains open until draft PR #19's UI fix is merged. Automatic
+time-advanced renewal and a second-user ownership attempt remain unattempted.
 
 The sections below preserve the earlier startup checkpoint. Their billing blockers
 and initial Turbopack observation were superseded by the results above.
