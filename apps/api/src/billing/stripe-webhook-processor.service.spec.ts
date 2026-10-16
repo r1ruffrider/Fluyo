@@ -29,6 +29,7 @@ const PLAN: BillingPlanDefinition = {
 
 function subscription(
   overrides: Partial<{
+    cancelAt: number | null;
     canceledAt: number | null;
     status: Stripe.Subscription.Status;
   }> = {},
@@ -40,6 +41,7 @@ function subscription(
     metadata: { supabase_user_id: USER_ID, plan_key: PLAN.key },
     status: overrides.status ?? "active",
     cancel_at_period_end: false,
+    cancel_at: overrides.cancelAt ?? null,
     canceled_at: overrides.canceledAt ?? null,
     trial_end: null,
     items: {
@@ -181,6 +183,24 @@ describe("StripeWebhookProcessorService", () => {
     expect(transaction.stripeWebhookEvent.create).not.toHaveBeenCalled();
     expect(transaction.stripeSubscription.upsert).not.toHaveBeenCalled();
     expect(transaction.entitlement.upsert).not.toHaveBeenCalled();
+  });
+
+  it("projects a portal cancellation scheduled at the current period end", async () => {
+    const fixture = createFixture();
+
+    await fixture.service.process(
+      "evt_portal_cancel_fixture",
+      "customer.subscription.updated",
+      subscription({ cancelAt: PERIOD_END }),
+      OCCURRED_AT,
+    );
+
+    expect(fixture.transaction.stripeSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ cancelAtPeriodEnd: true }),
+        update: expect.objectContaining({ cancelAtPeriodEnd: true }),
+      }),
+    );
   });
 
   it("treats a concurrent ledger uniqueness conflict as replay protection", async () => {

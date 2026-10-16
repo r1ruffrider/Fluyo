@@ -61,6 +61,7 @@ describe("SubscriptionStatusService", () => {
       billingInterval: "monthly",
       currentPeriodEnd: "2026-08-20T12:00:00.000Z",
       cancelAtPeriodEnd: false,
+      canceledAt: null,
       trialEnd: null,
       accessGranted: true,
     });
@@ -75,6 +76,7 @@ describe("SubscriptionStatusService", () => {
         billingInterval: "ANNUAL",
         currentPeriodEnd: new Date("2026-08-20T12:00:00.000Z"),
         cancelAtPeriodEnd: true,
+        canceledAt: new Date("2026-08-16T12:00:00.000Z"),
         trialEnd: null,
       },
     ]);
@@ -86,6 +88,7 @@ describe("SubscriptionStatusService", () => {
     const result = await service.getCurrent(USER_ID, NO_ENTITLEMENTS);
 
     expect(result?.displayName).toBe("retired_plan");
+    expect(result?.canceledAt).toBe("2026-08-16T12:00:00.000Z");
     expect(result?.accessGranted).toBe(false);
   });
 

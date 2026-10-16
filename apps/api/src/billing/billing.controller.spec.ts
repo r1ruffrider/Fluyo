@@ -166,6 +166,7 @@ describe("BillingController integration", () => {
       billingInterval: "monthly",
       currentPeriodEnd: "2026-08-20T12:00:00.000Z",
       cancelAtPeriodEnd: false,
+      canceledAt: null,
       trialEnd: null,
       accessGranted: true,
     };
