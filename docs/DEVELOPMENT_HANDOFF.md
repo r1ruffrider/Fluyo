@@ -37,28 +37,37 @@ No migration, reseed, or database reset was needed.
 
 ## Verification results
 
-| Check                                        | Result      | Evidence / limitation                                                                        |
-| -------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
-| Clean lockfile install and Prisma generation | Passed      | `npm ci` completed                                                                           |
-| Shared-package build                         | Passed      | TypeScript build completed                                                                   |
-| API health                                   | Passed      | `GET /api/v1/health` returned 200                                                            |
-| PostgreSQL and API database health           | Passed      | Healthy Compose service; `GET /api/v1/health/database` returned 200                          |
-| Migration status and Prisma schema           | Passed      | Three migrations current; schema valid                                                       |
-| Browser startup                              | Passed      | Home and login rendered; backend available                                                   |
-| Lint and typecheck                           | Passed      | All workspaces                                                                               |
-| Tests                                        | Passed      | 6 audit-policy + 1 shared + 100 API tests; these are not live billing proof                  |
-| Production-only audit                        | Passed      | Zero vulnerabilities                                                                         |
-| Full audit and dependency policy             | Failed      | `shell-quote` critical advisory and `braces` high advisory; no exceptions added              |
-| Formatting on initial Windows checkout       | Failed      | 45 files flagged; CRLF checkout conflicts with existing LF policy, plus generated Next types |
-| Production build                             | Unattempted | Pending in this verification run                                                             |
-| Fresh committed secret scan                  | Unattempted | Pending draft PR CI                                                                          |
-| Unauthenticated billing status               | Passed      | HTTP 401 with safe error envelope                                                            |
-| Missing / invalid webhook signatures         | Passed      | Real HTTP requests returned 400 with safe errors                                             |
-| Stripe test configuration                    | Blocked     | Read-only price lookup returned HTTP 401 `api_key_expired`                                   |
-| Authenticated Fluyo flow                     | Blocked     | Available browser has no session; secure user sign-in requested                              |
+| Check                                        | Result                       | Evidence / limitation                                                           |
+| -------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| Clean lockfile install and Prisma generation | Passed                       | `npm ci` completed                                                              |
+| Shared-package build                         | Passed                       | TypeScript build completed                                                      |
+| API health                                   | Passed                       | `GET /api/v1/health` returned 200                                               |
+| PostgreSQL and API database health           | Passed                       | Healthy Compose service; `GET /api/v1/health/database` returned 200             |
+| Migration status and Prisma schema           | Passed                       | Three migrations current; schema valid                                          |
+| Browser startup                              | Passed                       | Home and login rendered; backend available                                      |
+| Lint and typecheck                           | Passed                       | All workspaces                                                                  |
+| Tests                                        | Passed                       | 6 audit-policy + 1 shared + 100 API tests; these are not live billing proof     |
+| Production-only audit                        | Passed                       | Zero vulnerabilities                                                            |
+| Full audit and dependency policy             | Failed                       | `shell-quote` critical advisory and `braces` high advisory; no exceptions added |
+| Formatting                                   | Passed after checkout repair | Exact committed LF bytes restored only for verified unchanged files             |
+| Production build                             | Passed                       | Shared, API and web builds passed with NODE_ENV=production                      |
+| Fresh committed secret scan                  | Unattempted                  | Pending draft PR CI                                                             |
+| Unauthenticated billing status               | Passed                       | HTTP 401 with safe error envelope                                               |
+| Missing / invalid webhook signatures         | Passed                       | Real HTTP requests returned 400 with safe errors                                |
+| Stripe test configuration                    | Blocked                      | Read-only price lookup returned HTTP 401 `api_key_expired`                      |
+| Authenticated Fluyo flow                     | Blocked                      | Available browser has no session; secure user sign-in requested                 |
 
 `.gitattributes` now declares LF checkouts to match `.editorconfig` and Prettier without reducing the
-formatting check. Existing CRLF files were not broadly rewritten. Next development generates
+formatting check. A broad rewrite was rejected by automatic approval review. Read-only comparison
+then proved each remaining failure was CRLF-only in an unchanged file. The approved repair restored
+exact HEAD bytes only when normalization matched HEAD and Prettier, rechecking before writing and
+skipping modified files. This produced no source-content diff.
+
+The first production build inherited development NODE_ENV from .env and failed prerendering;
+explicitly selecting production corrected it without an application change. Read-only baseline counts
+were zero for customer mappings, subscriptions, entitlements, and the webhook ledger.
+
+Next development generates
 `apps/web/AGENTS.md`, `apps/web/CLAUDE.md`, and changes `next-env.d.ts` to development type paths;
 these generated changes are not billing implementation changes.
 
