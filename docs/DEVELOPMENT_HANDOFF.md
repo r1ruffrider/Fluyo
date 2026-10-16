@@ -20,13 +20,20 @@ fixes scheduled-cancellation projection and the canceled date shown in billing.
 [Draft PR #20](https://github.com/r1ruffrider/Fluyo/pull/20) corrects stale Checkout
 return copy and links to the current billing status. All five PRs remain draft and unmerged.
 
-Current local verification has 108 passing tests, with schema, lint, typecheck,
+Current local verification has 110 passing tests, with schema, lint, typecheck,
 formatting, production build, and production-only audit passing. The eight required CI
 jobs remain in place. Completed CI runs have seven passing jobs per PR; the full
 dependency audit fails on the inherited advisory or advisories. Marlon confirmed that
 `past_due` retains grace-period access under ADR 0003. Issue #12's conflicting wording
-was corrected; the issue remains open until draft PR #19's UI fix is merged. Automatic
-time-advanced renewal and a second-user ownership attempt remain unattempted.
+was corrected; the issue remains open until draft PR #19's UI fix is merged.
+
+Automatic time-advanced renewal is blocked because Stripe test clocks attach to new
+Customers and the authenticated user already has a preserved Customer mapping. A
+second-user Checkout is blocked because only one confirmed non-production Supabase
+identity was available. PR #19 now includes focused ownership tests proving that
+conflicting Customer metadata and a second Customer for an already-mapped user roll
+back before subscription or entitlement writes. These two blocked matrix items are
+additional coverage and are not issue #12 acceptance criteria.
 
 Read-only audit reconciliation traced `braces@3.0.3` through
 `eslint-config-next@16.3.8` → `@next/eslint-plugin-next` → `fast-glob` →
