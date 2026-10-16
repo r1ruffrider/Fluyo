@@ -1,6 +1,37 @@
 # Development and billing verification handoff
 
-## Scope and reconciliation — 2026-10-16
+## Current result — 2026-10-16
+
+The original startup and billing blockers below were resolved later on October 16. The
+authenticated [issue #12 billing run](https://github.com/r1ruffrider/Fluyo/pull/19)
+and its [full evidence report](https://github.com/r1ruffrider/Fluyo/blob/codex/stripe-cancel-at-projection/docs/BILLING_VERIFICATION_2026-10-16.md)
+now show real test-mode Checkout, signed webhooks, Customer ownership, ACTIVE and TRIALING
+projection, payment failure and recovery, Portal cancellation, entitlement revocation, and
+duplicate-event handling. The test subscription was left CANCELED with no active grants.
+The configured monthly and annual Prices were both verified in the test account.
+
+The API and PostgreSQL health endpoints return 200. Next.js 16.3.8 Turbopack later
+panicked on the first billing request in Windows, so the verified browser run uses
+Webpack. [Draft PR #18](https://github.com/r1ruffrider/Fluyo/pull/18) makes that
+development default. [Draft PR #17](https://github.com/r1ruffrider/Fluyo/pull/17)
+patches the critical shell-quote dependency; a separate high braces advisory remains
+without a patched upstream release. [Draft PR #19](https://github.com/r1ruffrider/Fluyo/pull/19)
+fixes scheduled-cancellation projection and the canceled date shown in billing.
+All four PRs remain draft and unmerged.
+
+Current local verification has 108 passing tests, with schema, lint, typecheck,
+formatting, production build, and production-only audit passing. The eight required CI
+jobs remain in place. Seven pass on each current PR; the full dependency-audit job
+fails on the inherited advisory or advisories. Issue #12's request for no access in
+past_due conflicts with accepted ADR 0003, which grants grace-period access. A
+product decision is pending before treating that criterion as closed. Annual Checkout,
+promotion redemption, automatic time-advanced renewal, and a second-user ownership
+attempt remain unattempted.
+
+The sections below preserve the earlier startup checkpoint. Their billing blockers
+and initial Turbopack observation were superseded by the results above.
+
+## Initial scope and reconciliation — 2026-10-16
 
 Work is limited to reliable local startup and [issue #12](https://github.com/r1ruffrider/Fluyo/issues/12).
 No later sprint, production billing, deployment, or merge is authorized.
@@ -13,7 +44,7 @@ No later sprint, production billing, deployment, or merge is authorized.
   original jobs, with strict checks and administrator enforcement. This is historical CI evidence,
   not proof that a fresh audit passes today.
 
-## Startup findings and recovery
+## Initial startup findings and recovery
 
 The previous `npm ci` failed with `EPERM` while unlinking the Windows Lightning CSS native module.
 The incomplete install had no `node_modules/.bin/dotenv.cmd`; later `npx dotenv` attempts resolved
@@ -35,7 +66,7 @@ Docker Engine 29.6.1 then started. The existing `fluyo-postgres-1` container and
 `fluyo_postgres_data` volume were reused; PostgreSQL is healthy and all three migrations are current.
 No migration, reseed, or database reset was needed.
 
-## Verification results
+## Initial verification results (superseded where noted above)
 
 | Check                                        | Result                       | Evidence / limitation                                                           |
 | -------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
@@ -71,11 +102,11 @@ Next development generates
 `apps/web/AGENTS.md`, `apps/web/CLAUDE.md`, and changes `next-env.d.ts` to development type paths;
 these generated changes are not billing implementation changes.
 
-## Issue #12 lifecycle matrix
+## Initial issue #12 lifecycle matrix (superseded by linked report)
 
-All rows below remain **blocked / unattempted** until a valid local Stripe test key and an
-authenticated non-production Fluyo session are available. No real Checkout, subscription mutation,
-or signed provider delivery has been claimed.
+At this initial checkpoint, all rows below were **blocked / unattempted** because the
+local Stripe test key and authenticated session were not yet available. Later results appear
+in the linked billing report.
 
 | Scenario                      | Required evidence                                                                                                                                          |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -96,15 +127,13 @@ Issue #12's “past_due / no-access” wording conflicts with accepted ADR 0003:
 and `trialing` grant access under the shared policy. Verify `past_due` grace access separately from
 no-access states; do not change that policy without a product decision and the required ADR process.
 
-Code inspection also found that the current billing page uses renewal wording for an immediately
-canceled subscription and does not receive `canceledAt` in its summary contract. This is an
-unverified UI acceptance gap to reproduce during authenticated lifecycle testing, not a passed check.
+Code inspection at this checkpoint found that the billing page used renewal wording for an
+immediately canceled subscription and did not receive `canceledAt` in its summary contract.
+This gap was reproduced and fixed in draft PR #19.
 
-## Resume securely
+## Secure configuration used
 
-Replace only `STRIPE_SECRET_KEY` in ignored root `.env` with a valid test-mode key for the account
-holding the configured monthly and annual prices. Never paste the key into chat, logs, or a PR.
-Sign in through `http://localhost:3000/login` in the available browser; no password is required in chat.
-Recheck the test key and both prices before making test-mode mutations, then establish the signed
-listener and compare its secret in memory without printing either value. Root `.env.local` is not
-the source for `npm run dev`.
+The user updated the ignored root `.env` to a valid `sk_test_` key for the account holding
+the monthly and annual Prices. The user signed in through the local browser. The CLI listener
+forwarded to the local API, and its `whsec_` matched the server configuration without
+printing either value. Root `.env.local` is not the source for `npm run dev`.
