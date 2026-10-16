@@ -13,19 +13,20 @@ Both test subscriptions were left CANCELED with no active grants.
 The API and PostgreSQL health endpoints return 200. Next.js 16.3.8 Turbopack later
 panicked on the first billing request in Windows, so the verified browser run uses
 Webpack. [Draft PR #18](https://github.com/r1ruffrider/Fluyo/pull/18) makes that
-development default. [Draft PR #17](https://github.com/r1ruffrider/Fluyo/pull/17)
-patches the critical shell-quote dependency; a separate high braces advisory remains
-without a patched upstream release. [Draft PR #19](https://github.com/r1ruffrider/Fluyo/pull/19)
+development default. [PR #17](https://github.com/r1ruffrider/Fluyo/pull/17) merged
+the critical shell-quote patch and the authorized, time-boxed braces exception into
+main at `b1548087`. [Draft PR #19](https://github.com/r1ruffrider/Fluyo/pull/19)
 fixes scheduled-cancellation projection and the canceled date shown in billing.
 [Draft PR #20](https://github.com/r1ruffrider/Fluyo/pull/20) corrects stale Checkout
-return copy and links to the current billing status. All five PRs remain draft and unmerged.
+return copy and links to the current billing status. The four remaining PRs are
+draft and unmerged.
 
 Current local verification has 110 passing tests, with schema, lint, typecheck,
 formatting, production build, and production-only audit passing. The eight required CI
-jobs remain in place. Completed CI runs have seven passing jobs per PR; the full
-dependency audit fails on the inherited advisory or advisories. Marlon confirmed that
-`past_due` retains grace-period access under ADR 0003. Issue #12's conflicting wording
-was corrected; the issue remains open until draft PR #19's UI fix is merged.
+jobs remain in place, and all eight pass on each of the four remaining draft PRs after
+updating them from main. Marlon confirmed that `past_due` retains grace-period access
+under ADR 0003. Issue #12's conflicting wording was corrected; the issue remains open
+until draft PR #19's UI fix is merged.
 
 Automatic time-advanced renewal is blocked because Stripe test clocks attach to new
 Customers and the authenticated user already has a preserved Customer mapping. A
@@ -40,7 +41,10 @@ Read-only audit reconciliation traced `braces@3.0.3` through
 `micromatch`. The npm registry's latest `braces` release is still 3.0.3 and
 the advisory covers that version. npm's offered path downgrades
 `eslint-config-next` to 14.2.35, conflicting with pinned Next.js 16.3.8.
-No dependency install, security-policy exception, or check bypass was made.
+The exact development-only exception is tracked in
+[issue #21](https://github.com/r1ruffrider/Fluyo/issues/21), expires October 30,
+2026, and cannot extend automatically. No threshold reduction, broad suppression,
+or check bypass was made.
 
 The sections below preserve the earlier startup checkpoint. Their billing blockers
 and initial Turbopack observation were superseded by the results above.
