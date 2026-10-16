@@ -29,10 +29,15 @@ landing/                Existing standalone marketing landing page
 Install all workspace dependencies from the repository root:
 
 ```bash
-npm install
+npm ci
 ```
 
 The post-install step generates the Prisma client.
+
+Stop this checkout's development servers before reinstalling dependencies on Windows: a running
+server can lock native modules and leave `npm ci` incomplete. After an interrupted install, resolve
+the reported file lock and rerun one `npm ci` before starting either application. Do not run installs
+concurrently. The committed lockfile is the dependency baseline.
 
 ## Environment Setup
 
@@ -123,6 +128,16 @@ Start the API and web application together:
 ```bash
 npm run dev
 ```
+
+Run this command from the repository root. It builds the shared package and uses the installed
+`dotenv-cli` executable to load the root `.env` into both applications. Do not substitute
+`npx dotenv`: when the local CLI is missing, npm can resolve the `dotenv` library, which has no
+executable. Root `.env.local` is not loaded by this command. For local Stripe delivery, place the
+listener's matching signing secret in root `.env` and restart the API.
+
+Git checkout line endings follow `.gitattributes` and the existing LF formatting policy. See the
+[development and billing verification handoff](docs/DEVELOPMENT_HANDOFF.md) for current evidence
+and remaining issue #12 prerequisites.
 
 Local URLs use the values in `.env`:
 
