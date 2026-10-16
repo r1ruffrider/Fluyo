@@ -30,14 +30,18 @@ volume, and Stripe test mode only. No secret or Portal session URL is recorded h
 | Final cancellation     | Pass            | Immediately canceling the same test subscription produced signed `customer.subscription.deleted`. The DB stored CANCELED and all six Stripe entitlements became CANCELED. `/billing` showed CANCELED, the actual cancellation date, a no-access warning, and no active entitlement list. This PR adds the cancellation date to the status response and display.                                                                                                                                                              |
 | Replay and signature   | Pass            | Replaying the real Checkout event ID with a fresh valid local signature returned HTTP 200 with `duplicate: true`; event, subscription, and entitlement row counts did not change. Tampering with the signed body returned HTTP 400 with no row changes. The first delivery itself was Stripe-signed through the CLI listener.                                                                                                                                                                                                |
 | Annual and promotion   | Pass            | A second authenticated `/pricing` Checkout selected the configured annual Price. Stripe Checkout accepted a one-use 25% test promotion; the paid USD invoice had a $95.88 subtotal and $71.91 total. The completed Checkout Session, Stripe Customer, subscription metadata, local Customer mapping, annual Price, and user UUID matched. Signed Checkout and subscription-created events were in the local webhook ledger. `/billing` showed ACTIVE, billed annually, renewal on Oct 16, 2027, and six active entitlements. |
+| Ownership rejection    | Pass (unit)     | Focused processor tests now prove that a webhook transaction rolls back before subscription or entitlement writes when subscription metadata conflicts with the mapped Customer owner or when an already-mapped user is presented with a second Stripe Customer. The real Checkout path positively verified the matching ownership case.                                                                                                                                                                                     |
+| Automatic renewal      | Blocked         | The authenticated user already has a mapped Stripe Customer with no test clock. Stripe test clocks can be attached to new Customers and quotes, not retrofitted onto that existing Customer. A clock-based renewal would require replacing preserved ownership data or bypassing the authenticated Checkout flow, so it was not attempted.                                                                                                                                                                                   |
+| Cross-account Checkout | Blocked         | Only one confirmed non-production Supabase session was available. Creating or impersonating a second confirmed identity would require additional identity access. Positive real ownership and both negative ownership guards were verified without weakening that boundary.                                                                                                                                                                                                                                                  |
 
 Customer ownership was confirmed positively by matching Stripe subscription metadata, its Customer,
 the local Customer/subscription mapping, and the existing profile UUID. No Stripe entitlements
-belonged to another local user. A second-user cross-account Checkout was not exercised.
-The annual test promotion was redeemed once and became inactive under its one-use limit. A
-time-advanced automatic monthly renewal remains unattempted. The Stripe Customer Portal's
-period-end cancellation and immediate test-mode cancellation were exercised; no production
-billing was touched.
+belonged to another local user. The annual test promotion was redeemed once and became inactive
+under its one-use limit. Stripe documents that test clocks attach to
+[new Customers and quotes](https://docs.stripe.com/api/test_clocks/create), which is why the
+existing authenticated Customer could not be time-advanced without changing the preserved mapping.
+The Stripe Customer Portal's period-end cancellation and immediate test-mode cancellation were
+exercised; no production billing was touched.
 
 Both test subscriptions were left CANCELED with no active Stripe entitlements. After the annual
 Checkout check, immediate test-mode cancellation produced a signed update, the annual database
@@ -51,7 +55,7 @@ revoke the Stripe-sourced entitlements when the subscription becomes a no-access
 
 ## Repository checks and follow-up
 
-The local suite passed 108 tests, lint, typecheck, Prisma validation, production build, formatting,
+The local suite passed 110 tests, lint, typecheck, Prisma validation, production build, formatting,
 and a production-only audit with zero findings. The eight required CI jobs remain enabled. The
 full dependency audit on this PR fails on the inherited `braces` high-severity chain and critical
 `shell-quote` advisory. Draft PR #17 patches `shell-quote` separately, leaving the unpatched

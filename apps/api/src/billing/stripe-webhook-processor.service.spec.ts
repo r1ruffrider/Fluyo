@@ -203,6 +203,48 @@ describe("StripeWebhookProcessorService", () => {
     );
   });
 
+  it("rejects subscription metadata that conflicts with the Stripe Customer owner", async () => {
+    const transaction = createTransaction();
+    transaction.stripeCustomer.findUnique.mockResolvedValue({
+      userId: "22222222-2222-4222-8222-222222222222",
+    });
+    const fixture = createFixture(transaction);
+
+    await expect(
+      fixture.service.process(
+        "evt_customer_owner_mismatch",
+        "customer.subscription.updated",
+        subscription(),
+        OCCURRED_AT,
+      ),
+    ).rejects.toThrow("Stripe Customer ownership does not match subscription metadata");
+
+    expect(fixture.committed()).toBe(false);
+    expect(transaction.stripeSubscription.upsert).not.toHaveBeenCalled();
+    expect(transaction.entitlement.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a second Stripe Customer for an already-mapped user", async () => {
+    const transaction = createTransaction();
+    transaction.stripeCustomer.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ stripeCustomerId: "cus_existing_owner" });
+    const fixture = createFixture(transaction);
+
+    await expect(
+      fixture.service.process(
+        "evt_second_customer_fixture",
+        "customer.subscription.created",
+        subscription(),
+        OCCURRED_AT,
+      ),
+    ).rejects.toThrow("User is already mapped to a different Stripe Customer");
+
+    expect(fixture.committed()).toBe(false);
+    expect(transaction.stripeSubscription.upsert).not.toHaveBeenCalled();
+    expect(transaction.entitlement.upsert).not.toHaveBeenCalled();
+  });
+
   it("treats a concurrent ledger uniqueness conflict as replay protection", async () => {
     const fixture = createFixture();
     fixture.prismaMock.$transaction.mockRejectedValue(
