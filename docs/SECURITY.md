@@ -134,6 +134,24 @@ The policy currently has no scheduled (cron) re-run — it only evaluates on pus
 
 ## Future Security Work
 
+### Verification on 2026-10-16
+
+Fresh audit results differ from the earlier clean October checkpoint. The development dependency
+`shell-quote` 1.10.0 is affected by critical
+[GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-j6r4-53mv). The existing override is
+updated to compatible 1.12.0; the lockfile changes only that package. Next.js remains 16.3.8.
+
+The full audit still reports five high-severity findings in the `braces` dependency chain used by
+Next.js lint tooling ([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)).
+The advisory lists no patched release, and npm currently publishes 3.0.3 as latest. The suggested
+Next.js ESLint downgrade is a major-version change and was not applied. The unchanged audit policy
+keeps its High threshold. An exact-match, development-only exception tracks the public advisory in
+[issue #21](https://github.com/r1ruffrider/Fluyo/issues/21) and expires on October 30, 2026. It is not
+automatically extended: CI fails if the advisory, severity, vulnerable range, installed version, or
+dependency node changes, if the advisory disappears, or when the exception expires. Production-only
+audit reports zero vulnerabilities. This patch removes the critical finding and temporarily accepts
+only the unpatched lint-tooling finding.
+
 Before production launch, configure ingress rate limiting, alerting for repeated authentication failures, session and account-deletion retention behavior, profile and billing-data export/deletion handling, Stripe reconciliation, webhook replay operations, and a tested signing-key rotation procedure. Verify live webhook delivery through a real Stripe-signed payload ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)) and complete the broader live Stripe test-mode lifecycle check (Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, reconciliation) before accepting production billing traffic. Feature gating, subscription-experience UI, storage, AI, and mobile work still require their own threat-model updates and authorization tests. Add a scheduled re-run of the dependency-audit policy so a future exception's expiry cannot again go unnoticed between CI runs.
 
 ## Reporting
