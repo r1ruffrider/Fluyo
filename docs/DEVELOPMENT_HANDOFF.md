@@ -28,6 +28,13 @@ dependency audit fails on the inherited advisory or advisories. Marlon confirmed
 was corrected; the issue remains open until draft PR #19's UI fix is merged. Automatic
 time-advanced renewal and a second-user ownership attempt remain unattempted.
 
+Read-only audit reconciliation traced `braces@3.0.3` through
+`eslint-config-next@16.3.8` → `@next/eslint-plugin-next` → `fast-glob` →
+`micromatch`. The npm registry's latest `braces` release is still 3.0.3 and
+the advisory covers that version. npm's offered path downgrades
+`eslint-config-next` to 14.2.35, conflicting with pinned Next.js 16.3.8.
+No dependency install, security-policy exception, or check bypass was made.
+
 The sections below preserve the earlier startup checkpoint. Their billing blockers
 and initial Turbopack observation were superseded by the results above.
 
