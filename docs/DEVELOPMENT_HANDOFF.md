@@ -22,9 +22,9 @@ All four PRs remain draft and unmerged.
 Current local verification has 108 passing tests, with schema, lint, typecheck,
 formatting, production build, and production-only audit passing. The eight required CI
 jobs remain in place. Seven pass on each current PR; the full dependency-audit job
-fails on the inherited advisory or advisories. Issue #12's request for no access in
-past_due conflicts with accepted ADR 0003, which grants grace-period access. A
-product decision is pending before treating that criterion as closed. Annual Checkout,
+fails on the inherited advisory or advisories. Marlon confirmed that `past_due`
+retains grace-period access under ADR 0003. Issue #12's conflicting wording was
+corrected; the issue remains open until draft PR #19's UI fix is merged. Annual Checkout,
 promotion redemption, automatic time-advanced renewal, and a second-user ownership
 attempt remain unattempted.
 
@@ -123,9 +123,9 @@ in the linked billing report.
 | Out-of-order / reconciliation | Delayed real event retrieves current Stripe state and cannot revert it; distinguish replay of processed event from reconciliation                          |
 | Redirect independence         | Success/Portal return alone leaves database and grants unchanged                                                                                           |
 
-Issue #12's “past_due / no-access” wording conflicts with accepted ADR 0003: `past_due`, `active`,
-and `trialing` grant access under the shared policy. Verify `past_due` grace access separately from
-no-access states; do not change that policy without a product decision and the required ADR process.
+At this initial checkpoint, issue #12's “past_due / no-access” wording conflicted with accepted
+ADR 0003: `past_due`, `active`, and `trialing` grant access under the shared policy. Marlon later
+confirmed grace-period access and the issue wording was corrected.
 
 Code inspection at this checkpoint found that the billing page used renewal wording for an
 immediately canceled subscription and did not receive `canceledAt` in its summary contract.
