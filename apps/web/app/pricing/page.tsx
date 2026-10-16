@@ -42,8 +42,11 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
         ) : null}
         {checkout === "success" ? (
           <p className="mx-auto mt-8 max-w-xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center text-sm text-emerald-900">
-            Stripe completed Checkout. Subscription access will be synchronized by the later webhook
-            milestone.
+            View your current plan and access on{" "}
+            <Link className="font-bold underline" href="/billing">
+              Billing
+            </Link>
+            . Payment confirmation may take a moment.
           </p>
         ) : null}
 
