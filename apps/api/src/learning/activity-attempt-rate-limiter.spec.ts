@@ -12,27 +12,38 @@ describe("InMemoryActivityAttemptRateLimiter", () => {
     const limiter = new InMemoryActivityAttemptRateLimiter({ clock: () => now });
 
     for (let attempt = 0; attempt < ACTIVITY_ATTEMPT_RATE_LIMIT; attempt += 1) {
-      expect(limiter.checkAndConsume("user-a")).toEqual({ allowed: true });
+      expect(limiter.checkAndConsume("user-a", `key-${attempt}`)).toEqual({ allowed: true });
     }
 
-    expect(limiter.checkAndConsume("user-a")).toEqual({
+    expect(limiter.checkAndConsume("user-a", "new-key")).toEqual({
       allowed: false,
       retryAfterSeconds: 60,
     });
 
     now += ACTIVITY_ATTEMPT_RATE_WINDOW_MS;
-    expect(limiter.checkAndConsume("user-a")).toEqual({ allowed: true });
+    expect(limiter.checkAndConsume("user-a", "new-key")).toEqual({ allowed: true });
   });
 
   it("isolates limits by verified user ID", () => {
     const limiter = new InMemoryActivityAttemptRateLimiter({ limit: 1 });
 
-    expect(limiter.checkAndConsume("user-a")).toEqual({ allowed: true });
-    expect(limiter.checkAndConsume("user-a")).toEqual({
+    expect(limiter.checkAndConsume("user-a", "key-a")).toEqual({ allowed: true });
+    expect(limiter.checkAndConsume("user-a", "key-b")).toEqual({
       allowed: false,
       retryAfterSeconds: 60,
     });
-    expect(limiter.checkAndConsume("user-b")).toEqual({ allowed: true });
+    expect(limiter.checkAndConsume("user-b", "key-b")).toEqual({ allowed: true });
+  });
+
+  it("does not consume capacity twice for the same pending idempotency key", () => {
+    const limiter = new InMemoryActivityAttemptRateLimiter({ limit: 1 });
+
+    expect(limiter.checkAndConsume("user-a", "same-key")).toEqual({ allowed: true });
+    expect(limiter.checkAndConsume("user-a", "same-key")).toEqual({ allowed: true });
+    expect(limiter.checkAndConsume("user-a", "new-key")).toEqual({
+      allowed: false,
+      retryAfterSeconds: 60,
+    });
   });
 
   it("rejects invalid limiter configuration", () => {

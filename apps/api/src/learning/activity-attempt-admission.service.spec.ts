@@ -75,8 +75,8 @@ describe("ActivityAttemptAdmissionService", () => {
     expect(error).toBeInstanceOf(ApiDomainException);
     expect(error).toMatchObject({
       code: "rate_limited",
+      retryAfterSeconds: 11,
       safeDetails: { retryAfterSeconds: 11 },
-      safeHeaders: { "Retry-After": "11" },
     });
     expect((error as ApiDomainException).getStatus()).toBe(HttpStatus.TOO_MANY_REQUESTS);
   });
@@ -89,9 +89,75 @@ describe("ActivityAttemptAdmissionService", () => {
       checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
     } satisfies ActivityAttemptRateLimiter;
 
-    await expect(createService(replayStore, rateLimiter).admit(REQUEST)).resolves.toEqual({
-      kind: "new",
+    const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
+
+    expect(admission).toMatchObject({ kind: "provisional_new" });
+    expect(rateLimiter.checkAndConsume).toHaveBeenCalledWith(
+      REQUEST.userId,
+      REQUEST.idempotencyKey,
+    );
+  });
+
+  it("recovers the unique-key loser as a replay after concurrent provisional admission", async () => {
+    const stored = {
+      requestHash: REQUEST.requestHash,
+      response: { attemptId: "attempt-winner" },
+    };
+    const replayStore = {
+      findByOwnerAndKey: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(stored),
+    } satisfies ActivityAttemptReplayStore;
+    const rateLimiter = {
+      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+    } satisfies ActivityAttemptRateLimiter;
+    const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
+
+    expect(admission.kind).toBe("provisional_new");
+    if (admission.kind !== "provisional_new") {
+      throw new Error("Expected provisional admission");
+    }
+    await expect(admission.recoverUniqueKeyConflict()).resolves.toEqual({
+      kind: "replay",
+      response: stored.response,
     });
-    expect(rateLimiter.checkAndConsume).toHaveBeenCalledWith(REQUEST.userId);
+  });
+
+  it("recovers a concurrent changed-payload loser as an idempotency conflict", async () => {
+    const replayStore = {
+      findByOwnerAndKey: vi
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          requestHash: "different-request-hash",
+          response: { attemptId: "attempt-winner" },
+        }),
+    } satisfies ActivityAttemptReplayStore;
+    const rateLimiter = {
+      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+    } satisfies ActivityAttemptRateLimiter;
+    const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
+
+    if (admission.kind !== "provisional_new") {
+      throw new Error("Expected provisional admission");
+    }
+    await expect(admission.recoverUniqueKeyConflict()).rejects.toMatchObject({
+      code: "idempotency_conflict",
+    });
+  });
+
+  it("keeps a missing unique-key winner behind the internal error boundary", async () => {
+    const replayStore = {
+      findByOwnerAndKey: vi.fn().mockResolvedValue(null),
+    } satisfies ActivityAttemptReplayStore;
+    const rateLimiter = {
+      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+    } satisfies ActivityAttemptRateLimiter;
+    const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
+
+    if (admission.kind !== "provisional_new") {
+      throw new Error("Expected provisional admission");
+    }
+    await expect(admission.recoverUniqueKeyConflict()).rejects.toThrow(
+      "The winning idempotent activity attempt could not be loaded",
+    );
   });
 });

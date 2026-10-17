@@ -48,10 +48,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
           ? requestCorrelationId
           : randomUUID();
 
-    if (domainException) {
-      for (const [name, value] of Object.entries(domainException.safeHeaders)) {
-        response.setHeader(name, value);
-      }
+    if (domainException?.code === "rate_limited" && domainException.retryAfterSeconds !== null) {
+      response.setHeader("Retry-After", String(domainException.retryAfterSeconds));
     }
 
     response.setHeader("x-correlation-id", correlationId);

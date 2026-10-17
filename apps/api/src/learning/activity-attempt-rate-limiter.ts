@@ -7,7 +7,7 @@ export type ActivityAttemptRateLimitDecision =
   { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
 export interface ActivityAttemptRateLimiter {
-  checkAndConsume(userId: string): ActivityAttemptRateLimitDecision;
+  checkAndConsume(userId: string, idempotencyKey: string): ActivityAttemptRateLimitDecision;
 }
 
 interface InMemoryActivityAttemptRateLimiterOptions {
@@ -17,7 +17,10 @@ interface InMemoryActivityAttemptRateLimiterOptions {
 }
 
 export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLimiter {
-  private readonly attemptsByUser = new Map<string, number[]>();
+  private readonly attemptsByUser = new Map<
+    string,
+    Array<{ attemptedAt: number; idempotencyKey: string }>
+  >();
   private readonly clock: () => number;
   private readonly limit: number;
   private readonly windowMs: number;
@@ -36,17 +39,22 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
     }
   }
 
-  checkAndConsume(userId: string): ActivityAttemptRateLimitDecision {
+  checkAndConsume(userId: string, idempotencyKey: string): ActivityAttemptRateLimitDecision {
     const now = this.clock();
     this.sweepExpiredUsers(now);
 
     const cutoff = now - this.windowMs;
     const recentAttempts = (this.attemptsByUser.get(userId) ?? []).filter(
-      (attemptedAt) => attemptedAt > cutoff,
+      ({ attemptedAt }) => attemptedAt > cutoff,
     );
 
+    if (recentAttempts.some((attempt) => attempt.idempotencyKey === idempotencyKey)) {
+      this.attemptsByUser.set(userId, recentAttempts);
+      return { allowed: true };
+    }
+
     if (recentAttempts.length >= this.limit) {
-      const oldestAttempt = recentAttempts[0];
+      const oldestAttempt = recentAttempts[0]?.attemptedAt;
       if (oldestAttempt === undefined) {
         throw new Error("Rate limiter reached an invalid state");
       }
@@ -58,7 +66,7 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
       };
     }
 
-    recentAttempts.push(now);
+    recentAttempts.push({ attemptedAt: now, idempotencyKey });
     this.attemptsByUser.set(userId, recentAttempts);
     return { allowed: true };
   }
@@ -70,7 +78,7 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
 
     const cutoff = now - this.windowMs;
     for (const [userId, attempts] of this.attemptsByUser) {
-      if (!attempts.some((attemptedAt) => attemptedAt > cutoff)) {
+      if (!attempts.some(({ attemptedAt }) => attemptedAt > cutoff)) {
         this.attemptsByUser.delete(userId);
       }
     }

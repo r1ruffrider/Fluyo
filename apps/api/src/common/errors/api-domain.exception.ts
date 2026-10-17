@@ -23,32 +23,39 @@ export type ApiDomainErrorCode = keyof typeof API_DOMAIN_ERROR_DEFINITIONS;
 
 interface ApiDomainExceptionOptions {
   details?: Readonly<Record<string, unknown>>;
-  headers?: Readonly<Record<string, string>>;
+  retryAfterSeconds?: number;
 }
 
 export class ApiDomainException extends HttpException {
   readonly code: ApiDomainErrorCode;
+  readonly retryAfterSeconds: number | null;
   readonly safeDetails: Readonly<Record<string, unknown>>;
-  readonly safeHeaders: Readonly<Record<string, string>>;
   readonly safeMessage: string;
 
   constructor(code: ApiDomainErrorCode, options: ApiDomainExceptionOptions = {}) {
     const definition = API_DOMAIN_ERROR_DEFINITIONS[code];
     super(definition.message, definition.status);
+
+    if (code === "rate_limited") {
+      if (!Number.isInteger(options.retryAfterSeconds) || (options.retryAfterSeconds ?? 0) < 1) {
+        throw new Error("Retry-After must be a positive integer number of seconds");
+      }
+    } else if (options.retryAfterSeconds !== undefined) {
+      throw new Error("Retry-After is only valid for rate-limited errors");
+    }
+
     this.code = code;
-    this.safeDetails = options.details ?? {};
-    this.safeHeaders = options.headers ?? {};
+    this.retryAfterSeconds = options.retryAfterSeconds ?? null;
+    this.safeDetails =
+      code === "rate_limited"
+        ? { retryAfterSeconds: this.retryAfterSeconds }
+        : (options.details ?? {});
     this.safeMessage = definition.message;
   }
 }
 
 export function rateLimitedException(retryAfterSeconds: number): ApiDomainException {
-  if (!Number.isInteger(retryAfterSeconds) || retryAfterSeconds < 1) {
-    throw new Error("Retry-After must be a positive integer number of seconds");
-  }
-
   return new ApiDomainException("rate_limited", {
-    details: { retryAfterSeconds },
-    headers: { "Retry-After": String(retryAfterSeconds) },
+    retryAfterSeconds,
   });
 }

@@ -90,6 +90,22 @@ describe("ApiExceptionFilter", () => {
     );
   });
 
+  it("does not emit arbitrary properties as response headers", () => {
+    const fixture = createFixture();
+    const exception = new ApiDomainException("resource_not_found") as ApiDomainException & {
+      headers: Record<string, string>;
+    };
+    exception.headers = {
+      "Set-Cookie": "unsafe=value",
+      "Access-Control-Allow-Origin": "*",
+    };
+
+    new ApiExceptionFilter().catch(exception, fixture.host);
+
+    expect(fixture.headers.has("Set-Cookie")).toBe(false);
+    expect(fixture.headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
   it("keeps unknown conflict errors behind the generic boundary", () => {
     const fixture = createFixture();
 

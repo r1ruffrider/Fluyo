@@ -20,7 +20,18 @@ export interface ActivityAttemptReplayStore {
   ): Promise<StoredActivityAttemptReplay | null>;
 }
 
-export type ActivityAttemptAdmission = { kind: "new" } | { kind: "replay"; response: unknown };
+export type ActivityAttemptReplay = { kind: "replay"; response: unknown };
+
+export type ActivityAttemptAdmission =
+  | {
+      /**
+       * The downstream transaction must insert under the unique owner/idempotency-key constraint.
+       * If it loses that race, it must call this recovery before returning a response.
+       */
+      kind: "provisional_new";
+      recoverUniqueKeyConflict: () => Promise<ActivityAttemptReplay>;
+    }
+  | ActivityAttemptReplay;
 
 interface ActivityAttemptAdmissionRequest {
   idempotencyKey: string;
@@ -51,11 +62,31 @@ export class ActivityAttemptAdmissionService {
       return { kind: "replay", response: existing.response };
     }
 
-    const decision = this.rateLimiter.checkAndConsume(request.userId);
+    const decision = this.rateLimiter.checkAndConsume(request.userId, request.idempotencyKey);
     if (!decision.allowed) {
       throw rateLimitedException(decision.retryAfterSeconds);
     }
 
-    return { kind: "new" };
+    return {
+      kind: "provisional_new",
+      recoverUniqueKeyConflict: () => this.recoverUniqueKeyConflict(request),
+    };
+  }
+
+  private async recoverUniqueKeyConflict(
+    request: ActivityAttemptAdmissionRequest,
+  ): Promise<ActivityAttemptReplay> {
+    const winner = await this.replayStore.findByOwnerAndKey(request.userId, request.idempotencyKey);
+
+    if (!winner) {
+      // A real unique-key violation guarantees a committed winner. Missing data is an internal
+      // consistency failure and must stay behind the global generic-error boundary.
+      throw new Error("The winning idempotent activity attempt could not be loaded");
+    }
+    if (winner.requestHash !== request.requestHash) {
+      throw new ApiDomainException("idempotency_conflict");
+    }
+
+    return { kind: "replay", response: winner.response };
   }
 }
