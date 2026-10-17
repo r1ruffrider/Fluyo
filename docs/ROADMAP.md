@@ -75,7 +75,9 @@ Billing Foundation verification note (2026-07-20): Docker PostgreSQL 17 was heal
 - [x] Stripe Customer Portal sessions use the existing server-owned customer mapping.
 - [x] A raw-body signed webhook processor synchronizes subscriptions and entitlements transactionally and idempotently.
 - [x] Subscription and entitlement UI displays synchronized state without granting access from redirects.
-- [ ] Live Stripe test-mode verification covers Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, and reconciliation, including a real signed webhook delivery through the running application rather than test fixtures ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)).
+- [x] Live Stripe test-mode verification covers Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, and reconciliation, including a real signed webhook delivery through the running application rather than test fixtures ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)).
+
+Live Stripe test-mode verification note (2026-10-16): authenticated monthly and annual Checkout, a one-use promotion, real signed CLI webhook delivery, Customer ownership, subscription projection, entitlements, past-due grace behavior per ADR 0003, recovery, Portal cancellation, immediate cancellation, event replay/idempotency, signature rejection, and final access revocation were verified against the running application. Both test subscriptions were left canceled with no active grants. Automatic time-advanced renewal and a second confirmed Supabase identity were additional matrix items that remained unavailable without bypassing real ownership; they were not issue #12 acceptance blockers. Issue #12 was closed after PR #19 merged.
 
 Subscription and entitlement UI verification note (2026-09-16): a protected `GET /api/v1/billing/status` endpoint reports the caller's normalized subscription summary and active entitlements, selecting the access-granting subscription when more than one local record exists and tie-breaking by the most recently updated record. The `/billing` page renders plan, status, renewal/trial/cancellation date, and entitlement keys purely from this server-verified response; it reads no query parameters and grants no access itself. Lint and strict type checking passed across all workspaces; the API workspace's 98 tests across 25 files (7 new), the shared workspace's 1 test, and 6 dependency-audit-policy tests all passed, and production builds succeeded. No live Stripe test-mode verification was performed or claimed; that item remains open.
 
@@ -89,8 +91,49 @@ Dependency remediation note (2026-09-12): the 15 dependency advisories noted abo
 
 Dependency remediation verification note (2026-10-02): new advisories published after the September 16 CI run were removed with Next.js and `eslint-config-next` 16.3.8, `brace-expansion` 1.1.21/5.0.12, fast-uri 3.1.8, and Vitest 4.1.11. `@nestjs/platform-express` 11.2.7 declares patched Multer 2.4.0 directly, replacing the earlier Multer override while retaining compatible Nest 11 peers. A clean npm 11.13.0 install, Prisma generation/schema validation, all 107 tests, lint, typecheck, production builds, formatting, and HTTP smoke checks passed locally. Full and production-only audits report zero vulnerabilities, and the unchanged High-threshold policy accepts zero exceptions. Lockfile regeneration also refreshed compatible transitive releases; Stripe and React pins remain unchanged. The original baseline's `deepmerge-ts` override mismatch in Prisma tooling still appears in `npm ls --all` and was not changed by this remediation. No live Stripe or database verification was performed; [#12](https://github.com/r1ruffrider/Fluyo/issues/12) remains open, and no later sprint scope was started.
 
-RevenueCat remains reserved for future native mobile applications. Checkout and Customer Portal provide Stripe-hosted purchase and self-service handoffs, signed webhooks synchronize the local billing projection, and the status endpoint/UI expose it for display. Feature gating, subscription experience beyond the status summary, live billing lifecycle verification, and native billing remain unimplemented.
+RevenueCat remains reserved for future native mobile applications. Checkout and Customer Portal provide Stripe-hosted purchase and self-service handoffs, signed webhooks synchronize the local billing projection, and the status endpoint/UI expose it for display. Live Stripe test-mode lifecycle verification is complete. Feature gating, the product experience beyond the billing status summary, and native billing remain future work.
 
-## Sprint 4 — User Dashboard
+## Sprint 3.5 — Product Experience and Launch Readiness
 
-Planned: the authenticated product shell and first user-facing account experience, using the identity and entitlement boundaries established in Sprints 2 and 3.
+Goal: turn the completed identity and billing foundations into a locally reviewable product direction, an implementation-ready mobile/store plan, and measurable launch operations before product-domain schemas expand.
+
+- [ ] Replace internal foundation copy on the web home page with an honest learner-facing experience and working local CTAs.
+- [ ] Add a small, accessible language-learning interaction that demonstrates the intended product tone without claiming unimplemented AI behavior.
+- [ ] Add purposeful motion and local visual assets with reduced-motion support and no unlicensed media.
+- [ ] Complete the product-experience review, marketing plan, TikTok/Instagram plan, three-posts-per-day calendar, and UGC advertising plan.
+- [x] Accept ADR 0004 for native SwiftUI and Kotlin/Jetpack Compose applications before implementation.
+- [x] Approve the end-to-end iOS/App Store and Android/Google Play release plan, MVP scope, privacy inventory, account ownership, and quality gates.
+- [ ] Verify the localhost experience, responsive layouts, CTA destinations, reduced motion, claims, console, code quality, and all eight CI checks using the standing counted-test audit.
+
+## Sprint 4 — User Dashboard and Learning Domain
+
+Goal: deliver the authenticated product shell and canonical learning domain used by web and future mobile clients.
+
+- Define and implement lessons, activities, phrase decks, progress, streak, goals, and notification preferences with ownership and retention rules.
+- Provide the next activity, recent progress, subscription/access state, loading/empty/error states, and accessible navigation.
+- Add versioned API contracts, authorization failures, idempotent progress writes, pagination, migrations, telemetry, and end-to-end tests.
+- Do not mark complete until the dashboard and core progress loop pass real reload, failure, mobile-layout, accessibility, and cross-session tests.
+
+## Sprint 5 — Native Mobile Foundations
+
+Goal: establish installable authenticated iOS and Android applications after ADR 0004 is accepted.
+
+- Create SwiftUI and Kotlin/Compose projects with development, staging, and production configurations.
+- Implement Supabase PKCE, secure token storage, universal/App Links, API clients, design tokens, localization, accessibility, telemetry, feature flags, and CI-signed internal builds.
+- Reserve production identifiers and complete store-account, privacy, signing, and compliance prerequisites.
+
+## Sprint 6 — Core Learning MVP
+
+Goal: ship onboarding, dashboard, short lessons, phrase review, progress synchronization, audio controls, safe offline behavior, and notification preferences across web, iOS, and Android.
+
+## Sprint 7 — Conversation and Interpreter Betas
+
+Goal: add server-controlled, evaluated Charla conversations and a remotely gated two-way interpreter beta with explicit recording state, privacy controls, latency/cost thresholds, and kill switches.
+
+## Sprint 8 — Native Commerce and Store Launch
+
+Goal: map App Store and Play subscriptions through RevenueCat into the existing entitlement model, complete sandbox lifecycle matrices, pass store/privacy/accessibility review gates, and release through TestFlight and Play closed testing before staged production rollout.
+
+## Later phases
+
+Video translation/dubbing, tutors, social exchange, dialects, broader offline packs, classroom/B2B, certification, music, widgets, and wearables follow only after the core learning, reliability, privacy, unit economics, and retention gates are met.
