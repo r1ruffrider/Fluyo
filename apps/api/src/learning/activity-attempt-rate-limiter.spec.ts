@@ -105,6 +105,24 @@ describe("InMemoryActivityAttemptRateLimiter", () => {
     });
   });
 
+  it("does not let a stale lease settle a replacement generation", () => {
+    let now = 0;
+    const limiter = new InMemoryActivityAttemptRateLimiter({
+      clock: () => now,
+      limit: 1,
+      windowMs: 10,
+    });
+    const staleLease = expectAllowed(limiter.checkAndConsume("user-a", "same-key"));
+
+    now = 10;
+    const replacementLease = expectAllowed(limiter.checkAndConsume("user-a", "same-key"));
+    staleLease.fail();
+    const concurrentReplacementLease = expectAllowed(limiter.checkAndConsume("user-a", "same-key"));
+
+    replacementLease.complete();
+    concurrentReplacementLease.complete();
+  });
+
   it("rejects invalid limiter configuration", () => {
     expect(() => new InMemoryActivityAttemptRateLimiter({ limit: 0 })).toThrow(
       "Activity attempt rate limit must be a positive integer",

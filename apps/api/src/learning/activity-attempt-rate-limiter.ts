@@ -22,12 +22,14 @@ interface InMemoryActivityAttemptRateLimiterOptions {
   windowMs?: number;
 }
 
+interface InFlightActivityAttemptReservation {
+  expiresAt: number;
+  reservations: number;
+}
+
 export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLimiter {
   private readonly attemptsByUser = new Map<string, number[]>();
-  private readonly inFlightByOwnerAndKey = new Map<
-    string,
-    { expiresAt: number; reservations: number }
-  >();
+  private readonly inFlightByOwnerAndKey = new Map<string, InFlightActivityAttemptReservation>();
   private readonly clock: () => number;
   private readonly limit: number;
   private readonly windowMs: number;
@@ -60,7 +62,7 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
     if (inFlight && inFlight.expiresAt > now) {
       inFlight.reservations += 1;
       this.attemptsByUser.set(userId, recentAttempts);
-      return { allowed: true, lease: this.createLease(ownerAndKey) };
+      return { allowed: true, lease: this.createLease(ownerAndKey, inFlight) };
     }
 
     if (recentAttempts.length >= this.limit) {
@@ -78,14 +80,21 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
 
     recentAttempts.push(now);
     this.attemptsByUser.set(userId, recentAttempts);
-    this.inFlightByOwnerAndKey.set(ownerAndKey, {
+    const inFlightReservation = {
       expiresAt: now + this.windowMs,
       reservations: 1,
-    });
-    return { allowed: true, lease: this.createLease(ownerAndKey) };
+    };
+    this.inFlightByOwnerAndKey.set(ownerAndKey, inFlightReservation);
+    return {
+      allowed: true,
+      lease: this.createLease(ownerAndKey, inFlightReservation),
+    };
   }
 
-  private createLease(ownerAndKey: string): ActivityAttemptRateLimitLease {
+  private createLease(
+    ownerAndKey: string,
+    generation: InFlightActivityAttemptReservation,
+  ): ActivityAttemptRateLimitLease {
     let settled = false;
     const settle = (): void => {
       if (settled) {
@@ -93,12 +102,15 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
       }
       settled = true;
 
-      const inFlight = this.inFlightByOwnerAndKey.get(ownerAndKey);
-      if (!inFlight || inFlight.reservations <= 1) {
+      const currentGeneration = this.inFlightByOwnerAndKey.get(ownerAndKey);
+      if (currentGeneration !== generation) {
+        return;
+      }
+      if (generation.reservations <= 1) {
         this.inFlightByOwnerAndKey.delete(ownerAndKey);
         return;
       }
-      inFlight.reservations -= 1;
+      generation.reservations -= 1;
     };
 
     return { complete: settle, fail: settle };
