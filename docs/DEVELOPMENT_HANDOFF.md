@@ -10,10 +10,11 @@ protection:
 - PR #23, launch marketing and native mobile release plans: `f34836f28eb14e731136835ed67d0003af974890`
 - PR #24, playful learner-facing phrase sprint: `4870a957f69da07706522333bffac7728f97e61c`
 
-PR #24 passed the standing phase audit with 58 counted tests: 54 passed initially, four diagnostic
-failures were fixed and passed on retest, and no failures remained. After PR #23 merged, PR #24 was
-updated from `main`; the new exact head `4fd9ce8775a9eb46ddc93a36bcf450d632b33803` then passed all
-eight protected CI checks before merge. The localhost experience remains available at
+PR #24's standing phase audit counted 58 executions: 54 passed and four pre-fix or diagnostic checks
+failed; all four affected areas subsequently passed retests included in the 54 passes, leaving no
+blocker. After PR #23 merged, PR #24 was updated from `main`; the new exact head
+`4fd9ce8775a9eb46ddc93a36bcf450d632b33803` then passed all eight protected CI checks before merge.
+The localhost experience remains available at
 `http://localhost:3000` for review. No production deployment, store publication, production billing,
 or advertising spend occurred.
 
