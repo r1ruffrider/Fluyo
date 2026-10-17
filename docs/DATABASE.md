@@ -69,7 +69,10 @@ npm run db:migrate
 npm run db:seed
 ```
 
-The seed is idempotent and upserts one record with key `platform.foundation`.
+The seed is idempotent. It upserts the `platform.foundation` record plus one free starter lesson,
+three immutable phrase-choice activity versions, one four-phrase English/Spanish deck, and the
+lesson/deck membership. Re-running the seed does not create duplicate catalog rows or mutate a
+published activity version.
 
 ## Sprint 4 Learning Domain
 

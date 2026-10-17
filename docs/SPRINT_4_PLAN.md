@@ -66,7 +66,7 @@ Each increment uses a short-lived branch and draft PR. Every exact PR head must 
 1. [x] **Contract and decision:** accept ADR 0005, this plan, endpoint shapes, states, and retention rules.
 2. [x] **API error and abuse boundary:** add allowlisted domain errors, safe filter mappings, the attempt-rate-limiter interface/local adapter, `Retry-After`, and focused 404/409/429 tests.
 3. [x] **Schema and shared types:** add reviewed Prisma migration, stable activities plus immutable versions, catalog/progress models, enum mappings, constraints, indexes, shared contracts, and schema tests. Do not seed or expose UI yet.
-4. **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
+4. [x] **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
 5. **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, UTC preference bootstrap, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
 6. **Lifecycle and observability:** add the learning-data export/delete service hooks, privacy-safe event/metric contract, and complete/rollback/isolation/telemetry tests.
 7. **Dashboard UI:** add `/dashboard`, session return routing, responsive states, real API wiring, accessible activity flow, and honest error/retry behavior.

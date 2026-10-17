@@ -8,19 +8,22 @@ replay-first attempt admission, and local 30-per-60-second limiter. Adriana's fi
 tests/checks, all passed; PR #27 merged as `9d3554436efef752c2dfbe196ea0d32ac0fc0b90`, and all eight
 post-merge `main` checks passed.
 
-[Draft PR #28](https://github.com/r1ruffrider/Fluyo/pull/28) is the isolated schema/shared-types
-increment. It adds the versioned catalog and owned learning projections without seeding content or
-registering routes. All five migrations apply from an empty PostgreSQL database. The two additive
-learning migrations also applied to the preserved development database without changing existing
-counts: one profile, one Stripe customer, two subscriptions, six entitlements, 20 webhook events,
-and one system metadata row. API and database health remained 200. Local validation passed the audit
-policy, Prisma schema, lint, typecheck, 140 tests, production build, formatting, and diff check; the
-required GitHub committed-secret scan and remaining CI jobs must pass on the exact PR head before
-Adriana's delegated merge gate.
+PR #28 added the versioned catalog and owned learning projections and merged as
+`e223f69b1604d40d5e8103e03fd1644d29ef5cfc`. Its forward-only migrations passed from an empty
+database and on the preserved development database without changing existing billing/profile counts.
+Adriana's exact-head audit counted 179 tests/checks, all passed, and all eight post-merge `main`
+checks passed.
 
-The next increment is server-managed starter catalog content and protected paginated read APIs. It
-must not begin until PR #28 receives a PASS audit and merges. The primary checkout's local changes,
-stashes, credentials, and database contents remain preserved.
+Sprint 4 increment 4 adds idempotent server-managed starter catalog content and protected,
+cursor-paginated lesson and phrase-deck reads. Local validation passed the audit policy, Prisma
+schema, lint, typecheck, 149 tests, production build, formatting, and diff check. Running the seed
+twice preserved exact catalog counts (one lesson, three activities and immutable versions, one deck,
+four phrases, and one lesson/deck membership). A read-only database smoke returned the complete
+starter catalog without validation or answer fields. An isolated built API on port 4001 returned 200
+for health and 401 for unauthenticated catalog requests; it was stopped after verification. The
+existing services on ports 3000 and 4000 remain untouched. The exact PR head still requires the eight
+GitHub checks and Adriana's counted phase audit before her delegated merge gate. The primary
+checkout's local changes, stashes, credentials, and database contents remain preserved.
 
 ## Sprint 3.5 completion — 2026-10-17
 
