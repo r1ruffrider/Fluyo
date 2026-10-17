@@ -17,7 +17,7 @@ function CheckoutButton() {
       disabled={pending}
       type="submit"
     >
-      {pending ? "Opening secure checkout..." : "Upgrade with Stripe"}
+      {pending ? "Opening test checkout..." : "Try Stripe test checkout"}
     </button>
   );
 }
@@ -50,7 +50,7 @@ export function PricingCard() {
       </div>
 
       <p className="mt-7 text-xs font-bold uppercase tracking-[0.18em] text-[#ef4d4d]">
-        Fluyo Plus
+        Fluyo Plus · Test mode
       </p>
       <div className="mt-3 flex items-end gap-2">
         <span className="text-5xl font-black tracking-[-0.055em]">
@@ -62,14 +62,14 @@ export function PricingCard() {
         <p className="mt-2 text-sm font-bold text-emerald-700">Equivalent to $7.99 per month</p>
       ) : null}
       <p className="mt-5 leading-7 text-[#15123a]/65">
-        Unlimited daily practice, full review tools, offline packs, and the complete Fluyo learning
-        experience.
+        Demonstrate the real subscription lifecycle without presenting roadmap learning features as
+        available today.
       </p>
       <ul className="mt-6 list-disc space-y-3 pl-5 text-sm font-semibold text-[#15123a]/75">
-        <li>Unlimited lessons and Charla practice</li>
-        <li>Full grammar and spaced-repetition review</li>
-        <li>Offline packs and camera translation</li>
-        <li>Promotion codes accepted in secure Checkout</li>
+        <li>Monthly or annual Stripe test Checkout</li>
+        <li>Promotion-code support when configured</li>
+        <li>Signed webhook billing projection</li>
+        <li>Server-verified subscription status</li>
       </ul>
 
       <form action={action}>
@@ -85,7 +85,7 @@ export function PricingCard() {
         </p>
       ) : null}
       <p className="mt-4 text-center text-xs leading-5 text-[#15123a]/45">
-        Stripe securely handles payment details. Fluyo never receives your card number.
+        Use Stripe test payment details only. This local preview does not enable unreleased lessons.
       </p>
     </section>
   );
