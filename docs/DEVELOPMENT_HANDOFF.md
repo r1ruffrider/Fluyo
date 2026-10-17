@@ -1,5 +1,27 @@
 # Development and billing verification handoff
 
+## Sprint 4 checkpoint — 2026-10-18
+
+ADR 0005 and the Sprint 4 implementation plan are accepted. PR #26 recorded the contract and merged
+as `ceefdc0edeb2b8dd77b86f32c2a7acdc1d13fcaa`. PR #27 added the safe learning error boundary,
+replay-first attempt admission, and local 30-per-60-second limiter. Adriana's final audit counted 140
+tests/checks, all passed; PR #27 merged as `9d3554436efef752c2dfbe196ea0d32ac0fc0b90`, and all eight
+post-merge `main` checks passed.
+
+[Draft PR #28](https://github.com/r1ruffrider/Fluyo/pull/28) is the isolated schema/shared-types
+increment. It adds the versioned catalog and owned learning projections without seeding content or
+registering routes. All five migrations apply from an empty PostgreSQL database. The two additive
+learning migrations also applied to the preserved development database without changing existing
+counts: one profile, one Stripe customer, two subscriptions, six entitlements, 20 webhook events,
+and one system metadata row. API and database health remained 200. Local validation passed the audit
+policy, Prisma schema, lint, typecheck, 140 tests, production build, formatting, and diff check; the
+required GitHub committed-secret scan and remaining CI jobs must pass on the exact PR head before
+Adriana's delegated merge gate.
+
+The next increment is server-managed starter catalog content and protected paginated read APIs. It
+must not begin until PR #28 receives a PASS audit and merges. The primary checkout's local changes,
+stashes, credentials, and database contents remain preserved.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.
