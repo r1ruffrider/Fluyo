@@ -71,6 +71,45 @@ npm run db:seed
 
 The seed is idempotent and upserts one record with key `platform.foundation`.
 
+## Sprint 4 Learning Domain
+
+The migrations `20261017233723_create_learning_domain` and
+`20261018000000_enforce_learning_publication` add the server-owned catalog, user-owned learning
+records, and publication invariants accepted in ADR 0005. They do not seed catalog content or expose
+new routes by themselves.
+
+| Table                      | Responsibility                                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `lessons`                  | Ordered, archivable lesson metadata with an optional provider-neutral entitlement requirement.      |
+| `activities`               | Stable activity identity and the pointer to its currently published immutable content version.      |
+| `activity_versions`        | Versioned prompt, choices, feedback, and server-only validation data.                               |
+| `phrase_decks`, `phrases`  | Reusable bilingual phrase content with deterministic deck ordering.                                 |
+| `lesson_phrase_decks`      | Ordered many-to-many lesson/deck membership.                                                        |
+| `activity_attempts`        | Append-only owned results and the response source for retry-safe idempotent replay.                 |
+| `lesson_progress`          | One owned lesson projection with completed stable activity IDs and a same-lesson next activity.     |
+| `practice_days`            | One owned local-date projection used for daily totals and streak calculation.                       |
+| `learning_goals`           | One owned daily target constrained to 1–20 completed activities.                                    |
+| `learning_preferences`     | One owned IANA timezone preference, defaulting to `UTC` when created.                               |
+| `notification_preferences` | One owned practice-reminder toggle and local time; storage does not imply that delivery is enabled. |
+
+Supabase remains the identity system of record. Learning `user_id` columns contain the verified JWT
+subject and intentionally have no foreign key to `user_profiles` or Supabase's internal Auth schema.
+Catalog writes remain server-only. Browser and future mobile contracts omit answer-validation data,
+request hashes, stored replay payloads, owner IDs, and entitlement sources.
+
+The database enforces unique catalog ordering, exact activity/version ownership, same-lesson next
+activities, one attempt idempotency key per user, one progress row per user/lesson, one practice row
+per user/local date, and one goal or preference row per user. Published activity versions are guarded
+against update and deletion by a trigger. An activity's published pointer can reference only one of
+its versions whose `published_at` is set. Draft versions may be edited until publication; later
+material changes require a new positive `content_version`. Attempts retain the exact positive version
+they received.
+
+The migration is additive: it does not alter or delete profiles, billing projections, entitlements,
+or the Stripe event ledger. Forward recovery uses a follow-up migration; an applied migration is never
+rewritten. Before merge, the migration must apply both to an empty database and to the preserved local
+database, with existing row counts and health rechecked afterward.
+
 ## Migration Rules
 
 - Update `apps/api/prisma/schema.prisma` first.

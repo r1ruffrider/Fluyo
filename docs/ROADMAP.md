@@ -111,7 +111,7 @@ Completion evidence (2026-10-17): [PR #23](https://github.com/r1ruffrider/Fluyo/
 
 Goal: deliver the authenticated product shell and canonical learning domain used by web and future mobile clients.
 
-- [ ] Accept ADR 0005 and the Sprint 4 implementation plan before creating learning-domain tables.
+- [x] Accept ADR 0005 and the Sprint 4 implementation plan before creating learning-domain tables.
 - [ ] Define and implement lessons, activities, phrase decks, progress, streak, goals, and notification preferences with ownership and retention rules.
 - [ ] Provide the next activity, recent progress, subscription/access state, loading/empty/error states, and accessible navigation.
 - [ ] Add versioned API contracts, authorization failures, idempotent progress writes, pagination, migrations, telemetry, and end-to-end tests.
