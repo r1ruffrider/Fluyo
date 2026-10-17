@@ -14,8 +14,9 @@ database and on the preserved development database without changing existing bil
 Adriana's exact-head audit counted 179 tests/checks, all passed, and all eight post-merge `main`
 checks passed.
 
-Sprint 4 increment 4 adds idempotent server-managed starter catalog content and protected,
-cursor-paginated lesson and phrase-deck reads. Local validation passed the audit policy, Prisma
+[Draft PR #29](https://github.com/r1ruffrider/Fluyo/pull/29) is Sprint 4 increment 4. It adds
+idempotent server-managed starter catalog content and protected, cursor-paginated lesson and
+phrase-deck reads. Local validation passed the audit policy, Prisma
 schema, lint, typecheck, 149 tests, production build, formatting, and diff check. Running the seed
 twice preserved exact catalog counts (one lesson, three activities and immutable versions, one deck,
 four phrases, and one lesson/deck membership). A read-only database smoke returned the complete
