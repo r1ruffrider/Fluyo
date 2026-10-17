@@ -1,6 +1,6 @@
 # ADR 0004: Native mobile application architecture
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Decision owners:** Product and engineering
 
@@ -22,7 +22,7 @@ Advantages include direct access to audio/media, background execution, accessibi
 
 This minimizes client work but does not meet the stated store, native billing, offline, media, notification, widget, and wearable goals.
 
-## Proposed decision
+## Decision
 
 Use Swift with SwiftUI for iOS and Kotlin with Jetpack Compose for Android. Share backend APIs, provider-neutral domain contracts, content identifiers, analytics taxonomy, design tokens, fixtures, and acceptance tests at the specification level. Do not attempt to share UI or security-sensitive session code across platforms.
 
@@ -47,4 +47,4 @@ Keep Supabase as the identity provider, the NestJS API as the trusted applicatio
 
 ## Acceptance
 
-This ADR remains proposed until the product owner accepts the native staffing/cost tradeoff, initial OS/device support, and MVP store scope.
+Approved by Marlon on 2026-10-17. This decision accepts the native staffing and cost tradeoff, the platform-specific implementation model, and the proposed MVP store scope. Native implementation may proceed through the approved roadmap phases while individual release, spending, production billing, and store-publishing actions retain their existing approval gates.
