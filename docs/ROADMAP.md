@@ -111,10 +111,13 @@ Completion evidence (2026-10-17): [PR #23](https://github.com/r1ruffrider/Fluyo/
 
 Goal: deliver the authenticated product shell and canonical learning domain used by web and future mobile clients.
 
-- Define and implement lessons, activities, phrase decks, progress, streak, goals, and notification preferences with ownership and retention rules.
-- Provide the next activity, recent progress, subscription/access state, loading/empty/error states, and accessible navigation.
-- Add versioned API contracts, authorization failures, idempotent progress writes, pagination, migrations, telemetry, and end-to-end tests.
-- Do not mark complete until the dashboard and core progress loop pass real reload, failure, mobile-layout, accessibility, and cross-session tests.
+- [ ] Accept ADR 0005 and the Sprint 4 implementation plan before creating learning-domain tables.
+- [ ] Define and implement lessons, activities, phrase decks, progress, streak, goals, and notification preferences with ownership and retention rules.
+- [ ] Provide the next activity, recent progress, subscription/access state, loading/empty/error states, and accessible navigation.
+- [ ] Add versioned API contracts, authorization failures, idempotent progress writes, pagination, migrations, telemetry, and end-to-end tests.
+- [ ] Pass the standing counted phase audit for real reload, failure, mobile layout, accessibility, cross-session persistence, code quality, console, and all eight required checks.
+
+Implementation contract: [SPRINT_4_PLAN.md](SPRINT_4_PLAN.md).
 
 ## Sprint 5 — Native Mobile Foundations
 
