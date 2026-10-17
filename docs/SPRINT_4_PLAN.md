@@ -6,7 +6,7 @@ Success task: an authenticated learner opens Fluyo, sees the next real activity,
 
 ## Smallest end-to-end path
 
-1. Sign in and land on `/dashboard`.
+1. Sign in and land on `/dashboard`. The client offers its detected IANA timezone for the owned learning preference; until a valid zone is saved, the server uses `UTC`.
 2. See an honest first-use state with one primary action: **Start first lesson**.
 3. Open a server-provided phrase-choice activity, select an answer, and receive visible feedback.
 4. Submit completion with an idempotency key; the API records one attempt and advances owned progress in one transaction.
@@ -28,10 +28,16 @@ All endpoints use `/api/v1`, Supabase bearer authentication, camel-case JSON, th
 | `POST /activities/:activityId/attempts` | Submit one versioned activity result             | required UUID `Idempotency-Key`; transactional projections; no client-awarded streak/access              |
 | `GET /learning-goals/me`                | Read the current daily target                    | default target is three completed activities                                                             |
 | `PUT /learning-goals/me`                | Idempotently replace the target                  | integer 1–20; unknown fields rejected                                                                    |
+| `GET /learning-preferences/me`          | Read the practice-day timezone                   | deterministic `UTC` default until a valid zone is saved                                                  |
+| `PUT /learning-preferences/me`          | Idempotently replace the timezone                | validated IANA timezone; changes apply only to future practice days                                      |
 | `GET /notification-preferences/me`      | Read practice-reminder preference                | delivery availability is reported honestly                                                               |
-| `PUT /notification-preferences/me`      | Idempotently replace preference                  | validated boolean, local time, and IANA timezone                                                         |
+| `PUT /notification-preferences/me`      | Idempotently replace preference                  | validated boolean and local time; uses the learning timezone                                             |
 
-The activity submission includes `contentVersion` and the selected server-issued choice identifier. Stale versions return `409 content_version_conflict` with a safe retry instruction. A repeated idempotency key with the same normalized request returns the stored success response; a changed request returns `409 idempotency_conflict`.
+The activity submission includes `contentVersion` and the selected server-issued choice identifier. The attempt references the immutable activity-version row. Published wording or feedback revisions preserve progress for the stable activity; a changed learning objective receives a new activity identity. Stale versions return `409 content_version_conflict` with a safe retry instruction. A repeated idempotency key with the same normalized request returns the stored success response; a changed request returns `409 idempotency_conflict`.
+
+The first API increment adds an allowlisted domain exception type and extends `ApiExceptionFilter` so `resource_not_found`, `content_version_conflict`, `idempotency_conflict`, and `rate_limited` survive with safe messages and details. Unknown 409s and unexpected exceptions remain `internal_error`.
+
+Activity submissions allow 30 requests per rolling 60 seconds per verified user. The 31st returns `429 rate_limited` with `Retry-After` and performs no write. A replaceable limiter interface uses a deterministic local adapter for development/tests; production cannot enable the learning write endpoint until a shared adapter and ingress abuse controls are configured.
 
 Shared TypeScript request/response types and path constants live in `@fluyo/shared`. Provider identifiers, database row shapes, answer keys, entitlement sources, and internal scoring details stay server-side.
 
@@ -58,11 +64,13 @@ Screen recordings for marketing use synthetic accounts only and hide email, bill
 Each increment uses a short-lived branch and draft PR. Every exact PR head must pass the eight protected checks before Adriana's delegated merge gate applies.
 
 1. **Contract and decision:** accept ADR 0005, this plan, endpoint shapes, states, and retention rules.
-2. **Schema and shared types:** add reviewed Prisma migration, catalog/progress models, enum mappings, constraints, indexes, shared contracts, and schema tests. Do not seed or expose UI yet.
-3. **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
-4. **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
-5. **Dashboard UI:** add `/dashboard`, session return routing, responsive states, real API wiring, accessible activity flow, and honest error/retry behavior.
-6. **Phase audit:** run the standing counted audit, fix every blocker, reconcile API/database/security/handoff docs, and close Sprint 4 only after a PASS verdict.
+2. **API error and abuse boundary:** add allowlisted domain errors, safe filter mappings, the attempt-rate-limiter interface/local adapter, `Retry-After`, and focused 404/409/429 tests.
+3. **Schema and shared types:** add reviewed Prisma migration, stable activities plus immutable versions, catalog/progress models, enum mappings, constraints, indexes, shared contracts, and schema tests. Do not seed or expose UI yet.
+4. **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
+5. **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, UTC preference bootstrap, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
+6. **Lifecycle and observability:** add the learning-data export/delete service hooks, privacy-safe event/metric contract, and complete/rollback/isolation/telemetry tests.
+7. **Dashboard UI:** add `/dashboard`, session return routing, responsive states, real API wiring, accessible activity flow, and honest error/retry behavior.
+8. **Phase audit:** run the standing counted audit, fix every blocker, reconcile API/database/security/handoff docs, and close Sprint 4 only after a PASS verdict.
 
 ## Required verification
 
@@ -70,9 +78,14 @@ Each increment uses a short-lived branch and draft PR. Every exact PR head must 
 - Schema validation checks mappings, foreign-key behavior, uniqueness, checks, indexes, and forward recovery.
 - Missing/invalid auth is `401`; one identity cannot read or mutate another identity's progress, goals, preferences, attempts, or dashboard.
 - Catalog pagination is deterministic and rejects invalid or oversized cursors/limits.
+- Domain-error filter tests prove the safe codes and statuses for resource, version, idempotency, and rate-limit failures while unknown exceptions remain `internal_error`.
 - New, correct, incorrect, stale-version, duplicate, conflicting-idempotency, archived-content, and transaction-failure attempts are covered.
 - Duplicate submissions never double-count progress, daily completion, or streaks.
-- Server-time and timezone boundary tests cover same-day repeats, midnight, missed days, and future timezone changes.
+- Stable-activity tests prove that wording/feedback versions preserve progress, exact versions remain attributable, and a changed objective uses a new activity identity.
+- Server-time and timezone boundary tests cover the UTC first-write default, saved IANA zones, same-day repeats, midnight, missed days, and future-only timezone changes.
+- The 31st attempt inside a rolling minute returns `429` with `Retry-After`; expiry permits a later request; rejected requests do not write data.
+- Learning-data export/delete hooks cover complete output, complete deletion, idempotent retry, transactional rollback, and two-user isolation without touching profile or billing rows.
+- Telemetry tests assert stable event names, enumerated outcomes, counters, durations, and redaction of answers, email, tokens, provider payloads, and unbounded input.
 - First-use, loading, ready, completed, partial-failure, total-failure, expired-session, and inaccessible-content UI states are exercised.
 - Reload and sign-out/sign-in preserve server-confirmed progress; failed writes do not appear completed.
 - Narrow/wide responsive layouts, keyboard, visible focus, screen reader names, contrast, reduced motion, CTA destinations, and browser console are checked.
