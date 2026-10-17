@@ -78,7 +78,10 @@ input {
 }
 
 .wordmark {
+  min-height: 44px;
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
   font-family: var(--display);
   font-size: 1.9rem;
   font-weight: 900;
@@ -103,6 +106,9 @@ input {
 .nav-links a,
 .nav-account,
 .nav-signout {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   transition: color 160ms ease;
 }
 
@@ -157,7 +163,7 @@ input {
 }
 
 .button-small {
-  min-height: 40px;
+  min-height: 44px;
   padding: 9px 17px;
   font-size: 0.82rem;
 }
@@ -530,6 +536,9 @@ input {
 }
 
 .moment-card a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: flex-end;
   margin-top: auto;
   padding-top: 28px;
   font-weight: 900;
@@ -557,7 +566,9 @@ input {
 }
 
 .text-link-light {
-  display: inline-block;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   margin-top: 16px;
   color: var(--sun);
   font-weight: 900;
@@ -781,6 +792,9 @@ input {
 }
 
 .lesson-exit {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   padding: 9px 14px;
   border-radius: 999px;
   color: var(--ink-soft);
@@ -1203,7 +1217,7 @@ input {
     font-size: 0.8rem;
   }
   .button-small {
-    min-height: 38px;
+    min-height: 44px;
     padding: 8px 13px;
   }
   .hero-copy h1 {
