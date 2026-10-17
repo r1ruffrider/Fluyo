@@ -1,5 +1,39 @@
 # Development and billing verification handoff
 
+## Continuation checkpoint — 2026-10-17
+
+Adriana took over the engineering-owner task with access to the shared checkout, GitHub connector,
+development services, and team mailbox. Read-only reconciliation confirms that PR #17 is merged at
+`b1548087`; draft PRs #16, #18, #19, and #20 remain open and mergeable against that main baseline.
+Each latest workflow has exactly the eight required jobs, and all eight pass. Issues #12 and #21
+remain open. The four draft PRs still require Marlon's explicit merge approval.
+
+The local checkout remains on `codex/stripe-cancel-at-projection` and is behind the remote PR head.
+The known CRLF-only status entries, Next-generated files, unrelated files, two stashes, credentials,
+and database contents were left intact. No broad stage, reset, install, migration, reseed, or volume
+replacement was performed.
+
+Docker Desktop again encountered inaccessible AF_UNIX runtime sockets. With Docker stopped, the
+new runtime directories were renamed in place and preserved:
+
+- `%LOCALAPPDATA%/Docker/run.stale-20261017-adriana`
+- `%LOCALAPPDATA%/Docker/run.stale-20261017-adriana-retry`
+- `%LOCALAPPDATA%/docker-secrets-engine.stale-20261017-adriana`
+
+The third start brought the existing engine back without a factory reset. Compose reused the
+three-month-old `fluyo-postgres-1` container and existing volume; PostgreSQL reports healthy.
+
+A direct `npm run dev` recheck reproduced the Next.js 16.3.8 Turbopack panic on the first
+`/login` request and returned HTTP 500. The API and database health endpoints returned 200.
+Restarting the web application explicitly with Webpack made `/login` return 200 and unauthenticated
+`/billing` redirect with 307, reinforcing the fix already isolated in draft PR #18.
+
+Stripe CLI 1.53.1 now requires an explicit event selection. The test-mode listener was restarted with
+`--all-snapshot`, forwarding to
+`http://localhost:4000/api/v1/billing/webhooks/stripe`. A read-only comparison confirmed that the
+listener's signing secret still matches root `.env` without printing either secret. The authenticated
+lifecycle evidence remains the completed report in PR #19; no production billing was used.
+
 ## Current result — 2026-10-16
 
 The original startup and billing blockers below were resolved later on October 16. The
