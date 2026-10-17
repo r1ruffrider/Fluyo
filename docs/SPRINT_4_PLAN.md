@@ -33,7 +33,7 @@ All endpoints use `/api/v1`, Supabase bearer authentication, camel-case JSON, th
 | `GET /notification-preferences/me`      | Read practice-reminder preference                | delivery availability is reported honestly                                                               |
 | `PUT /notification-preferences/me`      | Idempotently replace preference                  | validated boolean and local time; uses the learning timezone                                             |
 
-The activity submission includes `contentVersion` and the selected server-issued choice identifier. The attempt references the immutable activity-version row. Published wording or feedback revisions preserve progress for the stable activity; a changed learning objective receives a new activity identity. Stale versions return `409 content_version_conflict` with a safe retry instruction. A repeated idempotency key with the same normalized request returns the stored success response; a changed request returns `409 idempotency_conflict`.
+The activity submission includes `contentVersion` and the selected server-issued choice identifier. The attempt references the immutable activity-version row. Published wording or feedback revisions preserve progress for the stable activity; a changed learning objective receives a new activity identity. Stale versions return `409 content_version_conflict` with a safe retry instruction. Existing owner/key lookup precedes rate limiting: a repeated key with the same normalized request returns the stored response, and a repeated key with changed content returns `409 idempotency_conflict`. Neither consumes limiter capacity. Only a new key proceeds to the limiter before any write.
 
 The first API increment adds an allowlisted domain exception type and extends `ApiExceptionFilter` so `resource_not_found`, `content_version_conflict`, `idempotency_conflict`, and `rate_limited` survive with safe messages and details. Unknown 409s and unexpected exceptions remain `internal_error`.
 
@@ -84,6 +84,7 @@ Each increment uses a short-lived branch and draft PR. Every exact PR head must 
 - Stable-activity tests prove that wording/feedback versions preserve progress, exact versions remain attributable, and a changed objective uses a new activity identity.
 - Server-time and timezone boundary tests cover the UTC first-write default, saved IANA zones, same-day repeats, midnight, missed days, and future-only timezone changes.
 - The 31st attempt inside a rolling minute returns `429` with `Retry-After`; expiry permits a later request; rejected requests do not write data.
+- With the limiter saturated, an existing identical owner/key still returns its stored response, an existing changed payload still returns `409`, and only a new key returns `429`; replay and conflict paths do not consume limiter capacity.
 - Learning-data export/delete hooks cover complete output, complete deletion, idempotent retry, transactional rollback, and two-user isolation without touching profile or billing rows.
 - Telemetry tests assert stable event names, enumerated outcomes, counters, durations, and redaction of answers, email, tokens, provider payloads, and unbounded input.
 - First-use, loading, ready, completed, partial-failure, total-failure, expired-session, and inaccessible-content UI states are exercised.
