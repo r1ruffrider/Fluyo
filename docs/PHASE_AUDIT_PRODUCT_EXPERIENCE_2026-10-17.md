@@ -73,3 +73,26 @@ The product-experience phase is cleared. The working local review surface is ava
 The next authorized work is the Sprint 3.5+ implementation sequence, beginning with an accepted
 product/mobile architecture plan and a server-owned lesson/progress contract before claims or UI for
 speech, adaptive learning, or native-store availability are added.
+
+## Independent release audit
+
+Adriana repeated the phase audit after the draft PR was created. The independent cycle conducted 58
+tests: 54 passed on first observation and four diagnostic tests exposed issues. Every affected area was
+fixed and retested successfully on PR #24 head `40eca07dfe9b622f5218c2c02f15c264d3692f14`.
+Blocked: 0. Unattempted: 0. Final verdict: **PASS**.
+
+The independent coverage included the full phrase-sprint loop; incorrect-answer recovery; cookie
+persistence, invalid-cookie recovery, reload, completion, and restart; trusted keyboard input;
+desktop and 390×844 layouts; visible target sizes; reduced motion; CTA destinations; pricing state;
+claims honesty; semantics; browser logs; favicon delivery; API and database health; dependency policy;
+110 repository tests; and every required GitHub check.
+
+| Severity | Location | Problem | Action |
+| --- | --- | --- | --- |
+| Medium | `apps/web/app/globals.css` | The mobile header phrase-sprint CTA measured 38px high, below the phase's 44px target. | **Fixed and retested:** the CTA now measures 44px, and no visible link or button on `/` or `/learn` falls below 44px at 390×844. |
+| Low | `apps/web/app/layout.tsx`, `apps/web/public/favicon.svg` | Missing explicit favicon metadata produced `/favicon.ico` 404 entries. | **Fixed and retested:** the local SVG favicon returns HTTP 200 and a fresh browser log is clean. |
+| High | Dependency-audit test environment | An initial run against the preserved dirty checkout reported stale dependency state. | **Reconciled and retested:** the clean PR branch accepts only the exact temporary `braces@3.0.3` exception through 2026-10-30; local policy and CI pass. |
+| Low | Keyboard audit harness | Raw CDP key dispatch did not provide reliable activation evidence. | **Retested with trusted input:** Playwright `press("Enter")` selected the focused answer, showed correct feedback, and enabled continuation. |
+
+PR #24 remains draft and mergeable. Dependency audit policy, committed secret scan, Prisma schema,
+lint, typecheck, tests, build, and formatting are all green. No phase blocker remains.
