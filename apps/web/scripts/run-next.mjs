@@ -9,7 +9,12 @@ if (command !== "dev" && command !== "start") {
 
 const port = process.env.WEB_PORT ?? "3000";
 const nextCli = fileURLToPath(import.meta.resolve("next/dist/bin/next"));
-const child = spawn(process.execPath, [nextCli, command, "--port", port], {
+const args = [nextCli, command, "--port", port];
+if (command === "dev") {
+  args.push("--webpack");
+}
+
+const child = spawn(process.execPath, args, {
   stdio: "inherit",
 });
 
