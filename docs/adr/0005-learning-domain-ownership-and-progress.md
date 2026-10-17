@@ -1,7 +1,7 @@
 # ADR 0005: Learning-domain ownership and progress writes
 
-- Status: proposed
-- Date: 2026-10-17
+- Status: accepted
+- Date: 2026-10-18
 - Decision owners: product and engineering
 - Related: [ADR 0002](0002-minimal-user-profile.md), [ADR 0003](0003-forge-compatible-billing-foundation.md), [ADR 0004](0004-native-mobile-app-architecture.md)
 
