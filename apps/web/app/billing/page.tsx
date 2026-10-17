@@ -28,6 +28,11 @@ function formatDate(value: string | null): string | null {
 }
 
 function renewalCopy(subscription: BillingSubscriptionSummary): string | null {
+  if (subscription.status === "canceled") {
+    const canceledAt = formatDate(subscription.canceledAt);
+    return canceledAt ? `Canceled on ${canceledAt}` : "Subscription canceled";
+  }
+
   if (subscription.cancelAtPeriodEnd) {
     const endsAt = formatDate(subscription.currentPeriodEnd);
     return endsAt ? `Access ends on ${endsAt}` : "Access ends at the end of the current period";
