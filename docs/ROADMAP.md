@@ -97,13 +97,15 @@ RevenueCat remains reserved for future native mobile applications. Checkout and 
 
 Goal: turn the completed identity and billing foundations into a locally reviewable product direction, an implementation-ready mobile/store plan, and measurable launch operations before product-domain schemas expand.
 
-- [ ] Replace internal foundation copy on the web home page with an honest learner-facing experience and working local CTAs.
-- [ ] Add a small, accessible language-learning interaction that demonstrates the intended product tone without claiming unimplemented AI behavior.
-- [ ] Add purposeful motion and local visual assets with reduced-motion support and no unlicensed media.
-- [ ] Complete the product-experience review, marketing plan, TikTok/Instagram plan, three-posts-per-day calendar, and UGC advertising plan.
+- [x] Replace internal foundation copy on the web home page with an honest learner-facing experience and working local CTAs.
+- [x] Add a small, accessible language-learning interaction that demonstrates the intended product tone without claiming unimplemented AI behavior.
+- [x] Add purposeful motion and local visual assets with reduced-motion support and no unlicensed media.
+- [x] Complete the product-experience review, marketing plan, TikTok/Instagram plan, three-posts-per-day calendar, and UGC advertising plan.
 - [x] Accept ADR 0004 for native SwiftUI and Kotlin/Jetpack Compose applications before implementation.
 - [x] Approve the end-to-end iOS/App Store and Android/Google Play release plan, MVP scope, privacy inventory, account ownership, and quality gates.
-- [ ] Verify the localhost experience, responsive layouts, CTA destinations, reduced motion, claims, console, code quality, and all eight CI checks using the standing counted-test audit.
+- [x] Verify the localhost experience, responsive layouts, CTA destinations, reduced motion, claims, console, code quality, and all eight CI checks using the standing counted-test audit.
+
+Completion evidence (2026-10-17): [PR #23](https://github.com/r1ruffrider/Fluyo/pull/23) records the accepted native architecture, end-to-end mobile release plan, launch marketing plan, and TikTok/Instagram/UGC operating plan. [PR #24](https://github.com/r1ruffrider/Fluyo/pull/24) delivers the learner-facing home experience, accessible local phrase sprint, local artwork, and reduced-motion behavior. Its independent phase audit counted 58 executions: 54 passed and four pre-fix or diagnostic checks failed; all four affected areas subsequently passed retests included in the 54 passes, leaving no blocker. Both exact PR heads passed the eight protected CI checks before merge.
 
 ## Sprint 4 — User Dashboard and Learning Domain
 
