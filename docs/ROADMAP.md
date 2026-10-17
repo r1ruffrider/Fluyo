@@ -102,7 +102,7 @@ Goal: turn the completed identity and billing foundations into a locally reviewa
 - [ ] Add purposeful motion and local visual assets with reduced-motion support and no unlicensed media.
 - [ ] Complete the product-experience review, marketing plan, TikTok/Instagram plan, three-posts-per-day calendar, and UGC advertising plan.
 - [x] Accept ADR 0004 for native SwiftUI and Kotlin/Jetpack Compose applications before implementation.
-- [ ] Approve the end-to-end iOS/App Store and Android/Google Play release plan, MVP scope, privacy inventory, account ownership, and quality gates.
+- [x] Approve the end-to-end iOS/App Store and Android/Google Play release plan, MVP scope, privacy inventory, account ownership, and quality gates.
 - [ ] Verify the localhost experience, responsive layouts, CTA destinations, reduced motion, claims, console, code quality, and all eight CI checks using the standing counted-test audit.
 
 ## Sprint 4 — User Dashboard and Learning Domain

@@ -1,6 +1,7 @@
 # Fluyo iOS and Google Play Release Plan
 
-Status: proposed implementation plan
+Status: approved implementation plan
+Approved by: Marlon on 2026-10-17
 Owners: product, mobile engineering, backend, design, growth, privacy/security
 Last updated: 2026-10-17
 
@@ -8,7 +9,7 @@ Last updated: 2026-10-17
 
 Ship a reviewable, secure Fluyo MVP to the Apple App Store and Google Play with one Supabase identity, synchronized progress, native in-app subscriptions mapped into the existing provider-neutral entitlement model, and a controlled path from internal testing to staged production release.
 
-The business plan calls for native SwiftUI on iOS and Kotlin/Jetpack Compose on Android. [ADR 0004](adr/0004-native-mobile-app-architecture.md) records that recommendation as proposed and must be accepted before implementation begins.
+The business plan calls for native SwiftUI on iOS and Kotlin/Jetpack Compose on Android. [ADR 0004](adr/0004-native-mobile-app-architecture.md) records the accepted architecture decision and authorizes implementation through the governed roadmap phases.
 
 ## Launch scope
 
