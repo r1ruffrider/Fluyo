@@ -1,5 +1,25 @@
 # Development and billing verification handoff
 
+## Sprint 3.5 completion — 2026-10-17
+
+Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.
+Adriana independently confirmed the exact heads, required checks, merge order, and phase evidence.
+The pull requests were updated as needed, marked ready, and squash-merged without bypassing branch
+protection:
+
+- PR #23, launch marketing and native mobile release plans: `f34836f28eb14e731136835ed67d0003af974890`
+- PR #24, playful learner-facing phrase sprint: `4870a957f69da07706522333bffac7728f97e61c`
+
+PR #24 passed the standing phase audit with 58 counted tests: 54 passed initially, four diagnostic
+failures were fixed and passed on retest, and no failures remained. After PR #23 merged, PR #24 was
+updated from `main`; the new exact head `4fd9ce8775a9eb46ddc93a36bcf450d632b33803` then passed all
+eight protected CI checks before merge. The localhost experience remains available at
+`http://localhost:3000` for review. No production deployment, store publication, production billing,
+or advertising spend occurred.
+
+Sprint 3.5 is complete. The next governed phase is Sprint 4: define the authenticated dashboard
+acceptance criteria and canonical owned learning-domain schema/API contracts before implementation.
+
 ## Merge completion — 2026-10-17
 
 Marlon explicitly approved the final merge sequence. The four remaining pull requests were updated

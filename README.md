@@ -2,7 +2,7 @@
 
 Spanish that flows both ways.
 
-Fluyo is a TypeScript monorepo containing the product web application, backend API, shared contracts, and local platform infrastructure. Sprint 1 establishes the platform foundation. Sprint 2 adds Supabase Auth sessions, a server-verified identity boundary, password recovery, and a minimal self-owned profile. The current billing increments add a Forge-compatible billing foundation, Stripe Checkout and Customer Portal handoffs, and signed webhook synchronization. Entitlement-gated product UI, AI, lessons, translation, and mobile applications remain deferred.
+Fluyo is a TypeScript monorepo containing the product web application, backend API, shared contracts, and local platform infrastructure. Sprint 1 establishes the platform foundation. Sprint 2 adds Supabase Auth sessions, a server-verified identity boundary, password recovery, and a minimal self-owned profile. The current billing increments add a Forge-compatible billing foundation, Stripe Checkout and Customer Portal handoffs, and signed webhook synchronization. Sprint 3.5 adds a learner-facing home experience and a deterministic local phrase sprint for product review. The authenticated learning domain, AI behavior, full lessons, translation, and native mobile applications remain later roadmap work.
 
 ## Project Structure
 
