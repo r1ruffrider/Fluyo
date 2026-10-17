@@ -1,5 +1,31 @@
 # Development and billing verification handoff
 
+## Merge completion — 2026-10-17
+
+Marlon explicitly approved the final merge sequence. The four remaining pull requests were updated
+from the latest `main`, required all eight protected CI jobs to pass, were marked ready for review,
+and were squash-merged in order:
+
+- PR #16, Windows setup and handoff: `c3acaadd2ec4dea74542fab904f1ec97b57725a4`
+- PR #18, Webpack development fallback: `5c333437b7216c9bb2945f724489eb3085ce3598`
+- PR #19, cancellation projection and billing verification: `a101f70394105da475a4a0ffcccde49a68a6f904`
+- PR #20, Checkout return billing-status copy: `3501096f400622696836efee2892e67057e83935`
+
+Issue #12 was closed as completed after PR #19 merged. Its completion comment links the merged
+implementation and the full test-mode lifecycle report. Both test subscriptions remain canceled
+with no active entitlement grants. No production billing or deployment was used.
+
+Final local service checks return 200 for the API, database health, and login page. The development
+stack continues to use Webpack on port 3000, the API on port 4000, the existing PostgreSQL volume,
+and the test-mode Stripe listener forwarding signed events to
+`http://localhost:4000/api/v1/billing/webhooks/stripe`. The primary checkout's known generated and
+CRLF-only status entries, both stashes, credentials, and database contents remain preserved.
+
+PR #18 required one safe CI retrigger after GitHub reported the workflow and every Build step as
+successful while leaving the required Build check-run in progress. The replacement run completed
+all eight checks successfully; no check, severity threshold, or protection was weakened. Issue #21
+remains open for the exact `braces@3.0.3` exception that expires October 30, 2026.
+
 ## Continuation checkpoint — 2026-10-17
 
 Adriana took over the engineering-owner task with access to the shared checkout, GitHub connector,
