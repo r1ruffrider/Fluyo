@@ -4,6 +4,8 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from
 
 import type { Request, Response } from "express";
 
+import { ApiDomainException } from "./api-domain.exception";
+
 function errorCode(status: number): string {
   const codes: Partial<Record<number, string>> = {
     [HttpStatus.BAD_REQUEST]: "invalid_request",
@@ -34,6 +36,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
+    const domainException = exception instanceof ApiDomainException ? exception : null;
     const status =
       exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const responseCorrelationId = response.getHeader("x-correlation-id");
@@ -45,12 +48,18 @@ export class ApiExceptionFilter implements ExceptionFilter {
           ? requestCorrelationId
           : randomUUID();
 
+    if (domainException) {
+      for (const [name, value] of Object.entries(domainException.safeHeaders)) {
+        response.setHeader(name, value);
+      }
+    }
+
     response.setHeader("x-correlation-id", correlationId);
     response.status(status).json({
       error: {
-        code: errorCode(status),
-        message: errorMessage(status),
-        details: {},
+        code: domainException?.code ?? errorCode(status),
+        message: domainException?.safeMessage ?? errorMessage(status),
+        details: domainException?.safeDetails ?? {},
         correlationId,
       },
     });
