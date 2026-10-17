@@ -110,7 +110,8 @@ export class StripeWebhookProcessorService {
 
     return {
       billingInterval: resolved.price.interval === "monthly" ? "MONTHLY" : "ANNUAL",
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      cancelAtPeriodEnd:
+        subscription.cancel_at_period_end || subscription.cancel_at === item.current_period_end,
       canceledAt: timestamp(subscription.canceled_at),
       currentPeriodEnd: new Date(item.current_period_end * 1_000),
       currentPeriodStart: new Date(item.current_period_start * 1_000),

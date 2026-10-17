@@ -59,6 +59,7 @@ export interface BillingSubscriptionSummary {
   billingInterval: BillingInterval;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
   trialEnd: string | null;
   accessGranted: boolean;
 }

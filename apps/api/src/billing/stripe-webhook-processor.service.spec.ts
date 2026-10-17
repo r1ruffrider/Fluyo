@@ -29,6 +29,7 @@ const PLAN: BillingPlanDefinition = {
 
 function subscription(
   overrides: Partial<{
+    cancelAt: number | null;
     canceledAt: number | null;
     status: Stripe.Subscription.Status;
   }> = {},
@@ -40,6 +41,7 @@ function subscription(
     metadata: { supabase_user_id: USER_ID, plan_key: PLAN.key },
     status: overrides.status ?? "active",
     cancel_at_period_end: false,
+    cancel_at: overrides.cancelAt ?? null,
     canceled_at: overrides.canceledAt ?? null,
     trial_end: null,
     items: {
@@ -179,6 +181,66 @@ describe("StripeWebhookProcessorService", () => {
     ).resolves.toEqual({ duplicate: true, processed: true });
 
     expect(transaction.stripeWebhookEvent.create).not.toHaveBeenCalled();
+    expect(transaction.stripeSubscription.upsert).not.toHaveBeenCalled();
+    expect(transaction.entitlement.upsert).not.toHaveBeenCalled();
+  });
+
+  it("projects a portal cancellation scheduled at the current period end", async () => {
+    const fixture = createFixture();
+
+    await fixture.service.process(
+      "evt_portal_cancel_fixture",
+      "customer.subscription.updated",
+      subscription({ cancelAt: PERIOD_END }),
+      OCCURRED_AT,
+    );
+
+    expect(fixture.transaction.stripeSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ cancelAtPeriodEnd: true }),
+        update: expect.objectContaining({ cancelAtPeriodEnd: true }),
+      }),
+    );
+  });
+
+  it("rejects subscription metadata that conflicts with the Stripe Customer owner", async () => {
+    const transaction = createTransaction();
+    transaction.stripeCustomer.findUnique.mockResolvedValue({
+      userId: "22222222-2222-4222-8222-222222222222",
+    });
+    const fixture = createFixture(transaction);
+
+    await expect(
+      fixture.service.process(
+        "evt_customer_owner_mismatch",
+        "customer.subscription.updated",
+        subscription(),
+        OCCURRED_AT,
+      ),
+    ).rejects.toThrow("Stripe Customer ownership does not match subscription metadata");
+
+    expect(fixture.committed()).toBe(false);
+    expect(transaction.stripeSubscription.upsert).not.toHaveBeenCalled();
+    expect(transaction.entitlement.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a second Stripe Customer for an already-mapped user", async () => {
+    const transaction = createTransaction();
+    transaction.stripeCustomer.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ stripeCustomerId: "cus_existing_owner" });
+    const fixture = createFixture(transaction);
+
+    await expect(
+      fixture.service.process(
+        "evt_second_customer_fixture",
+        "customer.subscription.created",
+        subscription(),
+        OCCURRED_AT,
+      ),
+    ).rejects.toThrow("User is already mapped to a different Stripe Customer");
+
+    expect(fixture.committed()).toBe(false);
     expect(transaction.stripeSubscription.upsert).not.toHaveBeenCalled();
     expect(transaction.entitlement.upsert).not.toHaveBeenCalled();
   });

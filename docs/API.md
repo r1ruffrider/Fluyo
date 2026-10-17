@@ -165,6 +165,7 @@ Success response (`200 OK`) for a caller with a subscription:
     "billingInterval": "monthly",
     "currentPeriodEnd": "2026-08-20T12:00:00.000Z",
     "cancelAtPeriodEnd": false,
+    "canceledAt": null,
     "trialEnd": null,
     "accessGranted": true
   },

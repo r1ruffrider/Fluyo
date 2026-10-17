@@ -38,6 +38,7 @@ interface StoredSubscription {
   billingInterval: BillingInterval;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  canceledAt: Date | null;
   trialEnd: Date | null;
 }
 
@@ -61,6 +62,7 @@ export class SubscriptionStatusService {
         billingInterval: true,
         currentPeriodEnd: true,
         cancelAtPeriodEnd: true,
+        canceledAt: true,
         trialEnd: true,
       },
     });
@@ -80,6 +82,7 @@ export class SubscriptionStatusService {
       billingInterval: INTERVAL_LABELS[current.billingInterval],
       currentPeriodEnd: current.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: current.cancelAtPeriodEnd,
+      canceledAt: current.canceledAt?.toISOString() ?? null,
       trialEnd: current.trialEnd?.toISOString() ?? null,
       // Sourced from the entitlement table, not `current.status`: the two
       // can briefly diverge (webhook lag, a manual revocation), and
