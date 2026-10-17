@@ -3,8 +3,14 @@ export const ACTIVITY_ATTEMPT_RATE_LIMITER = Symbol("ACTIVITY_ATTEMPT_RATE_LIMIT
 export const ACTIVITY_ATTEMPT_RATE_LIMIT = 30;
 export const ACTIVITY_ATTEMPT_RATE_WINDOW_MS = 60_000;
 
+export interface ActivityAttemptRateLimitLease {
+  complete(): void;
+  fail(): void;
+}
+
 export type ActivityAttemptRateLimitDecision =
-  { allowed: true } | { allowed: false; retryAfterSeconds: number };
+  | { allowed: true; lease: ActivityAttemptRateLimitLease }
+  | { allowed: false; retryAfterSeconds: number };
 
 export interface ActivityAttemptRateLimiter {
   checkAndConsume(userId: string, idempotencyKey: string): ActivityAttemptRateLimitDecision;
@@ -17,9 +23,10 @@ interface InMemoryActivityAttemptRateLimiterOptions {
 }
 
 export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLimiter {
-  private readonly attemptsByUser = new Map<
+  private readonly attemptsByUser = new Map<string, number[]>();
+  private readonly inFlightByOwnerAndKey = new Map<
     string,
-    Array<{ attemptedAt: number; idempotencyKey: string }>
+    { expiresAt: number; reservations: number }
   >();
   private readonly clock: () => number;
   private readonly limit: number;
@@ -45,16 +52,19 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
 
     const cutoff = now - this.windowMs;
     const recentAttempts = (this.attemptsByUser.get(userId) ?? []).filter(
-      ({ attemptedAt }) => attemptedAt > cutoff,
+      (attemptedAt) => attemptedAt > cutoff,
     );
+    const ownerAndKey = this.ownerAndKey(userId, idempotencyKey);
+    const inFlight = this.inFlightByOwnerAndKey.get(ownerAndKey);
 
-    if (recentAttempts.some((attempt) => attempt.idempotencyKey === idempotencyKey)) {
+    if (inFlight && inFlight.expiresAt > now) {
+      inFlight.reservations += 1;
       this.attemptsByUser.set(userId, recentAttempts);
-      return { allowed: true };
+      return { allowed: true, lease: this.createLease(ownerAndKey) };
     }
 
     if (recentAttempts.length >= this.limit) {
-      const oldestAttempt = recentAttempts[0]?.attemptedAt;
+      const oldestAttempt = recentAttempts[0];
       if (oldestAttempt === undefined) {
         throw new Error("Rate limiter reached an invalid state");
       }
@@ -66,9 +76,36 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
       };
     }
 
-    recentAttempts.push({ attemptedAt: now, idempotencyKey });
+    recentAttempts.push(now);
     this.attemptsByUser.set(userId, recentAttempts);
-    return { allowed: true };
+    this.inFlightByOwnerAndKey.set(ownerAndKey, {
+      expiresAt: now + this.windowMs,
+      reservations: 1,
+    });
+    return { allowed: true, lease: this.createLease(ownerAndKey) };
+  }
+
+  private createLease(ownerAndKey: string): ActivityAttemptRateLimitLease {
+    let settled = false;
+    const settle = (): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+
+      const inFlight = this.inFlightByOwnerAndKey.get(ownerAndKey);
+      if (!inFlight || inFlight.reservations <= 1) {
+        this.inFlightByOwnerAndKey.delete(ownerAndKey);
+        return;
+      }
+      inFlight.reservations -= 1;
+    };
+
+    return { complete: settle, fail: settle };
+  }
+
+  private ownerAndKey(userId: string, idempotencyKey: string): string {
+    return `${userId}\u0000${idempotencyKey}`;
   }
 
   private sweepExpiredUsers(now: number): void {
@@ -78,8 +115,13 @@ export class InMemoryActivityAttemptRateLimiter implements ActivityAttemptRateLi
 
     const cutoff = now - this.windowMs;
     for (const [userId, attempts] of this.attemptsByUser) {
-      if (!attempts.some(({ attemptedAt }) => attemptedAt > cutoff)) {
+      if (!attempts.some((attemptedAt) => attemptedAt > cutoff)) {
         this.attemptsByUser.delete(userId);
+      }
+    }
+    for (const [ownerAndKey, inFlight] of this.inFlightByOwnerAndKey) {
+      if (inFlight.expiresAt <= now) {
+        this.inFlightByOwnerAndKey.delete(ownerAndKey);
       }
     }
     this.nextSweepAt = now + this.windowMs;

@@ -26,9 +26,12 @@ export type ActivityAttemptAdmission =
   | {
       /**
        * The downstream transaction must insert under the unique owner/idempotency-key constraint.
-       * If it loses that race, it must call this recovery before returning a response.
+       * It must settle the reservation after success or failure. If it loses a unique-key race,
+       * it must call the recovery helper, which settles the reservation after loading the winner.
        */
       kind: "provisional_new";
+      complete: () => void;
+      fail: () => void;
       recoverUniqueKeyConflict: () => Promise<ActivityAttemptReplay>;
     }
   | ActivityAttemptReplay;
@@ -69,7 +72,15 @@ export class ActivityAttemptAdmissionService {
 
     return {
       kind: "provisional_new",
-      recoverUniqueKeyConflict: () => this.recoverUniqueKeyConflict(request),
+      complete: decision.lease.complete,
+      fail: decision.lease.fail,
+      recoverUniqueKeyConflict: async () => {
+        try {
+          return await this.recoverUniqueKeyConflict(request);
+        } finally {
+          decision.lease.fail();
+        }
+      },
     };
   }
 

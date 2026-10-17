@@ -21,6 +21,13 @@ function createService(
   return new ActivityAttemptAdmissionService(replayStore, rateLimiter);
 }
 
+function allowedDecision() {
+  return {
+    allowed: true as const,
+    lease: { complete: vi.fn(), fail: vi.fn() },
+  };
+}
+
 describe("ActivityAttemptAdmissionService", () => {
   it("returns a stored replay before consulting the limiter", async () => {
     const replayStore = {
@@ -85,8 +92,9 @@ describe("ActivityAttemptAdmissionService", () => {
     const replayStore = {
       findByOwnerAndKey: vi.fn().mockResolvedValue(null),
     } satisfies ActivityAttemptReplayStore;
+    const decision = allowedDecision();
     const rateLimiter = {
-      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+      checkAndConsume: vi.fn().mockReturnValue(decision),
     } satisfies ActivityAttemptRateLimiter;
 
     const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
@@ -96,6 +104,11 @@ describe("ActivityAttemptAdmissionService", () => {
       REQUEST.userId,
       REQUEST.idempotencyKey,
     );
+    if (admission.kind !== "provisional_new") {
+      throw new Error("Expected provisional admission");
+    }
+    admission.complete();
+    expect(decision.lease.complete).toHaveBeenCalledOnce();
   });
 
   it("recovers the unique-key loser as a replay after concurrent provisional admission", async () => {
@@ -106,8 +119,9 @@ describe("ActivityAttemptAdmissionService", () => {
     const replayStore = {
       findByOwnerAndKey: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(stored),
     } satisfies ActivityAttemptReplayStore;
+    const decision = allowedDecision();
     const rateLimiter = {
-      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+      checkAndConsume: vi.fn().mockReturnValue(decision),
     } satisfies ActivityAttemptRateLimiter;
     const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
 
@@ -119,6 +133,7 @@ describe("ActivityAttemptAdmissionService", () => {
       kind: "replay",
       response: stored.response,
     });
+    expect(decision.lease.fail).toHaveBeenCalledOnce();
   });
 
   it("recovers a concurrent changed-payload loser as an idempotency conflict", async () => {
@@ -131,8 +146,9 @@ describe("ActivityAttemptAdmissionService", () => {
           response: { attemptId: "attempt-winner" },
         }),
     } satisfies ActivityAttemptReplayStore;
+    const decision = allowedDecision();
     const rateLimiter = {
-      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+      checkAndConsume: vi.fn().mockReturnValue(decision),
     } satisfies ActivityAttemptRateLimiter;
     const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
 
@@ -142,14 +158,16 @@ describe("ActivityAttemptAdmissionService", () => {
     await expect(admission.recoverUniqueKeyConflict()).rejects.toMatchObject({
       code: "idempotency_conflict",
     });
+    expect(decision.lease.fail).toHaveBeenCalledOnce();
   });
 
   it("keeps a missing unique-key winner behind the internal error boundary", async () => {
     const replayStore = {
       findByOwnerAndKey: vi.fn().mockResolvedValue(null),
     } satisfies ActivityAttemptReplayStore;
+    const decision = allowedDecision();
     const rateLimiter = {
-      checkAndConsume: vi.fn().mockReturnValue({ allowed: true }),
+      checkAndConsume: vi.fn().mockReturnValue(decision),
     } satisfies ActivityAttemptRateLimiter;
     const admission = await createService(replayStore, rateLimiter).admit(REQUEST);
 
@@ -159,5 +177,6 @@ describe("ActivityAttemptAdmissionService", () => {
     await expect(admission.recoverUniqueKeyConflict()).rejects.toThrow(
       "The winning idempotent activity attempt could not be loaded",
     );
+    expect(decision.lease.fail).toHaveBeenCalledOnce();
   });
 });
