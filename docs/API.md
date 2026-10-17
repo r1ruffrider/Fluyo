@@ -177,6 +177,6 @@ Success response (`200 OK`) for a caller with a subscription:
 
 ## Future Billing APIs
 
-Live Stripe test-mode lifecycle verification remains open. Subscription-experience gating beyond this status summary, lessons, progress, translation, and AI endpoints are not part of the billing foundation.
+Live Stripe test-mode lifecycle verification is complete. Subscription-experience gating beyond this status summary, lessons, progress, translation, and AI endpoints remain future work.
 
 New APIs must follow `PLATFORM_STANDARDS.md`, include validation and safe error responses, and update this document.
