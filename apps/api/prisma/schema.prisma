@@ -35,6 +35,15 @@ enum EntitlementStatus {
   EXPIRED  @map("expired")
 }
 
+enum ActivityKind {
+  PHRASE_CHOICE @map("phrase_choice")
+}
+
+enum ActivityAttemptResult {
+  CORRECT   @map("correct")
+  INCORRECT @map("incorrect")
+}
+
 model SystemMetadata {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   key       String   @unique
@@ -46,13 +55,13 @@ model SystemMetadata {
 }
 
 model UserProfile {
-  id                    String    @id @db.Uuid
-  displayName           String?   @map("display_name") @db.VarChar(80)
-  subscriptionTier      String    @default("free") @map("subscription_tier") @db.VarChar(50)
-  revenuecatAppUserId   String?   @map("revenuecat_app_user_id")
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id                  String    @id @db.Uuid
+  displayName         String?   @map("display_name") @db.VarChar(80)
+  subscriptionTier    String    @default("free") @map("subscription_tier") @db.VarChar(50)
+  revenuecatAppUserId String?   @map("revenuecat_app_user_id")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@map("user_profiles")
 }
@@ -84,7 +93,7 @@ model StripeSubscription {
   canceledAt           DateTime?                @map("canceled_at") @db.Timestamptz(6)
   createdAt            DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  customer             StripeCustomer           @relation(fields: [stripeCustomerId, userId], references: [stripeCustomerId, userId], onDelete: Cascade)
+  customer             StripeCustomer           @relation(fields: [stripeCustomerId, userId], references: [stripeCustomerId, userId], onDelete: Cascade, map: "stripe_subscriptions_customer_user_fkey")
 
   @@index([userId], map: "stripe_subscriptions_user_id_idx")
   @@index([stripeCustomerId], map: "stripe_subscriptions_customer_id_idx")
@@ -114,4 +123,188 @@ model StripeWebhookEvent {
   processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
 
   @@map("stripe_webhook_events")
+}
+
+model Lesson {
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                   String             @unique @db.VarChar(120)
+  title                  String             @db.VarChar(160)
+  description            String?
+  sortOrder              Int                @map("sort_order")
+  requiredEntitlementKey String?            @map("required_entitlement_key") @db.VarChar(100)
+  archivedAt             DateTime?          @map("archived_at") @db.Timestamptz(6)
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  activities             Activity[]
+  phraseDeckMemberships  LessonPhraseDeck[]
+  progress               LessonProgress[]
+
+  @@unique([sortOrder], map: "lessons_sort_order_key")
+  @@map("lessons")
+}
+
+model Activity {
+  id                     String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId               String            @map("lesson_id") @db.Uuid
+  kind                   ActivityKind
+  sortOrder              Int               @map("sort_order")
+  publishedVersion       Int?              @map("published_version")
+  requiredEntitlementKey String?           @map("required_entitlement_key") @db.VarChar(100)
+  archivedAt             DateTime?         @map("archived_at") @db.Timestamptz(6)
+  createdAt              DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lesson                 Lesson            @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  versions               ActivityVersion[] @relation("ActivityVersions")
+  publishedContent       ActivityVersion?  @relation("PublishedActivityVersion", fields: [id, publishedVersion], references: [activityId, contentVersion], onDelete: NoAction, onUpdate: NoAction)
+  nextForProgress        LessonProgress[]  @relation("NextActivity")
+
+  @@unique([lessonId, sortOrder], map: "activities_lesson_order_key")
+  @@unique([id, lessonId], map: "activities_id_lesson_key")
+  @@map("activities")
+}
+
+model ActivityVersion {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activityId     String            @map("activity_id") @db.Uuid
+  contentVersion Int               @map("content_version")
+  prompt         String
+  choices        Json
+  feedback       Json
+  validation     Json
+  publishedAt    DateTime?         @map("published_at") @db.Timestamptz(6)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  activity       Activity          @relation("ActivityVersions", fields: [activityId], references: [id], onDelete: Restrict)
+  publishedFor   Activity[]        @relation("PublishedActivityVersion")
+  attempts       ActivityAttempt[]
+
+  @@unique([activityId, contentVersion], map: "activity_versions_activity_version_key")
+  @@map("activity_versions")
+}
+
+model PhraseDeck {
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                   String             @unique @db.VarChar(120)
+  title                  String             @db.VarChar(160)
+  description            String?
+  sourceLocale           String             @map("source_locale") @db.VarChar(35)
+  targetLocale           String             @map("target_locale") @db.VarChar(35)
+  requiredEntitlementKey String?            @map("required_entitlement_key") @db.VarChar(100)
+  archivedAt             DateTime?          @map("archived_at") @db.Timestamptz(6)
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  phrases                Phrase[]
+  lessonMemberships      LessonPhraseDeck[]
+
+  @@map("phrase_decks")
+}
+
+model Phrase {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deckId     String     @map("deck_id") @db.Uuid
+  sortOrder  Int        @map("sort_order")
+  sourceText String     @map("source_text")
+  targetText String     @map("target_text")
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deck       PhraseDeck @relation(fields: [deckId], references: [id], onDelete: Restrict)
+
+  @@unique([deckId, sortOrder], map: "phrases_deck_order_key")
+  @@map("phrases")
+}
+
+model LessonPhraseDeck {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId  String     @map("lesson_id") @db.Uuid
+  deckId    String     @map("deck_id") @db.Uuid
+  sortOrder Int        @map("sort_order")
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  lesson    Lesson     @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  deck      PhraseDeck @relation(fields: [deckId], references: [id], onDelete: Restrict)
+
+  @@unique([lessonId, deckId], map: "lesson_phrase_decks_lesson_deck_key")
+  @@unique([lessonId, sortOrder], map: "lesson_phrase_decks_lesson_order_key")
+  @@index([deckId], map: "lesson_phrase_decks_deck_id_idx")
+  @@map("lesson_phrase_decks")
+}
+
+model ActivityAttempt {
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String                @map("user_id") @db.Uuid
+  activityId       String                @map("activity_id") @db.Uuid
+  contentVersion   Int                   @map("content_version")
+  idempotencyKey   String                @map("idempotency_key") @db.Uuid
+  requestHash      String                @map("request_hash") @db.Char(64)
+  selectedChoiceId String                @map("selected_choice_id") @db.VarChar(100)
+  result           ActivityAttemptResult
+  response         Json
+  completedAt      DateTime              @map("completed_at") @db.Timestamptz(6)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  activityVersion  ActivityVersion       @relation(fields: [activityId, contentVersion], references: [activityId, contentVersion], onDelete: Restrict)
+
+  @@unique([userId, idempotencyKey], map: "activity_attempts_user_idempotency_key")
+  @@index([userId, activityId, completedAt], map: "activity_attempts_user_activity_time_idx")
+  @@map("activity_attempts")
+}
+
+model LessonProgress {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  lessonId             String    @map("lesson_id") @db.Uuid
+  nextActivityId       String?   @map("next_activity_id") @db.Uuid
+  completedActivityIds String[]  @default([]) @map("completed_activity_ids") @db.Uuid
+  completedAt          DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lesson               Lesson    @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  nextActivity         Activity? @relation("NextActivity", fields: [nextActivityId, lessonId], references: [id, lessonId], onDelete: Restrict)
+
+  @@unique([userId, lessonId], map: "lesson_progress_user_lesson_key")
+  @@index([userId, updatedAt], map: "lesson_progress_user_updated_idx")
+  @@index([nextActivityId], map: "lesson_progress_next_activity_idx")
+  @@map("lesson_progress")
+}
+
+model PracticeDay {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                 String   @map("user_id") @db.Uuid
+  localDate              DateTime @map("local_date") @db.Date
+  timezone               String   @db.VarChar(100)
+  completedActivityCount Int      @default(0) @map("completed_activity_count")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([userId, localDate], map: "practice_days_user_local_date_key")
+  @@index([userId, localDate(sort: Desc)], map: "practice_days_user_date_idx")
+  @@map("practice_days")
+}
+
+model LearningGoal {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @unique(map: "learning_goals_user_id_key") @map("user_id") @db.Uuid
+  dailyTarget Int      @default(3) @map("daily_target")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("learning_goals")
+}
+
+model LearningPreference {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @unique(map: "learning_preferences_user_id_key") @map("user_id") @db.Uuid
+  timezone  String   @default("UTC") @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("learning_preferences")
+}
+
+model NotificationPreference {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                  String   @unique(map: "notification_preferences_user_id_key") @map("user_id") @db.Uuid
+  practiceReminderEnabled Boolean  @default(false) @map("practice_reminder_enabled")
+  reminderLocalTime       DateTime @default(dbgenerated("'09:00:00'::time")) @map("reminder_local_time") @db.Time(0)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("notification_preferences")
 }

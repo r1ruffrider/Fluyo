@@ -1,6 +1,6 @@
 # Sprint 4 — Authenticated dashboard and learning domain
 
-Status: proposed implementation plan pending acceptance of [ADR 0005](adr/0005-learning-domain-ownership-and-progress.md)
+Status: accepted implementation plan under delivery. ADR 0005 and increments 1–2 are merged; increment 3 adds the reviewed schema and shared client contracts.
 
 Success task: an authenticated learner opens Fluyo, sees the next real activity, completes it once, and can reload or return in another session with the same progress, goal, and streak.
 
@@ -63,9 +63,9 @@ Screen recordings for marketing use synthetic accounts only and hide email, bill
 
 Each increment uses a short-lived branch and draft PR. Every exact PR head must pass the eight protected checks before Adriana's delegated merge gate applies.
 
-1. **Contract and decision:** accept ADR 0005, this plan, endpoint shapes, states, and retention rules.
-2. **API error and abuse boundary:** add allowlisted domain errors, safe filter mappings, the attempt-rate-limiter interface/local adapter, `Retry-After`, and focused 404/409/429 tests.
-3. **Schema and shared types:** add reviewed Prisma migration, stable activities plus immutable versions, catalog/progress models, enum mappings, constraints, indexes, shared contracts, and schema tests. Do not seed or expose UI yet.
+1. [x] **Contract and decision:** accept ADR 0005, this plan, endpoint shapes, states, and retention rules.
+2. [x] **API error and abuse boundary:** add allowlisted domain errors, safe filter mappings, the attempt-rate-limiter interface/local adapter, `Retry-After`, and focused 404/409/429 tests.
+3. [x] **Schema and shared types:** add reviewed Prisma migration, stable activities plus immutable versions, catalog/progress models, enum mappings, constraints, indexes, shared contracts, and schema tests. Do not seed or expose UI yet.
 4. **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
 5. **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, UTC preference bootstrap, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
 6. **Lifecycle and observability:** add the learning-data export/delete service hooks, privacy-safe event/metric contract, and complete/rollback/isolation/telemetry tests.

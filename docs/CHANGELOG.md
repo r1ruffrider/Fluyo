@@ -25,6 +25,9 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - Independent CI jobs for dependency auditing, committed-secret scanning, Prisma validation, linting, type checking, tests, builds, and formatting.
 - A protected `GET /api/v1/billing/status` endpoint reporting the caller's normalized subscription summary and active entitlements.
 - A `/billing` subscription-status card showing synchronized plan, status, renewal/trial/cancellation date, and entitlement keys without granting access from redirects.
+- Accepted ADR 0005 and the Sprint 4 delivery contract for an authenticated dashboard and canonical learning domain.
+- Versioned learning catalog, attempt, progress, practice-day, goal, timezone, and reminder schemas with database constraints for publication ownership, idempotency, ordering, and daily-target bounds.
+- Shared mobile-ready TypeScript contracts and path constants for dashboard, lesson, phrase-deck, activity-attempt, goal, timezone, and notification-preference APIs without exposing answer keys or provider data.
 
 ### Changed
 
