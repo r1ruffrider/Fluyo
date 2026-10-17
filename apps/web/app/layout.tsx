@@ -4,13 +4,13 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fluyo Platform",
-  description: "Spanish that flows both ways.",
+  title: "Fluyo | Spanish for real conversations",
+  description: "Practice useful Spanish through playful, conversation-first phrase sprints.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html data-scroll-behavior="smooth" lang="en">
       <body>{children}</body>
     </html>
   );

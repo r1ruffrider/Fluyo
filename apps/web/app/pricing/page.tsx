@@ -24,14 +24,14 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
 
         <section className="mx-auto mt-14 max-w-3xl text-center">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#ef4d4d]">
-            Choose your flow
+            Billing preview
           </p>
           <h1 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-6xl">
-            Practice every day, without limits.
+            Explore Fluyo&apos;s test-mode plans.
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-[#15123a]/65">
-            Start free, then upgrade through Stripe-hosted Checkout when you want the complete
-            experience.
+            The current build uses Stripe test mode to demonstrate Checkout and verified billing
+            status. Paid learning features are still on the product roadmap.
           </p>
         </section>
 
@@ -42,11 +42,8 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
         ) : null}
         {checkout === "success" ? (
           <p className="mx-auto mt-8 max-w-xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center text-sm text-emerald-900">
-            View your current plan and access on{" "}
-            <Link className="font-bold underline" href="/billing">
-              Billing
-            </Link>
-            . Payment confirmation may take a moment.
+            Stripe completed Checkout. Signed webhooks update billing status; this redirect does not
+            grant product access.
           </p>
         ) : null}
 
@@ -55,18 +52,18 @@ export default async function PricingPage({ searchParams }: PricingPageProps) {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#15123a]/45">Free</p>
             <p className="mt-3 text-5xl font-black tracking-[-0.055em]">$0</p>
             <p className="mt-5 leading-7 text-[#15123a]/65">
-              Build a daily Spanish habit with the essential Fluyo experience.
+              Explore the working product preview without starting a test subscription.
             </p>
             <ul className="mt-6 list-disc space-y-3 pl-5 text-sm font-semibold text-[#15123a]/70">
-              <li>Core daily practice</li>
-              <li>Basic review</li>
+              <li>Three-step café phrase sprint</li>
+              <li>Account and profile foundation</li>
               <li>No payment method required</li>
             </ul>
             <Link
               className="mt-7 block rounded-full border border-[#15123a]/20 px-6 py-3 text-center text-sm font-bold text-[#15123a]/65"
               href="/account"
             >
-              Continue free
+              Open my account
             </Link>
           </section>
           <PricingCard />
