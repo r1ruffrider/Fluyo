@@ -117,6 +117,15 @@ retries deterministic, while a changed request using the same key is rejected. L
 timezone/reminder preferences use owner-keyed upserts; changing a timezone does not rewrite prior
 practice-day dates or their recorded timezone.
 
+`LearningDataLifecycleService` is the provider-neutral hook for a future account export/deletion
+orchestrator. Export reads all six user-owned learning record groups in one repeatable-read
+transaction and returns stable ISO date/time values plus the complete owned attempt metadata. Delete
+removes those groups in one transaction and returns per-group counts; a repeated delete returns zero.
+Both operations scope every query by the verified owner UUID. They do not mutate catalog content,
+profiles, Stripe customer/subscription projections, entitlements, or the webhook ledger. No public
+delete route exists yet, so identity-provider deletion and user confirmation remain future account-
+lifecycle work.
+
 The migration is additive: it does not alter or delete profiles, billing projections, entitlements,
 or the Stripe event ledger. Forward recovery uses a follow-up migration; an applied migration is never
 rewritten. Before merge, the migration must apply both to an empty database and to the preserved local

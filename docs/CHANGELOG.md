@@ -30,6 +30,8 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - Shared mobile-ready TypeScript contracts and path constants for dashboard, lesson, phrase-deck, activity-attempt, goal, timezone, and notification-preference APIs without exposing answer keys or provider data.
 - An idempotent free starter lesson and phrase deck plus authenticated, entitlement-filtered, cursor-paginated lesson and phrase-deck read APIs.
 - Transactional, idempotent activity attempts with server-side evaluation, lesson/practice projections, UTC bootstrap, streak calculation, daily goals, IANA timezone preferences, and honest reminder-preference storage.
+- A provider-neutral learning-data export/delete service with repeatable-read export, atomic idempotent deletion, owner isolation, and rollback coverage.
+- Privacy-bounded learning telemetry events plus labeled attempt counters and attempt/dashboard duration histograms, emitted as structured server logs without answers, email, tokens, or provider payloads.
 
 ### Changed
 

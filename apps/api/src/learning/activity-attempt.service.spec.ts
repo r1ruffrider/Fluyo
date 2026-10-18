@@ -11,6 +11,7 @@ import {
   type ActivityAttemptReplayStore,
 } from "./activity-attempt-admission.service";
 import { ActivityAttemptService } from "./activity-attempt.service";
+import type { LearningTelemetryService } from "./learning-telemetry.service";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const LESSON_ID = "22222222-2222-4222-8222-222222222222";
@@ -75,10 +76,12 @@ function createFixture() {
       recoverUniqueKeyConflict,
     }),
   };
+  const telemetry = { recordAttempt: vi.fn(), recordProgress: vi.fn() };
   const service = new ActivityAttemptService(
     prisma as unknown as PrismaService,
     entitlements as unknown as EntitlementsService,
     admission as unknown as ActivityAttemptAdmissionService,
+    telemetry as unknown as LearningTelemetryService,
   );
 
   return {
@@ -90,6 +93,7 @@ function createFixture() {
     complete,
     fail,
     recoverUniqueKeyConflict,
+    telemetry,
   };
 }
 
@@ -136,6 +140,14 @@ describe("ActivityAttemptService", () => {
     });
     expect(fixture.complete).toHaveBeenCalledOnce();
     expect(fixture.fail).not.toHaveBeenCalled();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "correct", activityId: ACTIVITY_ID, lessonId: LESSON_ID }),
+    );
+    expect(fixture.telemetry.recordProgress).toHaveBeenCalledWith({
+      outcome: "updated",
+      activityId: ACTIVITY_ID,
+      lessonId: LESSON_ID,
+    });
   });
 
   it("records incorrect feedback without awarding progress or daily practice", async () => {
@@ -164,6 +176,12 @@ describe("ActivityAttemptService", () => {
     expect(fixture.transaction.activityAttempt.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ result: ActivityAttemptResult.INCORRECT }),
     });
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "incorrect" }),
+    );
+    expect(fixture.telemetry.recordProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "unchanged" }),
+    );
   });
 
   it("does not award progress twice when a completed activity is answered again", async () => {
@@ -270,6 +288,31 @@ describe("ActivityAttemptService", () => {
     ).resolves.toBe(stored);
     expect(fixture.entitlements.listActive).not.toHaveBeenCalled();
     expect(fixture.prisma.$transaction).not.toHaveBeenCalled();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "duplicate" }),
+    );
+  });
+
+  it("records a rate-limit outcome without entitlement or transaction work", async () => {
+    const fixture = createFixture();
+    fixture.admission.admit.mockRejectedValue(
+      new ApiDomainException("rate_limited", { retryAfterSeconds: 30 }),
+    );
+
+    await expect(
+      fixture.service.submit(
+        USER_ID,
+        ACTIVITY_ID,
+        KEY,
+        { contentVersion: 1, selectedChoiceId: "hola" },
+        NOW,
+      ),
+    ).rejects.toMatchObject({ code: "rate_limited" });
+    expect(fixture.entitlements.listActive).not.toHaveBeenCalled();
+    expect(fixture.prisma.$transaction).not.toHaveBeenCalled();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "rate_limited" }),
+    );
   });
 
   it("rejects inaccessible or archived content without projections", async () => {
@@ -284,6 +327,9 @@ describe("ActivityAttemptService", () => {
     expect(error).toMatchObject({ code: "resource_not_found" });
     expect(fixture.transaction.practiceDay.upsert).not.toHaveBeenCalled();
     expect(fixture.fail).toHaveBeenCalledOnce();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "denied" }),
+    );
   });
 
   it("rejects stale content versions before writing progress", async () => {
@@ -296,6 +342,9 @@ describe("ActivityAttemptService", () => {
     expect(error).toBeInstanceOf(ApiDomainException);
     expect(error).toMatchObject({ code: "content_version_conflict" });
     expect(fixture.transaction.practiceDay.upsert).not.toHaveBeenCalled();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "conflict" }),
+    );
   });
 
   it("rejects a choice that was not issued by the published activity", async () => {
@@ -328,6 +377,9 @@ describe("ActivityAttemptService", () => {
     ).rejects.toThrow("database unavailable");
     expect(fixture.fail).toHaveBeenCalledOnce();
     expect(fixture.complete).not.toHaveBeenCalled();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "failed" }),
+    );
   });
 
   it("recovers the committed winner after an idempotency unique-key race", async () => {
@@ -352,5 +404,8 @@ describe("ActivityAttemptService", () => {
     ).resolves.toBe(stored);
     expect(fixture.recoverUniqueKeyConflict).toHaveBeenCalledOnce();
     expect(fixture.fail).not.toHaveBeenCalled();
+    expect(fixture.telemetry.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "duplicate" }),
+    );
   });
 });

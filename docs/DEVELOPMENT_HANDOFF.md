@@ -34,14 +34,13 @@ NUL text. The repaired head then received a fresh eight-check CI run and exact-h
 
 The repaired head passed Adriana's 159-check re-audit and all eight exact-head checks. PR #29 merged
 as `0ee6f74bc536ea3d5e145c1bc780157f31e27336`; post-merge `main` CI run `39081587057` passed all
-eight jobs. [Draft PR #30](https://github.com/r1ruffrider/Fluyo/pull/30) is Sprint 4 increment 5 on
-`codex/sprint-4-progress-writes`. It adds protected,
+eight jobs. [PR #30](https://github.com/r1ruffrider/Fluyo/pull/30) is Sprint 4 increment 5. It adds protected,
 idempotent activity submission; one-transaction attempt, progress, and practice-day writes; UTC
 bootstrap; streak calculation; goals; IANA timezone preferences; and reminder-preference storage.
 A scoped real-database smoke used only a synthetic owner and cleaned it afterward: one first attempt
 created one attempt/progress/practice-day row, identical replay returned the same attempt without an
 increment, changed content returned `idempotency_conflict`, invalid choice rolled back, and the
-preference bootstrapped to UTC. Exact-head CI and Adriana's increment audit remain pending.
+preference bootstrapped to UTC.
 
 A follow-up concurrency probe initially failed because Prisma cannot deserialize PostgreSQL's `void`
 return from a direct advisory-lock select; its transaction rolled back and cleanup found no retained
@@ -62,8 +61,7 @@ daily practice only for the first correct completion, canonicalizes path/key UUI
 hashing and persistence, and keeps the in-memory write limiter unavailable in production through a
 validated `LEARNING_WRITES_ENABLED` gate. Focused HTTP/service regressions cover boolean rejection,
 incorrect-answer retryability, repeat-correct non-counting, case-variant replay with changed-payload
-conflict, local enablement, and disabled/production behavior. PR #30 remains draft until the repaired
-exact head passes the complete local/GitHub gate and Adriana's counted re-audit.
+conflict, local enablement, and disabled/production behavior.
 
 The repaired local gate passed the dependency policy, Prisma schema, lint, typecheck, 183 tests
 (six policy, four shared, and 173 API), production build, formatting, and diff check. Gitleaks is not
@@ -72,6 +70,27 @@ job. A new scoped real-database smoke used a synthetic owner and cleaned all of 
 answer remained retryable with no progress/practice award, an upper/lowercase UUID retry returned the
 same attempt, changed payload returned `idempotency_conflict`, the first correct answer awarded one
 completion, and a second correct attempt left both completed IDs and daily practice at one.
+
+Adriana's repaired-head audit passed 199/199. She marked PR #30 ready and squash-merged it as
+`342f2edf751fc0b19e45ade6434794654f80bd0a`; post-merge `main` run `39083416521` passed all eight
+jobs. Sprint 4 increment 6 now runs on `codex/sprint-4-lifecycle-observability`. It adds a module-
+exported, provider-neutral learning-data export/delete hook and a bounded structured event/metric
+contract. No public deletion endpoint or identity-provider deletion orchestration is claimed in this
+increment.
+
+The increment 6 real-database smoke created two scoped synthetic owners and cleaned every synthetic
+row in `finally`. The export contained all six owned learning groups; the first delete removed six
+rows, the retry removed zero, and the other owner's six learning rows remained. The target owner's
+profile and Stripe-customer mapping remained present. A Prisma query-extension fault injected after
+two delete statements proved the real PostgreSQL transaction rolled the whole learning deletion back,
+leaving all six rows until final cleanup.
+
+The increment 6 local gate passes the dependency policy, Prisma schema, lint, typecheck, 196 tests
+(six policy, four shared, and 186 API), production build, formatting, and diff integrity. Gitleaks is
+assigned to the exact-head GitHub job because it is not installed locally. One pre-final typecheck
+caught a Prisma/local JSON type-boundary mismatch and passed after an explicit JSON boundary cast.
+One combined focused run hit the existing five-second AppModule test timeout during a cold import;
+the isolated module test and the subsequent complete API suite passed without a timeout change.
 
 ## Sprint 3.5 completion — 2026-10-17
 

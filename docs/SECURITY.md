@@ -92,6 +92,21 @@ The profile API demonstrates ownership authorization: `GET /profiles/me` and `PU
   it while that local adapter is registered. Production activation requires a shared limiter and
   ingress abuse controls.
 
+## Learning data lifecycle and telemetry
+
+- The exported lifecycle service receives one verified owner UUID from a future account orchestrator;
+  every export/delete query is owner-scoped. It has no public route in this increment.
+- Learning deletion is one database transaction across attempts, progress, practice days, goals, and
+  preferences. It leaves profiles, billing rows, entitlements, the webhook ledger, and catalog data
+  untouched. A failure rolls back the complete learning deletion.
+- Learning observability accepts only fixed event names, enumerated outcomes, bounded correlation
+  IDs, UUID record IDs, durations, and fixed operation/preference labels. Answer text and choice IDs,
+  email addresses, tokens, arbitrary user input, provider payloads, and database request hashes are
+  absent from telemetry.
+- The current telemetry sink emits structured event and metric samples through the server logger.
+  External aggregation/retention is a deployment concern; telemetry failure is best effort and never
+  changes a learning result.
+
 ## Verification
 
 Automated tests cover valid tokens and negative cases for missing credentials, malformed bearer headers, verification failures, wrong issuer, wrong audience, expiration, and invalid subjects. These deterministic tests use an ephemeral local signing key and do not claim that a real Supabase project was contacted.
