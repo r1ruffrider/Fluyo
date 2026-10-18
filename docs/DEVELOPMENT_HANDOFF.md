@@ -12,9 +12,11 @@ The bundle separates exact HTTP responses from nine no-response transport scenar
 billing projection and ADR 0003 past-due grace access, and records factual dashboard empty/complete/entitlement,
 attempt replay/conflict, settings, failure, and account-switch behavior. Stripe Checkout/Portal/webhooks,
 Supabase provider payloads, internal learning lifecycle hooks, native callback/telemetry/RevenueCat, tester,
-campaign, social, store, and public-release APIs remain excluded. This checkpoint is implementation evidence;
-the increment remains open until Isabella, Fernanda, and Danila clear their specialist reviews, Elana returns an
-independent exact-head PASS, and all eight protected checks pass on that head.
+campaign, social, store, and public-release APIs remain excluded. The audited implementation head `a697d6bd1576ca59fd0d6f6cb5897d7d676f90b0` passed all specialist gates:
+Isabella 31/31 combined checks, Fernanda 27/27, Danila 42/42, and Elana 295/295 independent checks with zero
+failed or unattempted. GitHub run `39102720332` passed all eight protected jobs. The full counted report is in
+[review-report.md](review-report.md). Any later documentation-only head still requires a fresh eight-check run
+before merge.
 
 ## Sprint 5 Increment 1 checkpoint — 2026-10-18
 

@@ -64,8 +64,9 @@ Exit gate: fixtures validate against the server contracts, negative envelopes re
 
 Implementation artifact: [`contracts/mobile/v1`](../contracts/mobile/v1/README.md) versions the exact
 implemented route inventory and deterministic synthetic fixtures. Learning operations carry a Sprint 6 stage
-marker and are not presented in the Sprint 5 native shell. Exact-head specialist and independent audit evidence
-remains required before this increment closes.
+marker and are not presented in the Sprint 5 native shell. The implementation head
+`a697d6bd1576ca59fd0d6f6cb5897d7d676f90b0` passed Isabella, Fernanda, Danila, and Elana's counted gates;
+the final documentation-only head still requires all eight protected checks before merge.
 
 ### 3. iOS foundation
 
