@@ -212,7 +212,7 @@ else
   run_xcodebuild build-debug     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Debug" build "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-staging     -project "$PROJECT" -scheme "$SCHEME" -configuration Staging     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Staging" build "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-release     -project "$PROJECT" -scheme "$SCHEME" -configuration Release     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Release" build
-  for app in     "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
+  for app in     "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
     test -d "$app"
   done
   validate_app_configuration "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app" development
@@ -249,7 +249,7 @@ BUILD_SCAN="$WORK_ROOT/all-build-strings.txt"
 if [[ "$LEG" == "minimum" ]]; then
   find "$APP_PATH" -type f -print0 | xargs -0 strings >>"$BUILD_SCAN"
 else
-  for app in     "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
+  for app in     "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
     find "$app" -type f -print0 | xargs -0 strings >>"$BUILD_SCAN"
   done
 fi

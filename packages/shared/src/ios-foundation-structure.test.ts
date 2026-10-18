@@ -215,6 +215,9 @@ describe("iOS unsigned foundation structure", () => {
         /validate_app_configuration "\$DERIVED_ROOT\/Debug\/Build\/Products\/Debug-iphonesimulator\/Fluyo\.app" development/g,
       ),
     ).toHaveLength(2);
+    expect(
+      script.match(/"\$DERIVED_ROOT\/Tests\/Build\/Products\/Debug-iphonesimulator\/Fluyo\.app"/g),
+    ).toHaveLength(3);
     expect(script).toContain("grep -Eaiq");
     expect(script).toContain('node "$ROOT_DIR/scripts/ios-evidence.mjs" generate');
     expect(script).toContain('node "$ROOT_DIR/scripts/scan-ios-evidence.mjs"');
