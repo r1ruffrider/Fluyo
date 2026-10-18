@@ -115,7 +115,12 @@ describe("iOS unsigned foundation structure", () => {
     expect(uiTests).toContain("NSForceRightToLeftWritingDirection");
     expect(uiTests).toContain("NSDoubleLocalizedStrings");
     expect(uiTests).toContain("testAccessibleNamesAndReadingOrderAreStable");
+    expect(uiTests).toMatch(
+      /override func setUpWithError\(\) throws \{\s*continueAfterFailure = false\s*\}/,
+    );
+    expect(uiTests).toContain("private func resetOrientation()");
     expect(uiTests).toContain("XCUIDevice.shared.orientation = .portrait");
+    expect(uiTests.match(/resetOrientation\(\)/g)).toHaveLength(4);
     for (const stateIdentifier of ["loading-state", "signed-out-state", "error-state"]) {
       expect(uiTests).toContain(`staticTexts["${stateIdentifier}"]`);
       expect(uiTests).not.toContain(`otherElements["${stateIdentifier}"]`);

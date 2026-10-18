@@ -4,7 +4,6 @@ import XCTest
 final class FoundationShellUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
-        XCUIDevice.shared.orientation = .portrait
     }
 
     func testLoadingStateIsStaticAndHonest() {
@@ -128,6 +127,7 @@ final class FoundationShellUITests: XCTestCase {
     }
 
     func testNaturalDebugLaunchRendersAnInternalMarker() {
+        resetOrientation()
         let app = XCUIApplication()
         app.launch()
 
@@ -136,6 +136,7 @@ final class FoundationShellUITests: XCTestCase {
     }
 
     func testNaturalInvalidConfigurationFailsClosed() {
+        resetOrientation()
         let app = XCUIApplication()
         app.launchEnvironment["FLUYO_UI_TEST_CONFIGURATION"] = "invalid"
         app.launch()
@@ -156,10 +157,15 @@ final class FoundationShellUITests: XCTestCase {
     }
 
     private func launch(state: String, arguments: [String] = []) -> XCUIApplication {
+        resetOrientation()
         let app = XCUIApplication()
         app.launchEnvironment["FLUYO_UI_TEST_STATE"] = state
         app.launchArguments += arguments
         app.launch()
         return app
+    }
+
+    private func resetOrientation() {
+        XCUIDevice.shared.orientation = .portrait
     }
 }
