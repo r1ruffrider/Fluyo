@@ -64,7 +64,8 @@
     ]
   },
   "buildMarker": {
-    "required": true,
+    "requiredForEnvironments": ["development", "staging"],
+    "releaseBehavior": "not_rendered_while_release_networking_is_inert",
     "allowedFields": [
       "environment",
       "isInternal",
@@ -202,12 +203,17 @@
   "acceptance": {
     "evidenceRequiredFields": [
       "sourceCommit",
+      "buildIdentifier",
+      "platform",
       "macosVersion",
       "xcodeVersion",
       "swiftVersion",
-      "simulatorModel",
-      "simulatorOsVersion",
-      "configuration",
+      "deviceModel",
+      "deviceClass",
+      "deviceKind",
+      "deviceOsVersion",
+      "environment",
+      "accessibilitySetting",
       "command",
       "expected",
       "observed",
@@ -216,21 +222,180 @@
       "secretScanResult"
     ],
     "scenarios": [
-      { "id": "ios_config_development", "status": "unattempted" },
-      { "id": "ios_config_staging", "status": "unattempted" },
-      { "id": "ios_release_inert", "status": "unattempted" },
-      { "id": "ios_deterministic_launch", "status": "unattempted" },
-      { "id": "ios_loading_state", "status": "unattempted" },
-      { "id": "ios_signed_out_state", "status": "unattempted" },
-      { "id": "ios_safe_error_state", "status": "unattempted" },
-      { "id": "ios_reduce_motion", "status": "unattempted" },
-      { "id": "ios_dynamic_type_200_percent", "status": "unattempted" },
-      { "id": "ios_voiceover_order_and_names", "status": "unattempted" },
-      { "id": "ios_minimum_touch_targets", "status": "unattempted" },
-      { "id": "ios_portrait_layout", "status": "unattempted" },
-      { "id": "ios_landscape_fallback", "status": "unattempted" },
-      { "id": "ios_privacy_manifest_inventory", "status": "unattempted" },
-      { "id": "ios_artifact_secret_scan", "status": "unattempted" }
+      {
+        "id": "ios_config_development",
+        "status": "unattempted",
+        "expectedCriteria": ["public non-production values only", "missing values fail closed"]
+      },
+      {
+        "id": "ios_config_staging",
+        "status": "unattempted",
+        "expectedCriteria": ["public non-production values only", "missing values fail closed"]
+      },
+      {
+        "id": "ios_release_inert",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "networking disabled",
+          "build marker not rendered",
+          "missing values fail closed"
+        ]
+      },
+      {
+        "id": "ios_deterministic_launch",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "no indefinite spinner",
+          "no signed-out flash",
+          "one semantic end state"
+        ]
+      },
+      {
+        "id": "ios_loading_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "localized meaningful label",
+          "one polite announcement",
+          "bounded resolution"
+        ]
+      },
+      {
+        "id": "ios_signed_out_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "one safe primary action",
+          "logical focus order",
+          "no identity or provider detail"
+        ]
+      },
+      {
+        "id": "ios_safe_error_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "focus moves to error or action",
+          "one announcement",
+          "state retained",
+          "bounded recovery",
+          "no raw internal detail"
+        ]
+      },
+      {
+        "id": "ios_system_reduce_motion",
+        "status": "unattempted",
+        "expectedCriteria": ["system preference honored", "immediate static semantic equivalent"]
+      },
+      {
+        "id": "ios_motion_interruption_static_equivalent",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "transition is interruptible",
+          "interruption reaches the same semantic end state"
+        ]
+      },
+      {
+        "id": "ios_dynamic_type_200_percent",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "text reaches 200 percent",
+          "no clipping or overlap",
+          "primary actions remain visible"
+        ]
+      },
+      {
+        "id": "ios_voiceover_order_and_names",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "logical traversal order",
+          "actionable names and values",
+          "decorative content hidden"
+        ]
+      },
+      {
+        "id": "ios_minimum_touch_targets",
+        "status": "unattempted",
+        "expectedCriteria": ["every actionable target is at least 44 by 44 points"]
+      },
+      {
+        "id": "ios_focus_order_and_target",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "focus order follows reading order",
+          "status and error focus moves only when useful"
+        ]
+      },
+      {
+        "id": "ios_contrast_and_non_color_status",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "contrast meets the approved threshold",
+          "state is not communicated by color alone"
+        ]
+      },
+      {
+        "id": "ios_keyboard_and_switch_focus",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "supported controls are reachable",
+          "focus is visible",
+          "order remains logical"
+        ]
+      },
+      {
+        "id": "ios_smallest_supported_iphone_simulator",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "all foundation states fit",
+          "large text and primary actions remain usable"
+        ]
+      },
+      {
+        "id": "ios_large_current_iphone_simulator",
+        "status": "unattempted",
+        "expectedCriteria": ["layout uses space without stretching or hiding state"]
+      },
+      {
+        "id": "ios_physical_iphone_evidence",
+        "status": "unattempted",
+        "stage": "sprint_5_closeout",
+        "expectedCriteria": [
+          "install and launch evidence uses an approved non-production device and custodian"
+        ]
+      },
+      {
+        "id": "ios_portrait_layout",
+        "status": "unattempted",
+        "expectedCriteria": ["foundation states remain usable at supported text sizes"]
+      },
+      {
+        "id": "ios_landscape_fallback",
+        "status": "unattempted",
+        "expectedCriteria": ["auth, legal, error, and large-text states remain functional"]
+      },
+      {
+        "id": "ios_asset_rendering_provenance_semantics",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "approved provenance exists",
+          "no baked-in text",
+          "semantic or decorative role is correct",
+          "safe crop is verified"
+        ]
+      },
+      {
+        "id": "ios_privacy_manifest_inventory",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "declarations match exact code and SDK inventory",
+          "tracking remains disabled unless separately approved"
+        ]
+      },
+      {
+        "id": "ios_artifact_secret_scan",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "artifact and logs contain no secret, token, identity, provider, signing, path, or production value"
+        ]
+      }
     ]
   }
 }

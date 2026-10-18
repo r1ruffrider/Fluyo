@@ -12,7 +12,8 @@ It also records that no production data or external action was used to prepare t
 ## Boundaries
 
 - Development and staging may eventually use public, non-production client configuration. Missing values fail
-  closed. Release networking remains inert until its separately approved release gate.
+  closed and must show the constrained internal build marker. Release networking remains inert, and the marker
+  is not rendered there, until its separately approved release gate.
 - The initial privacy-manifest baseline declares no tracking, tracking domains, collected data, or required-reason
   API categories. Exact code and SDK inventory plus privacy approval must precede any addition.
 - Shell telemetry remains a no-op. Exact property constraints permit only iOS, development/staging, an internal
@@ -23,14 +24,16 @@ It also records that no production data or external action was used to prepare t
   [`docs/TEST_ACCOUNT_GOVERNANCE.md`](../../../../../docs/TEST_ACCOUNT_GOVERNANCE.md).
 - The asset manifest is empty until ownership and provenance are approved. Native shapes, system typography, and
   approved SF Symbols are the only interim sources.
-- Every simulator, accessibility, artifact, and binary/log check remains `unattempted`. Windows or static review
-  cannot convert any of those rows to PASS.
+- All 23 macOS, simulator, later physical-device, accessibility, asset, artifact, and binary/log scenarios remain
+  `unattempted`. Each scenario has explicit expected criteria. Windows or static review cannot convert any row
+  to PASS.
 
 ## Evidence rule
 
-The eventual macOS/Xcode run must record the exact source commit, host and toolchain versions, simulator, build
-configuration, command, expected and observed result, artifact hash, and secret-scan result. Any head change
-invalidates earlier exact-head audit and protected-check evidence under
+The eventual macOS/Xcode run must record the exact source commit and build identity; platform; host and
+toolchain versions; device model, class, kind, and OS; environment and accessibility setting; command; expected
+and observed result; artifact hash; and secret-scan result. A physical iPhone row remains separately unattempted
+until the Sprint 5 closeout device gate. Any head change invalidates earlier exact-head audit and protected-check evidence under
 [`docs/TEST_ACCOUNT_GOVERNANCE.md`](../../../../../docs/TEST_ACCOUNT_GOVERNANCE.md).
 
 Reference sources for the eventual toolchain decision:

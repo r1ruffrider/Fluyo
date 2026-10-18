@@ -33,7 +33,7 @@ Independent repository work therefore adds a specification-only
 [iOS foundation readiness contract](../contracts/mobile/ios/foundation/v1/README.md). It keeps Release
 networking inert, limits development and staging to public non-production configuration, starts with an empty
 no-tracking privacy baseline, keeps telemetry as a bounded no-op, blocks capture, keeps the asset ledger empty,
-and records 15 platform scenarios as unattempted. It contains no endpoint, bundle identifier, Apple account,
+and records 23 structured platform scenarios as unattempted. It contains no endpoint, bundle identifier, Apple account,
 signing material, credential, device value, production value, or captured data, and it does not authorize an
 Xcode project. Isabella, Fernanda, Danila, and Elana must review the exact head; all eight protected checks must
 pass before this prerequisite can merge.

@@ -146,7 +146,10 @@ describe("iOS foundation readiness contract v1", () => {
   });
 
   it("permits only bounded non-sensitive build marker fields", () => {
-    expect(buildMarker.required).toBe(true);
+    expect(
+      asStrings(buildMarker.requiredForEnvironments, "buildMarker.requiredForEnvironments"),
+    ).toEqual(["development", "staging"]);
+    expect(buildMarker.releaseBehavior).toBe("not_rendered_while_release_networking_is_inert");
     const allowedFields = asStrings(buildMarker.allowedFields, "buildMarker.allowedFields");
     expect(allowedFields).toEqual([
       "environment",
@@ -316,42 +319,62 @@ describe("iOS foundation readiness contract v1", () => {
     ]);
   });
 
-  it("keeps every macOS, simulator, accessibility, and artifact scenario unattempted", () => {
+  it("keeps every macOS, device, accessibility, and artifact scenario structured and unattempted", () => {
     const scenarios = acceptance.scenarios;
     if (!Array.isArray(scenarios)) throw new Error("acceptance.scenarios must be an array");
-    expect(scenarios).toHaveLength(15);
+    expect(scenarios).toHaveLength(23);
     expect(scenarios.map((scenario) => asObject(scenario).id)).toEqual([
       "ios_config_development",
       "ios_config_staging",
       "ios_release_inert",
       "ios_deterministic_launch",
-      "ios_loading_state",
-      "ios_signed_out_state",
-      "ios_safe_error_state",
-      "ios_reduce_motion",
+      "ios_loading_accessible_state",
+      "ios_signed_out_accessible_state",
+      "ios_safe_error_accessible_state",
+      "ios_system_reduce_motion",
+      "ios_motion_interruption_static_equivalent",
       "ios_dynamic_type_200_percent",
       "ios_voiceover_order_and_names",
       "ios_minimum_touch_targets",
+      "ios_focus_order_and_target",
+      "ios_contrast_and_non_color_status",
+      "ios_keyboard_and_switch_focus",
+      "ios_smallest_supported_iphone_simulator",
+      "ios_large_current_iphone_simulator",
+      "ios_physical_iphone_evidence",
       "ios_portrait_layout",
       "ios_landscape_fallback",
+      "ios_asset_rendering_provenance_semantics",
       "ios_privacy_manifest_inventory",
       "ios_artifact_secret_scan",
     ]);
     expect(scenarios.every((scenario) => asObject(scenario).status === "unattempted")).toBe(true);
-    expect(asStrings(acceptance.evidenceRequiredFields, "evidenceRequiredFields")).toEqual(
-      expect.arrayContaining([
-        "sourceCommit",
-        "macosVersion",
-        "xcodeVersion",
-        "simulatorModel",
-        "configuration",
-        "command",
-        "observed",
-        "result",
-        "artifactHash",
-        "secretScanResult",
-      ]),
-    );
+    for (const scenario of scenarios) {
+      expect(
+        asStrings(asObject(scenario).expectedCriteria, "scenario.expectedCriteria").length,
+      ).toBeGreaterThan(0);
+    }
+    expect(asObject(scenarios[17]).stage).toBe("sprint_5_closeout");
+    expect(asStrings(acceptance.evidenceRequiredFields, "evidenceRequiredFields")).toEqual([
+      "sourceCommit",
+      "buildIdentifier",
+      "platform",
+      "macosVersion",
+      "xcodeVersion",
+      "swiftVersion",
+      "deviceModel",
+      "deviceClass",
+      "deviceKind",
+      "deviceOsVersion",
+      "environment",
+      "accessibilitySetting",
+      "command",
+      "expected",
+      "observed",
+      "result",
+      "artifactHash",
+      "secretScanResult",
+    ]);
   });
 
   it("contains no concrete endpoint, bundle identifier, account, or secret value", () => {
