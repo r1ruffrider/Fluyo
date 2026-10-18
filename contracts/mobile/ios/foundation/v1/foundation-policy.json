@@ -1,0 +1,229 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "specification_only",
+  "sourceMainCommit": "a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1",
+  "lastReviewedDate": "2026-10-18",
+  "productionDataUsed": false,
+  "externalActionsPerformed": false,
+  "projectScaffoldAuthorized": false,
+  "completionClaimAllowed": false,
+  "requiredDecisions": [
+    "S5-D01",
+    "S5-D02",
+    "S5-D03",
+    "S5-D04",
+    "S5-D06",
+    "S5-D10",
+    "UX-OS-IOS",
+    "UX-DEVICE-IOS",
+    "UX-FORM-FACTOR",
+    "UX-ORIENTATION",
+    "UX-LOCALE",
+    "UX-A11Y-OWNERSHIP",
+    "UX-REDUCED-MOTION",
+    "UX-ASSET-OWNERSHIP",
+    "UX-TEST-TRACEABILITY"
+  ],
+  "configuration": {
+    "allowedEnvironments": ["development", "staging", "release"],
+    "publicFieldNames": [
+      "apiBaseUrl",
+      "supabaseUrl",
+      "supabasePublishableKey",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort"
+    ],
+    "development": {
+      "classification": "public_non_production_only",
+      "networkEnabled": true,
+      "failClosedOnMissingValue": true
+    },
+    "staging": {
+      "classification": "public_non_production_only",
+      "networkEnabled": true,
+      "failClosedOnMissingValue": true
+    },
+    "release": {
+      "classification": "inert_until_release_gate",
+      "networkEnabled": false,
+      "failClosedOnMissingValue": true
+    },
+    "forbiddenConcepts": [
+      "serviceRole",
+      "clientSecret",
+      "accessToken",
+      "refreshToken",
+      "authorizationCode",
+      "cookie",
+      "teamId",
+      "provisioningProfile",
+      "signingCertificate"
+    ]
+  },
+  "buildMarker": {
+    "required": true,
+    "allowedFields": [
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort"
+    ],
+    "forbiddenFields": [
+      "email",
+      "profileId",
+      "ownerId",
+      "correlationId",
+      "deviceId",
+      "providerProjectId",
+      "endpoint",
+      "branch",
+      "user",
+      "filesystemPath"
+    ]
+  },
+  "privacyManifestBaseline": {
+    "tracking": false,
+    "trackingDomains": [],
+    "collectedDataTypes": [],
+    "accessedApiCategories": [],
+    "rule": "declare_only_after_exact_code_or_sdk_inventory_and_privacy_approval"
+  },
+  "telemetry": {
+    "mode": "no_op",
+    "allowedEvents": [
+      "app_shell_loaded",
+      "app_shell_failed",
+      "app_shell_state_changed",
+      "network_state_changed",
+      "reduced_motion_applied"
+    ],
+    "allowedProperties": [
+      "platform",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort",
+      "outcome",
+      "durationBucket"
+    ],
+    "propertyConstraints": {
+      "platform": { "const": "ios" },
+      "environment": { "enum": ["development", "staging"] },
+      "isInternal": { "const": true },
+      "semanticVersion": { "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32 },
+      "buildNumber": { "pattern": "^[0-9]+$", "maxLength": 18 },
+      "sourceCommitShort": { "pattern": "^[0-9a-f]{7,12}$" },
+      "outcome": {
+        "enum": ["loaded", "failed", "changed", "online", "offline", "applied"]
+      },
+      "durationBucket": {
+        "enum": ["under_100ms", "100_to_499ms", "500_to_1999ms", "2000ms_or_more"]
+      }
+    },
+    "futureAttributionRequiresSeparateAcceptedContract": true,
+    "forbiddenConcepts": [
+      "email",
+      "profileId",
+      "ownerId",
+      "accessToken",
+      "refreshToken",
+      "authorizationCode",
+      "cookie",
+      "requestBody",
+      "responseBody",
+      "url",
+      "query",
+      "referrer",
+      "utm",
+      "campaign",
+      "clickId",
+      "deviceId",
+      "advertisingId",
+      "installId",
+      "ipAddress",
+      "userAgent",
+      "providerPayload",
+      "providerId",
+      "accessibilitySetting",
+      "crashStack",
+      "filesystemPath",
+      "lessonId",
+      "progress",
+      "selectedChoiceId",
+      "billingStatus",
+      "correlationId"
+    ]
+  },
+  "syntheticCapture": {
+    "policyReference": "docs/TEST_ACCOUNT_GOVERNANCE.md",
+    "status": "blocked_until_capture_owners_and_checklist_are_approved",
+    "allowedIdentityLabel": "Signed in",
+    "requiredChecks": [
+      "isolated_non_production_session",
+      "internal_environment_marker_visible",
+      "deterministic_synthetic_state",
+      "personal_status_bar_data_hidden",
+      "logs_and_developer_overlays_hidden",
+      "identity_and_billing_values_absent",
+      "product_and_privacy_review_complete"
+    ]
+  },
+  "assets": {
+    "status": "empty_until_asset_ownership_is_approved",
+    "items": [],
+    "requiredItemFields": [
+      "assetId",
+      "repositorySourcePath",
+      "sourceHash",
+      "author",
+      "license",
+      "modificationRecord",
+      "semanticRole",
+      "accessibilityLabel",
+      "cropAndSafeAreaEvidence",
+      "sizeBudgetBytes",
+      "containsBakedText",
+      "metadataStripped"
+    ],
+    "allowedInterimSources": ["native_swiftui_shapes", "system_typography", "approved_sf_symbols"]
+  },
+  "acceptance": {
+    "evidenceRequiredFields": [
+      "sourceCommit",
+      "macosVersion",
+      "xcodeVersion",
+      "swiftVersion",
+      "simulatorModel",
+      "simulatorOsVersion",
+      "configuration",
+      "command",
+      "expected",
+      "observed",
+      "result",
+      "artifactHash",
+      "secretScanResult"
+    ],
+    "scenarios": [
+      { "id": "ios_config_development", "status": "unattempted" },
+      { "id": "ios_config_staging", "status": "unattempted" },
+      { "id": "ios_release_inert", "status": "unattempted" },
+      { "id": "ios_deterministic_launch", "status": "unattempted" },
+      { "id": "ios_loading_state", "status": "unattempted" },
+      { "id": "ios_signed_out_state", "status": "unattempted" },
+      { "id": "ios_safe_error_state", "status": "unattempted" },
+      { "id": "ios_reduce_motion", "status": "unattempted" },
+      { "id": "ios_dynamic_type_200_percent", "status": "unattempted" },
+      { "id": "ios_voiceover_order_and_names", "status": "unattempted" },
+      { "id": "ios_minimum_touch_targets", "status": "unattempted" },
+      { "id": "ios_portrait_layout", "status": "unattempted" },
+      { "id": "ios_landscape_fallback", "status": "unattempted" },
+      { "id": "ios_privacy_manifest_inventory", "status": "unattempted" },
+      { "id": "ios_artifact_secret_scan", "status": "unattempted" }
+    ]
+  }
+}
