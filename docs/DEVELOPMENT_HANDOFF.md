@@ -1,5 +1,21 @@
 # Development and billing verification handoff
 
+## Sprint 5 Increment 1 checkpoint — 2026-10-18
+
+The accepted [Sprint 5 plan](SPRINT_5_PLAN.md) is merged on `main` as
+`2457d5eb11d5034a6d93d6b0b10aaab21acb9ee6`; post-merge run `39100845190` passed all eight
+required jobs. [SPRINT_5_DECISION_REGISTER.md](SPRINT_5_DECISION_REGISTER.md) is the active Increment 1
+artifact. It separates proposed choices from approvals, names accountable review owners, inventories the actual
+HTTP surface, labels learning export/deletion as internal-only hooks, and keeps the missing verified account
+lifecycle API visible as a mobile/store blocker.
+
+Isabella, Fernanda, and Danila supplied the decision evidence, market/social readiness, device/state,
+accessibility, motion, asset, and acceptance-traceability gates. Material OS, form-factor, locale, identifier,
+account, signing, domain, privacy, device, staffing, social, destination, rights, analytics, and release choices
+remain proposed or blocked until their dated evidence exists. This increment performs no native scaffold,
+credential, account, identifier, store, production, database, publishing, or spending action. Elana's independent
+exact-head audit and all eight protected checks remain required before merge.
+
 ## Sprint 5 planning checkpoint — 2026-10-18
 
 Sprint 4 is closed: PR #33 merged its reconciled roadmap and handoff as
