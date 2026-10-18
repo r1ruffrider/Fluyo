@@ -3,13 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BillingPlanCatalogService } from "./billing/billing-plan-catalog.service";
 import { EntitlementsService } from "./billing/entitlements.service";
+import { CatalogService } from "./catalog/catalog.service";
 
 describe("AppModule", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("resolves the identity, profile, and billing-foundation dependencies", async () => {
+  it("resolves the identity, profile, billing, and learning-catalog dependencies", async () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("DATABASE_URL", "postgresql://fluyo:fluyo@localhost:5432/fluyo");
     vi.stubEnv("SUPABASE_URL", "https://identity.example.com");
@@ -22,6 +23,7 @@ describe("AppModule", () => {
     expect(moduleRef).toBeDefined();
     expect(moduleRef.get(BillingPlanCatalogService)).toBeDefined();
     expect(moduleRef.get(EntitlementsService)).toBeDefined();
+    expect(moduleRef.get(CatalogService)).toBeDefined();
     await moduleRef.close();
   });
 });

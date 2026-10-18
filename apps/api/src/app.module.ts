@@ -4,6 +4,7 @@ import { LoggerModule } from "nestjs-pino";
 
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
+import { CatalogModule } from "./catalog/catalog.module";
 import { appConfig } from "./config/app.config";
 import { authConfig } from "./config/auth.config";
 import { billingConfig } from "./config/billing.config";
@@ -26,6 +27,7 @@ import { ProfilesModule } from "./profiles/profiles.module";
     LoggerModule.forRoot(createLoggerConfig()),
     AuthModule,
     BillingModule,
+    CatalogModule,
     DatabaseModule,
     HealthModule,
     ProfilesModule,
