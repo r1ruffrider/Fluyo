@@ -17,6 +17,7 @@ const expectedIosFiles = [
   "Fluyo/FluyoApp.swift",
   "Fluyo/FoundationShellModel.swift",
   "Fluyo/FoundationShellView.swift",
+  "Fluyo/Info.plist",
   "Fluyo/FoundationDesignTokens.swift",
   "Fluyo/FoundationTelemetry.swift",
   "Fluyo/Localizable.xcstrings",
@@ -52,6 +53,9 @@ describe("iOS unsigned foundation structure", () => {
     expect(debug).toContain("PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.dev");
     expect(staging).toContain("PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.staging");
     expect(release).toContain("PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app");
+    const project = read("apps/ios/Fluyo.xcodeproj/project.pbxproj");
+    expect(project.match(/GENERATE_INFOPLIST_FILE = NO/g)).toHaveLength(3);
+    expect(project.match(/INFOPLIST_FILE = Fluyo\/Info\.plist/g)).toHaveLength(3);
   });
 
   it("keeps development and staging public while release remains inert", () => {
@@ -81,6 +85,22 @@ describe("iOS unsigned foundation structure", () => {
     expect(release).toMatch(/FLUYO_API_BASE_URL =\s*\r?\n/);
     expect(release).toMatch(/FLUYO_SUPABASE_URL =\s*\r?\n/);
     expect(release).toMatch(/FLUYO_SUPABASE_PUBLISHABLE_KEY =\s*\r?\n/);
+
+    const plist = read("apps/ios/Fluyo/Info.plist");
+    for (const key of [
+      "FluyoAPIBaseURL",
+      "FluyoConfigurationClassification",
+      "FluyoEnvironment",
+      "FluyoInternalBuild",
+      "FluyoNetworkEnabled",
+      "FluyoSourceCommitShort",
+      "FluyoSupabasePublishableKey",
+      "FluyoSupabaseURL",
+    ]) {
+      expect(plist).toContain(`<key>${key}</key>`);
+    }
+    expect(plist).toContain("<string>$(FLUYO_ENVIRONMENT)</string>");
+    expect(plist).toContain("<string>$(FLUYO_API_BASE_URL)</string>");
   });
 
   it("keeps the initial privacy manifest empty and tracking disabled", () => {
