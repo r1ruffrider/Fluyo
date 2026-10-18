@@ -7,12 +7,14 @@ Authenticated development checks use role-specific, non-production accounts unde
 session state, use only their own locally referenced credentials, and never use Marlon's account as a
 fallback. Elana remains the independent QA and code-review owner and must use her separate account.
 
-After an increment passes Elana's counted exact-head audit and every required check, engineering commits and
-pushes completed work, reconciles the pull request and report, applies the standing authorized merge gate,
-verifies all required post-merge `main` checks, and immediately starts the next documented increment. A new
-start instruction is not required. Work pauses only for an undelegated explicit approval boundary, missing
-secure access or secrets, an external account or spending action, destructive or irreversible work, or a
-material product decision. When one workstream is blocked, independent authorized workstreams continue.
+Engineering commits and pushes completed work and reconciles the pull request and report before Elana's final
+exact-head audit. After that exact head passes Elana's counted audit and every required check, engineering
+applies the standing authorized merge gate, verifies all required post-merge `main` checks, and immediately
+starts the next documented increment. Any post-audit commit invalidates the evidence and requires a fresh audit
+and protected-check run. A new start instruction is not required. Work pauses only for an undelegated explicit
+approval boundary, missing secure access or secrets, an external account or spending action, destructive or
+irreversible work, or a material product decision. When one workstream is blocked, independent authorized
+workstreams continue.
 
 ## Sprint 5 Increment 2 implementation checkpoint — 2026-10-18
 

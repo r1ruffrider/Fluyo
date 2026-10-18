@@ -48,14 +48,17 @@ keeps the increment open.
 
 ## Standing execution and merge rule
 
-After Elana reports PASS with every required scenario executed and all required repository checks pass on the
-exact head, engineering:
+Engineering commits and pushes completed work and reconciles the pull request description, audit report, and
+handoff before the final exact-head gate. After Elana reports PASS with every required scenario executed and all
+required repository checks pass on that same head, engineering:
 
-1. commits and pushes all completed work;
-2. reconciles the pull request description, audit report, and handoff;
-3. applies the standing authorized merge gate;
-4. verifies all required checks on post-merge `main`; and
-5. immediately begins the next documented phase or increment.
+1. verifies that the reviewed head has not changed;
+2. applies the standing authorized merge gate;
+3. verifies all required checks on post-merge `main`; and
+4. immediately begins the next documented phase or increment.
+
+Any commit or push after the audit changes the exact head, invalidates the earlier gate evidence, and requires a
+fresh Elana exact-head audit and all required checks before merge.
 
 Engineering does not wait for another start instruction. Work pauses only for an explicit approval boundary
 that has not already been delegated, missing secure access or secrets, an external account or spending action,
