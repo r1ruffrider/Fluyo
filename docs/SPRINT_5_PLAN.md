@@ -45,10 +45,11 @@ Each increment is a small pull request. It must preserve the repository's eight 
 ### 1. Decision register and contract inventory
 
 - Record the approved OS/device baseline, application identifiers, account owners, CI-host availability, link domains, privacy owner, support/legal URL owners, and open external dependencies.
-- Inventory the existing `/api/v1` authentication, dashboard, catalog, attempt, settings, export, deletion, and billing-status contracts needed by mobile foundations.
+- Inventory the existing `/api/v1` authentication, dashboard, catalog, attempt, settings, and billing-status contracts needed by mobile foundations. Record the learning export/deletion capability separately as internal `LearningDataLifecycleService` hooks with no HTTP endpoint.
+- Define the missing authenticated account-lifecycle orchestration and public API, including reauthentication, export delivery, deletion confirmation, billing/store guidance, idempotency, auditability, and safe recovery. Treat it as an explicit dependency for later mobile settings and store-readiness work; do not generate client fixtures for an endpoint until its contract and implementation are independently approved.
 - Define compatibility and error-envelope rules without copying provider payloads or answer/validation internals into public contracts.
 
-Exit gate: every later increment has an owner, dependency, testable acceptance criteria, and an explicit block when its prerequisite is unresolved. Any external account creation, purchase, identifier reservation, or production-system change retains its separate approval gate.
+Exit gate: every later increment has an owner, dependency, testable acceptance criteria, and an explicit block when its prerequisite is unresolved. Existing HTTP contracts and internal-only hooks are labeled accurately, and the missing account-lifecycle orchestration/API remains visible as a blocker for dependent mobile/store work. Any external account creation, purchase, identifier reservation, or production-system change retains its separate approval gate.
 
 ### 2. Versioned mobile contract and fixture baseline
 
