@@ -16,6 +16,8 @@ import { ActivityAttemptService } from "./activity-attempt.service";
 import { LearningSettingsController } from "./learning-settings.controller";
 import { LearningSettingsService } from "./learning-settings.service";
 import { LearningDataLifecycleService } from "./learning-data-lifecycle.service";
+import { LearningDashboardController } from "./learning-dashboard.controller";
+import { LearningDashboardService } from "./learning-dashboard.service";
 import {
   LEARNING_TELEMETRY_SINK,
   LearningTelemetryService,
@@ -26,7 +28,7 @@ import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-repl
 
 @Module({
   imports: [AuthModule, BillingModule, DatabaseModule],
-  controllers: [ActivityAttemptController, LearningSettingsController],
+  controllers: [ActivityAttemptController, LearningDashboardController, LearningSettingsController],
   providers: [
     PrismaActivityAttemptReplayStore,
     {
@@ -40,6 +42,7 @@ import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-repl
     ActivityAttemptAdmissionService,
     ActivityAttemptService,
     LearningDataLifecycleService,
+    LearningDashboardService,
     LoggerLearningTelemetrySink,
     {
       provide: LEARNING_TELEMETRY_SINK,
@@ -49,6 +52,11 @@ import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-repl
     LearningWriteAvailabilityGuard,
     LearningSettingsService,
   ],
-  exports: [ActivityAttemptService, LearningDataLifecycleService, LearningSettingsService],
+  exports: [
+    ActivityAttemptService,
+    LearningDashboardService,
+    LearningDataLifecycleService,
+    LearningSettingsService,
+  ],
 })
 export class LearningModule {}

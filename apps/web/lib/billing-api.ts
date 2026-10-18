@@ -8,6 +8,12 @@ import {
 
 import { apiBaseUrl } from "./api-client";
 
+export class BillingApiError extends Error {
+  constructor(readonly status: number) {
+    super(`Billing API request failed with status ${status}`);
+  }
+}
+
 function requireStripeUrl(value: string, hostname: string): string {
   const url = new URL(value);
 
@@ -35,7 +41,7 @@ export async function createCheckoutSession(
   });
 
   if (!response.ok) {
-    throw new Error(`Checkout request failed with status ${response.status}`);
+    throw new BillingApiError(response.status);
   }
 
   const data = (await response.json()) as CreateCheckoutSessionResponse;
@@ -56,7 +62,7 @@ export async function createPortalSession(accessToken: string): Promise<string> 
   });
 
   if (!response.ok) {
-    throw new Error(`Customer Portal request failed with status ${response.status}`);
+    throw new BillingApiError(response.status);
   }
 
   const data = (await response.json()) as CreatePortalSessionResponse;
@@ -74,7 +80,7 @@ export async function fetchBillingStatus(accessToken: string): Promise<BillingSt
   });
 
   if (!response.ok) {
-    throw new Error(`Billing status request failed with status ${response.status}`);
+    throw new BillingApiError(response.status);
   }
 
   return (await response.json()) as BillingStatusResponse;

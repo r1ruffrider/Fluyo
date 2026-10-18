@@ -68,6 +68,9 @@ export default async function HomePage() {
           <div className="nav-actions">
             {identity ? (
               <>
+                <Link className="nav-account" href="/dashboard">
+                  Dashboard
+                </Link>
                 <Link className="nav-account" href="/account">
                   My account
                 </Link>
@@ -220,6 +223,8 @@ export default async function HomePage() {
             <ul>
               <li>Interactive café phrase sprint</li>
               <li>Account creation and profile</li>
+              <li>Structured starter lesson with saved progress</li>
+              <li>Daily goal and learning streak dashboard</li>
               <li>Test-mode subscription flow</li>
               <li>Responsive web experience</li>
             </ul>
@@ -228,7 +233,6 @@ export default async function HomePage() {
             <p className="eyebrow">On the product roadmap</p>
             <h2>Where Fluyo flows next.</h2>
             <ul>
-              <li>Structured lessons and saved learning progress</li>
               <li>Speaking and pronunciation feedback</li>
               <li>Adaptive practice and conversation tools</li>
               <li>Native iOS and Android applications</li>

@@ -175,6 +175,45 @@ Success response (`200 OK`) for a caller with a subscription:
 
 `subscription` is `null` when the caller has never started billing. `status` is one of `trialing`, `active`, `past_due`, `canceled`, `unpaid`, `incomplete`, `incomplete_expired`, or `paused`. `accessGranted` mirrors the shared `trialing`/`active`/`past_due` access policy and is display data only; product features must still query active entitlements directly rather than trust this field or any client value. When a caller holds more than one local subscription record, the response reports the access-granting one, tie-broken by the most recently updated record. No Stripe customer, subscription, or Price identifier is returned.
 
+## Learning dashboard API
+
+### `GET /learning/dashboard`
+
+Returns the verified learner's mobile-ready aggregate: the first accessible published activity not
+already completed, five most recently updated lesson-progress summaries, the daily goal, current
+streak, timezone, stored reminder preference, and server-derived content-access state. The response
+does not include an owner ID, answer key, entitlement source, billing provider identifier, or
+another learner's data.
+
+`access.unavailableReason` is `entitlement_required` when published catalog content exists but none
+is accessible, `catalog_empty` when no published content exists, and `null` when an accessible
+catalog is complete or a next activity is available. A learner's completed activity IDs across all
+lesson-progress rows are considered when choosing the next activity; only the newest five progress
+summaries are returned for display.
+
+```json
+{
+  "nextActivity": {
+    "id": "20000000-0000-4000-8000-000000000001",
+    "kind": "phrase_choice",
+    "contentVersion": 1,
+    "prompt": "Which phrase means Good morning?",
+    "choices": [{ "id": "buenos-dias", "label": "Buenos días" }]
+  },
+  "recentProgress": [],
+  "goal": { "dailyTarget": 3, "updatedAt": "2026-10-18T01:00:00.000Z" },
+  "streak": { "currentDays": 0, "practicedToday": false, "todayCompletedActivities": 0 },
+  "learningPreference": { "timezone": "UTC", "updatedAt": "2026-10-18T01:00:00.000Z" },
+  "notificationPreference": {
+    "practiceReminderEnabled": false,
+    "reminderLocalTime": "09:00",
+    "deliveryAvailable": false,
+    "updatedAt": "2026-10-18T01:00:00.000Z"
+  },
+  "access": { "nextActivityAvailable": true, "unavailableReason": null }
+}
+```
+
 ## Learning catalog APIs
 
 All learning catalog routes require a verified Supabase bearer token. Catalog records are

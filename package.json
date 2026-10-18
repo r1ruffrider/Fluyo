@@ -20,7 +20,7 @@
     "prisma:validate": "npm run prisma:validate --workspace @fluyo/api",
     "db:migrate": "dotenv -e .env -- npm run prisma:migrate --workspace @fluyo/api",
     "db:seed": "dotenv -e .env -- npm run prisma:seed --workspace @fluyo/api",
-    "test": "npm run test:audit-policy && npm run test --workspace @fluyo/shared && npm run test --workspace @fluyo/api",
+    "test": "npm run test:audit-policy && npm run test --workspace @fluyo/shared && npm run test --workspace @fluyo/api && npm run test --workspace @fluyo/web",
     "test:audit-policy": "node --test scripts/check-npm-audit.test.mjs",
     "typecheck": "npm run typecheck --workspace @fluyo/shared && npm run typecheck --workspace @fluyo/api && npm run typecheck --workspace @fluyo/web"
   },

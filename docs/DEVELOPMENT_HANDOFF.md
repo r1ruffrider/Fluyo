@@ -92,6 +92,27 @@ caught a Prisma/local JSON type-boundary mismatch and passed after an explicit J
 One combined focused run hit the existing five-second AppModule test timeout during a cold import;
 the isolated module test and the subsequent complete API suite passed without a timeout change.
 
+Adriana's independent increment 6 audit passed 215/215 with no blocked or unattempted checks. She
+marked PR #31 ready and squash-merged it as `5d14bc21dfc6431a00f891e96196e2b398e2275f`;
+post-merge run `39084682709` passed all eight required jobs. Increment 7 now runs on
+`codex/sprint-4-dashboard` from that exact main commit.
+
+Increment 7 adds the protected `GET /learning/dashboard` aggregate and `/dashboard` web route. The
+aggregate selects the first accessible activity not completed across any owned progress row while
+returning only five recent progress summaries. The web route uses verified Supabase server sessions,
+safe allowlisted return routing, idempotent server-action submissions, confirmed-result refresh,
+first-use/ready/completed/catalog-empty/entitlement-required/total-failure states, and an independent
+billing-status fallback. Next.js 16.3.8 runs with Webpack on port 3000; the current Nest branch runs
+on port 4000, and database health reports reachable against the preserved Compose volume.
+
+The increment 7 local gate passes 221 tests (six policy, four shared, 194 API, and 17 web), lint,
+typecheck, Prisma validation through the preserved root environment, formatting, the exact audit
+policy, production build, and diff integrity. Eight live HTTP/service assertions pass. The browser
+security gate refused agent observation of the localhost tab, so the preliminary review remains FAIL
+until Adriana completes the authenticated activity, reload/sign-in persistence, 320/390/768/1440,
+keyboard/focus/reduced-motion, and browser-console matrix on the exact PR head. No browser cookies or
+database rows were extracted or changed to bypass that gate.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.

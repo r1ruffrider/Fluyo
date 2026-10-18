@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getPublicWebUrl } from "../../lib/supabase/config";
 import { createSupabaseServerClient } from "../../lib/supabase/server";
+import { safeReturnPath } from "../../lib/safe-return-path";
 
 interface Credentials {
   email: string;
@@ -29,11 +30,14 @@ function readCredentials(formData: FormData): Credentials | null {
   return { email, password };
 }
 
-function callbackUrl(flow?: "recovery"): string {
+function callbackUrl(flow?: "recovery", next?: string): string {
   const url = new URL("/auth/callback", getPublicWebUrl());
 
   if (flow) {
     url.searchParams.set("flow", flow);
+  }
+  if (next) {
+    url.searchParams.set("next", safeReturnPath(next));
   }
 
   return url.toString();
@@ -53,7 +57,7 @@ export async function signIn(formData: FormData): Promise<void> {
     redirect("/login?error=invalid_credentials");
   }
 
-  redirect("/account");
+  redirect(safeReturnPath(formData.get("next")));
 }
 
 export async function signUp(formData: FormData): Promise<void> {
@@ -64,16 +68,17 @@ export async function signUp(formData: FormData): Promise<void> {
   }
 
   const supabase = await createSupabaseServerClient();
+  const next = safeReturnPath(formData.get("next"));
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
-    options: { emailRedirectTo: callbackUrl() },
+    options: { emailRedirectTo: callbackUrl(undefined, next) },
   });
 
   if (error) {
     redirect("/login?error=signup_failed");
   }
 
-  redirect(data.session ? "/account" : "/login?message=check_email");
+  redirect(data.session ? next : `/login?message=check_email&next=${encodeURIComponent(next)}`);
 }
 
 export async function requestPasswordReset(formData: FormData): Promise<void> {
