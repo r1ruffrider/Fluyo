@@ -16,6 +16,28 @@ approval boundary, missing secure access or secrets, an external account or spen
 irreversible work, or a material product decision. When one workstream is blocked, independent authorized
 workstreams continue.
 
+## Sprint 5 Increment 3 readiness checkpoint — 2026-10-18
+
+Increment 2 merged through PR #36 as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`; post-merge
+`main` run `39103456847` passed all eight required jobs. The test-account governance follow-up merged through
+PR #37 as `a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1`; post-merge run `39162465474` also passed all
+eight jobs.
+
+Increment 3 remains blocked from SwiftUI scaffolding by proposed or unresolved product, ownership, device,
+accessibility, asset, and macOS/Xcode decisions in
+[SPRINT_5_DECISION_REGISTER.md](SPRINT_5_DECISION_REGISTER.md). The current Windows host has no
+`xcodebuild`, `swift`, or `simctl`, so it cannot provide build, simulator, UI, accessibility, artifact, or
+binary-scan evidence. No iOS completion or availability claim is permitted.
+
+Independent repository work therefore adds a specification-only
+[iOS foundation readiness contract](../contracts/mobile/ios/foundation/v1/README.md). It keeps Release
+networking inert, limits development and staging to public non-production configuration, starts with an empty
+no-tracking privacy baseline, keeps telemetry as a bounded no-op, blocks capture, keeps the asset ledger empty,
+and records 23 structured platform scenarios as unattempted. It contains no endpoint, bundle identifier, Apple account,
+signing material, credential, device value, production value, or captured data, and it does not authorize an
+Xcode project. Isabella, Fernanda, Danila, and Elana must review the exact head; all eight protected checks must
+pass before this prerequisite can merge.
+
 ## Sprint 5 Increment 2 implementation checkpoint — 2026-10-18
 
 Increment 1 merged through PR #35 as `8b506202319dacd4635d20787cd47e1ef1d5b7b8`; post-merge

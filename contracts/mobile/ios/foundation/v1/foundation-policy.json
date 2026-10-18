@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "specification_only",
+  "sourceMainCommit": "a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1",
+  "lastReviewedDate": "2026-10-18",
+  "productionDataUsed": false,
+  "externalActionsPerformed": false,
+  "projectScaffoldAuthorized": false,
+  "completionClaimAllowed": false,
+  "requiredDecisions": [
+    "S5-D01",
+    "S5-D02",
+    "S5-D03",
+    "S5-D04",
+    "S5-D06",
+    "S5-D10",
+    "UX-OS-IOS",
+    "UX-DEVICE-IOS",
+    "UX-FORM-FACTOR",
+    "UX-ORIENTATION",
+    "UX-LOCALE",
+    "UX-A11Y-OWNERSHIP",
+    "UX-REDUCED-MOTION",
+    "UX-ASSET-OWNERSHIP",
+    "UX-TEST-TRACEABILITY"
+  ],
+  "configuration": {
+    "allowedEnvironments": ["development", "staging", "release"],
+    "publicFieldNames": [
+      "apiBaseUrl",
+      "supabaseUrl",
+      "supabasePublishableKey",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort"
+    ],
+    "development": {
+      "classification": "public_non_production_only",
+      "networkEnabled": true,
+      "failClosedOnMissingValue": true
+    },
+    "staging": {
+      "classification": "public_non_production_only",
+      "networkEnabled": true,
+      "failClosedOnMissingValue": true
+    },
+    "release": {
+      "classification": "inert_until_release_gate",
+      "networkEnabled": false,
+      "failClosedOnMissingValue": true
+    },
+    "forbiddenConcepts": [
+      "serviceRole",
+      "clientSecret",
+      "accessToken",
+      "refreshToken",
+      "authorizationCode",
+      "cookie",
+      "teamId",
+      "provisioningProfile",
+      "signingCertificate"
+    ]
+  },
+  "buildMarker": {
+    "requiredForEnvironments": ["development", "staging"],
+    "releaseBehavior": "not_rendered_while_release_networking_is_inert",
+    "allowedFields": [
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort"
+    ],
+    "propertyConstraints": {
+      "environment": { "enum": ["development", "staging"] },
+      "isInternal": { "const": true },
+      "semanticVersion": { "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32 },
+      "buildNumber": { "pattern": "^[0-9]+$", "maxLength": 18 },
+      "sourceCommitShort": { "pattern": "^[0-9a-f]{7,12}$" }
+    },
+    "forbiddenFields": [
+      "email",
+      "profileId",
+      "ownerId",
+      "correlationId",
+      "deviceId",
+      "providerProjectId",
+      "endpoint",
+      "branch",
+      "user",
+      "filesystemPath"
+    ]
+  },
+  "privacyManifestBaseline": {
+    "tracking": false,
+    "trackingDomains": [],
+    "collectedDataTypes": [],
+    "accessedApiCategories": [],
+    "rule": "declare_only_after_exact_code_or_sdk_inventory_and_privacy_approval"
+  },
+  "telemetry": {
+    "mode": "no_op",
+    "allowedEvents": [
+      "app_shell_loaded",
+      "app_shell_failed",
+      "app_shell_state_changed",
+      "network_state_changed",
+      "reduced_motion_applied"
+    ],
+    "allowedProperties": [
+      "platform",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort",
+      "outcome",
+      "durationBucket"
+    ],
+    "propertyConstraints": {
+      "platform": { "const": "ios" },
+      "environment": { "enum": ["development", "staging"] },
+      "isInternal": { "const": true },
+      "semanticVersion": { "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32 },
+      "buildNumber": { "pattern": "^[0-9]+$", "maxLength": 18 },
+      "sourceCommitShort": { "pattern": "^[0-9a-f]{7,12}$" },
+      "outcome": {
+        "enum": ["loaded", "failed", "changed", "online", "offline", "applied"]
+      },
+      "durationBucket": {
+        "enum": ["under_100ms", "100_to_499ms", "500_to_1999ms", "2000ms_or_more"]
+      }
+    },
+    "futureAttributionRequiresSeparateAcceptedContract": true,
+    "forbiddenConcepts": [
+      "email",
+      "profileId",
+      "ownerId",
+      "accessToken",
+      "refreshToken",
+      "authorizationCode",
+      "cookie",
+      "requestBody",
+      "responseBody",
+      "url",
+      "query",
+      "referrer",
+      "utm",
+      "campaign",
+      "clickId",
+      "deviceId",
+      "advertisingId",
+      "installId",
+      "ipAddress",
+      "userAgent",
+      "providerPayload",
+      "providerId",
+      "accessibilitySetting",
+      "crashStack",
+      "filesystemPath",
+      "lessonId",
+      "progress",
+      "selectedChoiceId",
+      "billingStatus",
+      "correlationId"
+    ]
+  },
+  "syntheticCapture": {
+    "policyReference": "docs/TEST_ACCOUNT_GOVERNANCE.md",
+    "status": "blocked_until_capture_owners_and_checklist_are_approved",
+    "allowedIdentityLabel": "Signed in",
+    "requiredChecks": [
+      "isolated_non_production_session",
+      "internal_environment_marker_visible",
+      "deterministic_synthetic_state",
+      "personal_status_bar_data_hidden",
+      "logs_and_developer_overlays_hidden",
+      "identity_and_billing_values_absent",
+      "product_and_privacy_review_complete"
+    ]
+  },
+  "assets": {
+    "status": "empty_until_asset_ownership_is_approved",
+    "items": [],
+    "requiredItemFields": [
+      "assetId",
+      "repositorySourcePath",
+      "sourceHash",
+      "author",
+      "license",
+      "modificationRecord",
+      "semanticRole",
+      "accessibilityLabel",
+      "cropAndSafeAreaEvidence",
+      "sizeBudgetBytes",
+      "containsBakedText",
+      "metadataStripped"
+    ],
+    "allowedInterimSources": ["native_swiftui_shapes", "system_typography", "approved_sf_symbols"]
+  },
+  "acceptance": {
+    "evidenceRequiredFields": [
+      "sourceCommit",
+      "buildIdentifier",
+      "platform",
+      "macosVersion",
+      "xcodeVersion",
+      "swiftVersion",
+      "deviceModel",
+      "deviceClass",
+      "deviceKind",
+      "deviceOsVersion",
+      "environment",
+      "accessibilitySetting",
+      "command",
+      "expected",
+      "observed",
+      "result",
+      "artifactHash",
+      "secretScanResult"
+    ],
+    "scenarios": [
+      {
+        "id": "ios_config_development",
+        "status": "unattempted",
+        "expectedCriteria": ["public non-production values only", "missing values fail closed"]
+      },
+      {
+        "id": "ios_config_staging",
+        "status": "unattempted",
+        "expectedCriteria": ["public non-production values only", "missing values fail closed"]
+      },
+      {
+        "id": "ios_release_inert",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "networking disabled",
+          "build marker not rendered",
+          "missing values fail closed"
+        ]
+      },
+      {
+        "id": "ios_deterministic_launch",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "no indefinite spinner",
+          "no signed-out flash",
+          "one semantic end state"
+        ]
+      },
+      {
+        "id": "ios_loading_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "localized meaningful label",
+          "one polite announcement",
+          "bounded resolution"
+        ]
+      },
+      {
+        "id": "ios_signed_out_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "one safe primary action",
+          "logical focus order",
+          "no identity or provider detail"
+        ]
+      },
+      {
+        "id": "ios_safe_error_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "focus moves to error or action",
+          "one announcement",
+          "state retained",
+          "bounded recovery",
+          "no raw internal detail"
+        ]
+      },
+      {
+        "id": "ios_system_reduce_motion",
+        "status": "unattempted",
+        "expectedCriteria": ["system preference honored", "immediate static semantic equivalent"]
+      },
+      {
+        "id": "ios_motion_interruption_static_equivalent",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "transition is interruptible",
+          "interruption reaches the same semantic end state"
+        ]
+      },
+      {
+        "id": "ios_dynamic_type_200_percent",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "text reaches 200 percent",
+          "no clipping or overlap",
+          "primary actions remain visible"
+        ]
+      },
+      {
+        "id": "ios_voiceover_order_and_names",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "logical traversal order",
+          "actionable names and values",
+          "decorative content hidden"
+        ]
+      },
+      {
+        "id": "ios_minimum_touch_targets",
+        "status": "unattempted",
+        "expectedCriteria": ["every actionable target is at least 44 by 44 points"]
+      },
+      {
+        "id": "ios_focus_order_and_target",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "focus order follows reading order",
+          "status and error focus moves only when useful"
+        ]
+      },
+      {
+        "id": "ios_contrast_and_non_color_status",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "contrast meets the approved threshold",
+          "state is not communicated by color alone"
+        ]
+      },
+      {
+        "id": "ios_keyboard_and_switch_focus",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "supported controls are reachable",
+          "focus is visible",
+          "order remains logical"
+        ]
+      },
+      {
+        "id": "ios_smallest_supported_iphone_simulator",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "all foundation states fit",
+          "large text and primary actions remain usable"
+        ]
+      },
+      {
+        "id": "ios_large_current_iphone_simulator",
+        "status": "unattempted",
+        "expectedCriteria": ["layout uses space without stretching or hiding state"]
+      },
+      {
+        "id": "ios_physical_iphone_evidence",
+        "status": "unattempted",
+        "stage": "sprint_5_closeout",
+        "expectedCriteria": [
+          "install and launch evidence uses an approved non-production device and custodian"
+        ]
+      },
+      {
+        "id": "ios_portrait_layout",
+        "status": "unattempted",
+        "expectedCriteria": ["foundation states remain usable at supported text sizes"]
+      },
+      {
+        "id": "ios_landscape_fallback",
+        "status": "unattempted",
+        "expectedCriteria": ["auth, legal, error, and large-text states remain functional"]
+      },
+      {
+        "id": "ios_asset_rendering_provenance_semantics",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "approved provenance exists",
+          "no baked-in text",
+          "semantic or decorative role is correct",
+          "safe crop is verified"
+        ]
+      },
+      {
+        "id": "ios_privacy_manifest_inventory",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "declarations match exact code and SDK inventory",
+          "tracking remains disabled unless separately approved"
+        ]
+      },
+      {
+        "id": "ios_artifact_secret_scan",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "artifact and logs contain no secret, token, identity, provider, signing, path, or production value"
+        ]
+      }
+    ]
+  }
+}

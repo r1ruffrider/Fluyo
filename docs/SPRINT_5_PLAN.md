@@ -65,10 +65,19 @@ Exit gate: fixtures validate against the server contracts, negative envelopes re
 Implementation artifact: [`contracts/mobile/v1`](../contracts/mobile/v1/README.md) versions the exact
 implemented route inventory and deterministic synthetic fixtures. Learning operations carry a Sprint 6 stage
 marker and are not presented in the Sprint 5 native shell. The implementation head
-`a697d6bd1576ca59fd0d6f6cb5897d7d676f90b0` passed Isabella, Fernanda, Danila, and Elana's counted gates;
-the final documentation-only head still requires all eight protected checks before merge.
+`a697d6bd1576ca59fd0d6f6cb5897d7d676f90b0` passed Isabella, Fernanda, Danila, and Elana's counted gates.
+PR #36 merged as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`, and post-merge `main` run `39103456847`
+passed all eight required jobs.
 
 ### 3. iOS foundation
+
+Readiness artifact: [`contracts/mobile/ios/foundation/v1`](../contracts/mobile/ios/foundation/v1/README.md)
+defines the specification-only configuration, privacy, no-op telemetry, capture, asset-provenance, and
+evidence rules that can be reviewed before an Xcode project exists. It contains no endpoint, bundle identifier,
+account, signing, credential, device, production, or capture value. It leaves every macOS, simulator,
+accessibility, artifact, and binary/log scenario unattempted and keeps `projectScaffoldAuthorized` and
+`completionClaimAllowed` false. This prerequisite does not approve the proposed decision-register rows,
+authorize a SwiftUI scaffold, or satisfy the Increment 3 exit gate.
 
 - Add a SwiftUI workspace with unit and UI test targets and Debug, Staging, and Release configurations.
 - Load only non-secret endpoints and public client configuration through checked templates and protected CI values.
