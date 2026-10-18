@@ -196,6 +196,10 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain("/Applications/Xcode_26.6.app/Contents/Developer");
     expect(script).toContain('ACTUAL_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD)"');
     expect(script).toContain("The approved minimum iOS 17 simulator runtime is unavailable");
+    expect(script).toContain('xcrun simctl create "Fluyo evidence $LEG"');
+    expect(script).toContain('xcrun simctl delete "$DEVICE_UDID"');
+    expect(script).toContain('"deviceTypeIdentifier": device["deviceTypeIdentifier"]');
+    expect(script).toContain('"runtimeIdentifier"');
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
     expect(script).toContain("validate_app_configuration");

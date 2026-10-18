@@ -18,6 +18,7 @@ RESULTS_ROOT="$WORK_ROOT/results"
 LOG_DIR="$WORK_ROOT/logs"
 DEVICE_FILE="$WORK_ROOT/device.json"
 METADATA_FILE="$WORK_ROOT/metadata.json"
+DEVICE_UDID=""
 
 case "$LEG" in
   minimum)
@@ -100,7 +101,12 @@ json.dump(
     {
         "version": selected[1],
         "name": device["name"],
-        "udid": device["udid"],
+        "runtimeIdentifier": next(
+            runtime
+            for runtime in payload.get("devices", {})
+            if runtime.endswith("iOS-" + selected[1].replace(".", "-"))
+        ),
+        "deviceTypeIdentifier": device["deviceTypeIdentifier"],
         "deviceClass": device_class,
     },
     open(output_path, "w", encoding="utf-8"),
@@ -108,18 +114,23 @@ json.dump(
 )
 PY
 
-DEVICE_UDID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["udid"])' "$DEVICE_FILE")"
 DEVICE_NAME="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["name"])' "$DEVICE_FILE")"
 DEVICE_OS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$DEVICE_FILE")"
 DEVICE_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["deviceClass"])' "$DEVICE_FILE")"
+RUNTIME_IDENTIFIER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["runtimeIdentifier"])' "$DEVICE_FILE")"
+DEVICE_TYPE_IDENTIFIER="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["deviceTypeIdentifier"])' "$DEVICE_FILE")"
 
 cleanup() {
-  xcrun simctl shutdown "$DEVICE_UDID" >/dev/null 2>&1 || true
+  if [[ -n "$DEVICE_UDID" ]]; then
+    xcrun simctl shutdown "$DEVICE_UDID" >/dev/null 2>&1 || true
+    xcrun simctl delete "$DEVICE_UDID" >/dev/null 2>&1 || true
+  fi
   rm -rf "$WORK_ROOT"
 }
 trap cleanup EXIT
 
-xcrun simctl boot "$DEVICE_UDID" >/dev/null 2>&1 || true
+DEVICE_UDID="$(xcrun simctl create "Fluyo evidence $LEG" "$DEVICE_TYPE_IDENTIFIER" "$RUNTIME_IDENTIFIER")"
+xcrun simctl boot "$DEVICE_UDID"
 xcrun simctl bootstatus "$DEVICE_UDID" -b
 
 COMMON_SETTINGS=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO FLUYO_SOURCE_COMMIT_SHORT="$SHORT_SHA")
