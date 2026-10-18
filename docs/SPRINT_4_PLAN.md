@@ -1,6 +1,6 @@
 # Sprint 4 — Authenticated dashboard and learning domain
 
-Status: accepted implementation plan under delivery. ADR 0005 and increments 1–2 are merged; increment 3 adds the reviewed schema and shared client contracts.
+Status: accepted implementation plan under delivery. Increments 1–4 are merged; increment 5 adds the progress-write and preference boundary.
 
 Success task: an authenticated learner opens Fluyo, sees the next real activity, completes it once, and can reload or return in another session with the same progress, goal, and streak.
 
@@ -39,6 +39,8 @@ The first API increment adds an allowlisted domain exception type and extends `A
 
 Activity submissions allow 30 requests per rolling 60 seconds per verified user. The 31st returns `429 rate_limited` with `Retry-After` and performs no write. A replaceable limiter interface uses a deterministic local adapter for development/tests; production cannot enable the learning write endpoint until a shared adapter and ingress abuse controls are configured.
 
+`LEARNING_WRITES_ENABLED` defaults to `true` outside production and `false` in production. Startup validation rejects an attempt to enable it in production while the process-local limiter is registered, and the attempt route returns `503` whenever writes are disabled.
+
 Shared TypeScript request/response types and path constants live in `@fluyo/shared`. Provider identifiers, database row shapes, answer keys, entitlement sources, and internal scoring details stay server-side.
 
 ## Dashboard experience contract
@@ -67,7 +69,7 @@ Each increment uses a short-lived branch and draft PR. Every exact PR head must 
 2. [x] **API error and abuse boundary:** add allowlisted domain errors, safe filter mappings, the attempt-rate-limiter interface/local adapter, `Retry-After`, and focused 404/409/429 tests.
 3. [x] **Schema and shared types:** add reviewed Prisma migration, stable activities plus immutable versions, catalog/progress models, enum mappings, constraints, indexes, shared contracts, and schema tests. Do not seed or expose UI yet.
 4. [x] **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
-5. **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, UTC preference bootstrap, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
+5. [x] **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, UTC preference bootstrap, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
 6. **Lifecycle and observability:** add the learning-data export/delete service hooks, privacy-safe event/metric contract, and complete/rollback/isolation/telemetry tests.
 7. **Dashboard UI:** add `/dashboard`, session return routing, responsive states, real API wiring, accessible activity flow, and honest error/retry behavior.
 8. **Phase audit:** run the standing counted audit, fix every blocker, reconcile API/database/security/handoff docs, and close Sprint 4 only after a PASS verdict.

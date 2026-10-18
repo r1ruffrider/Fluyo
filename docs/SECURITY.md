@@ -87,6 +87,10 @@ The profile API demonstrates ownership authorization: `GET /profiles/me` and `PU
 - Public production deployment must add ingress-level request limiting before broad release. Authentication and account-recovery routes require stricter limits than ordinary reads.
 - A protected resource must document any additional per-user or per-IP limit appropriate to abuse and cost risk.
 - No in-process limiter is claimed in Sprint 2; deployment enforcement remains a pre-production operational requirement.
+- Sprint 4 activity attempts use a per-user in-memory limiter only in development and tests.
+  `LEARNING_WRITES_ENABLED` defaults to false in production, and startup validation rejects enabling
+  it while that local adapter is registered. Production activation requires a shared limiter and
+  ingress abuse controls.
 
 ## Verification
 

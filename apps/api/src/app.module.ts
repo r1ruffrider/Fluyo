@@ -13,6 +13,7 @@ import { validateEnvironment } from "./config/environment";
 import { createLoggerConfig } from "./config/logger.config";
 import { DatabaseModule } from "./database/database.module";
 import { HealthModule } from "./health/health.module";
+import { LearningModule } from "./learning/learning.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 
 @Module({
@@ -30,6 +31,7 @@ import { ProfilesModule } from "./profiles/profiles.module";
     CatalogModule,
     DatabaseModule,
     HealthModule,
+    LearningModule,
     ProfilesModule,
   ],
 })

@@ -72,6 +72,11 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
   );
   const billingEnabled = readBoolean(config, "BILLING_ENABLED", false);
+  const learningWritesEnabled = readBoolean(
+    config,
+    "LEARNING_WRITES_ENABLED",
+    nodeEnv !== "production",
+  );
   const stripeSecretKey = readOptionalString(config, "STRIPE_SECRET_KEY");
   const stripePriceFluyoPlusMonthly = readOptionalString(config, "STRIPE_PRICE_FLUYO_PLUS_MONTHLY");
   const stripePriceFluyoPlusAnnual = readOptionalString(config, "STRIPE_PRICE_FLUYO_PLUS_ANNUAL");
@@ -85,6 +90,12 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   if (nodeEnv === "production") {
     if (!supabaseUrl.startsWith("https://") || !supabaseJwksUrl.startsWith("https://")) {
       throw new Error("Supabase URLs must use HTTPS in production");
+    }
+
+    if (learningWritesEnabled) {
+      throw new Error(
+        "LEARNING_WRITES_ENABLED cannot be true in production while the in-memory attempt limiter is registered; configure a shared limiter and ingress abuse controls first",
+      );
     }
   }
 
@@ -137,6 +148,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     SUPABASE_JWKS_URL: supabaseJwksUrl,
     SUPABASE_JWT_AUDIENCE: readString(config, "SUPABASE_JWT_AUDIENCE", "authenticated"),
     BILLING_ENABLED: billingEnabled,
+    LEARNING_WRITES_ENABLED: learningWritesEnabled,
     STRIPE_SECRET_KEY: stripeSecretKey,
     STRIPE_PRICE_FLUYO_PLUS_MONTHLY: stripePriceFluyoPlusMonthly,
     STRIPE_PRICE_FLUYO_PLUS_ANNUAL: stripePriceFluyoPlusAnnual,
