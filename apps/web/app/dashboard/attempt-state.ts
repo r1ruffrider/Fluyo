@@ -15,13 +15,8 @@ export const initialAttemptState: AttemptActionState = {
 };
 
 export function shouldRotateAttemptKey(
-  state: AttemptActionState,
-  activityId: string,
+  submittedChoiceId: string | null,
   nextChoiceId: string,
 ): boolean {
-  return (
-    state.activityId === activityId &&
-    state.selectedChoiceId !== null &&
-    nextChoiceId !== state.selectedChoiceId
-  );
+  return submittedChoiceId !== null && nextChoiceId !== submittedChoiceId;
 }

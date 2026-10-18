@@ -113,6 +113,22 @@ until Adriana completes the authenticated activity, reload/sign-in persistence, 
 keyboard/focus/reduced-motion, and browser-console matrix on the exact PR head. No browser cookies or
 database rows were extracted or changed to bypass that gate.
 
+Draft PR #32 initially passed seven of eight required jobs. Tests run `39086066850` exposed a clean-
+checkout-only package-resolution defect: the web Vitest suite found `@fluyo/shared` locally only
+because `packages/shared/dist` already existed. `apps/web/vitest.config.ts` now aliases the shared
+workspace source, matching the API test configuration. All 17 web tests pass with the shared `dist`
+directory temporarily absent, and the complete 225-test local gate remains green. The replacement
+exact-head GitHub run is pending; PR #32 remains draft and Adriana retains the phase gate.
+
+Adriana's responsive code audit also found that the first mobile rule hid Account and the only Sign
+out control at 320/390 widths. The header now wraps onto a second navigation row and preserves
+Account, Billing, and Sign out as 44px targets. Her exact-head browser re-audit remains required.
+
+The same audit found two state defects. Auth errors now preserve the allowlisted encoded `next` path,
+with four action-level regression tests. Activity attempts now track the last submitted choice in a
+synchronous ref, so a choice changed while the previous request is pending rotates the idempotency key
+before the next submission. The same-choice retry still retains its key after an ambiguous failure.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.

@@ -43,39 +43,47 @@ function callbackUrl(flow?: "recovery", next?: string): string {
   return url.toString();
 }
 
+function loginErrorUrl(
+  error: "invalid_input" | "invalid_credentials" | "signup_failed",
+  next: string,
+) {
+  return `/login?error=${error}&next=${encodeURIComponent(next)}`;
+}
+
 export async function signIn(formData: FormData): Promise<void> {
+  const next = safeReturnPath(formData.get("next"));
   const credentials = readCredentials(formData);
 
   if (!credentials) {
-    redirect("/login?error=invalid_input");
+    redirect(loginErrorUrl("invalid_input", next));
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword(credentials);
 
   if (error) {
-    redirect("/login?error=invalid_credentials");
+    redirect(loginErrorUrl("invalid_credentials", next));
   }
 
-  redirect(safeReturnPath(formData.get("next")));
+  redirect(next);
 }
 
 export async function signUp(formData: FormData): Promise<void> {
+  const next = safeReturnPath(formData.get("next"));
   const credentials = readCredentials(formData);
 
   if (!credentials) {
-    redirect("/login?error=invalid_input");
+    redirect(loginErrorUrl("invalid_input", next));
   }
 
   const supabase = await createSupabaseServerClient();
-  const next = safeReturnPath(formData.get("next"));
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
     options: { emailRedirectTo: callbackUrl(undefined, next) },
   });
 
   if (error) {
-    redirect("/login?error=signup_failed");
+    redirect(loginErrorUrl("signup_failed", next));
   }
 
   redirect(data.session ? next : `/login?message=check_email&next=${encodeURIComponent(next)}`);

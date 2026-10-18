@@ -1812,12 +1812,13 @@ input {
   .dashboard-shell {
     padding-inline: 16px;
   }
-  .dashboard-nav nav {
-    gap: 12px;
+  .dashboard-nav {
+    flex-wrap: wrap;
   }
-  .dashboard-nav nav a:first-child,
-  .dashboard-nav nav form {
-    display: none;
+  .dashboard-nav nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
   }
   .dashboard-hero {
     align-items: flex-start;

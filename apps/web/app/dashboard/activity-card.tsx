@@ -1,7 +1,7 @@
 "use client";
 
 import type { PublishedActivity } from "@fluyo/shared";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitDashboardAttempt } from "./actions";
@@ -30,16 +30,23 @@ export function ActivityCard({
   const [state, formAction] = useActionState(submitDashboardAttempt, initialAttemptState);
   const [selectedChoiceId, setSelectedChoiceId] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState(initialIdempotencyKey);
+  const submittedChoiceId = useRef<string | null>(null);
 
   function chooseAnswer(choiceId: string) {
-    if (shouldRotateAttemptKey(state, activity.id, choiceId)) {
+    if (shouldRotateAttemptKey(submittedChoiceId.current, choiceId)) {
       setIdempotencyKey(crypto.randomUUID());
     }
     setSelectedChoiceId(choiceId);
   }
 
   return (
-    <form action={formAction} className="dashboard-activity-card">
+    <form
+      action={formAction}
+      className="dashboard-activity-card"
+      onSubmit={() => {
+        submittedChoiceId.current = selectedChoiceId;
+      }}
+    >
       <input name="activityId" type="hidden" value={activity.id} />
       <input name="contentVersion" type="hidden" value={activity.contentVersion} />
       <input name="idempotencyKey" type="hidden" value={idempotencyKey} />
