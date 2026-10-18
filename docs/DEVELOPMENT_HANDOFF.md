@@ -129,6 +129,12 @@ with four action-level regression tests. Activity attempts now track the last su
 synchronous ref, so a choice changed while the previous request is pending rotates the idempotency key
 before the next submission. The same-choice retry still retains its key after an ambiguous failure.
 
+Elana's independent audit then found that a correct server action could refresh to the next activity
+without remounting the client card, preserving the prior correct state and idempotency key. The card
+is now keyed by activity ID, and its defensive disabled state applies only when the result belongs to
+the current activity. Two cross-activity state regressions cover the no-reload transition; the live
+no-reload A-to-B browser check remains part of Adriana's exact-head re-audit.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.

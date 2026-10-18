@@ -5,7 +5,11 @@ import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitDashboardAttempt } from "./actions";
-import { initialAttemptState, shouldRotateAttemptKey } from "./attempt-state";
+import {
+  initialAttemptState,
+  isCorrectResultForActivity,
+  shouldRotateAttemptKey,
+} from "./attempt-state";
 
 function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
@@ -98,7 +102,9 @@ export function ActivityCard({
           Sign in again
         </a>
       ) : (
-        <SubmitButton disabled={!selectedChoiceId || state.result === "correct"} />
+        <SubmitButton
+          disabled={!selectedChoiceId || isCorrectResultForActivity(state, activity.id)}
+        />
       )}
     </form>
   );

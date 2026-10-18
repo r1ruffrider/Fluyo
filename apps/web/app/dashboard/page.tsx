@@ -133,7 +133,11 @@ export default async function DashboardPage() {
           </div>
 
           {dashboard.nextActivity ? (
-            <ActivityCard activity={dashboard.nextActivity} initialIdempotencyKey={randomUUID()} />
+            <ActivityCard
+              activity={dashboard.nextActivity}
+              initialIdempotencyKey={randomUUID()}
+              key={dashboard.nextActivity.id}
+            />
           ) : dashboard.access.unavailableReason === "entitlement_required" ? (
             <div className="dashboard-empty-card">
               <span aria-hidden="true">🔒</span>

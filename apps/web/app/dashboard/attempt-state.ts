@@ -20,3 +20,7 @@ export function shouldRotateAttemptKey(
 ): boolean {
   return submittedChoiceId !== null && nextChoiceId !== submittedChoiceId;
 }
+
+export function isCorrectResultForActivity(state: AttemptActionState, activityId: string): boolean {
+  return state.activityId === activityId && state.result === "correct";
+}

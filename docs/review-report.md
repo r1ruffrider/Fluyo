@@ -1,13 +1,13 @@
 **Phase:** Sprint 4 increment 7 — authenticated dashboard UI
 **Brief:** Deliver a protected, responsive dashboard that reads and advances real owned learning progress through the existing authenticated API boundary.
-**Tests conducted:** 240
-**Passed:** 240
+**Tests conducted:** 242
+**Passed:** 242
 **Failed:** 0 outstanding in the completed automated, gate, and live-service checks
 **Unattempted:** 12 browser-only scenarios blocked by the local-browser security gate
 
 ### What was tested
 
-- 225 automated tests: six dependency-policy validator tests, four shared-contract tests, 194 API tests, and 21 web security/request-state tests.
+- 227 automated tests: six dependency-policy validator tests, four shared-contract tests, 194 API tests, and 23 web security/request-state tests.
 - Protected dashboard authentication, verified-owner handoff, entitlement-filtered catalog and recent-progress queries, next-activity selection across all owned completion projections, stable recent ordering, empty/blocked/completed access states, safe telemetry outcomes, and Nest module resolution.
 - Exact local return-path allowlist, rejection of absolute/protocol-relative/query-bearing return values, protected API headers, no-store dashboard reads, activity path/body/idempotency wiring, typed 401 handling, retry-key preservation, and new-answer key rotation.
 - Seven local gates: dependency audit policy, Prisma schema, lint, typecheck, formatting, production build, and `git diff --check`.
@@ -35,6 +35,7 @@
 | Must fix   | `apps/web/app/globals.css`                | The 320/390-width rule hid both Account and the only dashboard Sign out control, blocking mobile account access and session exit.                      | Fixed by engineering owner: the mobile header now wraps and retains all three 44px navigation targets; browser re-audit pending.             |
 | Must fix   | `apps/web/app/auth/actions.ts`            | A failed sign-in or sign-up discarded the safe dashboard return path, so the next successful attempt fell back to Account.                             | Fixed by engineering owner: every auth error keeps the allowlisted encoded path; four action-level regression tests pass.                    |
 | Must fix   | `dashboard/activity-card.tsx`             | Changing a choice during a pending request could retain that request's key and cause a conflict on the next submission.                                | Fixed by engineering owner: a synchronous ref tracks the submitted choice independently; pending-change regression passes.                   |
+| Must fix   | `dashboard/page.tsx` and `activity-card`  | A confirmed-correct action could preserve client state for the next activity, leaving its submit button disabled and its idempotency key stale.        | Fixed by engineering owner: key the card by activity ID and scope the completed state; two cross-activity regressions pass.                  |
 
 ### Unattempted browser matrix
 
