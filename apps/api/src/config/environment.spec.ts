@@ -16,9 +16,30 @@ describe("validateEnvironment", () => {
   it("keeps billing disabled without requiring Stripe credentials", () => {
     expect(validateEnvironment(BASE_ENVIRONMENT)).toMatchObject({
       BILLING_ENABLED: false,
+      LEARNING_WRITES_ENABLED: true,
       STRIPE_SECRET_KEY: undefined,
       STRIPE_WEBHOOK_SECRET: undefined,
     });
+  });
+
+  it("keeps local learning writes available but disables them by default in production", () => {
+    expect(validateEnvironment(BASE_ENVIRONMENT)).toMatchObject({ LEARNING_WRITES_ENABLED: true });
+    expect(
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        NODE_ENV: "production",
+      }),
+    ).toMatchObject({ LEARNING_WRITES_ENABLED: false });
+  });
+
+  it("refuses to activate the in-memory learning-write boundary in production", () => {
+    expect(() =>
+      validateEnvironment({
+        ...BASE_ENVIRONMENT,
+        NODE_ENV: "production",
+        LEARNING_WRITES_ENABLED: "true",
+      }),
+    ).toThrow("shared limiter and ingress abuse controls");
   });
 
   it("accepts server-only Stripe configuration when billing is enabled", () => {

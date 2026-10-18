@@ -15,6 +15,7 @@ import {
 import { ActivityAttemptService } from "./activity-attempt.service";
 import { LearningSettingsController } from "./learning-settings.controller";
 import { LearningSettingsService } from "./learning-settings.service";
+import { LearningWriteAvailabilityGuard } from "./learning-write-availability.guard";
 import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-replay.store";
 
 @Module({
@@ -32,6 +33,7 @@ import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-repl
     },
     ActivityAttemptAdmissionService,
     ActivityAttemptService,
+    LearningWriteAvailabilityGuard,
     LearningSettingsService,
   ],
   exports: [ActivityAttemptService, LearningSettingsService],

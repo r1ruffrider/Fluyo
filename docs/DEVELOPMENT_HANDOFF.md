@@ -56,6 +56,23 @@ policy, four shared, and 166 API), production build, formatting, and diff check.
 on port 4001 returned 200 for API/database health and 401 for unauthenticated attempt, goal, timezone,
 and reminder requests; it was stopped after verification without touching the development services.
 
+Adriana's first exact-head PR #30 audit counted 189 checks: 184 passed and five adversarial checks
+failed across four defects. The repair removes boolean-to-number body coercion, awards progress and
+daily practice only for the first correct completion, canonicalizes path/key UUIDs before replay
+hashing and persistence, and keeps the in-memory write limiter unavailable in production through a
+validated `LEARNING_WRITES_ENABLED` gate. Focused HTTP/service regressions cover boolean rejection,
+incorrect-answer retryability, repeat-correct non-counting, case-variant replay with changed-payload
+conflict, local enablement, and disabled/production behavior. PR #30 remains draft until the repaired
+exact head passes the complete local/GitHub gate and Adriana's counted re-audit.
+
+The repaired local gate passed the dependency policy, Prisma schema, lint, typecheck, 183 tests
+(six policy, four shared, and 173 API), production build, formatting, and diff check. Gitleaks is not
+installed locally, so the required committed-secret scan remains assigned to the exact-head GitHub
+job. A new scoped real-database smoke used a synthetic owner and cleaned all of its rows: an incorrect
+answer remained retryable with no progress/practice award, an upper/lowercase UUID retry returned the
+same attempt, changed payload returned `idempotency_conflict`, the first correct answer awarded one
+completion, and a second correct attempt left both completed IDs and daily practice at one.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.

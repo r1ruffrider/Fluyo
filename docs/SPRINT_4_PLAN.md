@@ -39,6 +39,8 @@ The first API increment adds an allowlisted domain exception type and extends `A
 
 Activity submissions allow 30 requests per rolling 60 seconds per verified user. The 31st returns `429 rate_limited` with `Retry-After` and performs no write. A replaceable limiter interface uses a deterministic local adapter for development/tests; production cannot enable the learning write endpoint until a shared adapter and ingress abuse controls are configured.
 
+`LEARNING_WRITES_ENABLED` defaults to `true` outside production and `false` in production. Startup validation rejects an attempt to enable it in production while the process-local limiter is registered, and the attempt route returns `503` whenever writes are disabled.
+
 Shared TypeScript request/response types and path constants live in `@fluyo/shared`. Provider identifiers, database row shapes, answer keys, entitlement sources, and internal scoring details stay server-side.
 
 ## Dashboard experience contract

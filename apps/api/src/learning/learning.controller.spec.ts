@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import { ConfigService } from "@nestjs/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SupabaseJwtGuard } from "../auth/supabase-jwt.guard";
@@ -8,6 +9,7 @@ import { ActivityAttemptController } from "./activity-attempt.controller";
 import { ActivityAttemptService } from "./activity-attempt.service";
 import { LearningSettingsController } from "./learning-settings.controller";
 import { LearningSettingsService } from "./learning-settings.service";
+import { LearningWriteAvailabilityGuard } from "./learning-write-availability.guard";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const ACTIVITY_ID = "22222222-2222-4222-8222-222222222222";
@@ -21,7 +23,7 @@ describe("learning write controllers", () => {
     app = undefined;
   });
 
-  async function startApplication() {
+  async function startApplication(learningWritesEnabled = true) {
     const verify = vi.fn().mockResolvedValue({ id: USER_ID, email: null });
     const submit = vi.fn().mockResolvedValue({ attemptId: "attempt" });
     const updateGoal = vi.fn().mockResolvedValue({ dailyTarget: 4 });
@@ -38,6 +40,15 @@ describe("learning write controllers", () => {
       controllers: [ActivityAttemptController, LearningSettingsController],
       providers: [
         SupabaseJwtGuard,
+        LearningWriteAvailabilityGuard,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string, fallback: unknown) =>
+              key === "LEARNING_WRITES_ENABLED" ? learningWritesEnabled : fallback,
+            ),
+          },
+        },
         { provide: SupabaseJwtService, useValue: { verify } },
         { provide: ActivityAttemptService, useValue: { submit } },
         {
@@ -78,6 +89,22 @@ describe("learning write controllers", () => {
     });
 
     expect(response.status).toBe(401);
+    expect(fixture.submit).not.toHaveBeenCalled();
+  });
+
+  it("keeps the attempt endpoint unavailable when learning writes are disabled", async () => {
+    const fixture = await startApplication(false);
+    const response = await fetch(`${fixture.baseUrl}/activities/${ACTIVITY_ID}/attempts`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+        "idempotency-key": KEY,
+      },
+      body: JSON.stringify({ contentVersion: 1, selectedChoiceId: "hola" }),
+    });
+
+    expect(response.status).toBe(503);
     expect(fixture.submit).not.toHaveBeenCalled();
   });
 
@@ -129,6 +156,22 @@ describe("learning write controllers", () => {
     });
   });
 
+  it("rejects a boolean content version instead of coercing it to an integer", async () => {
+    const fixture = await startApplication();
+    const response = await fetch(`${fixture.baseUrl}/activities/${ACTIVITY_ID}/attempts`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+        "idempotency-key": KEY,
+      },
+      body: JSON.stringify({ contentVersion: true, selectedChoiceId: "hola" }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(fixture.submit).not.toHaveBeenCalled();
+  });
+
   it("enforces goal bounds and rejects owner selection", async () => {
     const fixture = await startApplication();
     const headers = { authorization: "Bearer valid-token", "content-type": "application/json" };
@@ -178,5 +221,17 @@ describe("learning write controllers", () => {
       practiceReminderEnabled: true,
       reminderLocalTime: "08:15",
     });
+  });
+
+  it("rejects a boolean daily target instead of coercing it to an integer", async () => {
+    const fixture = await startApplication();
+    const response = await fetch(`${fixture.baseUrl}/learning-goals/me`, {
+      method: "PUT",
+      headers: { authorization: "Bearer valid-token", "content-type": "application/json" },
+      body: JSON.stringify({ dailyTarget: true }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(fixture.updateGoal).not.toHaveBeenCalled();
   });
 });

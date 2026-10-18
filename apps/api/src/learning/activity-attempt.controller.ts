@@ -15,9 +15,10 @@ import { CurrentIdentity } from "../auth/current-identity.decorator";
 import { SupabaseJwtGuard } from "../auth/supabase-jwt.guard";
 import { ActivityAttemptService } from "./activity-attempt.service";
 import { SubmitActivityAttemptDto } from "./dto/submit-activity-attempt.dto";
+import { LearningWriteAvailabilityGuard } from "./learning-write-availability.guard";
 
 @Controller("activities")
-@UseGuards(SupabaseJwtGuard)
+@UseGuards(SupabaseJwtGuard, LearningWriteAvailabilityGuard)
 export class ActivityAttemptController {
   constructor(private readonly attempts: ActivityAttemptService) {}
 

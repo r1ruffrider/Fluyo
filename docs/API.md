@@ -237,10 +237,12 @@ Requires a UUID v4 `Idempotency-Key` header and this body:
 ```
 
 The server verifies access to the current published activity, evaluates the server-issued choice,
-and writes the attempt, lesson projection, and practice-day projection in one transaction. The first
-successful learning write creates a `UTC` preference unless the learner has already saved a valid
-IANA timezone. The response contains the result, learner-safe feedback, completion time, and updated
-lesson progress. It never contains the answer key, request hash, stored replay payload, or owner ID.
+and stores every valid attempt in one transaction. Only the first correct completion of a stable
+activity advances lesson progress and increments that local practice day; an incorrect answer stays
+retryable and returns the unchanged progress projection. The first learning write creates a `UTC`
+preference unless the learner has already saved a valid IANA timezone. The response contains the
+result, learner-safe feedback, completion time, and current lesson progress. It never contains the
+answer key, request hash, stored replay payload, or owner ID.
 
 The same owner/key/request returns the stored response without consuming limiter capacity or writing
 again. Reusing the key for a different path or body returns `409 idempotency_conflict`. A stale
@@ -248,6 +250,10 @@ again. Reusing the key for a different path or body returns `409 idempotency_con
 `404 resource_not_found`; a choice not issued by the published activity returns `400 invalid_request`.
 Only new keys reach the 30-per-60-second verified-user limiter; rejection returns
 `429 rate_limited` with `Retry-After` and performs no write.
+
+`LEARNING_WRITES_ENABLED` defaults on for development/tests and off for production. A disabled
+attempt route returns `503`. Startup validation refuses production activation while the in-memory
+limiter is registered; a shared limiter and ingress abuse controls are required first.
 
 ### Goals and preferences
 

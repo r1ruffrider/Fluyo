@@ -5,7 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { EntitlementsService } from "../billing/entitlements.service";
 import { ApiDomainException } from "../common/errors/api-domain.exception";
 import type { PrismaService } from "../database/prisma.service";
-import type { ActivityAttemptAdmissionService } from "./activity-attempt-admission.service";
+import type { ActivityAttemptRateLimiter } from "./activity-attempt-rate-limiter";
+import {
+  ActivityAttemptAdmissionService,
+  type ActivityAttemptReplayStore,
+} from "./activity-attempt-admission.service";
 import { ActivityAttemptService } from "./activity-attempt.service";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -134,7 +138,7 @@ describe("ActivityAttemptService", () => {
     expect(fixture.fail).not.toHaveBeenCalled();
   });
 
-  it("records incorrect feedback and completes a lesson after its final activity", async () => {
+  it("records incorrect feedback without awarding progress or daily practice", async () => {
     const fixture = createFixture();
     fixture.transaction.activity.findMany.mockResolvedValue([{ id: ACTIVITY_ID }]);
 
@@ -149,11 +153,105 @@ describe("ActivityAttemptService", () => {
     expect(response).toMatchObject({
       result: "incorrect",
       feedback: "Try again",
-      progress: { nextActivityId: null, completedAt: NOW.toISOString() },
+      progress: {
+        completedActivityIds: [],
+        nextActivityId: ACTIVITY_ID,
+        completedAt: null,
+      },
     });
+    expect(fixture.transaction.practiceDay.upsert).not.toHaveBeenCalled();
+    expect(fixture.transaction.lessonProgress.upsert).not.toHaveBeenCalled();
     expect(fixture.transaction.activityAttempt.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ result: ActivityAttemptResult.INCORRECT }),
     });
+  });
+
+  it("does not award progress twice when a completed activity is answered again", async () => {
+    const fixture = createFixture();
+    fixture.transaction.lessonProgress.findUnique.mockResolvedValue({
+      lessonId: LESSON_ID,
+      completedActivityIds: [ACTIVITY_ID],
+      nextActivityId: NEXT_ACTIVITY_ID,
+      completedAt: null,
+      updatedAt: NOW,
+    });
+
+    const response = await fixture.service.submit(
+      USER_ID,
+      ACTIVITY_ID,
+      KEY,
+      { contentVersion: 1, selectedChoiceId: "hola" },
+      NOW,
+    );
+
+    expect(response.progress).toMatchObject({
+      completedActivityIds: [ACTIVITY_ID],
+      nextActivityId: NEXT_ACTIVITY_ID,
+      completedAt: null,
+    });
+    expect(fixture.transaction.practiceDay.upsert).not.toHaveBeenCalled();
+    expect(fixture.transaction.lessonProgress.upsert).not.toHaveBeenCalled();
+  });
+
+  it("replays case-variant UUIDs but conflicts when their payload changes", async () => {
+    const transaction = createTransaction();
+    const casedActivityId = "abcdefab-cdef-4abc-8def-abcdefabcdef";
+    const casedKey = "abcdefab-cdef-4abc-8def-abcdefabcdea";
+    let stored: { requestHash: string; response: unknown } | null = null;
+    transaction.activityAttempt.create.mockImplementation(({ data }) => {
+      stored = { requestHash: data.requestHash, response: data.response };
+      return Promise.resolve({});
+    });
+    const prisma = {
+      $transaction: vi.fn().mockImplementation((callback) => callback(transaction)),
+    };
+    const replayStore = {
+      findByOwnerAndKey: vi.fn().mockImplementation(() => Promise.resolve(stored)),
+    } satisfies ActivityAttemptReplayStore;
+    const rateLimiter = {
+      checkAndConsume: vi.fn().mockReturnValue({
+        allowed: true,
+        lease: { complete: vi.fn(), fail: vi.fn() },
+      }),
+    } satisfies ActivityAttemptRateLimiter;
+    const service = new ActivityAttemptService(
+      prisma as unknown as PrismaService,
+      { listActive: vi.fn().mockResolvedValue([]) } as unknown as EntitlementsService,
+      new ActivityAttemptAdmissionService(replayStore, rateLimiter),
+    );
+
+    const first = await service.submit(
+      USER_ID,
+      casedActivityId.toUpperCase(),
+      casedKey.toUpperCase(),
+      { contentVersion: 1, selectedChoiceId: "hola" },
+      NOW,
+    );
+    const replay = await service.submit(
+      USER_ID,
+      casedActivityId,
+      casedKey,
+      { contentVersion: 1, selectedChoiceId: "hola" },
+      NOW,
+    );
+
+    expect(replay).toEqual(first);
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(replayStore.findByOwnerAndKey).toHaveBeenLastCalledWith(USER_ID, casedKey);
+    expect(transaction.activityAttempt.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ idempotencyKey: casedKey }),
+    });
+
+    await expect(
+      service.submit(
+        USER_ID,
+        casedActivityId,
+        casedKey,
+        { contentVersion: 1, selectedChoiceId: "adios" },
+        NOW,
+      ),
+    ).rejects.toMatchObject({ code: "idempotency_conflict" });
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
   });
 
   it("returns a stored replay before entitlement lookup or transaction work", async () => {

@@ -73,9 +73,9 @@ function requestHash(
   return createHash("sha256")
     .update(
       JSON.stringify({
-        activityId,
+        activityId: activityId.toLowerCase(),
         contentVersion: input.contentVersion,
-        idempotencyKey,
+        idempotencyKey: idempotencyKey.toLowerCase(),
         selectedChoiceId: input.selectedChoiceId,
       }),
     )
@@ -97,10 +97,12 @@ export class ActivityAttemptService {
     input: SubmitActivityAttemptDto,
     completedAt = new Date(),
   ): Promise<SubmitActivityAttemptResponse> {
-    const hash = requestHash(activityId, idempotencyKey, input);
+    const normalizedActivityId = activityId.toLowerCase();
+    const normalizedIdempotencyKey = idempotencyKey.toLowerCase();
+    const hash = requestHash(normalizedActivityId, normalizedIdempotencyKey, input);
     const admission = await this.admission.admit({
       userId,
-      idempotencyKey,
+      idempotencyKey: normalizedIdempotencyKey,
       requestHash: hash,
     });
     if (admission.kind === "replay") {
@@ -115,8 +117,8 @@ export class ActivityAttemptService {
         this.writeAttempt(
           transaction,
           userId,
-          activityId,
-          idempotencyKey,
+          normalizedActivityId,
+          normalizedIdempotencyKey,
           hash,
           input,
           entitlementKeys,
@@ -192,18 +194,6 @@ export class ActivityAttemptService {
       create: { userId, timezone: "UTC" },
       select: { timezone: true },
     });
-    const localDate = localDateAt(completedAt, preference.timezone);
-    await transaction.practiceDay.upsert({
-      where: { userId_localDate: { userId, localDate } },
-      update: { completedActivityCount: { increment: 1 } },
-      create: {
-        userId,
-        localDate,
-        timezone: preference.timezone,
-        completedActivityCount: 1,
-      },
-    });
-
     const publishedActivities = await transaction.activity.findMany({
       where: {
         lessonId: activity.lessonId,
@@ -216,26 +206,6 @@ export class ActivityAttemptService {
     });
     const existingProgress = await transaction.lessonProgress.findUnique({
       where: { userId_lessonId: { userId, lessonId: activity.lessonId } },
-      select: { completedActivityIds: true, completedAt: true },
-    });
-    const completedActivityIds = existingProgress?.completedActivityIds.includes(activity.id)
-      ? existingProgress.completedActivityIds
-      : [...(existingProgress?.completedActivityIds ?? []), activity.id];
-    const completedSet = new Set(completedActivityIds);
-    const nextActivityId =
-      publishedActivities.find((candidate) => !completedSet.has(candidate.id))?.id ?? null;
-    const lessonCompletedAt =
-      nextActivityId === null ? (existingProgress?.completedAt ?? completedAt) : null;
-    const progress = await transaction.lessonProgress.upsert({
-      where: { userId_lessonId: { userId, lessonId: activity.lessonId } },
-      update: { completedActivityIds, nextActivityId, completedAt: lessonCompletedAt },
-      create: {
-        userId,
-        lessonId: activity.lessonId,
-        completedActivityIds,
-        nextActivityId,
-        completedAt: lessonCompletedAt,
-      },
       select: {
         lessonId: true,
         completedActivityIds: true,
@@ -244,6 +214,56 @@ export class ActivityAttemptService {
         updatedAt: true,
       },
     });
+    const awardedCompletion =
+      correct && !existingProgress?.completedActivityIds.includes(activity.id);
+    let progress = existingProgress;
+
+    if (awardedCompletion) {
+      const localDate = localDateAt(completedAt, preference.timezone);
+      await transaction.practiceDay.upsert({
+        where: { userId_localDate: { userId, localDate } },
+        update: { completedActivityCount: { increment: 1 } },
+        create: {
+          userId,
+          localDate,
+          timezone: preference.timezone,
+          completedActivityCount: 1,
+        },
+      });
+
+      const completedActivityIds = [...(existingProgress?.completedActivityIds ?? []), activity.id];
+      const completedSet = new Set(completedActivityIds);
+      const nextActivityId =
+        publishedActivities.find((candidate) => !completedSet.has(candidate.id))?.id ?? null;
+      const lessonCompletedAt =
+        nextActivityId === null ? (existingProgress?.completedAt ?? completedAt) : null;
+      progress = await transaction.lessonProgress.upsert({
+        where: { userId_lessonId: { userId, lessonId: activity.lessonId } },
+        update: { completedActivityIds, nextActivityId, completedAt: lessonCompletedAt },
+        create: {
+          userId,
+          lessonId: activity.lessonId,
+          completedActivityIds,
+          nextActivityId,
+          completedAt: lessonCompletedAt,
+        },
+        select: {
+          lessonId: true,
+          completedActivityIds: true,
+          nextActivityId: true,
+          completedAt: true,
+          updatedAt: true,
+        },
+      });
+    }
+
+    const progressSnapshot = progress ?? {
+      lessonId: activity.lessonId,
+      completedActivityIds: [],
+      nextActivityId: publishedActivities[0]?.id ?? null,
+      completedAt: null,
+      updatedAt: completedAt,
+    };
 
     const response: SubmitActivityAttemptResponse = {
       attemptId: randomUUID(),
@@ -253,11 +273,11 @@ export class ActivityAttemptService {
       feedback,
       completedAt: completedAt.toISOString(),
       progress: {
-        lessonId: progress.lessonId,
-        completedActivityIds: progress.completedActivityIds,
-        nextActivityId: progress.nextActivityId,
-        completedAt: progress.completedAt?.toISOString() ?? null,
-        updatedAt: progress.updatedAt.toISOString(),
+        lessonId: progressSnapshot.lessonId,
+        completedActivityIds: progressSnapshot.completedActivityIds,
+        nextActivityId: progressSnapshot.nextActivityId,
+        completedAt: progressSnapshot.completedAt?.toISOString() ?? null,
+        updatedAt: progressSnapshot.updatedAt.toISOString(),
       },
     };
     await transaction.activityAttempt.create({
