@@ -2135,10 +2135,10 @@
       "rateLimit": "Honor positive integer Retry-After seconds. Stored replay and conflict checks precede throttling."
     },
     "excluded": [
-      "Stripe Checkout and Customer Portal are web-only.",
-      "Stripe webhooks are server integrations.",
+      "Hosted checkout and customer-portal routes are web-only.",
+      "Billing-provider webhooks are server integrations.",
       "Learning export and deletion have internal hooks but no HTTP endpoint.",
-      "Native callback, telemetry, RevenueCat, tester enrollment, and campaign endpoints do not exist."
+      "Native callback, telemetry, commerce-adapter, tester-enrollment, and campaign endpoints do not exist."
     ]
   }
 }

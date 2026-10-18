@@ -362,24 +362,22 @@ describe("mobile v1 contract bundle", () => {
     expect(bundle.marketingAttribution).toBe("absent");
     expect(bundle.marketingConsent).toBe("absent");
     expect(bundle.adPlatformExport).toBe("prohibited");
-    const wireValues = Object.fromEntries(
-      Object.entries(cases).map(([id, value]) => {
-        const fixture = asObject(value);
-        return [id, { body: fixture.body, headers: fixture.headers }];
-      }),
-    );
-    const inspected = JSON.stringify({ schemas: schemaMap, wireValues });
+    const portableOpenapi = structuredClone(openapi);
+    delete asObject(portableOpenapi.components).securitySchemes;
+    const inspected = JSON.stringify({ openapi: portableOpenapi, bundle, manifest });
     for (const denied of [
       /utm_/i,
       /gclid|gbraid|wbraid|fbclid|ttclid/i,
       /advertising.?id|install.?referrer/i,
       /campaign.?id|ad.?set.?id/i,
-      /authorization|cookie|pkce|client.?secret|webhook.?signature/i,
-      /access.?token|refresh.?token|id.?token|api.?key/i,
+      /authorization.?code|cookie|pkce|client.?secret|webhook.?signature/i,
+      /access.?token|refresh.?token|id.?token|session.?token|purchase.?token|api.?key/i,
       /\b(?:cus|sub|price|evt|sk|whsec)_[A-Za-z0-9_]+/,
-      /supabase|revenuecat/i,
-      /ip.?address|user.?agent|hardware.?serial|push.?token/i,
-      /stack.?trace|sql.?query|filesystem.?path/i,
+      /supabase|stripe|revenuecat/i,
+      /apple.?receipt|google.?receipt|provider.?payload/i,
+      /ip.?address|user.?agent|device.?id|hardware.?serial|push.?token/i,
+      /stack.?trace|sql.?query|filesystem.?path|DATABASE_URL|NODE_ENV|[A-Z]:\\Users\\|\/home\//i,
+      /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
     ])
       expect(inspected).not.toMatch(denied);
     const bodyText = JSON.stringify(
@@ -392,7 +390,7 @@ describe("mobile v1 contract bundle", () => {
 
   it("rejects answer, validation, request-hash, owner, and provider internals in public schemas", () => {
     const forbiddenProperty =
-      /(?:answer|correct(?:choice|answer)|validation|requesthash|ownerid|userid|provider(?:id|payload)|stripecustomerid|customerid|subscriptionid|supabasesubject|revenuecat)/i;
+      /(?:answer|correct(?:choice|answer)|validation|requesthash|ownerid|userid|provider(?:id|payload|object)|stripecustomerid|customerid|subscriptionid|subjectid|receipt|purchase.?token|device.?id|advertising.?id|access.?token|refresh.?token|session.?token|authorization|cookie|password|secret|private.?key|stack.?trace|sql|file.?path|environment)/i;
     const visitProperties = (
       schemaName: string,
       schema: JsonObject,
@@ -414,6 +412,77 @@ describe("mobile v1 contract bundle", () => {
       visitProperties(name, asObject(schema)),
     );
     expect(violations).toEqual([]);
+
+    for (const fixture of Object.values(cases).map((value) => asObject(value))) {
+      const bodyKeys: string[] = [];
+      const visitBody = (value: unknown): void => {
+        if (Array.isArray(value)) return value.forEach(visitBody);
+        if (value === null || typeof value !== "object") return;
+        for (const [key, child] of Object.entries(asObject(value))) {
+          if (forbiddenProperty.test(key) && key !== "selectedChoiceId") bodyKeys.push(key);
+          visitBody(child);
+        }
+      };
+      visitBody(fixture.body);
+      expect(bodyKeys).toEqual([]);
+      if (JSON.stringify(fixture.body).includes("selectedChoiceId")) {
+        expect(fixture.operationId).toBe("submitActivityAttempt");
+        expect(fixture.direction).toBe("request");
+      }
+    }
+
+    for (const mutation of [
+      { answerKey: "x" },
+      { correctChoiceId: "x" },
+      { validation: {} },
+      { requestHash: "x" },
+      { ownerId: "x" },
+      { userId: "x" },
+      { providerPayload: {} },
+      { stripeCustomerId: "x" },
+      { deviceId: "x" },
+      { receipt: "x" },
+      { purchaseToken: "x" },
+      { accessToken: "x" },
+      { stackTrace: "x" },
+      { sqlQuery: "x" },
+      { environment: "production" },
+    ]) {
+      expect(Object.keys(mutation).some((key) => forbiddenProperty.test(key))).toBe(true);
+    }
+  });
+
+  it("validates every fixture metadata record and the future-consent boundary", () => {
+    for (const [fixtureId, value] of Object.entries(cases)) {
+      const fixture = asObject(value);
+      expect(fixture.dataClass, fixtureId).toBe("synthetic");
+      expect(fixture.generationSource, fixtureId).toBe("repository_authored_deterministic");
+      expect(fixture.productionDataUsed, fixtureId).toBe(false);
+      expect(fixture.marketingAttribution, fixtureId).toBe("absent");
+      expect(fixture.marketingConsent, fixtureId).toBe("absent");
+      expect(fixture.adPlatformExport, fixtureId).toBe("prohibited");
+      expect(fixture.sensitiveFieldPolicy, fixtureId).toBe(
+        "whole_wire_body_restricted_never_marketing_logging_or_ad_export",
+      );
+      expect(fixture.sourceCommit, fixtureId).toBe(manifest.sourceImplementationCommit);
+      expect(["public", "authenticated_bearer", "cross_cutting"], fixtureId).toContain(
+        fixture.auth,
+      );
+      expect(fixture.restrictedFields, fixtureId).toEqual(expect.arrayContaining(["body"]));
+      if (asObject(fixture.headers)["Idempotency-Key"] !== undefined) {
+        expect(fixture.restrictedFields, fixtureId).toContain("headers.Idempotency-Key");
+      }
+    }
+    expect(asObject(bundle.futureAttributionContractRequired)).toEqual({
+      separateAcceptance: true,
+      purpose: "required",
+      consent: "required",
+      minimization: "required",
+      retention: "required",
+      deletion: "required",
+      deduplication: "required",
+      serverReconciliation: "required",
+    });
   });
 
   it("defines owner isolation, billing projection, restricted fields, and privacy-safe logging", () => {
@@ -433,9 +502,7 @@ describe("mobile v1 contract bundle", () => {
     expect(logPolicy.prohibited).toEqual(
       expect.arrayContaining(["body", "headers", "email", "selectedChoiceId", "destinationUrl"]),
     );
-    expect(asObject(cases.identity_ok).restrictedFields).toEqual(
-      expect.arrayContaining(["body.identity.id", "body.identity.email"]),
-    );
+    expect(asObject(cases.identity_ok).restrictedFields).toEqual(["body"]);
   });
 
   it("defines nine non-HTTP transport scenarios and actionable accessible client expectations", () => {
