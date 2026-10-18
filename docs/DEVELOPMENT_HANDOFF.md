@@ -34,7 +34,8 @@ NUL text. The repaired head then received a fresh eight-check CI run and exact-h
 
 The repaired head passed Adriana's 159-check re-audit and all eight exact-head checks. PR #29 merged
 as `0ee6f74bc536ea3d5e145c1bc780157f31e27336`; post-merge `main` CI run `39081587057` passed all
-eight jobs. Sprint 4 increment 5 is isolated on `codex/sprint-4-progress-writes`. It adds protected,
+eight jobs. [Draft PR #30](https://github.com/r1ruffrider/Fluyo/pull/30) is Sprint 4 increment 5 on
+`codex/sprint-4-progress-writes`. It adds protected,
 idempotent activity submission; one-transaction attempt, progress, and practice-day writes; UTC
 bootstrap; streak calculation; goals; IANA timezone preferences; and reminder-preference storage.
 A scoped real-database smoke used only a synthetic owner and cleaned it afterward: one first attempt
