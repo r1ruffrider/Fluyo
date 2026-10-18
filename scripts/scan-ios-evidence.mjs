@@ -7,7 +7,7 @@ const restrictedPatterns = [
   ["JWT", /\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}\b/],
   ["private key", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i],
   ["bearer credential", /\bAuthorization\s*:\s*Bearer\s+[A-Za-z0-9._~-]{8,}/i],
-  ["agent test credential", /\bFLUYO_TEST_(?:ADRIANA|ELANA)_(?:EMAIL|PASSWORD)\s*=/i],
+  ["agent test credential", /\bFLUYO_TEST_(?:ADRIANA|ELANA)_(?:EMAIL|PASSWORD)\b/i],
   ["Stripe object identifier", /\b(?:cus|sub|price|evt|cs_(?:test|live))_[A-Za-z0-9]{8,}\b/],
   [
     "device identifier",
@@ -22,7 +22,7 @@ const restrictedPatterns = [
   ],
 ];
 
-const emailPattern = /\b[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})\b/gi;
+const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 
 function filesUnder(target) {
   const stat = fs.statSync(target);
@@ -39,11 +39,7 @@ export function scanText(text, label = "value") {
   for (const [name, pattern] of restrictedPatterns) {
     if (pattern.test(text)) findings.push(`${label}: ${name}`);
   }
-  for (const match of text.matchAll(emailPattern)) {
-    if (!match[1].toLowerCase().endsWith(".test")) {
-      findings.push(`${label}: non-test email`);
-    }
-  }
+  if (emailPattern.test(text)) findings.push(`${label}: email-shaped identity`);
   return findings;
 }
 

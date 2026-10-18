@@ -16,6 +16,11 @@ const unsafeValues = [
   "https://api.fluyo.com/api/v1",
   "DEVELOPMENT_TEAM = ABCDE12345",
   "learner@example.com",
+  "learner@example.test",
+  "Learner+QA@Example.Test",
+  "binary\u0000learner@example.test\u0000payload",
+  "FLUYO_TEST_ADRIANA_EMAIL",
+  "FLUYO_TEST_ELANA_PASSWORD",
 ];
 
 for (const [index, value] of unsafeValues.entries()) {
@@ -24,14 +29,14 @@ for (const [index, value] of unsafeValues.entries()) {
   });
 }
 
-test("allows bounded synthetic evidence", () => {
+test("allows bounded non-contact synthetic evidence", () => {
   assert.deepEqual(
     scanText(
       JSON.stringify({
         platform: "ios",
         environment: "staging",
         deviceModel: "iPhone simulator",
-        email: "learner@example.test",
+        identityLabel: "Signed in",
         sourceCommit: "0123456789abcdef0123456789abcdef01234567",
       }),
     ),
