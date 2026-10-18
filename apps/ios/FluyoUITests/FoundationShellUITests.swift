@@ -75,7 +75,12 @@ final class FoundationShellUITests: XCTestCase {
             state: "signed_out",
             arguments: ["-NSForceLeftToRightWritingDirection", "YES"]
         )
-        let leftToRightX = leftToRight.staticTexts["brand-heading"].frame.midX
+        let leftToRightHeading = leftToRight.staticTexts["brand-heading"]
+        XCTAssertTrue(leftToRightHeading.waitForExistence(timeout: 5))
+        let leftToRightWindow = leftToRight.windows.element(boundBy: 0)
+        XCTAssertTrue(leftToRightWindow.exists)
+        XCTAssertGreaterThan(leftToRightHeading.frame.width, 0)
+        XCTAssertLessThan(leftToRightHeading.frame.midX, leftToRightWindow.frame.midX)
         leftToRight.terminate()
 
         let rightToLeft = launch(
@@ -87,7 +92,10 @@ final class FoundationShellUITests: XCTestCase {
         )
         let rightToLeftHeading = rightToLeft.staticTexts["brand-heading"]
         XCTAssertTrue(rightToLeftHeading.waitForExistence(timeout: 5))
-        XCTAssertGreaterThan(rightToLeftHeading.frame.midX, leftToRightX)
+        let rightToLeftWindow = rightToLeft.windows.element(boundBy: 0)
+        XCTAssertTrue(rightToLeftWindow.exists)
+        XCTAssertGreaterThan(rightToLeftHeading.frame.width, 0)
+        XCTAssertGreaterThan(rightToLeftHeading.frame.midX, rightToLeftWindow.frame.midX)
         XCTAssertTrue(rightToLeft.buttons["review-build-button"].isHittable)
     }
 

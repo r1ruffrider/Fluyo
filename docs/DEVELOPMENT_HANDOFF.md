@@ -27,7 +27,7 @@ The readiness contract merged through PR #38 as `4dc05e81b3fae101077025f4ccb28f8
 post-main run `39166750258` passed all eight required jobs. Marlon accepted iOS 17+, an iPhone-native
 phone-first target, portrait-primary layouts with functional landscape, no iPad-native support claim, English
 UI with Spanish learning content and pseudo/RTL probes, proposed unreserved repository identifiers, Adriana as
-interim iOS/accessibility/asset implementer, and free public `macos-26` / Xcode 26.6 unsigned simulator CI.
+interim iOS/accessibility/asset implementer, and free public `macos-26` / Xcode 26.6 unsigned simulator CI. The hosted current runner does not include an iOS 17 runtime, so minimum-version compatibility is a separate free public `macos-14` / Xcode 16.2 lane. A third job accepts only the exact-head sanitized union. GitHub schedules `macos-14` retirement for 2026-11-02; recheck or replace that lane by 2026-11-01 while preserving the accepted iOS 17 baseline.
 
 Increment 3 now implements the smallest internal SwiftUI foundation: Debug/Staging/Release configurations,
 checked public non-production configuration with an inert Release path, deterministic loading/signed-out/safe

@@ -76,7 +76,11 @@ defines configuration, privacy, no-op telemetry, capture, asset-provenance, and 
 as `4dc05e81b3fae101077025f4ccb28f82bf48e72d` and post-main run `39166750258` passed all eight required jobs.
 Marlon then accepted the recorded iOS 17, iPhone-native, portrait-primary/functional-landscape, English UI,
 Spanish-learning, pseudo/RTL, proposed-unreserved identifier, interim ownership, and free public macOS 26 /
-Xcode 26.6 unsigned-simulator baselines. The policy now authorizes the smallest repository scaffold while
+Xcode 26.6 unsigned-simulator baselines. Minimum-version compatibility runs separately on the free public
+`macos-14` / Xcode 16.2 image that supplies an iOS 17 simulator; exact-head sanitized evidence is accepted only
+after both lanes pass and their scenario union validates. Because GitHub schedules `macos-14` retirement for
+2026-11-02, the compatibility lane must be rechecked or replaced by 2026-11-01 without changing the iOS 17
+product baseline. The policy now authorizes the smallest repository scaffold while
 keeping `completionClaimAllowed` false until exact-head Mac, simulator, accessibility, artifact, roster, and
 Elana evidence passes. Apple accounts, identifier reservation, signing, production endpoints, physical-device
 claims, TestFlight/App Store work, and spending remain separately gated.

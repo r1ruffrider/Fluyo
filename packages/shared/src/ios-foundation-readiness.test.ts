@@ -124,8 +124,12 @@ describe("iOS foundation readiness contract v1", () => {
       assetOwner: "Adriana",
       independentQaOwner: "Elana",
       ci: {
-        runner: "macos-26",
-        xcode: "26.6",
+        currentRunner: "macos-26",
+        currentXcode: "26.6",
+        minimumCompatibilityRunner: "macos-14",
+        minimumCompatibilityXcode: "16.2",
+        minimumCompatibilityRuntime: "ios-17",
+        minimumRunnerRecheckBy: "2026-11-01",
         artifact: "unsigned_simulator_only",
       },
     });

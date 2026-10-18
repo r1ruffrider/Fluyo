@@ -118,24 +118,32 @@ describe("iOS unsigned foundation structure", () => {
     expect(uiTests).toContain("XCTAssertGreaterThanOrEqual(button.frame.height, 44)");
   });
 
-  it("pins exact-source unsigned macOS evidence and uploads only sanitized outputs", () => {
+  it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");
+    const evidence = read("scripts/ios-evidence.mjs");
     const scanner = read("scripts/scan-ios-evidence.mjs");
+    expect(workflow).toContain("runs-on: macos-14");
     expect(workflow).toContain("runs-on: macos-26");
+    expect(workflow).toContain("FLUYO_IOS_EVIDENCE_LEG: minimum");
+    expect(workflow).toContain("FLUYO_IOS_EVIDENCE_LEG: current");
+    expect(workflow).toContain("needs: [minimum-ios, current-ios]");
+    expect(workflow).toContain("Validate exact-head evidence union");
     expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
     expect(workflow).toContain("if: success()");
     expect(workflow).toContain("retention-days: 7");
+    expect(script).toContain("/Applications/Xcode_16.2.app/Contents/Developer");
     expect(script).toContain("/Applications/Xcode_26.6.app/Contents/Developer");
     expect(script).toContain('ACTUAL_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD)"');
     expect(script).toContain("The approved minimum iOS 17 simulator runtime is unavailable");
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
-    expect(script).toContain('policy["acceptance"]["evidenceRequiredFields"]');
-    expect(script).toContain('remainingUnattempted": ["ios_physical_iphone_evidence"]');
+    expect(script).toContain('node "$ROOT_DIR/scripts/ios-evidence.mjs" generate');
     expect(script).toContain('node "$ROOT_DIR/scripts/scan-ios-evidence.mjs"');
     expect(script).not.toContain('cp -R "$RESULTS_ROOT"');
     expect(script).toContain("SANITIZED_LOG_DIR");
+    expect(evidence).toContain('remainingUnattempted: ["ios_physical_iphone_evidence"]');
+    expect(evidence).toContain("Aggregate scenario union is incomplete");
     expect(scanner).toContain('"device identifier"');
     expect(scanner).toContain('"macOS user path"');
     expect(`${workflow}\n${script}`).not.toMatch(/secrets\.[A-Za-z0-9_]+/);
