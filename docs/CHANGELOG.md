@@ -32,6 +32,8 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 - Transactional, idempotent activity attempts with server-side evaluation, lesson/practice projections, UTC bootstrap, streak calculation, daily goals, IANA timezone preferences, and honest reminder-preference storage.
 - A provider-neutral learning-data export/delete service with repeatable-read export, atomic idempotent deletion, owner isolation, and rollback coverage.
 - Privacy-bounded learning telemetry events plus labeled attempt counters and attempt/dashboard duration histograms, emitted as structured server logs without answers, email, tokens, or provider payloads.
+- A protected, responsive `/dashboard` with the real next activity, idempotent server-confirmed answers, recent saved progress, daily goal, streak, settings, and an independently degradable billing summary.
+- Safe allowlisted post-auth return routing so dashboard sign-in and email confirmation return to the requested local application route without permitting open redirects.
 
 ### Changed
 
@@ -42,6 +44,6 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 
 ### Deferred
 
-- Social sign-in, MFA, expanded profiles, feature gating, subscription-experience UI beyond the status summary, billing history, RevenueCat, mobile billing, AI, lessons, translation, and mobile applications.
+- Social sign-in, MFA, expanded profiles, broader feature gating, subscription-experience UI beyond the status summary, billing history, RevenueCat, mobile billing, AI, translation, and mobile applications.
 - Live Stripe test-mode verification of the full billing lifecycle, including a real signed webhook delivery through the running application rather than test fixtures ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)).
 - A scheduled (cron) re-run of the dependency-audit policy, independent of push/PR triggers.

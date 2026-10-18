@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { signIn, signUp } from "../auth/actions";
+import { safeReturnPath } from "../../lib/safe-return-path";
 
 const errorMessages: Record<string, string> = {
   authentication_required: "Sign in to continue.",
@@ -19,6 +20,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const errorKey = typeof params.error === "string" ? params.error : "";
   const messageKey = typeof params.message === "string" ? params.message : "";
   const error = errorMessages[errorKey];
+  const next = safeReturnPath(typeof params.next === "string" ? params.next : null);
 
   return (
     <main className="min-h-screen bg-[#f7f1e7] px-6 py-12 text-[#15123a]">
@@ -27,8 +29,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           &larr; Back to Fluyo
         </Link>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <AuthCard action={signIn} submitLabel="Sign in" title="Welcome back" />
-          <AuthCard action={signUp} submitLabel="Create account" title="Start flowing" />
+          <AuthCard action={signIn} next={next} submitLabel="Sign in" title="Welcome back" />
+          <AuthCard
+            action={signUp}
+            next={next}
+            submitLabel="Create account"
+            title="Start flowing"
+          />
         </div>
         {error ? (
           <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -57,15 +64,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
 interface AuthCardProps {
   action: (formData: FormData) => Promise<void>;
+  next: string;
   submitLabel: string;
   title: string;
 }
 
-function AuthCard({ action, submitLabel, title }: AuthCardProps) {
+function AuthCard({ action, next, submitLabel, title }: AuthCardProps) {
   return (
     <section className="rounded-3xl border border-[#15123a]/10 bg-white/80 p-7 shadow-[0_20px_60px_rgba(23,38,165,0.1)]">
       <h1 className="text-2xl font-black tracking-[-0.03em]">{title}</h1>
       <form action={action} className="mt-6 space-y-4">
+        <input name="next" type="hidden" value={next} />
         <label className="block text-sm font-bold">
           Email
           <input

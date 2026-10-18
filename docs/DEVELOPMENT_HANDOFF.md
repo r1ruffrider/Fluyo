@@ -92,6 +92,50 @@ caught a Prisma/local JSON type-boundary mismatch and passed after an explicit J
 One combined focused run hit the existing five-second AppModule test timeout during a cold import;
 the isolated module test and the subsequent complete API suite passed without a timeout change.
 
+Adriana's independent increment 6 audit passed 215/215 with no blocked or unattempted checks. She
+marked PR #31 ready and squash-merged it as `5d14bc21dfc6431a00f891e96196e2b398e2275f`;
+post-merge run `39084682709` passed all eight required jobs. Increment 7 now runs on
+`codex/sprint-4-dashboard` from that exact main commit.
+
+Increment 7 adds the protected `GET /learning/dashboard` aggregate and `/dashboard` web route. The
+aggregate selects the first accessible activity not completed across any owned progress row while
+returning only five recent progress summaries. The web route uses verified Supabase server sessions,
+safe allowlisted return routing, idempotent server-action submissions, confirmed-result refresh,
+first-use/ready/completed/catalog-empty/entitlement-required/total-failure states, and an independent
+billing-status fallback. Next.js 16.3.8 runs with Webpack on port 3000; the current Nest branch runs
+on port 4000, and database health reports reachable against the preserved Compose volume.
+
+The increment 7 local gate passes 228 tests (six policy, four shared, 194 API, and 24 web), lint,
+typecheck, Prisma validation through the preserved root environment, formatting, the exact audit
+policy, production build, and diff integrity. Eight live HTTP/service assertions pass. A dedicated
+visible audit profile completed the authenticated activity, reload/sign-in persistence,
+320/390/768/1440, keyboard/focus/reduced-motion, failure-state, and console/network matrix. No browser
+cookies or credentials were copied from another profile, and no real database rows were changed for
+failure-state simulation.
+
+Draft PR #32 initially passed seven of eight required jobs. Tests run `39086066850` exposed a clean-
+checkout-only package-resolution defect: the web Vitest suite found `@fluyo/shared` locally only
+because `packages/shared/dist` already existed. `apps/web/vitest.config.ts` now aliases the shared
+workspace source, matching the API test configuration. All 17 web tests pass with the shared `dist`
+directory temporarily absent. PR #32 remains draft and Adriana retains the phase gate.
+
+Adriana's responsive code audit also found that the first mobile rule hid Account and the only Sign
+out control at 320/390 widths. The header now wraps onto a second navigation row and preserves
+Account, Billing, and Sign out as 44px targets. Her exact-head browser re-audit remains required.
+
+The same audit found two state defects. Auth errors now preserve the allowlisted encoded `next` path,
+with four action-level regression tests. Activity attempts now track the last submitted choice in a
+synchronous ref, so a choice changed while the previous request is pending rotates the idempotency key
+before the next submission. The same-choice retry still retains its key after an ambiguous failure.
+
+Elana's independent audit then found that a correct server action could refresh to the next activity
+without remounting the client card, preserving the prior correct state and idempotency key. The card
+is now keyed by activity ID, and its defensive disabled state applies only when the result belongs to
+the current activity. State tests and a rendered-page structural regression prove the cross-activity
+key changes. A live no-reload A-to-B transition also passed against a temporary in-memory API without
+touching the real database; the real API/database were restored healthy with 3/3 progress preserved.
+Elana's independent exact-head audit passed 255 of 255 checks with zero failed or unattempted, and GitHub run `39099487557` passed all eight required jobs. The final documentation-only verdict update now requires its own fresh eight-job run before merge.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.

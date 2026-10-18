@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getPublicWebUrl } from "../../lib/supabase/config";
 import { createSupabaseServerClient } from "../../lib/supabase/server";
+import { safeReturnPath } from "../../lib/safe-return-path";
 
 interface Credentials {
   email: string;
@@ -29,51 +30,63 @@ function readCredentials(formData: FormData): Credentials | null {
   return { email, password };
 }
 
-function callbackUrl(flow?: "recovery"): string {
+function callbackUrl(flow?: "recovery", next?: string): string {
   const url = new URL("/auth/callback", getPublicWebUrl());
 
   if (flow) {
     url.searchParams.set("flow", flow);
   }
+  if (next) {
+    url.searchParams.set("next", safeReturnPath(next));
+  }
 
   return url.toString();
 }
 
+function loginErrorUrl(
+  error: "invalid_input" | "invalid_credentials" | "signup_failed",
+  next: string,
+) {
+  return `/login?error=${error}&next=${encodeURIComponent(next)}`;
+}
+
 export async function signIn(formData: FormData): Promise<void> {
+  const next = safeReturnPath(formData.get("next"));
   const credentials = readCredentials(formData);
 
   if (!credentials) {
-    redirect("/login?error=invalid_input");
+    redirect(loginErrorUrl("invalid_input", next));
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword(credentials);
 
   if (error) {
-    redirect("/login?error=invalid_credentials");
+    redirect(loginErrorUrl("invalid_credentials", next));
   }
 
-  redirect("/account");
+  redirect(next);
 }
 
 export async function signUp(formData: FormData): Promise<void> {
+  const next = safeReturnPath(formData.get("next"));
   const credentials = readCredentials(formData);
 
   if (!credentials) {
-    redirect("/login?error=invalid_input");
+    redirect(loginErrorUrl("invalid_input", next));
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
-    options: { emailRedirectTo: callbackUrl() },
+    options: { emailRedirectTo: callbackUrl(undefined, next) },
   });
 
   if (error) {
-    redirect("/login?error=signup_failed");
+    redirect(loginErrorUrl("signup_failed", next));
   }
 
-  redirect(data.session ? "/account" : "/login?message=check_email");
+  redirect(data.session ? next : `/login?message=check_email&next=${encodeURIComponent(next)}`);
 }
 
 export async function requestPasswordReset(formData: FormData): Promise<void> {

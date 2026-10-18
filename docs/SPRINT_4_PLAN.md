@@ -1,6 +1,6 @@
 # Sprint 4 — Authenticated dashboard and learning domain
 
-Status: accepted implementation plan under delivery. Increments 1–5 are merged; increment 6 adds the learning-data lifecycle and observability boundary.
+Status: accepted implementation plan under delivery. Increments 1–6 are merged; increment 7 is implemented and awaiting its standing phase audit.
 
 Success task: an authenticated learner opens Fluyo, sees the next real activity, completes it once, and can reload or return in another session with the same progress, goal, and streak.
 
@@ -71,7 +71,7 @@ Each increment uses a short-lived branch and draft PR. Every exact PR head must 
 4. [x] **Catalog reads:** add server-managed starter lesson/deck seed, protected paginated read endpoints, access checks, and two-user authorization tests.
 5. [x] **Progress writes:** add idempotent attempt submission, transactional lesson/practice projections, UTC preference bootstrap, streak calculation, goals, preferences, and duplicate/conflict/failure tests.
 6. [x] **Lifecycle and observability:** add the learning-data export/delete service hooks, privacy-safe event/metric contract, and complete/rollback/isolation/telemetry tests.
-7. **Dashboard UI:** add `/dashboard`, session return routing, responsive states, real API wiring, accessible activity flow, and honest error/retry behavior.
+7. [x] **Dashboard UI:** add `/dashboard`, session return routing, responsive states, real API wiring, accessible activity flow, and honest error/retry behavior.
 8. **Phase audit:** run the standing counted audit, fix every blocker, reconcile API/database/security/handoff docs, and close Sprint 4 only after a PASS verdict.
 
 ## Required verification

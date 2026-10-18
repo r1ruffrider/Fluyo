@@ -6,6 +6,7 @@ import { EntitlementsService } from "./billing/entitlements.service";
 import { CatalogService } from "./catalog/catalog.service";
 import { ActivityAttemptService } from "./learning/activity-attempt.service";
 import { LearningDataLifecycleService } from "./learning/learning-data-lifecycle.service";
+import { LearningDashboardService } from "./learning/learning-dashboard.service";
 import { LearningSettingsService } from "./learning/learning-settings.service";
 import { LearningTelemetryService } from "./learning/learning-telemetry.service";
 
@@ -30,6 +31,7 @@ describe("AppModule", () => {
     expect(moduleRef.get(CatalogService)).toBeDefined();
     expect(moduleRef.get(ActivityAttemptService)).toBeDefined();
     expect(moduleRef.get(LearningDataLifecycleService)).toBeDefined();
+    expect(moduleRef.get(LearningDashboardService)).toBeDefined();
     expect(moduleRef.get(LearningSettingsService)).toBeDefined();
     expect(moduleRef.get(LearningTelemetryService)).toBeDefined();
     await moduleRef.close();

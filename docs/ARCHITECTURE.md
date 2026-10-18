@@ -54,6 +54,19 @@ operation labels. The current adapter writes structured event, counter, and hist
 server logger; it never accepts answers, email, credentials, provider payloads, or unbounded input.
 Telemetry failures cannot change request behavior.
 
+`LearningDashboardService` composes active entitlement keys, accessible published activities, all
+owned completion projections, the five newest display summaries, goal, streak, timezone, and stored
+reminder preference. Catalog ordering stays server-controlled, and next-activity selection considers
+every owned progress row rather than only the recent-display window. The protected Next.js
+`/dashboard` route verifies the Supabase session on the server and forwards only the short-lived
+access token to NestJS. Browser submissions use a UUID v4 idempotency key that is retained for a
+transport retry and rotated only when the learner makes a new confirmed attempt.
+
+The web route fetches the learning aggregate and billing-status summary independently. A billing
+read failure is shown as unavailable without inventing a free or paid state, while the already
+authorized learning response remains usable. Learning completion appears only after the signed-in
+server action receives an authoritative attempt response and refreshes the aggregate.
+
 ## Identity and authorization — Sprint 2
 
 Sprint 2 adds Supabase Auth as the identity provider while keeping authentication and authorization distinct. The accepted design is recorded in [ADR 0001](adr/0001-supabase-identity-boundary.md).
@@ -95,7 +108,7 @@ Sprint 2 added the minimal application-owned `user_profiles` table recorded in [
 
 ### Protected web route
 
-`/account` verifies the Supabase session on the server before rendering. It obtains the short-lived access token only after verified claims are available, then calls the protected profile API. Redirecting an unauthenticated browser is a user-experience control; NestJS bearer validation and profile ownership remain the security controls.
+`/account` and `/dashboard` verify the Supabase session on the server before rendering. They obtain the short-lived access token only after verified claims are available, then call protected APIs. Redirecting an unauthenticated browser is a user-experience control; NestJS bearer validation, owner scoping, and entitlement filtering remain the security controls.
 
 ## Billing and entitlements — compatible with Forge
 
