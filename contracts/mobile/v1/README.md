@@ -4,7 +4,7 @@ This directory versions provider-neutral wire contracts and deterministic synthe
 
 ## Sources and validation
 
-`openapi.json` is reconciled with the route constants in `packages/shared/src`, the NestJS controllers, DTO validation, domain errors, and `docs/API.md`. `fixtures.json` contains repository-authored synthetic examples; it was not captured from a user, production database, Supabase, Stripe, or another provider. The shared-package test validates route inventory, reachable statuses, every fixture body, schema references, UUID-v4 request identifiers, error disclosure, idempotency, privacy restrictions, and excluded APIs.
+`manifest.json` identifies the bundle version, expected files, validation date, and immutable 40-hex `sourceImplementationCommit`. That commit is the reconciled server-source baseline, not a claim that generated artifacts existed in the baseline commit. `openapi.json` is reconciled with the route constants in `packages/shared/src`, the NestJS controllers, DTO validation, domain errors, and `docs/API.md`. `fixtures.json` contains repository-authored synthetic examples; it was not captured from a user, production database, Supabase, Stripe, or another provider. The shared-package test validates manifest consistency, route inventory, reachable statuses, every fixture body, schema references, UUID-v4 request identifiers, error disclosure, idempotency, privacy restrictions, and excluded APIs.
 
 Each operation carries an `x-fluyo-stage` marker. `foundation` operations may be used by the Sprint 5 shell. `display_only` billing status may be rendered but does not grant client authority. `sprint_6` learning operations are versioned now for compatibility work and remain outside the Sprint 5 native-foundation product surface. Database health is monitoring-only.
 
@@ -15,7 +15,7 @@ Each operation carries an `x-fluyo-stage` marker. `foundation` operations may be
 - Safe reads may use bounded exponential backoff and cancellation. Preserve last confirmed state during transient failures.
 - A new logical activity attempt gets a fresh UUID-v4 `Idempotency-Key`. If a write outcome is ambiguous, retain the same key and exact payload while reconciling or retrying that logical attempt. An identical replay returns the stored response. Never change a payload under the same key after an `idempotency_conflict`.
 - Honor a valid positive `Retry-After` value. Use a bounded fallback for missing or malformed values. Do not run an announced second-by-second accessibility countdown.
-- Treat `x-correlation-id` as an ephemeral support identifier. It must not encode identity, contact, provider, or campaign data; become a stable user or analytics key; or appear in primary user copy, screenshots, marketing, or ad platforms.
+- Treat `x-correlation-id` as an ephemeral support identifier. The current server accepts a nonempty inbound value and does not enforce a maximum length, so clients must not assume a bound. It must not encode identity, contact, provider, or campaign data; become a stable user or analytics key; or appear in primary user copy, screenshots, marketing, or ad platforms.
 - Server English error messages are diagnostic wire data. Native UI maps stable codes and transport states to localized, actionable copy, focus, announcements, and retry behavior through `clientExpectations`.
 - `transportScenarios` describes no-response client states such as offline, timeout, cancellation, reconnect, and account switching. These are not fabricated HTTP status codes or response bodies.
 

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -15,6 +15,9 @@ const openapi = JSON.parse(
 ) as JsonObject;
 const bundle = JSON.parse(
   readFileSync(resolve(contractDirectory, "fixtures.json"), "utf8"),
+) as JsonObject;
+const manifest = JSON.parse(
+  readFileSync(resolve(contractDirectory, "manifest.json"), "utf8"),
 ) as JsonObject;
 
 const asObject = (value: unknown, label = "value"): JsonObject => {
@@ -179,6 +182,21 @@ const expectedOperations: Record<string, [string, string, boolean]> = {
 };
 
 describe("mobile v1 contract bundle", () => {
+  it("keeps the manifest, OpenAPI version, fixture header, and bundle files consistent", () => {
+    const version = manifest.bundleVersion;
+    expect(version).toBe("1.0.0");
+    expect(asObject(openapi.info).version).toBe(version);
+    expect(bundle.contractVersion).toBe(version);
+    expect(bundle.sourceCommit).toBe(manifest.sourceImplementationCommit);
+    expect(bundle.lastValidationDate).toBe(manifest.lastValidationDate);
+    expect(String(manifest.sourceImplementationCommit)).toMatch(/^[0-9a-f]{40}$/);
+    expect(String(manifest.lastValidationDate)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(manifest.productionDataUsed).toBe(false);
+    expect(readdirSync(contractDirectory).sort()).toEqual(
+      (manifest.files as string[]).slice().sort(),
+    );
+  });
+
   it("matches the implemented route inventory and excludes non-mobile or nonexistent APIs", () => {
     const actual = Object.fromEntries(
       operationEntries().map(({ path, method, operation }) => [
@@ -269,6 +287,7 @@ describe("mobile v1 contract bundle", () => {
       expect(successOperations.has(operationId)).toBe(true);
     for (const fixtureId of [
       "identity_email_absent",
+      "identity_second_owner",
       "profile_empty",
       "profile_updated",
       "profile_cleared",
@@ -371,6 +390,32 @@ describe("mobile v1 contract bundle", () => {
     expect(bodyText).not.toMatch(/https?:\/\//i);
   });
 
+  it("rejects answer, validation, request-hash, owner, and provider internals in public schemas", () => {
+    const forbiddenProperty =
+      /(?:answer|correct(?:choice|answer)|validation|requesthash|ownerid|userid|provider(?:id|payload)|stripecustomerid|customerid|subscriptionid|supabasesubject|revenuecat)/i;
+    const visitProperties = (
+      schemaName: string,
+      schema: JsonObject,
+      prefix = schemaName,
+    ): string[] => {
+      const properties = schema.properties;
+      if (properties === undefined) return [];
+      return Object.entries(asObject(properties)).flatMap(([name, child]) => {
+        const path = `${prefix}.${name}`;
+        const errors =
+          forbiddenProperty.test(name) &&
+          !(schemaName === "SubmitActivityAttemptRequest" && name === "selectedChoiceId")
+            ? [path]
+            : [];
+        return errors.concat(visitProperties(schemaName, asObject(child), path));
+      });
+    };
+    const violations = Object.entries(schemaMap).flatMap(([name, schema]) =>
+      visitProperties(name, asObject(schema)),
+    );
+    expect(violations).toEqual([]);
+  });
+
   it("defines owner isolation, billing projection, restricted fields, and privacy-safe logging", () => {
     expect(String(bundle.billingProjectionPolicy)).toContain("must never infer access");
     const ownerPolicy = asObject(bundle.ownerIsolationPolicy);
@@ -397,19 +442,40 @@ describe("mobile v1 contract bundle", () => {
     const transport = asObject(bundle.transportScenarios);
     expect(Object.keys(transport)).toHaveLength(9);
     for (const scenario of Object.values(transport)) {
-      expect(asObject(scenario).noHttpResponse).toBe(true);
-      expect(String(asObject(scenario).expected).length).toBeGreaterThan(20);
+      const expectation = asObject(scenario);
+      expect(Object.keys(expectation).sort()).toEqual(
+        [
+          "announcement",
+          "disposition",
+          "expected",
+          "focusTarget",
+          "messageKey",
+          "noHttpResponse",
+          "preserveState",
+          "primaryAction",
+        ].sort(),
+      );
+      expect(expectation.noHttpResponse).toBe(true);
+      expect(String(expectation.expected).length).toBeGreaterThan(20);
+      expect(typeof expectation.preserveState).toBe("boolean");
+      expect(String(expectation.disposition).length).toBeGreaterThan(5);
+      expect(expectation.messageKey === null || typeof expectation.messageKey === "string").toBe(
+        true,
+      );
+      expect(
+        expectation.primaryAction === null || typeof expectation.primaryAction === "string",
+      ).toBe(true);
+      expect(expectation.focusTarget === null || typeof expectation.focusTarget === "string").toBe(
+        true,
+      );
+      expect(expectation.announcement).toMatch(
+        /^(none|polite_once|polite_delayed_once|assertive_once)$/,
+      );
     }
     const expectations = asObject(bundle.clientExpectations);
-    for (const code of [
-      "invalid_request",
-      "authentication_required",
-      "resource_not_found",
-      "content_version_conflict",
-      "idempotency_conflict",
-      "rate_limited",
-      "internal_error",
-    ]) {
+    const apiErrorProperties = asObject(asObject(schemaMap.ApiError).properties);
+    const declaredCodes = asObject(apiErrorProperties.code).enum as string[];
+    for (const code of declaredCodes.concat("unknown")) {
       const expectation = asObject(expectations[code]);
       expect(expectation.messageKey).toMatch(/^error\./);
       expect(expectation.primaryAction).toBeTruthy();

@@ -1318,11 +1318,10 @@
     },
     "headers": {
       "CorrelationId": {
-        "description": "Opaque request correlation identifier. Never display it as a product error.",
+        "description": "Opaque request correlation identifier. The current server does not enforce a maximum length. Never display it as a product error.",
         "schema": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 200
+          "minLength": 1
         }
       }
     },
@@ -2111,8 +2110,7 @@
           },
           "correlationId": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 200
+            "minLength": 1
           }
         }
       },

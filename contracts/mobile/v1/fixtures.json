@@ -132,6 +132,33 @@
       "fixtureId": "identity_email_absent",
       "fixturePath": "fixtures.json#/cases/identity_email_absent"
     },
+    "identity_second_owner": {
+      "operationId": "getCurrentIdentity",
+      "method": "GET",
+      "path": "/auth/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "CurrentIdentityResponse",
+      "scenario": "identity_second_owner",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.identity.id", "body.identity.email"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "identity": {
+          "id": "99999999-9999-4999-8999-999999999999",
+          "email": "second-learner@example.test"
+        }
+      },
+      "fixtureId": "identity_second_owner",
+      "fixturePath": "fixtures.json#/cases/identity_second_owner"
+    },
     "profile_empty": {
       "operationId": "getCurrentProfile",
       "method": "GET",
@@ -1806,6 +1833,22 @@
       "focusTarget": "status_heading",
       "announcement": "assertive_once"
     },
+    "access_denied": {
+      "messageKey": "error.access_denied",
+      "primaryAction": "return_to_safe_screen",
+      "preserveInput": false,
+      "retry": "only_after_access_context_changes",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once"
+    },
+    "not_found": {
+      "messageKey": "error.not_found",
+      "primaryAction": "return_to_previous_screen",
+      "preserveInput": false,
+      "retry": "after_navigation_or_refresh_only",
+      "focusTarget": "status_heading",
+      "announcement": "polite_once"
+    },
     "resource_not_found": {
       "messageKey": "error.content_unavailable",
       "primaryAction": "return_to_catalog",
@@ -1845,43 +1888,105 @@
       "retry": "bounded_retry_when_safe",
       "focusTarget": "status_heading",
       "announcement": "assertive_once"
+    },
+    "unknown": {
+      "messageKey": "error.try_again",
+      "primaryAction": "retry_or_return",
+      "preserveInput": true,
+      "retry": "bounded_when_safe",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once"
     }
   },
   "transportScenarios": {
     "delayed_read": {
       "noHttpResponse": true,
+      "messageKey": "status.loading",
+      "primaryAction": null,
+      "preserveState": true,
+      "disposition": "wait_with_cancel_support_and_client_timeout",
+      "focusTarget": null,
+      "announcement": "polite_delayed_once",
       "expected": "Show a semantic loading state after the client threshold; never invent data or spin indefinitely."
     },
     "read_timeout_before_headers": {
       "noHttpResponse": true,
+      "messageKey": "error.request_timed_out",
+      "primaryAction": "retry",
+      "preserveState": true,
+      "disposition": "cancel_then_bounded_retry_on_user_action",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once",
       "expected": "Cancel, preserve last confirmed state, and offer an actionable retry."
     },
     "user_or_navigation_cancellation": {
       "noHttpResponse": true,
+      "messageKey": null,
+      "primaryAction": null,
+      "preserveState": true,
+      "disposition": "cancel_silently",
+      "focusTarget": null,
+      "announcement": "none",
       "expected": "Cancel cleanly without an error announcement."
     },
     "offline_before_request": {
       "noHttpResponse": true,
+      "messageKey": "status.offline",
+      "primaryAction": "retry_when_online",
+      "preserveState": true,
+      "disposition": "make_no_request_until_connectivity_returns",
+      "focusTarget": "status_heading",
+      "announcement": "polite_once",
       "expected": "Make no request and show the offline state with a safe retry."
     },
     "disconnect_mid_read": {
       "noHttpResponse": true,
+      "messageKey": "error.connection_lost",
+      "primaryAction": "retry_when_online",
+      "preserveState": true,
+      "disposition": "cancel_read_then_retry_after_reconnect",
+      "focusTarget": "status_heading",
+      "announcement": "polite_once",
       "expected": "Preserve confirmed state and retry only after reconnect."
     },
     "ambiguous_attempt_timeout": {
       "noHttpResponse": true,
+      "messageKey": "status.reconciling_attempt",
+      "primaryAction": "retry_same_attempt",
+      "preserveState": true,
+      "disposition": "retain_exact_payload_and_uuid_v4_idempotency_key",
+      "focusTarget": "status_heading",
+      "announcement": "polite_once",
       "expected": "Retain the same UUID v4 Idempotency-Key and reconcile or retry only that logical write."
     },
     "reconnect": {
       "noHttpResponse": true,
+      "messageKey": "status.reconnecting",
+      "primaryAction": null,
+      "preserveState": true,
+      "disposition": "revalidate_identity_and_owner_scoped_state",
+      "focusTarget": null,
+      "announcement": "polite_once",
       "expected": "Revalidate identity and owner-scoped data before rendering ready state."
     },
     "account_switch_in_flight": {
       "noHttpResponse": true,
+      "messageKey": "status.switching_account",
+      "primaryAction": null,
+      "preserveState": false,
+      "disposition": "cancel_previous_owner_clear_cache_then_revalidate",
+      "focusTarget": null,
+      "announcement": "polite_once",
       "expected": "Cancel or ignore previous-owner responses, clear owner caches, and fetch the new owner."
     },
     "late_response_after_cancellation": {
       "noHttpResponse": true,
+      "messageKey": null,
+      "primaryAction": null,
+      "preserveState": true,
+      "disposition": "discard_silently",
+      "focusTarget": null,
+      "announcement": "none",
       "expected": "Discard deterministically without overwriting current state."
     }
   }
