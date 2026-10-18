@@ -105,20 +105,19 @@ first-use/ready/completed/catalog-empty/entitlement-required/total-failure state
 billing-status fallback. Next.js 16.3.8 runs with Webpack on port 3000; the current Nest branch runs
 on port 4000, and database health reports reachable against the preserved Compose volume.
 
-The increment 7 local gate passes 221 tests (six policy, four shared, 194 API, and 17 web), lint,
+The increment 7 local gate passes 228 tests (six policy, four shared, 194 API, and 24 web), lint,
 typecheck, Prisma validation through the preserved root environment, formatting, the exact audit
-policy, production build, and diff integrity. Eight live HTTP/service assertions pass. The browser
-security gate refused agent observation of the localhost tab, so the preliminary review remains FAIL
-until Adriana completes the authenticated activity, reload/sign-in persistence, 320/390/768/1440,
-keyboard/focus/reduced-motion, and browser-console matrix on the exact PR head. No browser cookies or
-database rows were extracted or changed to bypass that gate.
+policy, production build, and diff integrity. Eight live HTTP/service assertions pass. A dedicated
+visible audit profile completed the authenticated activity, reload/sign-in persistence,
+320/390/768/1440, keyboard/focus/reduced-motion, failure-state, and console/network matrix. No browser
+cookies or credentials were copied from another profile, and no real database rows were changed for
+failure-state simulation.
 
 Draft PR #32 initially passed seven of eight required jobs. Tests run `39086066850` exposed a clean-
 checkout-only package-resolution defect: the web Vitest suite found `@fluyo/shared` locally only
 because `packages/shared/dist` already existed. `apps/web/vitest.config.ts` now aliases the shared
 workspace source, matching the API test configuration. All 17 web tests pass with the shared `dist`
-directory temporarily absent, and the complete 225-test local gate remains green. The replacement
-exact-head GitHub run is pending; PR #32 remains draft and Adriana retains the phase gate.
+directory temporarily absent. PR #32 remains draft and Adriana retains the phase gate.
 
 Adriana's responsive code audit also found that the first mobile rule hid Account and the only Sign
 out control at 320/390 widths. The header now wraps onto a second navigation row and preserves
@@ -132,8 +131,10 @@ before the next submission. The same-choice retry still retains its key after an
 Elana's independent audit then found that a correct server action could refresh to the next activity
 without remounting the client card, preserving the prior correct state and idempotency key. The card
 is now keyed by activity ID, and its defensive disabled state applies only when the result belongs to
-the current activity. Two cross-activity state regressions cover the no-reload transition; the live
-no-reload A-to-B browser check remains part of Adriana's exact-head re-audit.
+the current activity. State tests and a rendered-page structural regression prove the cross-activity
+key changes. A live no-reload A-to-B transition also passed against a temporary in-memory API without
+touching the real database; the real API/database were restored healthy with 3/3 progress preserved.
+Elana's independent exact-head re-audit and a fresh eight-job GitHub run remain the merge gate.
 
 ## Sprint 3.5 completion — 2026-10-17
 
