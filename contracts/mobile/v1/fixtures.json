@@ -1,0 +1,1888 @@
+{
+  "contractVersion": "1.0.0",
+  "cases": {
+    "health_ok": {
+      "operationId": "getHealth",
+      "method": "GET",
+      "path": "/health",
+      "auth": "public",
+      "direction": "response",
+      "status": 200,
+      "schema": "HealthResponse",
+      "scenario": "health_ok",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "status": "ok",
+        "service": "fluyo-api"
+      },
+      "fixtureId": "health_ok",
+      "fixturePath": "fixtures.json#/cases/health_ok"
+    },
+    "database_health_ok": {
+      "operationId": "getDatabaseHealth",
+      "method": "GET",
+      "path": "/health/database",
+      "auth": "public",
+      "direction": "response",
+      "status": 200,
+      "schema": "DatabaseHealthResponse",
+      "scenario": "database_health_ok",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "status": "ok",
+        "service": "fluyo-api",
+        "database": "reachable"
+      },
+      "fixtureId": "database_health_ok",
+      "fixturePath": "fixtures.json#/cases/database_health_ok"
+    },
+    "database_health_unavailable": {
+      "operationId": "getDatabaseHealth",
+      "method": "GET",
+      "path": "/health/database",
+      "auth": "public",
+      "direction": "response",
+      "status": 503,
+      "schema": "DatabaseHealthResponse",
+      "scenario": "database_health_unavailable",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "status": "error",
+        "service": "fluyo-api",
+        "database": "unreachable"
+      },
+      "fixtureId": "database_health_unavailable",
+      "fixturePath": "fixtures.json#/cases/database_health_unavailable"
+    },
+    "identity_ok": {
+      "operationId": "getCurrentIdentity",
+      "method": "GET",
+      "path": "/auth/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "CurrentIdentityResponse",
+      "scenario": "identity_ok",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.identity.id", "body.identity.email"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "identity": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "email": "learner@example.test"
+        }
+      },
+      "fixtureId": "identity_ok",
+      "fixturePath": "fixtures.json#/cases/identity_ok"
+    },
+    "identity_email_absent": {
+      "operationId": "getCurrentIdentity",
+      "method": "GET",
+      "path": "/auth/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "CurrentIdentityResponse",
+      "scenario": "identity_email_absent",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.identity.id", "body.identity.email"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "identity": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "email": null
+        }
+      },
+      "fixtureId": "identity_email_absent",
+      "fixturePath": "fixtures.json#/cases/identity_email_absent"
+    },
+    "profile_empty": {
+      "operationId": "getCurrentProfile",
+      "method": "GET",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "CurrentProfileResponse",
+      "scenario": "profile_empty",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.profile.id", "body.profile.displayName"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "profile": null
+      },
+      "fixtureId": "profile_empty",
+      "fixturePath": "fixtures.json#/cases/profile_empty"
+    },
+    "profile_present": {
+      "operationId": "getCurrentProfile",
+      "method": "GET",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "CurrentProfileResponse",
+      "scenario": "profile_present",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.profile.id", "body.profile.displayName"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "profile": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "displayName": "Ana",
+          "createdAt": "2026-10-18T00:00:00.000Z",
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        }
+      },
+      "fixtureId": "profile_present",
+      "fixturePath": "fixtures.json#/cases/profile_present"
+    },
+    "profile_update_request": {
+      "operationId": "updateCurrentProfile",
+      "method": "PUT",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "UpdateCurrentProfileRequest",
+      "scenario": "profile_update_request",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": [],
+      "headers": {},
+      "body": {
+        "displayName": "Ana"
+      },
+      "fixtureId": "profile_update_request",
+      "fixturePath": "fixtures.json#/cases/profile_update_request"
+    },
+    "profile_updated": {
+      "operationId": "updateCurrentProfile",
+      "method": "PUT",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "UserProfile",
+      "scenario": "profile_updated",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.id", "body.displayName"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "displayName": "Ana",
+        "createdAt": "2026-10-18T00:00:00.000Z",
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "profile_updated",
+      "fixturePath": "fixtures.json#/cases/profile_updated"
+    },
+    "profile_clear_request": {
+      "operationId": "updateCurrentProfile",
+      "method": "PUT",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "UpdateCurrentProfileRequest",
+      "scenario": "profile_clear_request",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": [],
+      "headers": {},
+      "body": {
+        "displayName": null
+      },
+      "fixtureId": "profile_clear_request",
+      "fixturePath": "fixtures.json#/cases/profile_clear_request"
+    },
+    "profile_cleared": {
+      "operationId": "updateCurrentProfile",
+      "method": "PUT",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "UserProfile",
+      "scenario": "profile_cleared",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.id", "body.displayName"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "displayName": null,
+        "createdAt": "2026-10-18T00:00:00.000Z",
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "profile_cleared",
+      "fixturePath": "fixtures.json#/cases/profile_cleared"
+    },
+    "billing_empty": {
+      "operationId": "getBillingStatus",
+      "method": "GET",
+      "path": "/billing/status",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "BillingStatusResponse",
+      "scenario": "billing_empty",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.subscription", "body.entitlements"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "subscription": null,
+        "entitlements": []
+      },
+      "fixtureId": "billing_empty",
+      "fixturePath": "fixtures.json#/cases/billing_empty"
+    },
+    "billing_active": {
+      "operationId": "getBillingStatus",
+      "method": "GET",
+      "path": "/billing/status",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "BillingStatusResponse",
+      "scenario": "billing_active",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.subscription", "body.entitlements"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "subscription": {
+          "planKey": "fluyo_plus",
+          "displayName": "Fluyo Plus",
+          "status": "active",
+          "billingInterval": "monthly",
+          "currentPeriodEnd": "2026-11-18T00:00:00.000Z",
+          "cancelAtPeriodEnd": false,
+          "canceledAt": null,
+          "trialEnd": null,
+          "accessGranted": true
+        },
+        "entitlements": [
+          {
+            "key": "practice.unlimited",
+            "startsAt": "2026-10-18T00:00:00.000Z",
+            "endsAt": null
+          }
+        ]
+      },
+      "fixtureId": "billing_active",
+      "fixturePath": "fixtures.json#/cases/billing_active"
+    },
+    "billing_past_due_grace": {
+      "operationId": "getBillingStatus",
+      "method": "GET",
+      "path": "/billing/status",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "BillingStatusResponse",
+      "scenario": "billing_past_due_grace",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.subscription", "body.entitlements"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "subscription": {
+          "planKey": "fluyo_plus",
+          "displayName": "Fluyo Plus",
+          "status": "past_due",
+          "billingInterval": "monthly",
+          "currentPeriodEnd": "2026-11-18T00:00:00.000Z",
+          "cancelAtPeriodEnd": false,
+          "canceledAt": null,
+          "trialEnd": null,
+          "accessGranted": true
+        },
+        "entitlements": [
+          {
+            "key": "practice.unlimited",
+            "startsAt": "2026-10-18T00:00:00.000Z",
+            "endsAt": null
+          }
+        ]
+      },
+      "fixtureId": "billing_past_due_grace",
+      "fixturePath": "fixtures.json#/cases/billing_past_due_grace"
+    },
+    "billing_no_access": {
+      "operationId": "getBillingStatus",
+      "method": "GET",
+      "path": "/billing/status",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "BillingStatusResponse",
+      "scenario": "billing_no_access",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.subscription", "body.entitlements"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "subscription": {
+          "planKey": "fluyo_plus",
+          "displayName": "Fluyo Plus",
+          "status": "canceled",
+          "billingInterval": "monthly",
+          "currentPeriodEnd": "2026-11-18T00:00:00.000Z",
+          "cancelAtPeriodEnd": false,
+          "canceledAt": "2026-10-18T00:00:00.000Z",
+          "trialEnd": null,
+          "accessGranted": false
+        },
+        "entitlements": []
+      },
+      "fixtureId": "billing_no_access",
+      "fixturePath": "fixtures.json#/cases/billing_no_access"
+    },
+    "dashboard_first_use": {
+      "operationId": "getLearningDashboard",
+      "method": "GET",
+      "path": "/learning/dashboard",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningDashboardResponse",
+      "scenario": "dashboard_first_use",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [
+        "body.recentProgress",
+        "body.goal",
+        "body.streak",
+        "body.learningPreference",
+        "body.notificationPreference"
+      ],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "nextActivity": {
+          "id": "33333333-3333-4333-8333-333333333333",
+          "kind": "phrase_choice",
+          "contentVersion": 1,
+          "prompt": "How do you say good morning?",
+          "choices": [
+            {
+              "id": "buenos-dias",
+              "label": "Buenos días"
+            },
+            {
+              "id": "buenas-noches",
+              "label": "Buenas noches"
+            }
+          ]
+        },
+        "recentProgress": [],
+        "goal": {
+          "dailyTarget": 3,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "streak": {
+          "currentDays": 0,
+          "practicedToday": false,
+          "todayCompletedActivities": 0
+        },
+        "learningPreference": {
+          "timezone": "UTC",
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "notificationPreference": {
+          "practiceReminderEnabled": false,
+          "reminderLocalTime": "09:00",
+          "deliveryAvailable": false,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "access": {
+          "nextActivityAvailable": true,
+          "unavailableReason": null
+        }
+      },
+      "fixtureId": "dashboard_first_use",
+      "fixturePath": "fixtures.json#/cases/dashboard_first_use"
+    },
+    "dashboard_all_visible_complete": {
+      "operationId": "getLearningDashboard",
+      "method": "GET",
+      "path": "/learning/dashboard",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningDashboardResponse",
+      "scenario": "dashboard_all_visible_complete",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [
+        "body.recentProgress",
+        "body.goal",
+        "body.streak",
+        "body.learningPreference",
+        "body.notificationPreference"
+      ],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "nextActivity": null,
+        "recentProgress": [
+          {
+            "lessonId": "22222222-2222-4222-8222-222222222222",
+            "completedActivityIds": [
+              "33333333-3333-4333-8333-333333333333",
+              "44444444-4444-4444-8444-444444444444"
+            ],
+            "nextActivityId": null,
+            "completedAt": "2026-10-18T00:00:00.000Z",
+            "updatedAt": "2026-10-18T00:00:00.000Z",
+            "lessonTitle": "Café basics"
+          }
+        ],
+        "goal": {
+          "dailyTarget": 3,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "streak": {
+          "currentDays": 1,
+          "practicedToday": true,
+          "todayCompletedActivities": 2
+        },
+        "learningPreference": {
+          "timezone": "UTC",
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "notificationPreference": {
+          "practiceReminderEnabled": false,
+          "reminderLocalTime": "09:00",
+          "deliveryAvailable": false,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "access": {
+          "nextActivityAvailable": false,
+          "unavailableReason": null
+        }
+      },
+      "fixtureId": "dashboard_all_visible_complete",
+      "fixturePath": "fixtures.json#/cases/dashboard_all_visible_complete"
+    },
+    "dashboard_catalog_empty": {
+      "operationId": "getLearningDashboard",
+      "method": "GET",
+      "path": "/learning/dashboard",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningDashboardResponse",
+      "scenario": "dashboard_catalog_empty",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [
+        "body.recentProgress",
+        "body.goal",
+        "body.streak",
+        "body.learningPreference",
+        "body.notificationPreference"
+      ],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "nextActivity": null,
+        "recentProgress": [],
+        "goal": {
+          "dailyTarget": 3,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "streak": {
+          "currentDays": 0,
+          "practicedToday": false,
+          "todayCompletedActivities": 0
+        },
+        "learningPreference": {
+          "timezone": "UTC",
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "notificationPreference": {
+          "practiceReminderEnabled": false,
+          "reminderLocalTime": "09:00",
+          "deliveryAvailable": false,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "access": {
+          "nextActivityAvailable": false,
+          "unavailableReason": "catalog_empty"
+        }
+      },
+      "fixtureId": "dashboard_catalog_empty",
+      "fixturePath": "fixtures.json#/cases/dashboard_catalog_empty"
+    },
+    "dashboard_entitlement_required": {
+      "operationId": "getLearningDashboard",
+      "method": "GET",
+      "path": "/learning/dashboard",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningDashboardResponse",
+      "scenario": "dashboard_entitlement_required",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [
+        "body.recentProgress",
+        "body.goal",
+        "body.streak",
+        "body.learningPreference",
+        "body.notificationPreference"
+      ],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "nextActivity": null,
+        "recentProgress": [],
+        "goal": {
+          "dailyTarget": 3,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "streak": {
+          "currentDays": 0,
+          "practicedToday": false,
+          "todayCompletedActivities": 0
+        },
+        "learningPreference": {
+          "timezone": "UTC",
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "notificationPreference": {
+          "practiceReminderEnabled": false,
+          "reminderLocalTime": "09:00",
+          "deliveryAvailable": false,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        },
+        "access": {
+          "nextActivityAvailable": false,
+          "unavailableReason": "entitlement_required"
+        }
+      },
+      "fixtureId": "dashboard_entitlement_required",
+      "fixturePath": "fixtures.json#/cases/dashboard_entitlement_required"
+    },
+    "lessons_empty": {
+      "operationId": "listLessons",
+      "method": "GET",
+      "path": "/lessons",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LessonsResponse",
+      "scenario": "lessons_empty",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "items": [],
+        "nextCursor": null,
+        "hasMore": false
+      },
+      "fixtureId": "lessons_empty",
+      "fixturePath": "fixtures.json#/cases/lessons_empty"
+    },
+    "lessons_page": {
+      "operationId": "listLessons",
+      "method": "GET",
+      "path": "/lessons",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LessonsResponse",
+      "scenario": "lessons_page",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "items": [
+          {
+            "id": "22222222-2222-4222-8222-222222222222",
+            "slug": "cafe-basics",
+            "title": "Café basics",
+            "description": "Useful phrases for ordering at a café.",
+            "activityCount": 2
+          }
+        ],
+        "nextCursor": "opaque-cursor",
+        "hasMore": true
+      },
+      "fixtureId": "lessons_page",
+      "fixturePath": "fixtures.json#/cases/lessons_page"
+    },
+    "lesson_detail": {
+      "operationId": "getLesson",
+      "method": "GET",
+      "path": "/lessons/{lessonId}",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LessonDetail",
+      "scenario": "lesson_detail",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "id": "22222222-2222-4222-8222-222222222222",
+        "slug": "cafe-basics",
+        "title": "Café basics",
+        "description": "Useful phrases for ordering at a café.",
+        "activityCount": 2,
+        "activities": [
+          {
+            "id": "33333333-3333-4333-8333-333333333333",
+            "kind": "phrase_choice",
+            "contentVersion": 1,
+            "prompt": "How do you say good morning?",
+            "choices": [
+              {
+                "id": "buenos-dias",
+                "label": "Buenos días"
+              },
+              {
+                "id": "buenas-noches",
+                "label": "Buenas noches"
+              }
+            ]
+          },
+          {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "kind": "phrase_choice",
+            "contentVersion": 1,
+            "prompt": "How do you say thank you?",
+            "choices": [
+              {
+                "id": "gracias",
+                "label": "Gracias"
+              },
+              {
+                "id": "por-favor",
+                "label": "Por favor"
+              }
+            ]
+          }
+        ],
+        "phraseDecks": [
+          {
+            "id": "66666666-6666-4666-8666-666666666666",
+            "slug": "cafe-phrases",
+            "title": "Café phrases",
+            "description": "A starter phrase deck.",
+            "sourceLocale": "en",
+            "targetLocale": "es",
+            "phraseCount": 1,
+            "phrases": [
+              {
+                "id": "77777777-7777-4777-8777-777777777777",
+                "sourceText": "Good morning",
+                "targetText": "Buenos días"
+              }
+            ]
+          }
+        ]
+      },
+      "fixtureId": "lesson_detail",
+      "fixturePath": "fixtures.json#/cases/lesson_detail"
+    },
+    "phrase_decks_page": {
+      "operationId": "listPhraseDecks",
+      "method": "GET",
+      "path": "/phrase-decks",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "PhraseDecksResponse",
+      "scenario": "phrase_decks_page",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "items": [
+          {
+            "id": "66666666-6666-4666-8666-666666666666",
+            "slug": "cafe-phrases",
+            "title": "Café phrases",
+            "description": "A starter phrase deck.",
+            "sourceLocale": "en",
+            "targetLocale": "es",
+            "phraseCount": 1
+          }
+        ],
+        "nextCursor": null,
+        "hasMore": false
+      },
+      "fixtureId": "phrase_decks_page",
+      "fixturePath": "fixtures.json#/cases/phrase_decks_page"
+    },
+    "phrase_decks_empty": {
+      "operationId": "listPhraseDecks",
+      "method": "GET",
+      "path": "/phrase-decks",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "PhraseDecksResponse",
+      "scenario": "phrase_decks_empty",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "items": [],
+        "nextCursor": null,
+        "hasMore": false
+      },
+      "fixtureId": "phrase_decks_empty",
+      "fixturePath": "fixtures.json#/cases/phrase_decks_empty"
+    },
+    "attempt_request_initial": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "SubmitActivityAttemptRequest",
+      "scenario": "attempt_request_initial",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.selectedChoiceId"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["Idempotency-Key"],
+      "headers": {
+        "Idempotency-Key": "88888888-8888-4888-8888-888888888888"
+      },
+      "body": {
+        "contentVersion": 1,
+        "selectedChoiceId": "buenos-dias"
+      },
+      "fixtureId": "attempt_request_initial",
+      "fixturePath": "fixtures.json#/cases/attempt_request_initial"
+    },
+    "attempt_request_replay": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "SubmitActivityAttemptRequest",
+      "scenario": "attempt_request_replay",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.selectedChoiceId"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["Idempotency-Key"],
+      "headers": {
+        "Idempotency-Key": "88888888-8888-4888-8888-888888888888"
+      },
+      "body": {
+        "contentVersion": 1,
+        "selectedChoiceId": "buenos-dias"
+      },
+      "fixtureId": "attempt_request_replay",
+      "fixturePath": "fixtures.json#/cases/attempt_request_replay"
+    },
+    "attempt_request_conflict": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "SubmitActivityAttemptRequest",
+      "scenario": "attempt_request_conflict",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.selectedChoiceId"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["Idempotency-Key"],
+      "headers": {
+        "Idempotency-Key": "88888888-8888-4888-8888-888888888888"
+      },
+      "body": {
+        "contentVersion": 1,
+        "selectedChoiceId": "buenas-noches"
+      },
+      "fixtureId": "attempt_request_conflict",
+      "fixturePath": "fixtures.json#/cases/attempt_request_conflict"
+    },
+    "attempt_correct": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "SubmitActivityAttemptResponse",
+      "scenario": "attempt_correct",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.attemptId", "body.activityId", "body.progress"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "attemptId": "55555555-5555-4555-8555-555555555555",
+        "activityId": "33333333-3333-4333-8333-333333333333",
+        "contentVersion": 1,
+        "result": "correct",
+        "feedback": "Nice work.",
+        "completedAt": "2026-10-18T00:00:00.000Z",
+        "progress": {
+          "lessonId": "22222222-2222-4222-8222-222222222222",
+          "completedActivityIds": ["33333333-3333-4333-8333-333333333333"],
+          "nextActivityId": "44444444-4444-4444-8444-444444444444",
+          "completedAt": null,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        }
+      },
+      "fixtureId": "attempt_correct",
+      "fixturePath": "fixtures.json#/cases/attempt_correct"
+    },
+    "attempt_replay": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "SubmitActivityAttemptResponse",
+      "scenario": "attempt_replay",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.attemptId", "body.activityId", "body.progress"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "attemptId": "55555555-5555-4555-8555-555555555555",
+        "activityId": "33333333-3333-4333-8333-333333333333",
+        "contentVersion": 1,
+        "result": "correct",
+        "feedback": "Nice work.",
+        "completedAt": "2026-10-18T00:00:00.000Z",
+        "progress": {
+          "lessonId": "22222222-2222-4222-8222-222222222222",
+          "completedActivityIds": ["33333333-3333-4333-8333-333333333333"],
+          "nextActivityId": "44444444-4444-4444-8444-444444444444",
+          "completedAt": null,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        }
+      },
+      "fixtureId": "attempt_replay",
+      "fixturePath": "fixtures.json#/cases/attempt_replay"
+    },
+    "attempt_repeat_correct_no_second_award": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "SubmitActivityAttemptResponse",
+      "scenario": "attempt_repeat_correct_no_second_award",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.attemptId", "body.activityId", "body.progress"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "attemptId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "activityId": "33333333-3333-4333-8333-333333333333",
+        "contentVersion": 1,
+        "result": "correct",
+        "feedback": "Nice work.",
+        "completedAt": "2026-10-18T00:00:00.000Z",
+        "progress": {
+          "lessonId": "22222222-2222-4222-8222-222222222222",
+          "completedActivityIds": ["33333333-3333-4333-8333-333333333333"],
+          "nextActivityId": "44444444-4444-4444-8444-444444444444",
+          "completedAt": null,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        }
+      },
+      "fixtureId": "attempt_repeat_correct_no_second_award",
+      "fixturePath": "fixtures.json#/cases/attempt_repeat_correct_no_second_award"
+    },
+    "attempt_incorrect": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "SubmitActivityAttemptResponse",
+      "scenario": "attempt_incorrect",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": ["body.attemptId", "body.activityId", "body.progress"],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "attemptId": "55555555-5555-4555-8555-555555555555",
+        "activityId": "33333333-3333-4333-8333-333333333333",
+        "contentVersion": 1,
+        "result": "incorrect",
+        "feedback": "Try another choice.",
+        "completedAt": "2026-10-18T00:00:00.000Z",
+        "progress": {
+          "lessonId": "22222222-2222-4222-8222-222222222222",
+          "completedActivityIds": [],
+          "nextActivityId": "33333333-3333-4333-8333-333333333333",
+          "completedAt": null,
+          "updatedAt": "2026-10-18T00:00:00.000Z"
+        }
+      },
+      "fixtureId": "attempt_incorrect",
+      "fixturePath": "fixtures.json#/cases/attempt_incorrect"
+    },
+    "goal_response": {
+      "operationId": "getLearningGoal",
+      "method": "GET",
+      "path": "/learning-goals/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningGoal",
+      "scenario": "goal_response",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "dailyTarget": 3,
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "goal_response",
+      "fixturePath": "fixtures.json#/cases/goal_response"
+    },
+    "goal_update_request": {
+      "operationId": "updateLearningGoal",
+      "method": "PUT",
+      "path": "/learning-goals/me",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "UpdateLearningGoalRequest",
+      "scenario": "goal_update_request",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": [],
+      "headers": {},
+      "body": {
+        "dailyTarget": 5
+      },
+      "fixtureId": "goal_update_request",
+      "fixturePath": "fixtures.json#/cases/goal_update_request"
+    },
+    "goal_updated": {
+      "operationId": "updateLearningGoal",
+      "method": "PUT",
+      "path": "/learning-goals/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningGoal",
+      "scenario": "goal_updated",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "dailyTarget": 5,
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "goal_updated",
+      "fixturePath": "fixtures.json#/cases/goal_updated"
+    },
+    "learning_preference_response": {
+      "operationId": "getLearningPreference",
+      "method": "GET",
+      "path": "/learning-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningPreference",
+      "scenario": "learning_preference_response",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "timezone": "UTC",
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "learning_preference_response",
+      "fixturePath": "fixtures.json#/cases/learning_preference_response"
+    },
+    "learning_preference_update_request": {
+      "operationId": "updateLearningPreference",
+      "method": "PUT",
+      "path": "/learning-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "UpdateLearningPreferenceRequest",
+      "scenario": "learning_preference_update_request",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": [],
+      "headers": {},
+      "body": {
+        "timezone": "Asia/Riyadh"
+      },
+      "fixtureId": "learning_preference_update_request",
+      "fixturePath": "fixtures.json#/cases/learning_preference_update_request"
+    },
+    "learning_preference_updated": {
+      "operationId": "updateLearningPreference",
+      "method": "PUT",
+      "path": "/learning-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "LearningPreference",
+      "scenario": "learning_preference_updated",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "timezone": "Asia/Riyadh",
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "learning_preference_updated",
+      "fixturePath": "fixtures.json#/cases/learning_preference_updated"
+    },
+    "notification_preference_response": {
+      "operationId": "getNotificationPreference",
+      "method": "GET",
+      "path": "/notification-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "NotificationPreference",
+      "scenario": "notification_preference_response",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "practiceReminderEnabled": false,
+        "reminderLocalTime": "09:00",
+        "deliveryAvailable": false,
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "notification_preference_response",
+      "fixturePath": "fixtures.json#/cases/notification_preference_response"
+    },
+    "notification_preference_update_request": {
+      "operationId": "updateNotificationPreference",
+      "method": "PUT",
+      "path": "/notification-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "request",
+      "status": null,
+      "schema": "UpdateNotificationPreferenceRequest",
+      "scenario": "notification_preference_update_request",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": [],
+      "headers": {},
+      "body": {
+        "practiceReminderEnabled": true,
+        "reminderLocalTime": "18:30"
+      },
+      "fixtureId": "notification_preference_update_request",
+      "fixturePath": "fixtures.json#/cases/notification_preference_update_request"
+    },
+    "notification_preference_updated": {
+      "operationId": "updateNotificationPreference",
+      "method": "PUT",
+      "path": "/notification-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 200,
+      "schema": "NotificationPreference",
+      "scenario": "notification_preference_updated",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "practiceReminderEnabled": true,
+        "reminderLocalTime": "18:30",
+        "deliveryAvailable": false,
+        "updatedAt": "2026-10-18T00:00:00.000Z"
+      },
+      "fixtureId": "notification_preference_updated",
+      "fixturePath": "fixtures.json#/cases/notification_preference_updated"
+    },
+    "error_invalid_request": {
+      "operationId": "updateLearningGoal",
+      "method": "PUT",
+      "path": "/learning-goals/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 400,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_invalid_request",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "The request is invalid",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_invalid_request",
+      "fixturePath": "fixtures.json#/cases/error_invalid_request"
+    },
+    "error_invalid_profile_field": {
+      "operationId": "updateCurrentProfile",
+      "method": "PUT",
+      "path": "/profiles/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 400,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_invalid_profile_field",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "The request is invalid",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_invalid_profile_field",
+      "fixturePath": "fixtures.json#/cases/error_invalid_profile_field"
+    },
+    "error_invalid_catalog_query": {
+      "operationId": "listLessons",
+      "method": "GET",
+      "path": "/lessons",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 400,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_invalid_catalog_query",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "The request is invalid",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_invalid_catalog_query",
+      "fixturePath": "fixtures.json#/cases/error_invalid_catalog_query"
+    },
+    "error_invalid_attempt": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 400,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_invalid_attempt",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "The request is invalid",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_invalid_attempt",
+      "fixturePath": "fixtures.json#/cases/error_invalid_attempt"
+    },
+    "error_invalid_timezone": {
+      "operationId": "updateLearningPreference",
+      "method": "PUT",
+      "path": "/learning-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 400,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_invalid_timezone",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "The request is invalid",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_invalid_timezone",
+      "fixturePath": "fixtures.json#/cases/error_invalid_timezone"
+    },
+    "error_invalid_reminder_time": {
+      "operationId": "updateNotificationPreference",
+      "method": "PUT",
+      "path": "/notification-preferences/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 400,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_invalid_reminder_time",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "invalid_request",
+          "message": "The request is invalid",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_invalid_reminder_time",
+      "fixturePath": "fixtures.json#/cases/error_invalid_reminder_time"
+    },
+    "error_authentication_required": {
+      "operationId": "getCurrentIdentity",
+      "method": "GET",
+      "path": "/auth/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 401,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_authentication_required",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "authentication_required",
+          "message": "Authentication is required",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_authentication_required",
+      "fixturePath": "fixtures.json#/cases/error_authentication_required"
+    },
+    "error_access_denied": {
+      "operationId": "sharedErrorEnvelope",
+      "method": null,
+      "path": null,
+      "auth": "cross_cutting",
+      "direction": "response",
+      "status": 403,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_access_denied",
+      "retrySemantics": "Do not retry blindly.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "access_denied",
+          "message": "Access is denied",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_access_denied",
+      "fixturePath": "fixtures.json#/cases/error_access_denied"
+    },
+    "error_not_found": {
+      "operationId": "getLesson",
+      "method": "GET",
+      "path": "/lessons/{lessonId}",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 404,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_not_found",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "resource_not_found",
+          "message": "The requested resource was not found",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_not_found",
+      "fixturePath": "fixtures.json#/cases/error_not_found"
+    },
+    "error_activity_not_found_or_inaccessible": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 404,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_activity_not_found_or_inaccessible",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "resource_not_found",
+          "message": "The requested resource was not found",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_activity_not_found_or_inaccessible",
+      "fixturePath": "fixtures.json#/cases/error_activity_not_found_or_inaccessible"
+    },
+    "error_content_version_conflict": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 409,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_content_version_conflict",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "content_version_conflict",
+          "message": "The activity content has changed",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_content_version_conflict",
+      "fixturePath": "fixtures.json#/cases/error_content_version_conflict"
+    },
+    "error_idempotency_conflict": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 409,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_idempotency_conflict",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "idempotency_conflict",
+          "message": "The idempotency key was already used for a different request",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_idempotency_conflict",
+      "fixturePath": "fixtures.json#/cases/error_idempotency_conflict"
+    },
+    "error_rate_limited": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 429,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_rate_limited",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["Retry-After", "x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id",
+        "Retry-After": "12"
+      },
+      "body": {
+        "error": {
+          "code": "rate_limited",
+          "message": "Too many activity attempts",
+          "details": {
+            "retryAfterSeconds": 12
+          },
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_rate_limited",
+      "fixturePath": "fixtures.json#/cases/error_rate_limited"
+    },
+    "error_internal": {
+      "operationId": "getCurrentIdentity",
+      "method": "GET",
+      "path": "/auth/me",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 500,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_internal",
+      "retrySemantics": "Bounded exponential backoff with cancellation is allowed.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "internal_error",
+          "message": "An unexpected error occurred",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_internal",
+      "fixturePath": "fixtures.json#/cases/error_internal"
+    },
+    "error_service_unavailable": {
+      "operationId": "submitActivityAttempt",
+      "method": "POST",
+      "path": "/activities/{activityId}/attempts",
+      "auth": "supabase_bearer",
+      "direction": "response",
+      "status": 503,
+      "schema": "ApiErrorResponse",
+      "scenario": "error_service_unavailable",
+      "retrySemantics": "Ambiguous retries reuse the same UUID v4 Idempotency-Key; new logical attempts use a new key.",
+      "dataClass": "synthetic",
+      "sensitiveFieldPolicy": "restricted_product_data_never_marketing_or_ad_export",
+      "restrictedFields": [],
+      "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+      "documentedHeaders": ["x-correlation-id"],
+      "headers": {
+        "x-correlation-id": "fixture-correlation-id"
+      },
+      "body": {
+        "error": {
+          "code": "internal_error",
+          "message": "An unexpected error occurred",
+          "details": {},
+          "correlationId": "fixture-correlation-id"
+        }
+      },
+      "fixtureId": "error_service_unavailable",
+      "fixturePath": "fixtures.json#/cases/error_service_unavailable"
+    }
+  },
+  "dataClass": "synthetic",
+  "fixtureOwner": "Fluyo engineering",
+  "generationSource": "Deterministic repository-authored examples; no runtime capture.",
+  "lastValidationDate": "2026-10-18",
+  "sourceCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+  "productionDataUsed": false,
+  "marketingAttribution": "absent",
+  "marketingConsent": "absent",
+  "adPlatformExport": "prohibited",
+  "correlationIdPolicy": "Ephemeral operational identifier only; never a user, campaign, attribution, or ad-platform join key.",
+  "clientLogPolicy": {
+    "allowed": [
+      "method",
+      "routeTemplate",
+      "status",
+      "safeErrorCode",
+      "durationMs",
+      "correlationId"
+    ],
+    "prohibited": [
+      "body",
+      "headers",
+      "query",
+      "identity",
+      "email",
+      "displayName",
+      "selectedChoiceId",
+      "destinationUrl"
+    ]
+  },
+  "ownerIsolationPolicy": {
+    "ownerSource": "Authenticated bearer identity only; owner identifiers are never accepted from request input.",
+    "inaccessibleCatalogBehavior": "Missing, archived, and entitlement-inaccessible lessons or activities use the same resource_not_found response.",
+    "accountSwitch": "Cancel or ignore prior-owner responses, clear owner-scoped caches, and revalidate identity before rendering new-owner data.",
+    "syntheticOwners": [
+      "11111111-1111-4111-8111-111111111111",
+      "99999999-9999-4999-8999-999999999999"
+    ]
+  },
+  "billingProjectionPolicy": "Billing status is display and routing data. Clients must use server-projected accessGranted and entitlements and must never infer access from the subscription status enum.",
+  "clientExpectations": {
+    "invalid_request": {
+      "messageKey": "error.invalid_request",
+      "primaryAction": "review_input",
+      "preserveInput": true,
+      "retry": "after_user_correction",
+      "focusTarget": "first_invalid_field_or_error_summary",
+      "announcement": "assertive_once"
+    },
+    "authentication_required": {
+      "messageKey": "error.sign_in_required",
+      "primaryAction": "sign_in",
+      "preserveInput": true,
+      "retry": "after_session_recovery",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once"
+    },
+    "resource_not_found": {
+      "messageKey": "error.content_unavailable",
+      "primaryAction": "return_to_catalog",
+      "preserveInput": false,
+      "retry": "after_catalog_refresh_only",
+      "focusTarget": "status_heading",
+      "announcement": "polite_once"
+    },
+    "content_version_conflict": {
+      "messageKey": "error.content_updated",
+      "primaryAction": "refresh_activity",
+      "preserveInput": true,
+      "retry": "only_after_refetch_and_confirmed_user_intent",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once"
+    },
+    "idempotency_conflict": {
+      "messageKey": "error.request_conflict",
+      "primaryAction": "reconcile_attempt",
+      "preserveInput": true,
+      "retry": "never_blind_retry_or_change_payload_under_same_key",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once"
+    },
+    "rate_limited": {
+      "messageKey": "error.too_many_attempts",
+      "primaryAction": "retry_after_wait",
+      "preserveInput": true,
+      "retry": "honor_bounded_positive_retry_after",
+      "focusTarget": "status_heading",
+      "announcement": "polite_once_no_countdown"
+    },
+    "internal_error": {
+      "messageKey": "error.try_again",
+      "primaryAction": "retry",
+      "preserveInput": true,
+      "retry": "bounded_retry_when_safe",
+      "focusTarget": "status_heading",
+      "announcement": "assertive_once"
+    }
+  },
+  "transportScenarios": {
+    "delayed_read": {
+      "noHttpResponse": true,
+      "expected": "Show a semantic loading state after the client threshold; never invent data or spin indefinitely."
+    },
+    "read_timeout_before_headers": {
+      "noHttpResponse": true,
+      "expected": "Cancel, preserve last confirmed state, and offer an actionable retry."
+    },
+    "user_or_navigation_cancellation": {
+      "noHttpResponse": true,
+      "expected": "Cancel cleanly without an error announcement."
+    },
+    "offline_before_request": {
+      "noHttpResponse": true,
+      "expected": "Make no request and show the offline state with a safe retry."
+    },
+    "disconnect_mid_read": {
+      "noHttpResponse": true,
+      "expected": "Preserve confirmed state and retry only after reconnect."
+    },
+    "ambiguous_attempt_timeout": {
+      "noHttpResponse": true,
+      "expected": "Retain the same UUID v4 Idempotency-Key and reconcile or retry only that logical write."
+    },
+    "reconnect": {
+      "noHttpResponse": true,
+      "expected": "Revalidate identity and owner-scoped data before rendering ready state."
+    },
+    "account_switch_in_flight": {
+      "noHttpResponse": true,
+      "expected": "Cancel or ignore previous-owner responses, clear owner caches, and fetch the new owner."
+    },
+    "late_response_after_cancellation": {
+      "noHttpResponse": true,
+      "expected": "Discard deterministically without overwriting current state."
+    }
+  }
+}

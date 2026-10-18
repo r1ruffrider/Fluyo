@@ -137,6 +137,17 @@ All routes use `/api/v1`, camel-case JSON, `x-correlation-id`, the documented sa
 
 Increment 2 may create schemas and sanitized fixtures only for implemented and approved HTTP contracts. It must not invent fixtures for the missing account-lifecycle, native callback, telemetry, or RevenueCat surfaces.
 
+### Increment 2 contract artifact
+
+[`contracts/mobile/v1/openapi.json`](../contracts/mobile/v1/openapi.json) and
+[`contracts/mobile/v1/fixtures.json`](../contracts/mobile/v1/fixtures.json) are the provider-neutral v1
+inventory and synthetic evidence bundle. Their shared-package validator rejects route/status drift, schema or
+fixture mismatch, non-v4 request identifiers, unsafe error disclosure, broken replay semantics, provider/secret/
+campaign leakage, and undocumented transport-state assumptions. The contract records marketing attribution and
+consent as absent, prohibits ad-platform export, and treats identity/profile/learning/billing fields as restricted
+product data. It does not approve any still-open identifier, account, signing, domain, locale, platform, store,
+production, or release decision in this register.
+
 ## Dependency-safe next actions
 
 1. Obtain explicit product decisions for S5-D01 through S5-D04. These are repository choices with material reach, layout, localization, and namespace consequences.

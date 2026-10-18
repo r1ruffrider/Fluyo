@@ -62,6 +62,11 @@ Exit gate: every later increment has an owner, dependency, testable acceptance c
 
 Exit gate: fixtures validate against the server contracts, negative envelopes remain safe, and no private answer, provider, owner, or credential field is exposed.
 
+Implementation artifact: [`contracts/mobile/v1`](../contracts/mobile/v1/README.md) versions the exact
+implemented route inventory and deterministic synthetic fixtures. Learning operations carry a Sprint 6 stage
+marker and are not presented in the Sprint 5 native shell. Exact-head specialist and independent audit evidence
+remains required before this increment closes.
+
 ### 3. iOS foundation
 
 - Add a SwiftUI workspace with unit and UI test targets and Debug, Staging, and Release configurations.

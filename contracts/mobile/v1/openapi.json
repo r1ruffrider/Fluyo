@@ -1,0 +1,2146 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fluyo mobile-facing API contract",
+    "version": "1.0.0",
+    "description": "Provider-neutral schemas for implemented Fluyo endpoints. Inclusion does not imply public mobile availability."
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Environment-selected API base path"
+    }
+  ],
+  "tags": [
+    {
+      "name": "foundation"
+    },
+    {
+      "name": "learning"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": ["foundation"],
+        "security": [],
+        "x-fluyo-stage": "foundation",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unavailable",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/database": {
+      "get": {
+        "operationId": "getDatabaseHealth",
+        "tags": ["foundation"],
+        "security": [],
+        "x-fluyo-stage": "monitoring_only",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseHealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseHealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getCurrentIdentity",
+        "tags": ["foundation"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "foundation",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentIdentityResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profiles/me": {
+      "get": {
+        "operationId": "getCurrentProfile",
+        "tags": ["foundation"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "foundation",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateCurrentProfile",
+        "tags": ["foundation"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "foundation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCurrentProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/status": {
+      "get": {
+        "operationId": "getBillingStatus",
+        "tags": ["foundation"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "display_only",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/learning/dashboard": {
+      "get": {
+        "operationId": "getLearningDashboard",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningDashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons": {
+      "get": {
+        "operationId": "listLessons",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lessonId}": {
+      "get": {
+        "operationId": "getLesson",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid lesson identifier",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lesson not found",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/phrase-decks": {
+      "get": {
+        "operationId": "listPhraseDecks",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhraseDecksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activities/{activityId}/attempts": {
+      "post": {
+        "operationId": "submitActivityAttempt",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitActivityAttemptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitActivityAttemptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, activity identifier, or idempotency key",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Activity not found",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Content or idempotency conflict",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              },
+              "Retry-After": {
+                "description": "Positive integer number of seconds before a new-key retry.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Learning writes unavailable",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/learning-goals/me": {
+      "get": {
+        "operationId": "getLearningGoal",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningGoal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateLearningGoal",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLearningGoalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningGoal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/learning-preferences/me": {
+      "get": {
+        "operationId": "getLearningPreference",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningPreference"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateLearningPreference",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLearningPreferenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningPreference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notification-preferences/me": {
+      "get": {
+        "operationId": "getNotificationPreference",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreference"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateNotificationPreference",
+        "tags": ["learning"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-fluyo-stage": "sprint_6",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPreferenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreference"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "headers": {
+              "x-correlation-id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "headers": {
+      "CorrelationId": {
+        "description": "Opaque request correlation identifier. Never display it as a product error.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "service"],
+        "properties": {
+          "status": {
+            "const": "ok"
+          },
+          "service": {
+            "const": "fluyo-api"
+          }
+        }
+      },
+      "DatabaseHealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "service", "database"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok", "error"]
+          },
+          "service": {
+            "const": "fluyo-api"
+          },
+          "database": {
+            "type": "string",
+            "enum": ["reachable", "unreachable"]
+          }
+        }
+      },
+      "AuthenticatedIdentity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "email"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "CurrentIdentityResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["identity"],
+        "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/AuthenticatedIdentity"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "displayName", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CurrentProfileResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["profile"],
+        "properties": {
+          "profile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "UpdateCurrentProfileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["displayName"],
+        "properties": {
+          "displayName": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 80
+          }
+        }
+      },
+      "ActiveEntitlement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "startsAt", "endsAt"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "BillingSubscriptionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "planKey",
+          "displayName",
+          "status",
+          "billingInterval",
+          "currentPeriodEnd",
+          "cancelAtPeriodEnd",
+          "canceledAt",
+          "trialEnd",
+          "accessGranted"
+        ],
+        "properties": {
+          "planKey": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "trialing",
+              "active",
+              "past_due",
+              "canceled",
+              "unpaid",
+              "incomplete",
+              "incomplete_expired",
+              "paused"
+            ]
+          },
+          "billingInterval": {
+            "type": "string",
+            "enum": ["monthly", "annual"]
+          },
+          "currentPeriodEnd": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "cancelAtPeriodEnd": {
+            "type": "boolean"
+          },
+          "canceledAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "trialEnd": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "accessGranted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BillingStatusResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["subscription", "entitlements"],
+        "properties": {
+          "subscription": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BillingSubscriptionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActiveEntitlement"
+            }
+          }
+        }
+      },
+      "ActivityChoice": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "PhraseChoiceActivity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "contentVersion", "prompt", "choices"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "const": "phrase_choice"
+          },
+          "contentVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityChoice"
+            }
+          }
+        }
+      },
+      "LearningGoal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dailyTarget", "updatedAt"],
+        "properties": {
+          "dailyTarget": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateLearningGoalRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dailyTarget"],
+        "properties": {
+          "dailyTarget": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        }
+      },
+      "LearningPreference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timezone", "updatedAt"],
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateLearningPreferenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timezone"],
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "NotificationPreference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "practiceReminderEnabled",
+          "reminderLocalTime",
+          "deliveryAvailable",
+          "updatedAt"
+        ],
+        "properties": {
+          "practiceReminderEnabled": {
+            "type": "boolean"
+          },
+          "reminderLocalTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "deliveryAvailable": {
+            "const": false
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateNotificationPreferenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["practiceReminderEnabled", "reminderLocalTime"],
+        "properties": {
+          "practiceReminderEnabled": {
+            "type": "boolean"
+          },
+          "reminderLocalTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          }
+        }
+      },
+      "LearningStreak": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["currentDays", "practicedToday", "todayCompletedActivities"],
+        "properties": {
+          "currentDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "practicedToday": {
+            "type": "boolean"
+          },
+          "todayCompletedActivities": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "LearningAccessSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nextActivityAvailable", "unavailableReason"],
+        "properties": {
+          "nextActivityAvailable": {
+            "type": "boolean"
+          },
+          "unavailableReason": {
+            "type": ["string", "null"],
+            "enum": ["entitlement_required", "catalog_empty", null]
+          }
+        }
+      },
+      "LessonProgressSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lessonId",
+          "completedActivityIds",
+          "nextActivityId",
+          "completedAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "lessonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "completedActivityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "nextActivityId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "completedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RecentLessonProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lessonId",
+          "completedActivityIds",
+          "nextActivityId",
+          "completedAt",
+          "updatedAt",
+          "lessonTitle"
+        ],
+        "properties": {
+          "lessonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "completedActivityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "nextActivityId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "completedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lessonTitle": {
+            "type": "string"
+          }
+        }
+      },
+      "LearningDashboardResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nextActivity",
+          "recentProgress",
+          "goal",
+          "streak",
+          "learningPreference",
+          "notificationPreference",
+          "access"
+        ],
+        "properties": {
+          "nextActivity": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PhraseChoiceActivity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recentProgress": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecentLessonProgress"
+            }
+          },
+          "goal": {
+            "$ref": "#/components/schemas/LearningGoal"
+          },
+          "streak": {
+            "$ref": "#/components/schemas/LearningStreak"
+          },
+          "learningPreference": {
+            "$ref": "#/components/schemas/LearningPreference"
+          },
+          "notificationPreference": {
+            "$ref": "#/components/schemas/NotificationPreference"
+          },
+          "access": {
+            "$ref": "#/components/schemas/LearningAccessSummary"
+          }
+        }
+      },
+      "LessonSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "slug", "title", "description", "activityCount"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "activityCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Phrase": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sourceText", "targetText"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceText": {
+            "type": "string"
+          },
+          "targetText": {
+            "type": "string"
+          }
+        }
+      },
+      "PhraseDeckSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "description",
+          "sourceLocale",
+          "targetLocale",
+          "phraseCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "sourceLocale": {
+            "type": "string"
+          },
+          "targetLocale": {
+            "type": "string"
+          },
+          "phraseCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "PhraseDeck": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "description",
+          "sourceLocale",
+          "targetLocale",
+          "phraseCount",
+          "phrases"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "sourceLocale": {
+            "type": "string"
+          },
+          "targetLocale": {
+            "type": "string"
+          },
+          "phraseCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "phrases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Phrase"
+            }
+          }
+        }
+      },
+      "LessonDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "description",
+          "activityCount",
+          "activities",
+          "phraseDecks"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "activityCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhraseChoiceActivity"
+            }
+          },
+          "phraseDecks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhraseDeck"
+            }
+          }
+        }
+      },
+      "LessonsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "nextCursor", "hasMore"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LessonSummary"
+            }
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PhraseDecksResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "nextCursor", "hasMore"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PhraseDeckSummary"
+            }
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SubmitActivityAttemptRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["contentVersion", "selectedChoiceId"],
+        "properties": {
+          "contentVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "selectedChoiceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "SubmitActivityAttemptResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attemptId",
+          "activityId",
+          "contentVersion",
+          "result",
+          "feedback",
+          "completedAt",
+          "progress"
+        ],
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contentVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "result": {
+            "type": "string",
+            "enum": ["correct", "incorrect"]
+          },
+          "feedback": {
+            "type": ["string", "null"]
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/LessonProgressSummary"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "details", "correlationId"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_request",
+              "authentication_required",
+              "access_denied",
+              "not_found",
+              "resource_not_found",
+              "content_version_conflict",
+              "idempotency_conflict",
+              "rate_limited",
+              "internal_error"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "details": {
+            "type": "object"
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        }
+      }
+    }
+  },
+  "x-fluyo-contract": {
+    "status": "internal",
+    "sourceOfTruth": ["packages/shared/src", "apps/api/src controllers and DTOs", "docs/API.md"],
+    "retryPolicy": {
+      "safeReads": "Retry with bounded exponential backoff and cancellation.",
+      "writes": "Retry only an ambiguous attempt with the same UUID v4 Idempotency-Key. A new logical attempt uses a new key.",
+      "rateLimit": "Honor positive integer Retry-After seconds. Stored replay and conflict checks precede throttling."
+    },
+    "excluded": [
+      "Stripe Checkout and Customer Portal are web-only.",
+      "Stripe webhooks are server integrations.",
+      "Learning export and deletion have internal hooks but no HTTP endpoint.",
+      "Native callback, telemetry, RevenueCat, tester enrollment, and campaign endpoints do not exist."
+    ]
+  }
+}
