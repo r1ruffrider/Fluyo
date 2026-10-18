@@ -134,7 +134,7 @@ is now keyed by activity ID, and its defensive disabled state applies only when 
 the current activity. State tests and a rendered-page structural regression prove the cross-activity
 key changes. A live no-reload A-to-B transition also passed against a temporary in-memory API without
 touching the real database; the real API/database were restored healthy with 3/3 progress preserved.
-Elana's independent exact-head audit passed 255 of 255 checks with zero failed or unattempted, and GitHub run `39099487557` passed all eight required jobs. The final documentation-only verdict update now requires its own fresh eight-job run before merge.
+Elana's independent exact-head audit passed 255 of 255 checks with zero failed or unattempted. PR #32 merged as `0ced1d4a80a42ac1cdf6d2bcee63a3d64cb78f59`; post-merge `main` run `39099767691` passed all eight required jobs. Sprint 4 is complete, and the next roadmap phase is Sprint 5 after its ADR 0004 prerequisite is reconciled.
 
 ## Sprint 3.5 completion — 2026-10-17
 
