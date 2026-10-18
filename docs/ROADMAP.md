@@ -125,6 +125,8 @@ Completion evidence (2026-10-18): PRs #26–#32 delivered the accepted contract,
 
 Goal: establish installable authenticated iOS and Android applications after ADR 0004 is accepted.
 
+Planning contract: [SPRINT_5_PLAN.md](SPRINT_5_PLAN.md). Status: planning under review; no native implementation or external account action has started.
+
 - Create SwiftUI and Kotlin/Compose projects with development, staging, and production configurations.
 - Implement Supabase PKCE, secure token storage, universal/App Links, API clients, design tokens, localization, accessibility, telemetry, feature flags, and CI-signed internal builds.
 - Reserve production identifiers and complete store-account, privacy, signing, and compliance prerequisites.
