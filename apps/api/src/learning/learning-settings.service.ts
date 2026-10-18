@@ -4,7 +4,7 @@ import type {
   LearningStreak,
   NotificationPreference,
 } from "@fluyo/shared";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 
 import { PrismaService } from "../database/prisma.service";
 import type { UpdateLearningGoalDto } from "./dto/update-learning-goal.dto";
@@ -18,10 +18,14 @@ import {
   timeText,
   timeValue,
 } from "./learning-time";
+import { LearningTelemetryService } from "./learning-telemetry.service";
 
 @Injectable()
 export class LearningSettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly telemetry?: LearningTelemetryService,
+  ) {}
 
   async getGoal(userId: string): Promise<LearningGoal> {
     return this.mapGoal(
@@ -34,13 +38,20 @@ export class LearningSettingsService {
   }
 
   async updateGoal(userId: string, input: UpdateLearningGoalDto): Promise<LearningGoal> {
-    return this.mapGoal(
-      await this.prisma.learningGoal.upsert({
-        where: { userId },
-        update: { dailyTarget: input.dailyTarget },
-        create: { userId, dailyTarget: input.dailyTarget },
-      }),
-    );
+    try {
+      const goal = this.mapGoal(
+        await this.prisma.learningGoal.upsert({
+          where: { userId },
+          update: { dailyTarget: input.dailyTarget },
+          create: { userId, dailyTarget: input.dailyTarget },
+        }),
+      );
+      this.telemetry?.recordGoal("updated");
+      return goal;
+    } catch (error) {
+      this.telemetry?.recordGoal("failed");
+      throw error;
+    }
   }
 
   async getLearningPreference(userId: string): Promise<LearningPreference> {
@@ -57,17 +68,24 @@ export class LearningSettingsService {
     userId: string,
     input: UpdateLearningPreferenceDto,
   ): Promise<LearningPreference> {
-    if (!isValidIanaTimeZone(input.timezone)) {
-      throw new BadRequestException("Invalid IANA timezone");
-    }
+    try {
+      if (!isValidIanaTimeZone(input.timezone)) {
+        throw new BadRequestException("Invalid IANA timezone");
+      }
 
-    return this.mapLearningPreference(
-      await this.prisma.learningPreference.upsert({
-        where: { userId },
-        update: { timezone: input.timezone },
-        create: { userId, timezone: input.timezone },
-      }),
-    );
+      const preference = this.mapLearningPreference(
+        await this.prisma.learningPreference.upsert({
+          where: { userId },
+          update: { timezone: input.timezone },
+          create: { userId, timezone: input.timezone },
+        }),
+      );
+      this.telemetry?.recordPreference({ outcome: "updated", preference: "timezone" });
+      return preference;
+    } catch (error) {
+      this.telemetry?.recordPreference({ outcome: "failed", preference: "timezone" });
+      throw error;
+    }
   }
 
   async getNotificationPreference(userId: string): Promise<NotificationPreference> {
@@ -84,20 +102,27 @@ export class LearningSettingsService {
     userId: string,
     input: UpdateNotificationPreferenceDto,
   ): Promise<NotificationPreference> {
-    return this.mapNotificationPreference(
-      await this.prisma.notificationPreference.upsert({
-        where: { userId },
-        update: {
-          practiceReminderEnabled: input.practiceReminderEnabled,
-          reminderLocalTime: timeValue(input.reminderLocalTime),
-        },
-        create: {
-          userId,
-          practiceReminderEnabled: input.practiceReminderEnabled,
-          reminderLocalTime: timeValue(input.reminderLocalTime),
-        },
-      }),
-    );
+    try {
+      const preference = this.mapNotificationPreference(
+        await this.prisma.notificationPreference.upsert({
+          where: { userId },
+          update: {
+            practiceReminderEnabled: input.practiceReminderEnabled,
+            reminderLocalTime: timeValue(input.reminderLocalTime),
+          },
+          create: {
+            userId,
+            practiceReminderEnabled: input.practiceReminderEnabled,
+            reminderLocalTime: timeValue(input.reminderLocalTime),
+          },
+        }),
+      );
+      this.telemetry?.recordPreference({ outcome: "updated", preference: "notification" });
+      return preference;
+    } catch (error) {
+      this.telemetry?.recordPreference({ outcome: "failed", preference: "notification" });
+      throw error;
+    }
   }
 
   async getStreak(userId: string, at = new Date()): Promise<LearningStreak> {

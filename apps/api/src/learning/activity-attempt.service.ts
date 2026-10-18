@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type { SubmitActivityAttemptResponse } from "@fluyo/shared";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import { ActivityAttemptResult, Prisma } from "@prisma/client";
 
 import { EntitlementsService } from "../billing/entitlements.service";
@@ -9,6 +9,7 @@ import { ApiDomainException } from "../common/errors/api-domain.exception";
 import { PrismaService } from "../database/prisma.service";
 import { ActivityAttemptAdmissionService } from "./activity-attempt-admission.service";
 import type { SubmitActivityAttemptDto } from "./dto/submit-activity-attempt.dto";
+import { LearningTelemetryService } from "./learning-telemetry.service";
 import { localDateAt } from "./learning-time";
 
 interface ActivityContent {
@@ -16,6 +17,27 @@ interface ActivityContent {
   correctChoiceId: string;
   correctFeedback: string;
   incorrectFeedback: string;
+}
+
+interface ActivityAttemptWriteResult {
+  response: SubmitActivityAttemptResponse;
+  progressUpdated: boolean;
+  lessonId: string;
+}
+
+function failureOutcome(error: unknown): "conflict" | "denied" | "rate_limited" | "failed" {
+  if (error instanceof ApiDomainException) {
+    if (error.code === "rate_limited") {
+      return "rate_limited";
+    }
+    if (error.code === "content_version_conflict" || error.code === "idempotency_conflict") {
+      return "conflict";
+    }
+    if (error.code === "resource_not_found") {
+      return "denied";
+    }
+  }
+  return error instanceof BadRequestException ? "denied" : "failed";
 }
 
 function entitlementAccess(entitlementKeys: string[]) {
@@ -88,6 +110,7 @@ export class ActivityAttemptService {
     private readonly prisma: PrismaService,
     private readonly entitlements: EntitlementsService,
     private readonly admission: ActivityAttemptAdmissionService,
+    @Optional() private readonly telemetry?: LearningTelemetryService,
   ) {}
 
   async submit(
@@ -97,42 +120,73 @@ export class ActivityAttemptService {
     input: SubmitActivityAttemptDto,
     completedAt = new Date(),
   ): Promise<SubmitActivityAttemptResponse> {
+    const startedAt = Date.now();
     const normalizedActivityId = activityId.toLowerCase();
     const normalizedIdempotencyKey = idempotencyKey.toLowerCase();
     const hash = requestHash(normalizedActivityId, normalizedIdempotencyKey, input);
-    const admission = await this.admission.admit({
-      userId,
-      idempotencyKey: normalizedIdempotencyKey,
-      requestHash: hash,
-    });
-    if (admission.kind === "replay") {
-      return admission.response as unknown as SubmitActivityAttemptResponse;
-    }
-
     try {
-      const entitlementKeys = (await this.entitlements.listActive(userId, completedAt)).map(
-        (entitlement) => entitlement.key,
-      );
-      const response = await this.prisma.$transaction((transaction) =>
-        this.writeAttempt(
-          transaction,
-          userId,
-          normalizedActivityId,
-          normalizedIdempotencyKey,
-          hash,
-          input,
-          entitlementKeys,
-          completedAt,
-        ),
-      );
-      admission.complete();
-      return response;
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        return (await admission.recoverUniqueKeyConflict())
-          .response as unknown as SubmitActivityAttemptResponse;
+      const admission = await this.admission.admit({
+        userId,
+        idempotencyKey: normalizedIdempotencyKey,
+        requestHash: hash,
+      });
+      if (admission.kind === "replay") {
+        this.telemetry?.recordAttempt({
+          outcome: "duplicate",
+          durationMs: Date.now() - startedAt,
+          activityId: normalizedActivityId,
+        });
+        return admission.response as unknown as SubmitActivityAttemptResponse;
       }
-      admission.fail();
+
+      try {
+        const entitlementKeys = (await this.entitlements.listActive(userId, completedAt)).map(
+          (entitlement) => entitlement.key,
+        );
+        const write = await this.prisma.$transaction((transaction) =>
+          this.writeAttempt(
+            transaction,
+            userId,
+            normalizedActivityId,
+            normalizedIdempotencyKey,
+            hash,
+            input,
+            entitlementKeys,
+            completedAt,
+          ),
+        );
+        admission.complete();
+        this.telemetry?.recordAttempt({
+          outcome: write.response.result,
+          durationMs: Date.now() - startedAt,
+          activityId: normalizedActivityId,
+          lessonId: write.lessonId,
+        });
+        this.telemetry?.recordProgress({
+          outcome: write.progressUpdated ? "updated" : "unchanged",
+          activityId: normalizedActivityId,
+          lessonId: write.lessonId,
+        });
+        return write.response;
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          const replay = await admission.recoverUniqueKeyConflict();
+          this.telemetry?.recordAttempt({
+            outcome: "duplicate",
+            durationMs: Date.now() - startedAt,
+            activityId: normalizedActivityId,
+          });
+          return replay.response as unknown as SubmitActivityAttemptResponse;
+        }
+        admission.fail();
+        throw error;
+      }
+    } catch (error) {
+      this.telemetry?.recordAttempt({
+        outcome: failureOutcome(error),
+        durationMs: Date.now() - startedAt,
+        activityId: normalizedActivityId,
+      });
       throw error;
     }
   }
@@ -146,7 +200,7 @@ export class ActivityAttemptService {
     input: SubmitActivityAttemptDto,
     entitlementKeys: string[],
     completedAt: Date,
-  ): Promise<SubmitActivityAttemptResponse> {
+  ): Promise<ActivityAttemptWriteResult> {
     const access = entitlementAccess(entitlementKeys);
     const activity = await transaction.activity.findFirst({
       where: {
@@ -295,6 +349,6 @@ export class ActivityAttemptService {
       },
     });
 
-    return response;
+    return { response, progressUpdated: awardedCompletion, lessonId: activity.lessonId };
   }
 }

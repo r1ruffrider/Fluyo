@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../database/prisma.service";
 import { LearningSettingsService } from "./learning-settings.service";
+import type { LearningTelemetryService } from "./learning-telemetry.service";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const UPDATED_AT = new Date("2026-10-18T00:00:00.000Z");
@@ -36,7 +37,11 @@ describe("LearningSettingsService", () => {
   it("idempotently replaces only the verified user's goal", async () => {
     const prisma = createPrismaMock();
     prisma.learningGoal.upsert.mockResolvedValue({ dailyTarget: 7, updatedAt: UPDATED_AT });
-    const service = new LearningSettingsService(prisma as unknown as PrismaService);
+    const telemetry = { recordGoal: vi.fn() };
+    const service = new LearningSettingsService(
+      prisma as unknown as PrismaService,
+      telemetry as unknown as LearningTelemetryService,
+    );
 
     await expect(service.updateGoal(USER_ID, { dailyTarget: 7 })).resolves.toMatchObject({
       dailyTarget: 7,
@@ -46,6 +51,7 @@ describe("LearningSettingsService", () => {
       update: { dailyTarget: 7 },
       create: { userId: USER_ID, dailyTarget: 7 },
     });
+    expect(telemetry.recordGoal).toHaveBeenCalledWith("updated");
   });
 
   it("uses UTC until a learner saves a preference", async () => {
@@ -61,12 +67,20 @@ describe("LearningSettingsService", () => {
 
   it("rejects invalid zones without writing", async () => {
     const prisma = createPrismaMock();
-    const service = new LearningSettingsService(prisma as unknown as PrismaService);
+    const telemetry = { recordPreference: vi.fn() };
+    const service = new LearningSettingsService(
+      prisma as unknown as PrismaService,
+      telemetry as unknown as LearningTelemetryService,
+    );
 
     await expect(
       service.updateLearningPreference(USER_ID, { timezone: "Mars/Olympus_Mons" }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.learningPreference.upsert).not.toHaveBeenCalled();
+    expect(telemetry.recordPreference).toHaveBeenCalledWith({
+      outcome: "failed",
+      preference: "timezone",
+    });
   });
 
   it("stores a valid timezone without rewriting earlier practice days", async () => {
@@ -90,7 +104,11 @@ describe("LearningSettingsService", () => {
       reminderLocalTime: new Date("1970-01-01T08:15:00.000Z"),
       updatedAt: UPDATED_AT,
     });
-    const service = new LearningSettingsService(prisma as unknown as PrismaService);
+    const telemetry = { recordPreference: vi.fn() };
+    const service = new LearningSettingsService(
+      prisma as unknown as PrismaService,
+      telemetry as unknown as LearningTelemetryService,
+    );
 
     await expect(
       service.updateNotificationPreference(USER_ID, {
@@ -102,6 +120,10 @@ describe("LearningSettingsService", () => {
       reminderLocalTime: "08:15",
       deliveryAvailable: false,
       updatedAt: UPDATED_AT.toISOString(),
+    });
+    expect(telemetry.recordPreference).toHaveBeenCalledWith({
+      outcome: "updated",
+      preference: "notification",
     });
   });
 

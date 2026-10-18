@@ -267,6 +267,18 @@ limiter is registered; a shared limiter and ingress abuse controls are required 
   `"deliveryAvailable": false` because Sprint 4 stores the preference without claiming a delivery
   channel exists.
 
+### Internal lifecycle and observability hooks
+
+`LearningDataLifecycleService` is exported from the Nest learning module for a future verified
+account-lifecycle orchestrator. It is not an HTTP endpoint. It exports all records owned by one UUID
+from a repeatable-read snapshot and deletes those records atomically and idempotently without
+touching profile, billing, entitlement, webhook-ledger, or catalog records.
+
+Learning services emit only the fixed ADR 0005 event names and enumerated outcomes. Attempt outcome,
+duplicate, conflict, rate-limit, and failure counters plus attempt/dashboard duration samples use
+bounded labels. Answers, choice IDs, request hashes, email, tokens, provider payloads, and arbitrary
+input are never telemetry fields.
+
 ## Future Billing APIs
 
 Live Stripe test-mode lifecycle verification is complete. Subscription-experience gating beyond this status summary, translation, and AI endpoints remain future work.

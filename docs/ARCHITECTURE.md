@@ -17,7 +17,7 @@ The existing `landing/` page remains a standalone marketing artifact. It is not 
 - **Web:** React and Next.js render the initial product shell. A reusable server-side API client reads `NEXT_PUBLIC_API_URL` and checks the API health endpoint without making the build depend on a running backend.
 - **API:** NestJS owns the versioned `/api/v1` boundary, validates its environment at startup, limits CORS to the configured web origin, and emits structured request logs with correlation IDs.
 - **Shared package:** `@fluyo/shared` owns provider-neutral contracts shared by the applications, including health, identity, profile, and published billing-catalog types.
-- **Database:** PostgreSQL is accessed only through the API's Prisma integration. It contains platform metadata, the minimal application profile, and the Sprint 3 billing projection and entitlement foundation. No lesson, progress, AI, or translation data exists yet.
+- **Database:** PostgreSQL is accessed only through the API's Prisma integration. It contains platform metadata, the minimal application profile, the Sprint 3 billing projection and entitlement foundation, and Sprint 4's server-owned learning catalog and owned progress records. No AI or translation-history data exists yet.
 - **Local infrastructure:** Docker Compose runs PostgreSQL with a health check and persistent named volume. Node applications run directly on the host during local development.
 
 ### Foundation request flow
@@ -32,7 +32,27 @@ The database health route returns only `reachable` or `unreachable` and never re
 
 ### Incremental boundaries
 
-Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. The billing foundation added normalized data and service contracts; focused increments now provide Checkout initiation, Customer Portal handoff, and signed webhook synchronization while subscription UI, feature gating, AI, lessons, translation, and mobile applications remain separate milestones.
+Each sprint extends this foundation without collapsing its trust boundaries. Sprint 2 added identity and profiles. Sprint 3 added normalized billing data, Checkout and Portal handoffs, signed webhook synchronization, and a subscription-status UI. Sprint 4 is adding the authenticated learning dashboard and canonical learning domain while AI, translation, and mobile applications remain separate milestones.
+
+## Learning domain — Sprint 4
+
+The Nest learning module owns server-managed catalog reads and verified-owner writes for immutable
+activity attempts, lesson progress, daily practice, goals, timezone, and reminder preferences.
+Clients submit only an activity version and server-issued choice ID. The server evaluates published
+content, serializes concurrent owner/lesson updates inside one transaction, and awards progress only
+for the first correct completion of a stable activity. A UUID idempotency key makes retries return the
+stored response before rate limiting or additional writes.
+
+The module exports `LearningDataLifecycleService` as the provider-neutral integration point for a
+future account lifecycle. Export uses a repeatable-read transaction; delete is atomic, idempotent,
+and limited to the six owner-scoped learning record groups. Neither operation changes catalog,
+profile, billing, entitlement, or webhook-ledger data.
+
+Learning observability uses fixed event names and outcomes from ADR 0005. A bounded API strips
+malformed correlation/record identifiers and exposes only internal UUIDs, durations, and fixed
+operation labels. The current adapter writes structured event, counter, and histogram samples to the
+server logger; it never accepts answers, email, credentials, provider payloads, or unbounded input.
+Telemetry failures cannot change request behavior.
 
 ## Identity and authorization — Sprint 2
 
