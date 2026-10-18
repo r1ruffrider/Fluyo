@@ -1,7 +1,7 @@
 # Sprint 5 Plan — Native Mobile Foundations
 
-Status: planning under review  
-Architecture: [ADR 0004](adr/0004-native-mobile-app-architecture.md) (accepted 2026-10-17)  
+Status: planning under review
+Architecture: [ADR 0004](adr/0004-native-mobile-app-architecture.md) (accepted 2026-10-17)
 Release program: [Mobile release plan](MOBILE_RELEASE_PLAN.md)
 
 ## Phase brief
