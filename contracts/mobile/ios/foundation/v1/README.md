@@ -44,6 +44,11 @@ Reference sources for the eventual toolchain decision:
 - [Apple simulated and physical-device testing](https://developer.apple.com/documentation/Xcode/running-your-app-on-simulated-or-physical-devices)
 - [GitHub-hosted runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 
-The iOS 17 deployment target and free public `macos-26` / Xcode 26.6 unsigned simulator CI are approved for this
-increment. The links do not authorize an Apple account, identifier reservation, signing, physical-device claim,
-production configuration, TestFlight, App Store activity, or spend.
+The iOS 17 deployment target and split free public unsigned simulator CI are approved for this increment:
+`macos-14` / Xcode 16.2 supplies the temporary minimum-iOS-17 lane, while `macos-26` / Xcode 26.6 supplies the
+current-runtime lane. The exact-head aggregate must receive and validate both sanitized manifests. GitHub
+schedules the macOS 14 image for retirement on November 2, 2026, so a compatible minimum-runtime replacement
+must be rechecked by November 1, 2026. If that evidence lane becomes unavailable, the minimum-runtime scenario
+returns to `unattempted`; the gate is not reduced. The links and runner approval do not authorize an Apple
+account, identifier reservation, signing, physical-device claim, production configuration, TestFlight, App Store
+activity, or spend.

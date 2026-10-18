@@ -118,6 +118,18 @@ describe("iOS unsigned foundation structure", () => {
     expect(uiTests).toContain("XCTAssertGreaterThanOrEqual(button.frame.height, 44)");
   });
 
+  it("isolates every XCTest case on the main actor", () => {
+    for (const testFile of [
+      "apps/ios/FluyoTests/AppConfigurationTests.swift",
+      "apps/ios/FluyoTests/FoundationDesignTokensTests.swift",
+      "apps/ios/FluyoTests/FoundationShellModelTests.swift",
+      "apps/ios/FluyoTests/FoundationTelemetryTests.swift",
+      "apps/ios/FluyoUITests/FoundationShellUITests.swift",
+    ]) {
+      expect(read(testFile)).toMatch(/@MainActor\s+final class \w+Tests: XCTestCase/);
+    }
+  });
+
   it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");

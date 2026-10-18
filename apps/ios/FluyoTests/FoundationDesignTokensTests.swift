@@ -1,6 +1,7 @@
 import XCTest
 @testable import Fluyo
 
+@MainActor
 final class FoundationDesignTokensTests: XCTestCase {
     func testBrandAndActionColorsMeetContrastInLightAndDarkAppearances() {
         XCTAssertGreaterThanOrEqual(

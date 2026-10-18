@@ -1,6 +1,7 @@
 import XCTest
 @testable import Fluyo
 
+@MainActor
 final class FoundationTelemetryTests: XCTestCase {
     func testNoOpSinkRetainsNoPayload() async {
         let context = FoundationTelemetryContext(

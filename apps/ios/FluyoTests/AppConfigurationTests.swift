@@ -1,6 +1,7 @@
 import XCTest
 @testable import Fluyo
 
+@MainActor
 final class AppConfigurationTests: XCTestCase {
     func testDevelopmentConfigurationUsesOnlyPublicNonProductionValues() throws {
         let configuration = try AppConfiguration.load(

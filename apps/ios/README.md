@@ -21,6 +21,6 @@ Values must refer to controlled non-production services. The project rejects loc
 
 ## CI evidence
 
-The `iOS foundation` GitHub Actions workflow uses the repository-approved public macOS 26 runner and Xcode 26.6. It builds all three configurations without signing, runs unit and UI tests on recorded iPhone simulators, scans the unsigned app and logs for restricted values, and uploads a short-lived simulator artifact with an evidence manifest.
+The `iOS foundation` GitHub Actions workflow uses two repository-approved public runners. A temporary macOS 14 / Xcode 16.2 lane records minimum-runtime evidence on iOS 17, and a macOS 26 / Xcode 26.6 lane records current-runtime evidence. Both lanes build without signing, run their assigned unit and UI tests on recorded iPhone simulators, and scan their unsigned app and sanitized log for restricted values. A fail-closed aggregate job verifies that both exact-head manifests form the complete simulator scenario set before it uploads a short-lived evidence bundle. Because GitHub schedules the macOS 14 image for retirement on November 2, 2026, its replacement must be rechecked by November 1, 2026; losing that lane leaves minimum-runtime evidence unattempted rather than weakening the gate.
 
 This evidence is internal only. It does not establish physical-device support, signing readiness, TestFlight or App Store availability, iPad-native support, or a production release.
