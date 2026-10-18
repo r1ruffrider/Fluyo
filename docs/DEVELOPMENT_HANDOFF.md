@@ -16,27 +16,30 @@ approval boundary, missing secure access or secrets, an external account or spen
 irreversible work, or a material product decision. When one workstream is blocked, independent authorized
 workstreams continue.
 
-## Sprint 5 Increment 3 readiness checkpoint — 2026-10-18
+## Sprint 5 Increment 3 implementation checkpoint — 2026-10-19
 
 Increment 2 merged through PR #36 as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`; post-merge
 `main` run `39103456847` passed all eight required jobs. The test-account governance follow-up merged through
 PR #37 as `a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1`; post-merge run `39162465474` also passed all
 eight jobs.
 
-Increment 3 remains blocked from SwiftUI scaffolding by proposed or unresolved product, ownership, device,
-accessibility, asset, and macOS/Xcode decisions in
-[SPRINT_5_DECISION_REGISTER.md](SPRINT_5_DECISION_REGISTER.md). The current Windows host has no
-`xcodebuild`, `swift`, or `simctl`, so it cannot provide build, simulator, UI, accessibility, artifact, or
-binary-scan evidence. No iOS completion or availability claim is permitted.
+The readiness contract merged through PR #38 as `4dc05e81b3fae101077025f4ccb28f82bf48e72d`;
+post-main run `39166750258` passed all eight required jobs. Marlon accepted iOS 17+, an iPhone-native
+phone-first target, portrait-primary layouts with functional landscape, no iPad-native support claim, English
+UI with Spanish learning content and pseudo/RTL probes, proposed unreserved repository identifiers, Adriana as
+interim iOS/accessibility/asset implementer, and free public `macos-26` / Xcode 26.6 unsigned simulator CI.
 
-Independent repository work therefore adds a specification-only
-[iOS foundation readiness contract](../contracts/mobile/ios/foundation/v1/README.md). It keeps Release
-networking inert, limits development and staging to public non-production configuration, starts with an empty
-no-tracking privacy baseline, keeps telemetry as a bounded no-op, blocks capture, keeps the asset ledger empty,
-and records 23 structured platform scenarios as unattempted. It contains no endpoint, bundle identifier, Apple account,
-signing material, credential, device value, production value, or captured data, and it does not authorize an
-Xcode project. Isabella, Fernanda, Danila, and Elana must review the exact head; all eight protected checks must
-pass before this prerequisite can merge.
+Increment 3 now implements the smallest internal SwiftUI foundation: Debug/Staging/Release configurations,
+checked public non-production configuration with an inert Release path, deterministic loading/signed-out/safe
+error states, Dynamic Type and VoiceOver semantics, 44-point actions, static reduced-motion behavior, an empty
+no-tracking privacy manifest, typed no-op telemetry, system-only visuals, unit/UI targets, and traceable unsigned
+simulator evidence. The current Windows host still cannot produce Mac or simulator evidence; the approved GitHub
+workflow must compile and test the exact head before the increment can pass. No completion or availability claim
+is permitted until Isabella, Fernanda, Danila, and Elana clear the exact head and the repository/platform checks
+are green.
+
+Apple accounts, identifier reservation, signing, production endpoints, physical-device claims, TestFlight or
+App Store actions, and spending remain separately gated. The proposed identifiers are repository settings only.
 
 ## Sprint 5 Increment 2 implementation checkpoint — 2026-10-18
 

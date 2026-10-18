@@ -76,14 +76,14 @@ const assets = asObject(policy.assets);
 const acceptance = asObject(policy.acceptance);
 
 describe("iOS foundation readiness contract v1", () => {
-  it("stays specification-only until every recorded decision and owner gate closes", () => {
+  it("authorizes only the approved unsigned simulator implementation", () => {
     expect(policy.schemaVersion).toBe("1.0.0");
-    expect(policy.status).toBe("specification_only");
-    expect(policy.sourceMainCommit).toBe("a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1");
+    expect(policy.status).toBe("implementation_authorized");
+    expect(policy.sourceMainCommit).toBe("4dc05e81b3fae101077025f4ccb28f82bf48e72d");
     expect(policy.lastReviewedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(policy.productionDataUsed).toBe(false);
     expect(policy.externalActionsPerformed).toBe(false);
-    expect(policy.projectScaffoldAuthorized).toBe(false);
+    expect(policy.projectScaffoldAuthorized).toBe(true);
     expect(policy.completionClaimAllowed).toBe(false);
     expect(asStrings(policy.requiredDecisions, "requiredDecisions").sort()).toEqual(
       [
@@ -104,6 +104,41 @@ describe("iOS foundation readiness contract v1", () => {
         "UX-TEST-TRACEABILITY",
       ].sort(),
     );
+
+    expect(policy.approvedBaselines).toEqual({
+      minimumIosVersion: "17.0",
+      formFactor: "iphone_native_phone_first",
+      ipadNativeSupportClaim: false,
+      orientation: "portrait_primary_landscape_functional",
+      interfaceLocale: "en",
+      learningContentLanguage: "es",
+      pseudoAndRtlTesting: true,
+      identifiers: {
+        status: "proposed_unreserved_repository_settings_only",
+        development: "com.fluyo.app.dev",
+        staging: "com.fluyo.app.staging",
+        release: "com.fluyo.app",
+      },
+      implementationOwner: "Adriana",
+      accessibilityOwner: "Adriana",
+      assetOwner: "Adriana",
+      independentQaOwner: "Elana",
+      ci: {
+        runner: "macos-26",
+        xcode: "26.6",
+        artifact: "unsigned_simulator_only",
+      },
+    });
+    expect(policy.remainingExternalGates).toEqual([
+      "apple_account",
+      "identifier_reservation",
+      "signing",
+      "production_endpoints",
+      "physical_device_claims",
+      "testflight",
+      "app_store",
+      "spending",
+    ]);
   });
 
   it("defines public non-production configuration and keeps release networking inert", () => {
@@ -396,7 +431,6 @@ describe("iOS foundation readiness contract v1", () => {
   it("contains no concrete endpoint, bundle identifier, account, or secret value", () => {
     const serialized = JSON.stringify(policy);
     expect(serialized).not.toMatch(/https?:\\?\//i);
-    expect(serialized).not.toMatch(/com\.fluyo\./i);
     expect(serialized).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     expect(serialized).not.toMatch(/(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+/);
     expect(serialized).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/);

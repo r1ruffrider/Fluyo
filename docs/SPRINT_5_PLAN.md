@@ -72,12 +72,14 @@ passed all eight required jobs.
 ### 3. iOS foundation
 
 Readiness artifact: [`contracts/mobile/ios/foundation/v1`](../contracts/mobile/ios/foundation/v1/README.md)
-defines the specification-only configuration, privacy, no-op telemetry, capture, asset-provenance, and
-evidence rules that can be reviewed before an Xcode project exists. It contains no endpoint, bundle identifier,
-account, signing, credential, device, production, or capture value. It leaves every macOS, simulator,
-accessibility, artifact, and binary/log scenario unattempted and keeps `projectScaffoldAuthorized` and
-`completionClaimAllowed` false. This prerequisite does not approve the proposed decision-register rows,
-authorize a SwiftUI scaffold, or satisfy the Increment 3 exit gate.
+defines configuration, privacy, no-op telemetry, capture, asset-provenance, and evidence rules. PR #38 merged
+as `4dc05e81b3fae101077025f4ccb28f82bf48e72d` and post-main run `39166750258` passed all eight required jobs.
+Marlon then accepted the recorded iOS 17, iPhone-native, portrait-primary/functional-landscape, English UI,
+Spanish-learning, pseudo/RTL, proposed-unreserved identifier, interim ownership, and free public macOS 26 /
+Xcode 26.6 unsigned-simulator baselines. The policy now authorizes the smallest repository scaffold while
+keeping `completionClaimAllowed` false until exact-head Mac, simulator, accessibility, artifact, roster, and
+Elana evidence passes. Apple accounts, identifier reservation, signing, production endpoints, physical-device
+claims, TestFlight/App Store work, and spending remain separately gated.
 
 - Add a SwiftUI workspace with unit and UI test targets and Debug, Staging, and Release configurations.
 - Load only non-secret endpoints and public client configuration through checked templates and protected CI values.

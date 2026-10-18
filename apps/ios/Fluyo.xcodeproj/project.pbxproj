@@ -1,0 +1,237 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* FluyoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* FluyoApp.swift */; };
+		A10000000000000000000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* AppConfiguration.swift */; };
+		A10000000000000000000003 /* FoundationTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* FoundationTelemetry.swift */; };
+		A10000000000000000000004 /* FoundationShellModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* FoundationShellModel.swift */; };
+		A10000000000000000000005 /* FoundationShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* FoundationShellView.swift */; };
+		A10000000000000000000006 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* PrivacyInfo.xcprivacy */; };
+		A10000000000000000000007 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* Localizable.xcstrings */; };
+		A10000000000000000000008 /* AppConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* AppConfigurationTests.swift */; };
+		A10000000000000000000009 /* FoundationShellModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* FoundationShellModelTests.swift */; };
+		A1000000000000000000000A /* FoundationTelemetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* FoundationTelemetryTests.swift */; };
+		A1000000000000000000000B /* FoundationShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* FoundationShellUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A30000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A40000000000000000000001;
+			remoteInfo = Fluyo;
+		};
+		A30000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A40000000000000000000001;
+			remoteInfo = Fluyo;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* FluyoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluyoApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* FoundationTelemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationTelemetry.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* FoundationShellModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationShellModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* FoundationShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationShellView.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A20000000000000000000007 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A20000000000000000000008 /* AppConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigurationTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* FoundationShellModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationShellModelTests.swift; sourceTree = "<group>"; };
+		A2000000000000000000000A /* FoundationTelemetryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationTelemetryTests.swift; sourceTree = "<group>"; };
+		A2000000000000000000000B /* FoundationShellUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationShellUITests.swift; sourceTree = "<group>"; };
+		A2000000000000000000000C /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000D /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000E /* Staging.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Staging.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000F /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		A20000000000000000000010 /* Fluyo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fluyo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000011 /* FluyoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FluyoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000012 /* FluyoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FluyoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A50000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A50000000000000000000002 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A50000000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A60000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A60000000000000000000002 /* Config */,
+				A60000000000000000000003 /* Fluyo */,
+				A60000000000000000000004 /* FluyoTests */,
+				A60000000000000000000005 /* FluyoUITests */,
+				A60000000000000000000006 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A60000000000000000000002 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000000C /* Base.xcconfig */,
+				A2000000000000000000000D /* Debug.xcconfig */,
+				A2000000000000000000000E /* Staging.xcconfig */,
+				A2000000000000000000000F /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		A60000000000000000000003 /* Fluyo */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* FluyoApp.swift */,
+				A20000000000000000000002 /* AppConfiguration.swift */,
+				A20000000000000000000003 /* FoundationTelemetry.swift */,
+				A20000000000000000000004 /* FoundationShellModel.swift */,
+				A20000000000000000000005 /* FoundationShellView.swift */,
+				A20000000000000000000007 /* Localizable.xcstrings */,
+				A20000000000000000000006 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Fluyo;
+			sourceTree = "<group>";
+		};
+		A60000000000000000000004 /* FluyoTests */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000008 /* AppConfigurationTests.swift */,
+				A20000000000000000000009 /* FoundationShellModelTests.swift */,
+				A2000000000000000000000A /* FoundationTelemetryTests.swift */,
+			);
+			path = FluyoTests;
+			sourceTree = "<group>";
+		};
+		A60000000000000000000005 /* FluyoUITests */ = {
+			isa = PBXGroup;
+			children = (A2000000000000000000000B /* FoundationShellUITests.swift */);
+			path = FluyoUITests;
+			sourceTree = "<group>";
+		};
+		A60000000000000000000006 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000010 /* Fluyo.app */,
+				A20000000000000000000011 /* FluyoTests.xctest */,
+				A20000000000000000000012 /* FluyoUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A40000000000000000000001 /* Fluyo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000000000000000000001 /* Build configuration list for PBXNativeTarget "Fluyo" */;
+			buildPhases = (A80000000000000000000001 /* Sources */, A50000000000000000000001 /* Frameworks */, A90000000000000000000001 /* Resources */);
+			buildRules = ();
+			dependencies = ();
+			name = Fluyo;
+			productName = Fluyo;
+			productReference = A20000000000000000000010 /* Fluyo.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A40000000000000000000002 /* FluyoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000000000000000000002 /* Build configuration list for PBXNativeTarget "FluyoTests" */;
+			buildPhases = (A80000000000000000000002 /* Sources */, A50000000000000000000002 /* Frameworks */, A90000000000000000000002 /* Resources */);
+			buildRules = ();
+			dependencies = (A30000000000000000000003 /* PBXTargetDependency */);
+			name = FluyoTests;
+			productName = FluyoTests;
+			productReference = A20000000000000000000011 /* FluyoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A40000000000000000000003 /* FluyoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000000000000000000003 /* Build configuration list for PBXNativeTarget "FluyoUITests" */;
+			buildPhases = (A80000000000000000000003 /* Sources */, A50000000000000000000003 /* Frameworks */, A90000000000000000000003 /* Resources */);
+			buildRules = ();
+			dependencies = (A30000000000000000000004 /* PBXTargetDependency */);
+			name = FluyoUITests;
+			productName = FluyoUITests;
+			productReference = A20000000000000000000012 /* FluyoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					A40000000000000000000001 = {CreatedOnToolsVersion = 26.6; };
+					A40000000000000000000002 = {CreatedOnToolsVersion = 26.6; TestTargetID = A40000000000000000000001; };
+					A40000000000000000000003 = {CreatedOnToolsVersion = 26.6; TestTargetID = A40000000000000000000001; };
+				};
+			};
+			buildConfigurationList = A70000000000000000000004 /* Build configuration list for PBXProject "Fluyo" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = A60000000000000000000001;
+			productRefGroup = A60000000000000000000006 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A40000000000000000000001 /* Fluyo */, A40000000000000000000002 /* FluyoTests */, A40000000000000000000003 /* FluyoUITests */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A90000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000006 /* PrivacyInfo.xcprivacy in Resources */, A10000000000000000000007 /* Localizable.xcstrings in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		A90000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A90000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A80000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* FluyoApp.swift in Sources */, A10000000000000000000002 /* AppConfiguration.swift in Sources */, A10000000000000000000003 /* FoundationTelemetry.swift in Sources */, A10000000000000000000004 /* FoundationShellModel.swift in Sources */, A10000000000000000000005 /* FoundationShellView.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A80000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000008 /* AppConfigurationTests.swift in Sources */, A10000000000000000000009 /* FoundationShellModelTests.swift in Sources */, A1000000000000000000000A /* FoundationTelemetryTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A80000000000000000000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000B /* FoundationShellUITests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A30000000000000000000003 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A40000000000000000000001 /* Fluyo */; targetProxy = A30000000000000000000001 /* PBXContainerItemProxy */; };
+		A30000000000000000000004 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A40000000000000000000001 /* Fluyo */; targetProxy = A30000000000000000000002 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA0000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; GCC_OPTIMIZATION_LEVEL = 0; ONLY_ACTIVE_ARCH = YES; }; name = Debug; };
+		AA0000000000000000000002 /* Staging */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_TESTABILITY = YES; }; name = Staging; };
+		AA0000000000000000000003 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; COPY_PHASE_STRIP = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_NS_ASSERTIONS = NO; SWIFT_COMPILATION_MODE = wholemodule; VALIDATE_PRODUCT = YES; }; name = Release; };
+
+		AA0000000000000000000011 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000D /* Debug.xcconfig */; buildSettings = {GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = Fluyo; INFOPLIST_KEY_FluyoAPIBaseURL = "$(FLUYO_API_BASE_URL)"; INFOPLIST_KEY_FluyoConfigurationClassification = "$(FLUYO_CONFIGURATION_CLASSIFICATION)"; INFOPLIST_KEY_FluyoEnvironment = "$(FLUYO_ENVIRONMENT)"; INFOPLIST_KEY_FluyoInternalBuild = "$(FLUYO_INTERNAL_BUILD)"; INFOPLIST_KEY_FluyoNetworkEnabled = "$(FLUYO_NETWORK_ENABLED)"; INFOPLIST_KEY_FluyoSourceCommitShort = "$(FLUYO_SOURCE_COMMIT_SHORT)"; INFOPLIST_KEY_FluyoSupabasePublishableKey = "$(FLUYO_SUPABASE_PUBLISHABLE_KEY)"; INFOPLIST_KEY_FluyoSupabaseURL = "$(FLUYO_SUPABASE_URL)"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Debug; };
+		AA0000000000000000000012 /* Staging */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000E /* Staging.xcconfig */; buildSettings = {GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = Fluyo; INFOPLIST_KEY_FluyoAPIBaseURL = "$(FLUYO_API_BASE_URL)"; INFOPLIST_KEY_FluyoConfigurationClassification = "$(FLUYO_CONFIGURATION_CLASSIFICATION)"; INFOPLIST_KEY_FluyoEnvironment = "$(FLUYO_ENVIRONMENT)"; INFOPLIST_KEY_FluyoInternalBuild = "$(FLUYO_INTERNAL_BUILD)"; INFOPLIST_KEY_FluyoNetworkEnabled = "$(FLUYO_NETWORK_ENABLED)"; INFOPLIST_KEY_FluyoSourceCommitShort = "$(FLUYO_SOURCE_COMMIT_SHORT)"; INFOPLIST_KEY_FluyoSupabasePublishableKey = "$(FLUYO_SUPABASE_PUBLISHABLE_KEY)"; INFOPLIST_KEY_FluyoSupabaseURL = "$(FLUYO_SUPABASE_URL)"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Staging; };
+		AA0000000000000000000013 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000F /* Release.xcconfig */; buildSettings = {GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = Fluyo; INFOPLIST_KEY_FluyoAPIBaseURL = "$(FLUYO_API_BASE_URL)"; INFOPLIST_KEY_FluyoConfigurationClassification = "$(FLUYO_CONFIGURATION_CLASSIFICATION)"; INFOPLIST_KEY_FluyoEnvironment = "$(FLUYO_ENVIRONMENT)"; INFOPLIST_KEY_FluyoInternalBuild = "$(FLUYO_INTERNAL_BUILD)"; INFOPLIST_KEY_FluyoNetworkEnabled = "$(FLUYO_NETWORK_ENABLED)"; INFOPLIST_KEY_FluyoSourceCommitShort = "$(FLUYO_SOURCE_COMMIT_SHORT)"; INFOPLIST_KEY_FluyoSupabasePublishableKey = "$(FLUYO_SUPABASE_PUBLISHABLE_KEY)"; INFOPLIST_KEY_FluyoSupabaseURL = "$(FLUYO_SUPABASE_URL)"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Release; };
+
+		AA0000000000000000000021 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fluyo.app/Fluyo"; }; name = Debug; };
+		AA0000000000000000000022 /* Staging */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fluyo.app/Fluyo"; }; name = Staging; };
+		AA0000000000000000000023 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fluyo.app/Fluyo"; }; name = Release; };
+
+		AA0000000000000000000031 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Fluyo; }; name = Debug; };
+		AA0000000000000000000032 /* Staging */ = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Fluyo; }; name = Staging; };
+		AA0000000000000000000033 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.fluyo.app.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Fluyo; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A70000000000000000000001 /* Build configuration list for PBXNativeTarget "Fluyo" */ = {isa = XCConfigurationList; buildConfigurations = (AA0000000000000000000011 /* Debug */, AA0000000000000000000012 /* Staging */, AA0000000000000000000013 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+		A70000000000000000000002 /* Build configuration list for PBXNativeTarget "FluyoTests" */ = {isa = XCConfigurationList; buildConfigurations = (AA0000000000000000000021 /* Debug */, AA0000000000000000000022 /* Staging */, AA0000000000000000000023 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+		A70000000000000000000003 /* Build configuration list for PBXNativeTarget "FluyoUITests" */ = {isa = XCConfigurationList; buildConfigurations = (AA0000000000000000000031 /* Debug */, AA0000000000000000000032 /* Staging */, AA0000000000000000000033 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+		A70000000000000000000004 /* Build configuration list for PBXProject "Fluyo" */ = {isa = XCConfigurationList; buildConfigurations = (AA0000000000000000000001 /* Debug */, AA0000000000000000000002 /* Staging */, AA0000000000000000000003 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
+}

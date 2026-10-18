@@ -1,0 +1,49 @@
+name: iOS foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/ios/**"
+      - "contracts/mobile/ios/**"
+      - "packages/shared/src/ios-foundation-*.test.ts"
+      - "scripts/ios-ci.sh"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "contracts/mobile/ios/**"
+      - "packages/shared/src/ios-foundation-*.test.ts"
+      - "scripts/ios-ci.sh"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-foundation:
+    name: unsigned simulator build and tests
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build, test, and scan
+        run: bash scripts/ios-ci.sh
+        env:
+          FLUYO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Upload simulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-foundation-${{ github.sha }}
+          path: artifacts/ios-foundation
+          if-no-files-found: error
+          retention-days: 7
