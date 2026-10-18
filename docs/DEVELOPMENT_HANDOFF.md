@@ -1,5 +1,24 @@
 # Development and billing verification handoff
 
+## Sprint 5 planning checkpoint — 2026-10-18
+
+Sprint 4 is closed: PR #33 merged its reconciled roadmap and handoff as
+`d85f6dcbe731b5a5890ab76672e08b4b1d1eef07`, and post-merge `main` run
+`39100051441` passed all eight required checks. ADR 0004 and the mobile release plan are accepted.
+
+[SPRINT_5_PLAN.md](SPRINT_5_PLAN.md) converts that architecture into eight dependency-safe increments:
+decision and ownership records; versioned contracts and fixtures; separate iOS and Android foundations;
+secure Supabase PKCE/session lifecycle; API shell and owner-safe state; shared experience foundations; and
+traceable internal-build CI. The plan keeps Sprint 6 learning, Sprint 7 AI, Sprint 8 commerce/store release,
+production changes, external account actions, and spend outside this phase.
+
+Isabella, Fernanda, and Danila reviewed the planning boundary. Their gates require traveler-focused but
+evidence-bounded claims, a no-acquisition internal-foundation phase, privacy-safe capture and analytics,
+native state/motion/accessibility contracts, no imitation of later learning or commerce controls, and a
+78-execution minimum cross-platform closeout matrix. Elana's independent exact-head audit remains required
+before this planning increment can merge. No native project, credential, identifier reservation, store action,
+production deployment, or database change was made by this planning work.
+
 ## Sprint 4 checkpoint — 2026-10-18
 
 ADR 0005 and the Sprint 4 implementation plan are accepted. PR #26 recorded the contract and merged
