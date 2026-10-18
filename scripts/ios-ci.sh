@@ -130,8 +130,14 @@ cleanup() {
 trap cleanup EXIT
 
 DEVICE_UDID="$(xcrun simctl create "Fluyo evidence $LEG" "$DEVICE_TYPE_IDENTIFIER" "$RUNTIME_IDENTIFIER")"
-xcrun simctl boot "$DEVICE_UDID"
-xcrun simctl bootstatus "$DEVICE_UDID" -b
+if ! xcrun simctl boot "$DEVICE_UDID" >"$WORK_ROOT/simulator-boot.log" 2>&1; then
+  echo "The isolated iOS evidence simulator could not boot" >&2
+  exit 1
+fi
+if ! xcrun simctl bootstatus "$DEVICE_UDID" -b >>"$WORK_ROOT/simulator-boot.log" 2>&1; then
+  echo "The isolated iOS evidence simulator did not become ready" >&2
+  exit 1
+fi
 
 COMMON_SETTINGS=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO FLUYO_SOURCE_COMMIT_SHORT="$SHORT_SHA")
 PUBLIC_SETTINGS=(

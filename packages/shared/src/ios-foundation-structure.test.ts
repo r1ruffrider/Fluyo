@@ -198,6 +198,12 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain("The approved minimum iOS 17 simulator runtime is unavailable");
     expect(script).toContain('xcrun simctl create "Fluyo evidence $LEG"');
     expect(script).toContain('xcrun simctl delete "$DEVICE_UDID"');
+    expect(script).toContain(
+      'xcrun simctl boot "$DEVICE_UDID" >"$WORK_ROOT/simulator-boot.log" 2>&1',
+    );
+    expect(script).toContain(
+      'xcrun simctl bootstatus "$DEVICE_UDID" -b >>"$WORK_ROOT/simulator-boot.log" 2>&1',
+    );
     expect(script).toContain('"deviceTypeIdentifier": device["deviceTypeIdentifier"]');
     expect(script).toContain('"runtimeIdentifier"');
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
