@@ -51,6 +51,21 @@ const matchesConstraint = (value: unknown, constraintValue: unknown): boolean =>
   return typeof constraint.pattern !== "string" || new RegExp(constraint.pattern).test(value);
 };
 
+const validatesClosedRecord = (
+  value: JsonObject,
+  allowedKeys: string[],
+  constraints: JsonObject,
+): boolean => {
+  const keys = Object.keys(value);
+  return (
+    keys.length === allowedKeys.length &&
+    keys.every(
+      (key) => allowedKeys.includes(key) && matchesConstraint(value[key], constraints[key]),
+    ) &&
+    allowedKeys.every((key) => Object.hasOwn(value, key))
+  );
+};
+
 const configuration = asObject(policy.configuration);
 const telemetry = asObject(policy.telemetry);
 const buildMarker = asObject(policy.buildMarker);
@@ -132,13 +147,40 @@ describe("iOS foundation readiness contract v1", () => {
 
   it("permits only bounded non-sensitive build marker fields", () => {
     expect(buildMarker.required).toBe(true);
-    expect(asStrings(buildMarker.allowedFields, "buildMarker.allowedFields")).toEqual([
+    const allowedFields = asStrings(buildMarker.allowedFields, "buildMarker.allowedFields");
+    expect(allowedFields).toEqual([
       "environment",
       "isInternal",
       "semanticVersion",
       "buildNumber",
       "sourceCommitShort",
     ]);
+    const propertyConstraints = asObject(
+      buildMarker.propertyConstraints,
+      "buildMarker.propertyConstraints",
+    );
+    expect(Object.keys(propertyConstraints).sort()).toEqual([...allowedFields].sort());
+    const safeMarker = {
+      environment: "development",
+      isInternal: true,
+      semanticVersion: "1.0.0",
+      buildNumber: "1",
+      sourceCommitShort: "a0c7b63",
+    };
+    expect(validatesClosedRecord(safeMarker, allowedFields, propertyConstraints)).toBe(true);
+    for (const mutation of [
+      { ...safeMarker, environment: "release" },
+      { ...safeMarker, environment: "production" },
+      { ...safeMarker, isInternal: false },
+      { ...safeMarker, semanticVersion: "learner@example.test" },
+      { ...safeMarker, buildNumber: "https://example.test" },
+      { ...safeMarker, buildNumber: "1".repeat(19) },
+      { ...safeMarker, sourceCommitShort: "not-a-sha" },
+      { ...safeMarker, sourceCommitShort: "C:\\private\\path" },
+      { ...safeMarker, debugNote: "synthetic" },
+    ]) {
+      expect(validatesClosedRecord(mutation, allowedFields, propertyConstraints)).toBe(false);
+    }
     expect(asStrings(buildMarker.forbiddenFields, "buildMarker.forbiddenFields")).toEqual(
       expect.arrayContaining([
         "email",
@@ -172,6 +214,16 @@ describe("iOS foundation readiness contract v1", () => {
       "reduced_motion_applied",
     ]);
     const allowedProperties = asStrings(telemetry.allowedProperties, "allowedProperties");
+    expect(allowedProperties).toEqual([
+      "platform",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "buildNumber",
+      "sourceCommitShort",
+      "outcome",
+      "durationBucket",
+    ]);
     const forbidden = asStrings(telemetry.forbiddenConcepts, "forbiddenConcepts");
     const propertyConstraints = asObject(telemetry.propertyConstraints, "propertyConstraints");
     expect(Object.keys(propertyConstraints).sort()).toEqual([...allowedProperties].sort());
@@ -186,14 +238,31 @@ describe("iOS foundation readiness contract v1", () => {
       durationBucket: "under_100ms",
     };
     expect(restrictedPaths(safeEvent, forbidden)).toEqual([]);
-    for (const [key, value] of Object.entries(safeEvent)) {
-      expect(matchesConstraint(value, propertyConstraints[key])).toBe(true);
-    }
+    expect(validatesClosedRecord(safeEvent, allowedProperties, propertyConstraints)).toBe(true);
     expect(matchesConstraint("release", propertyConstraints.environment)).toBe(false);
     expect(matchesConstraint("production", propertyConstraints.environment)).toBe(false);
     expect(matchesConstraint(false, propertyConstraints.isInternal)).toBe(false);
     expect(matchesConstraint("user@example.test", propertyConstraints.outcome)).toBe(false);
     expect(telemetry.futureAttributionRequiresSeparateAcceptedContract).toBe(true);
+
+    for (const extraKey of [
+      "debugNote",
+      "sessionId",
+      "installId",
+      "locale",
+      "campaignSource",
+      "errorMessage",
+      "email",
+      "userId",
+    ]) {
+      expect(
+        validatesClosedRecord(
+          { ...safeEvent, [extraKey]: "synthetic" },
+          allowedProperties,
+          propertyConstraints,
+        ),
+      ).toBe(false);
+    }
 
     for (const mutation of [
       { email: "learner@example.test" },
