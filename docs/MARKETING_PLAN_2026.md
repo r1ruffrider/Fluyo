@@ -7,12 +7,12 @@
 
 ## 1. Current truth and the decision this plan makes
 
-Fluyo has a working web platform foundation: Supabase identity, profile ownership, Stripe test-mode Checkout and Customer Portal handoffs, signed webhook synchronization, subscription projection, entitlements, and a billing-status UI. The authenticated Stripe lifecycle has been verified in test mode. The learning product described in the business plan—lessons, Charla, live interpretation, pronunciation, progress, translation, iOS, and Android—is still planned work.
+Fluyo has a verified local web platform foundation: Supabase identity, profile ownership, Stripe test-mode Checkout and Customer Portal handoffs, signed webhook synchronization, subscription projection, entitlements, and billing status. The authenticated Stripe lifecycle has been verified in test mode. The verified local learning build includes an authenticated dashboard, one server-managed starter café lesson with three phrase-choice activities, a phrase deck, persisted progress, streaks, goals, and preferences. This is local/internal product evidence, not public availability. Broader lessons, audio and pronunciation, Charla, live interpretation, translation, iOS, Android, and native commerce remain planned work.
 
 That distinction controls the marketing plan:
 
-- **Now:** build an owned audience, validate the problem and message, recruit research and alpha participants, and show only real prototypes or clearly labeled concepts.
-- **After the first learning loop works:** market a closed alpha around one repeatable user outcome.
+- **Now:** keep acquisition and public-launch work blocked; recruit research participants only through approved consented paths, reconcile claims, and use the verified local learning loop or clearly labeled concepts for internal preparation.
+- **After a public alpha destination, consent flow, support coverage, and exact-build claim sheet pass audit:** market a closed alpha around one repeatable user outcome.
 - **After mobile beta quality and store readiness pass:** open pre-registration and creator launch programs.
 - **After retention and paid conversion are measured:** scale paid acquisition.
 
