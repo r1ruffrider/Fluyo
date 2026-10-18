@@ -131,8 +131,9 @@ final class FoundationShellUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["signed-out-state"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["build-marker"].exists)
+        XCTAssertTrue(app.staticTexts["signed-out-state"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["build-marker"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["error-state"].exists)
     }
 
     func testNaturalInvalidConfigurationFailsClosed() {

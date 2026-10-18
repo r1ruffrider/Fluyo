@@ -146,6 +146,9 @@ describe("iOS unsigned foundation structure", () => {
     expect(uiTests).toContain("testAccessibleNamesAndReadingOrderAreStable");
     expect(uiTests).toContain("testNaturalDebugLaunchRendersAnInternalMarker");
     expect(uiTests).not.toContain('FLUYO_UI_TEST_CONFIGURATION"] = "valid"');
+    expect(uiTests).toMatch(
+      /testNaturalDebugLaunchRendersAnInternalMarker[\s\S]*signed-out-state"\]\.waitForExistence\(timeout: 15\)[\s\S]*build-marker"\]\.waitForExistence\(timeout: 5\)[\s\S]*XCTAssertFalse\(app\.staticTexts\["error-state"\]\.exists\)/,
+    );
     expect(uiTests).not.toContain("assertHittableAfterBoundedScroll");
     expect(uiTests).toMatch(
       /testLandscapeAndLargeTextKeepPrimaryActionVisible[\s\S]*XCTAssertTrue\(app\.buttons\["review-build-button"\]\.isHittable\)/,
