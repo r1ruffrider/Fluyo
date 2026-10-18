@@ -1,5 +1,19 @@
 # Development and billing verification handoff
 
+## Engineering execution and test-account governance — 2026-10-18
+
+Authenticated development checks use role-specific, non-production accounts under
+[TEST_ACCOUNT_GOVERNANCE.md](TEST_ACCOUNT_GOVERNANCE.md). Adriana and Elana keep isolated browser and
+session state, use only their own locally referenced credentials, and never use Marlon's account as a
+fallback. Elana remains the independent QA and code-review owner and must use her separate account.
+
+After an increment passes Elana's counted exact-head audit and every required check, engineering commits and
+pushes completed work, reconciles the pull request and report, applies the standing authorized merge gate,
+verifies all required post-merge `main` checks, and immediately starts the next documented increment. A new
+start instruction is not required. Work pauses only for an undelegated explicit approval boundary, missing
+secure access or secrets, an external account or spending action, destructive or irreversible work, or a
+material product decision. When one workstream is blocked, independent authorized workstreams continue.
+
 ## Sprint 5 Increment 2 implementation checkpoint — 2026-10-18
 
 Increment 1 merged through PR #35 as `8b506202319dacd4635d20787cd47e1ef1d5b7b8`; post-merge
@@ -16,7 +30,7 @@ campaign, social, store, and public-release APIs remain excluded. The audited im
 Isabella 31/31 combined checks, Fernanda 27/27, Danila 42/42, and Elana 295/295 independent checks with zero
 failed or unattempted. GitHub run `39102720332` passed all eight protected jobs. The full counted report is in
 [review-report.md](review-report.md). Any later documentation-only head still requires a fresh eight-check run
-before merge.
+before merge. PR #36 merged as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`; post-merge `main` run `39103456847` passed all eight required jobs.
 
 ## Sprint 5 Increment 1 checkpoint — 2026-10-18
 

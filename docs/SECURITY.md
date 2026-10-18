@@ -55,6 +55,14 @@ Sprint 1 exposes unauthenticated operational health endpoints. Sprint 2 adds Sup
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PORTAL_CONFIGURATION_ID` are server-only. Startup validation requires all Stripe values, including `STRIPE_WEBHOOK_SECRET`, whenever `BILLING_ENABLED=true`, and no Stripe value uses a `NEXT_PUBLIC_` prefix.
 - The Stripe signature header (`stripe-signature`) is redacted from request logs alongside `authorization`, `apikey`, and `cookie` headers. Webhook logs record event identifiers and types only, never payloads, signatures, credentials, or payment details.
 
+- Dedicated development and QA credentials live only in the ignored `.env.agent-test-accounts.local` file and
+  are referenced by the variable names documented in
+  [TEST_ACCOUNT_GOVERNANCE.md](TEST_ACCOUNT_GOVERNANCE.md). Values must never be printed, logged, committed,
+  pasted into chat, copied between agents, or exposed in screenshots and recordings.
+- Each agent uses its own isolated non-production account and browser/session state. An unavailable agent
+  account blocks that agent's authenticated checks; it does not authorize fallback to Marlon's account or to
+  another agent's account.
+
 ## API Controls
 
 - Environment values are validated at API startup.
