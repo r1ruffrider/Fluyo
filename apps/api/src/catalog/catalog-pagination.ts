@@ -1,6 +1,8 @@
 import { BadRequestException } from "@nestjs/common";
 import { isUUID } from "class-validator";
 
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+
 interface LessonCursor {
   id: string;
   resource: "lessons";
@@ -41,8 +43,9 @@ export function decodeLessonCursor(cursor: string): LessonCursor {
     !isRecord(value) ||
     value.version !== 1 ||
     value.resource !== "lessons" ||
-    !Number.isInteger(value.sortOrder) ||
+    !Number.isSafeInteger(value.sortOrder) ||
     (value.sortOrder as number) < 1 ||
+    (value.sortOrder as number) > POSTGRES_INTEGER_MAX ||
     typeof value.id !== "string" ||
     !isUUID(value.id, 4)
   ) {
@@ -65,6 +68,7 @@ export function decodePhraseDeckCursor(cursor: string): PhraseDeckCursor {
     typeof value.slug !== "string" ||
     value.slug.length < 1 ||
     value.slug.length > 120 ||
+    value.slug.includes("\0") ||
     typeof value.id !== "string" ||
     !isUUID(value.id, 4)
   ) {

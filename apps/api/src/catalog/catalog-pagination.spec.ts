@@ -33,4 +33,22 @@ describe("catalog pagination cursors", () => {
     );
     expect(() => decodePhraseDeckCursor(encodeLessonCursor(1, ID))).toThrow(BadRequestException);
   });
+
+  it("accepts the PostgreSQL integer boundary and rejects larger lesson sort keys", () => {
+    expect(decodeLessonCursor(encodeLessonCursor(2_147_483_647, ID))).toMatchObject({
+      sortOrder: 2_147_483_647,
+    });
+    expect(() => decodeLessonCursor(encodeLessonCursor(2_147_483_648, ID))).toThrow(
+      BadRequestException,
+    );
+    expect(() => decodeLessonCursor(encodeLessonCursor(Number.MAX_SAFE_INTEGER + 1, ID))).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it("rejects a phrase-deck cursor containing PostgreSQL-invalid NUL text", () => {
+    expect(() => decodePhraseDeckCursor(encodePhraseDeckCursor("a\0b", ID))).toThrow(
+      BadRequestException,
+    );
+  });
 });

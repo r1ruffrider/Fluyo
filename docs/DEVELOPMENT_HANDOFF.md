@@ -26,6 +26,13 @@ existing services on ports 3000 and 4000 remain untouched. The exact PR head sti
 GitHub checks and Adriana's counted phase audit before her delegated merge gate. The primary
 checkout's local changes, stashes, credentials, and database contents remain preserved.
 
+Adriana's first PR #29 audit counted 167 checks: 165 passed and two adversarial cursor checks failed.
+A forged lesson cursor could carry a sort key outside PostgreSQL's integer range, and a phrase-deck
+cursor could carry a NUL byte; both reached Prisma instead of returning `400 invalid_request`. The
+decoder now bounds lesson sort keys to positive PostgreSQL integers and rejects NUL-bearing deck
+slugs. Boundary regression tests cover the maximum integer, maximum plus one, unsafe integers, and
+NUL text. The repaired head requires a fresh eight-check CI run and exact-head re-audit before merge.
+
 ## Sprint 3.5 completion — 2026-10-17
 
 Marlon delegated the Fluyo phase merge gate to Adriana and approved the pending merge sequence.
