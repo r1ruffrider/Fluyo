@@ -18,6 +18,8 @@
 		A10000000000000000000009 /* FoundationShellModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* FoundationShellModelTests.swift */; };
 		A1000000000000000000000A /* FoundationTelemetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* FoundationTelemetryTests.swift */; };
 		A1000000000000000000000B /* FoundationShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* FoundationShellUITests.swift */; };
+		A1000000000000000000000C /* FoundationDesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* FoundationDesignTokens.swift */; };
+		A1000000000000000000000D /* FoundationDesignTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* FoundationDesignTokensTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +58,8 @@
 		A20000000000000000000010 /* Fluyo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fluyo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000011 /* FluyoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FluyoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000012 /* FluyoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FluyoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000013 /* FoundationDesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationDesignTokens.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 /* FoundationDesignTokensTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationDesignTokensTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +97,7 @@
 				A20000000000000000000001 /* FluyoApp.swift */,
 				A20000000000000000000002 /* AppConfiguration.swift */,
 				A20000000000000000000003 /* FoundationTelemetry.swift */,
+				A20000000000000000000013 /* FoundationDesignTokens.swift */,
 				A20000000000000000000004 /* FoundationShellModel.swift */,
 				A20000000000000000000005 /* FoundationShellView.swift */,
 				A20000000000000000000007 /* Localizable.xcstrings */,
@@ -107,6 +112,7 @@
 				A20000000000000000000008 /* AppConfigurationTests.swift */,
 				A20000000000000000000009 /* FoundationShellModelTests.swift */,
 				A2000000000000000000000A /* FoundationTelemetryTests.swift */,
+				A20000000000000000000014 /* FoundationDesignTokensTests.swift */,
 			);
 			path = FluyoTests;
 			sourceTree = "<group>";
@@ -198,8 +204,8 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A80000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* FluyoApp.swift in Sources */, A10000000000000000000002 /* AppConfiguration.swift in Sources */, A10000000000000000000003 /* FoundationTelemetry.swift in Sources */, A10000000000000000000004 /* FoundationShellModel.swift in Sources */, A10000000000000000000005 /* FoundationShellView.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
-		A80000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000008 /* AppConfigurationTests.swift in Sources */, A10000000000000000000009 /* FoundationShellModelTests.swift in Sources */, A1000000000000000000000A /* FoundationTelemetryTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A80000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* FluyoApp.swift in Sources */, A10000000000000000000002 /* AppConfiguration.swift in Sources */, A10000000000000000000003 /* FoundationTelemetry.swift in Sources */, A1000000000000000000000C /* FoundationDesignTokens.swift in Sources */, A10000000000000000000004 /* FoundationShellModel.swift in Sources */, A10000000000000000000005 /* FoundationShellView.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A80000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000008 /* AppConfigurationTests.swift in Sources */, A10000000000000000000009 /* FoundationShellModelTests.swift in Sources */, A1000000000000000000000A /* FoundationTelemetryTests.swift in Sources */, A1000000000000000000000D /* FoundationDesignTokensTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 		A80000000000000000000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000B /* FoundationShellUITests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 

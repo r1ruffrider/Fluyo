@@ -44,14 +44,101 @@ final class FoundationShellUITests: XCTestCase {
         XCTAssertTrue(app.buttons["review-build-button"].isHittable)
     }
 
-    func testReducedMotionAndRTLKeepTheSameSemanticState() {
+    func testLoadingAndErrorRemainUsableInLandscape() {
+        for state in ["loading", "failure"] {
+            let app = launch(
+                state: state,
+                arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+            )
+            XCUIDevice.shared.orientation = .landscapeRight
+
+            let identifier = state == "loading" ? "loading-state" : "error-state"
+            XCTAssertTrue(app.otherElements[identifier].waitForExistence(timeout: 5))
+            if state == "failure" {
+                XCTAssertTrue(app.buttons["retry-button"].isHittable)
+            }
+            app.terminate()
+        }
+    }
+    func testReducedMotionKeepsTheSameSemanticState() {
         let app = launch(
             state: "signed_out",
+            arguments: ["-UIAccessibilityReduceMotionEnabled", "YES"]
+        )
+
+        XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["review-build-button"].isHittable)
+    }
+
+    func testRTLProbeMirrorsLeadingContent() {
+        let leftToRight = launch(
+            state: "signed_out",
+            arguments: ["-NSForceLeftToRightWritingDirection", "YES"]
+        )
+        let leftToRightX = leftToRight.staticTexts["brand-heading"].frame.midX
+        leftToRight.terminate()
+
+        let rightToLeft = launch(
+            state: "signed_out",
             arguments: [
-                "-UIAccessibilityReduceMotionEnabled", "YES",
                 "-NSForceRightToLeftWritingDirection", "YES",
                 "-AppleTextDirection", "YES",
             ]
+        )
+        let rightToLeftHeading = rightToLeft.staticTexts["brand-heading"]
+        XCTAssertTrue(rightToLeftHeading.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(rightToLeftHeading.frame.midX, leftToRightX)
+        XCTAssertTrue(rightToLeft.buttons["review-build-button"].isHittable)
+    }
+
+    func testExpandedLocalizationKeepsThePrimaryActionVisible() {
+        let app = launch(
+            state: "signed_out",
+            arguments: ["-NSDoubleLocalizedStrings", "YES"]
+        )
+
+        let action = app.buttons["review-build-button"]
+        XCTAssertTrue(action.waitForExistence(timeout: 5))
+        XCTAssertTrue(action.isHittable)
+        XCTAssertNotEqual(action.label, "Review build status")
+    }
+
+    func testAccessibleNamesAndReadingOrderAreStable() {
+        let app = launch(state: "signed_out")
+
+        let heading = app.staticTexts["Foundation ready"]
+        let action = app.buttons["review-build-button"]
+        let boundary = app.staticTexts["foundation-boundary"]
+        XCTAssertTrue(heading.waitForExistence(timeout: 5))
+        XCTAssertEqual(action.label, "Review build status")
+        XCTAssertTrue(action.isHittable)
+        XCTAssertTrue(boundary.exists)
+        XCTAssertLessThan(heading.frame.minY, action.frame.minY)
+        XCTAssertLessThan(action.frame.minY, boundary.frame.minY)
+    }
+
+    func testNaturalDebugLaunchRendersAnInternalMarker() {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["build-marker"].exists)
+    }
+
+    func testNaturalInvalidConfigurationFailsClosed() {
+        let app = XCUIApplication()
+        app.launchEnvironment["FLUYO_UI_TEST_CONFIGURATION"] = "invalid"
+        app.launch()
+
+        XCTAssertTrue(app.otherElements["error-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["retry-button"].isHittable)
+        XCTAssertFalse(app.staticTexts["build-marker"].exists)
+    }
+
+    func testDarkAppearanceKeepsStateAndActionVisible() {
+        let app = launch(
+            state: "signed_out",
+            arguments: ["-AppleInterfaceStyle", "Dark"]
         )
 
         XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))

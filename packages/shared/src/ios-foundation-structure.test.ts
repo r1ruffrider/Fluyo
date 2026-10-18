@@ -17,12 +17,14 @@ const expectedIosFiles = [
   "Fluyo/FluyoApp.swift",
   "Fluyo/FoundationShellModel.swift",
   "Fluyo/FoundationShellView.swift",
+  "Fluyo/FoundationDesignTokens.swift",
   "Fluyo/FoundationTelemetry.swift",
   "Fluyo/Localizable.xcstrings",
   "Fluyo/PrivacyInfo.xcprivacy",
   "FluyoTests/AppConfigurationTests.swift",
   "FluyoTests/FoundationShellModelTests.swift",
   "FluyoTests/FoundationTelemetryTests.swift",
+  "FluyoTests/FoundationDesignTokensTests.swift",
   "FluyoUITests/FoundationShellUITests.swift",
   "README.md",
 ].sort();
@@ -97,7 +99,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("uses a typed no-op telemetry sink with a closed event set", () => {
     const telemetry = read("apps/ios/Fluyo/FoundationTelemetry.swift");
-    expect(telemetry.match(/case [A-Za-z]+(?: = )?/g)).toHaveLength(15);
+    expect(telemetry.match(/case [A-Za-z]+(?: = )?/g)).toHaveLength(17);
     expect(telemetry).toContain("struct NoOpFoundationTelemetrySink");
     expect(telemetry).toContain("async {}");
     expect(telemetry).not.toContain("URLSession");
@@ -111,18 +113,31 @@ describe("iOS unsigned foundation structure", () => {
     expect(uiTests).toContain("UICTContentSizeCategoryAccessibilityXXXL");
     expect(uiTests).toContain("UIAccessibilityReduceMotionEnabled");
     expect(uiTests).toContain("NSForceRightToLeftWritingDirection");
+    expect(uiTests).toContain("NSDoubleLocalizedStrings");
+    expect(uiTests).toContain("testAccessibleNamesAndReadingOrderAreStable");
     expect(uiTests).toContain("XCTAssertGreaterThanOrEqual(button.frame.height, 44)");
   });
 
-  it("pins unsigned macOS and Xcode evidence without secrets or release actions", () => {
+  it("pins exact-source unsigned macOS evidence and uploads only sanitized outputs", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");
+    const scanner = read("scripts/scan-ios-evidence.mjs");
     expect(workflow).toContain("runs-on: macos-26");
+    expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
+    expect(workflow).toContain("if: success()");
     expect(workflow).toContain("retention-days: 7");
     expect(script).toContain("/Applications/Xcode_26.6.app/Contents/Developer");
+    expect(script).toContain('ACTUAL_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD)"');
+    expect(script).toContain("The approved minimum iOS 17 simulator runtime is unavailable");
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
-    expect(script).toContain("restrictedValueScan");
+    expect(script).toContain('policy["acceptance"]["evidenceRequiredFields"]');
+    expect(script).toContain('remainingUnattempted": ["ios_physical_iphone_evidence"]');
+    expect(script).toContain('node "$ROOT_DIR/scripts/scan-ios-evidence.mjs"');
+    expect(script).not.toContain('cp -R "$RESULTS_ROOT"');
+    expect(script).toContain("SANITIZED_LOG_DIR");
+    expect(scanner).toContain('"device identifier"');
+    expect(scanner).toContain('"macOS user path"');
     expect(`${workflow}\n${script}`).not.toMatch(/secrets\.[A-Za-z0-9_]+/);
     expect(`${workflow}\n${script}`).not.toMatch(/testflight|app-store|appstore|notarytool/i);
   });

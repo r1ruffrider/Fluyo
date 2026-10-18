@@ -4,8 +4,7 @@ import XCTest
 final class AppConfigurationTests: XCTestCase {
     func testDevelopmentConfigurationUsesOnlyPublicNonProductionValues() throws {
         let configuration = try AppConfiguration.load(
-            infoDictionary: baseInfo,
-            processEnvironment: publicEnvironment(environment: "development")
+            infoDictionary: publicInfo(environment: "development")
         )
 
         XCTAssertEqual(configuration.environment, .development)
@@ -17,8 +16,7 @@ final class AppConfigurationTests: XCTestCase {
 
     func testStagingConfigurationUsesOnlyPublicNonProductionValues() throws {
         let configuration = try AppConfiguration.load(
-            infoDictionary: baseInfo,
-            processEnvironment: publicEnvironment(environment: "staging")
+            infoDictionary: publicInfo(environment: "staging")
         )
 
         XCTAssertEqual(configuration.environment, .staging)
@@ -32,7 +30,7 @@ final class AppConfigurationTests: XCTestCase {
         values["FluyoNetworkEnabled"] = false
         values["FluyoInternalBuild"] = false
 
-        let configuration = try AppConfiguration.load(infoDictionary: values, processEnvironment: [:])
+        let configuration = try AppConfiguration.load(infoDictionary: values)
 
         XCTAssertEqual(configuration.environment, .release)
         XCTAssertFalse(configuration.networkEnabled)
@@ -49,7 +47,7 @@ final class AppConfigurationTests: XCTestCase {
         values["FluyoNetworkEnabled"] = true
         values["FluyoInternalBuild"] = true
 
-        XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values, processEnvironment: [:])) {
+        XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values)) {
             XCTAssertEqual($0 as? AppConfigurationError, .missingPublicConfiguration)
         }
     }
@@ -61,22 +59,44 @@ final class AppConfigurationTests: XCTestCase {
         values["FluyoNetworkEnabled"] = true
         values["FluyoInternalBuild"] = false
 
-        XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values, processEnvironment: [:])) {
+        XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values)) {
             XCTAssertEqual($0 as? AppConfigurationError, .invalidNetworkPolicy)
         }
     }
 
     func testPrivilegedLookingClientValueIsRejected() {
-        var environment = publicEnvironment(environment: "development")
-        environment["FluyoSupabasePublishableKey"] = "sk_test_forbidden"
+        var values = publicInfo(environment: "development")
+        values["FluyoSupabasePublishableKey"] = "sk_test_forbidden"
 
         XCTAssertThrowsError(
-            try AppConfiguration.load(infoDictionary: baseInfo, processEnvironment: environment)
+            try AppConfiguration.load(infoDictionary: values)
         ) {
             XCTAssertEqual($0 as? AppConfigurationError, .invalidPublicConfiguration)
         }
     }
 
+    func testReleaseMissingBuildIdentityFailsClosed() {
+        var values: [String: Any] = [
+            "FluyoEnvironment": "release",
+            "FluyoConfigurationClassification": AppConfiguration.inertReleaseClassification,
+            "FluyoNetworkEnabled": false,
+            "FluyoInternalBuild": false,
+        ]
+        values["CFBundleShortVersionString"] = nil
+
+        XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values)) {
+            XCTAssertEqual($0 as? AppConfigurationError, .invalidBuildMarker)
+        }
+    }
+
+    func testProductionHostIsRejectedFromInternalConfiguration() {
+        var values = publicInfo(environment: "staging")
+        values["FluyoAPIBaseURL"] = "https://api.fluyo.com/api/v1"
+
+        XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values)) {
+            XCTAssertEqual($0 as? AppConfigurationError, .invalidPublicConfiguration)
+        }
+    }
     private var baseInfo: [String: Any] {
         [
             "CFBundleShortVersionString": "0.1.0",
@@ -85,8 +105,8 @@ final class AppConfigurationTests: XCTestCase {
         ]
     }
 
-    private func publicEnvironment(environment: String) -> [String: String] {
-        [
+    private func publicInfo(environment: String) -> [String: Any] {
+        baseInfo.merging([
             "FluyoEnvironment": environment,
             "FluyoConfigurationClassification": AppConfiguration.publicNonProductionClassification,
             "FluyoNetworkEnabled": "YES",
@@ -94,6 +114,6 @@ final class AppConfigurationTests: XCTestCase {
             "FluyoAPIBaseURL": "https://api.example.test/api/v1",
             "FluyoSupabaseURL": "https://auth.example.test",
             "FluyoSupabasePublishableKey": "synthetic_publishable_value",
-        ]
+        ]) { _, new in new }
     }
 }

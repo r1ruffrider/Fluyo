@@ -8,6 +8,11 @@ enum FoundationTelemetryEvent: String, CaseIterable, Sendable {
     case reducedMotionApplied = "reduced_motion_applied"
 }
 
+enum FoundationTelemetryEnvironment: String, CaseIterable, Sendable {
+    case development
+    case staging
+}
+
 enum FoundationTelemetryOutcome: String, CaseIterable, Sendable {
     case loaded
     case failed
@@ -26,7 +31,7 @@ enum FoundationDurationBucket: String, CaseIterable, Sendable {
 
 struct FoundationTelemetryContext: Equatable, Sendable {
     let platform = "ios"
-    let environment: FluyoEnvironment
+    let environment: FoundationTelemetryEnvironment
     let isInternal = true
     let semanticVersion: String
     let buildNumber: String

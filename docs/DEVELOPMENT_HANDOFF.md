@@ -33,11 +33,12 @@ Increment 3 now implements the smallest internal SwiftUI foundation: Debug/Stagi
 checked public non-production configuration with an inert Release path, deterministic loading/signed-out/safe
 error states, Dynamic Type and VoiceOver semantics, 44-point actions, static reduced-motion behavior, an empty
 no-tracking privacy manifest, typed no-op telemetry, system-only visuals, unit/UI targets, and traceable unsigned
-simulator evidence. The current Windows host still cannot produce Mac or simulator evidence; the approved GitHub
+simulator evidence. Constructor injection is limited to configuration and shell-state seams. There is no network client in this increment, so reachability/connectivity behavior remains explicitly ordered with the first authorized live client in Increment 6. The current Windows host still cannot produce Mac or simulator evidence; the approved GitHub
 workflow must compile and test the exact head before the increment can pass. No completion or availability claim
 is permitted until Isabella, Fernanda, Danila, and Elana clear the exact head and the repository/platform checks
 are green.
 
+The 2026-10-19 full dependency audit no longer reports the tracked braces advisory. The fail-closed policy rejected the old exception as stale, so PR #39 removes that exact exception without changing dependencies, severity, or checks. Issue #21 should close only after this removal merges.
 Apple accounts, identifier reservation, signing, production endpoints, physical-device claims, TestFlight or
 App Store actions, and spending remain separately gated. The proposed identifiers are repository settings only.
 

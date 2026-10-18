@@ -51,13 +51,9 @@ struct AppConfiguration: Equatable, Sendable {
     }
 
     static func load(
-        infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:],
-        processEnvironment: [String: String] = ProcessInfo.processInfo.environment
+        infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:]
     ) throws -> AppConfiguration {
-        let values = ConfigurationValues(
-            infoDictionary: infoDictionary,
-            processEnvironment: processEnvironment
-        )
+        let values = ConfigurationValues(infoDictionary: infoDictionary)
 
         guard
             let environmentValue = values.string(environmentKey),
@@ -77,6 +73,14 @@ struct AppConfiguration: Equatable, Sendable {
         let semanticVersion = values.string(semanticVersionKey) ?? ""
         let buildNumber = values.string(buildNumberKey) ?? ""
         let sourceCommitShort = values.string(sourceCommitKey) ?? ""
+
+        guard
+            semanticVersion.wholeMatch(of: /[0-9]+\.[0-9]+\.[0-9]+/) != nil,
+            buildNumber.wholeMatch(of: /[0-9]{1,18}/) != nil,
+            sourceCommitShort.wholeMatch(of: /[0-9a-f]{7,12}/) != nil
+        else {
+            throw AppConfigurationError.invalidBuildMarker
+        }
 
         if environment == .release {
             guard classification == inertReleaseClassification, !networkEnabled, !isInternal else {
@@ -116,15 +120,9 @@ struct AppConfiguration: Equatable, Sendable {
         else {
             throw AppConfigurationError.invalidPublicConfiguration
         }
-        guard
-            semanticVersion.wholeMatch(of: /[0-9]+\.[0-9]+\.[0-9]+/) != nil,
-            buildNumber.wholeMatch(of: /[0-9]{1,18}/) != nil,
-            sourceCommitShort.wholeMatch(of: /[0-9a-f]{7,12}/) != nil
-        else {
-            throw AppConfigurationError.invalidBuildMarker
-        }
 
         return AppConfiguration(
+
             environment: environment,
             networkEnabled: true,
             isInternal: true,
@@ -141,7 +139,11 @@ struct AppConfiguration: Equatable, Sendable {
         guard value.scheme?.lowercased() == "https", let host = value.host?.lowercased() else {
             return false
         }
-        return host != "localhost" && host != "127.0.0.1" && host != "::1"
+        return host.hasSuffix(".test") &&
+            value.user == nil &&
+            value.password == nil &&
+            value.query == nil &&
+            value.fragment == nil
     }
 
     private static func isPublishableClientValue(_ value: String) -> Bool {
@@ -166,12 +168,8 @@ struct AppConfiguration: Equatable, Sendable {
 
 private struct ConfigurationValues {
     let infoDictionary: [String: Any]
-    let processEnvironment: [String: String]
 
     func string(_ key: String) -> String? {
-        if let value = processEnvironment[key], !value.isEmpty {
-            return value
-        }
         if let value = infoDictionary[key] as? String, !value.isEmpty {
             return value
         }
@@ -179,9 +177,6 @@ private struct ConfigurationValues {
     }
 
     func boolean(_ key: String) -> Bool? {
-        if let value = processEnvironment[key] {
-            return parseBoolean(value)
-        }
         if let value = infoDictionary[key] as? Bool {
             return value
         }

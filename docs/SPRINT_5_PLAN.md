@@ -83,8 +83,9 @@ claims, TestFlight/App Store work, and spending remain separately gated.
 
 - Add a SwiftUI workspace with unit and UI test targets and Debug, Staging, and Release configurations.
 - Load only non-secret endpoints and public client configuration through checked templates and protected CI values.
-- Establish dependency injection, structured concurrency boundaries, network reachability, localization, design-token ingestion, Dynamic Type through at least 200%, VoiceOver semantics, 44-by-44-point minimum targets, reduced motion, and a privacy-manifest baseline.
-- Add repository-owned vector artwork, app-icon, and static launch assets with recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and only short interruptible native transitions with static reduced-motion equivalents.
+- Establish constructor-injected configuration and shell-state seams plus an async, cancellation-safe model boundary. This increment makes no network request: connectivity/reachability behavior and its dependency injection move with the first authorized live client in Increment 6 and must land before any online/offline product claim.
+- Establish localization, design-token ingestion, Dynamic Type through at least 200%, VoiceOver semantics, 44-by-44-point minimum targets, reduced motion, and a privacy-manifest baseline.
+- Use native SwiftUI shapes, system typography, and approved SF Symbols while the asset ledger remains empty. Repository-owned vector artwork, app-icon, and launch assets require recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and separately audited exports before use.
 - Add deterministic sandbox/demo configuration. Production endpoints remain inert until their release gate.
 
 Exit gate: the project builds and its automated tests pass on a documented supported macOS/Xcode toolchain; an unsigned simulator artifact contains no secret and renders loading, signed-out, error, and reduced-motion states accessibly.

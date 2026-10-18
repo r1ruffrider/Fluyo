@@ -22,6 +22,12 @@
     "Internal foundation only" : {
 
     },
+    "Internal foundation ready" : {
+
+    },
+    "Internal non-production build" : {
+
+    },
     "Internal iPhone foundation" : {
 
     },
@@ -41,6 +47,9 @@
 
     },
     "This internal build could not load its safe non-production setup. Try again after the configuration is corrected." : {
+
+    },
+    "Configuration unavailable. Retry after the setup is corrected." : {
 
     },
     "This unsigned simulator build does not provide sign-in, learning, billing, or public availability." : {

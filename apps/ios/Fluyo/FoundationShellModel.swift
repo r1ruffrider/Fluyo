@@ -30,6 +30,7 @@ final class FoundationShellModel {
 
     func start() async {
         state = .loading
+        guard !Task.isCancelled else { return }
 
         if let forcedState = forcedTestState {
             state = forcedState
@@ -37,10 +38,10 @@ final class FoundationShellModel {
         }
 
         await Task.yield()
+        guard !Task.isCancelled else { return }
         do {
             configuration = try AppConfiguration.load(
-                infoDictionary: infoDictionary,
-                processEnvironment: processEnvironment
+                infoDictionary: effectiveInfoDictionary
             )
             state = .signedOut
         } catch {
@@ -54,7 +55,20 @@ final class FoundationShellModel {
     }
 
     private var forcedTestState: FoundationShellState? {
+#if DEBUG
         guard let value = processEnvironment["FLUYO_UI_TEST_STATE"] else { return nil }
         return FoundationShellState(rawValue: value)
+#else
+        return nil
+#endif
+    }
+
+    private var effectiveInfoDictionary: [String: Any] {
+#if DEBUG
+        if processEnvironment["FLUYO_UI_TEST_CONFIGURATION"] == "invalid" {
+            return [:]
+        }
+#endif
+        return infoDictionary
     }
 }

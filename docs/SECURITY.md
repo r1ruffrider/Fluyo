@@ -179,6 +179,9 @@ dependency node changes, if the advisory disappears, or when the exception expir
 audit reports zero vulnerabilities. This patch removes the critical finding and temporarily accepts
 only the unpatched lint-tooling finding.
 
+### Verification on 2026-10-19
+
+A fresh full audit no longer reports GHSA-vfj7-8cjw-p6xm or any other vulnerability. The audit policy therefore rejected the braces exception as stale, exactly as designed. This branch removes the one exception; the High threshold and drift/expiry protections remain unchanged. Production-only and full audits both report zero vulnerabilities. Tracking issue #21 can close when this removal reaches `main`.
 Before production launch, configure ingress rate limiting, alerting for repeated authentication failures, session and account-deletion retention behavior, profile and billing-data export/deletion handling, Stripe reconciliation, webhook replay operations, and a tested signing-key rotation procedure. Verify live webhook delivery through a real Stripe-signed payload ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)) and complete the broader live Stripe test-mode lifecycle check (Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, reconciliation) before accepting production billing traffic. Feature gating, subscription-experience UI, storage, AI, and mobile work still require their own threat-model updates and authorization tests. Add a scheduled re-run of the dependency-audit policy so a future exception's expiry cannot again go unnoticed between CI runs.
 
 ## Reporting

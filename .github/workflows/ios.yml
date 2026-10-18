@@ -8,6 +8,8 @@ on:
       - "contracts/mobile/ios/**"
       - "packages/shared/src/ios-foundation-*.test.ts"
       - "scripts/ios-ci.sh"
+      - "scripts/scan-ios-evidence.mjs"
+      - "scripts/scan-ios-evidence.test.mjs"
       - ".github/workflows/ios.yml"
   pull_request:
     paths:
@@ -15,6 +17,8 @@ on:
       - "contracts/mobile/ios/**"
       - "packages/shared/src/ios-foundation-*.test.ts"
       - "scripts/ios-ci.sh"
+      - "scripts/scan-ios-evidence.mjs"
+      - "scripts/scan-ios-evidence.test.mjs"
       - ".github/workflows/ios.yml"
 
 permissions:
@@ -31,19 +35,21 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Checkout
+      - name: Checkout exact source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Build, test, and scan
         run: bash scripts/ios-ci.sh
         env:
           FLUYO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Upload simulator evidence
-        if: always()
+      - name: Upload sanitized simulator evidence
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-foundation-${{ github.sha }}
+          name: ios-foundation-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ios-foundation
           if-no-files-found: error
           retention-days: 7

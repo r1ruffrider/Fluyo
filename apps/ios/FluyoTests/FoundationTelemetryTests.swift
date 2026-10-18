@@ -15,7 +15,9 @@ final class FoundationTelemetryTests: XCTestCase {
         await NoOpFoundationTelemetrySink().record(.appShellLoaded, context: context)
 
         XCTAssertEqual(context.platform, "ios")
+        XCTAssertEqual(context.environment, .staging)
         XCTAssertTrue(context.isInternal)
         XCTAssertEqual(FoundationTelemetryEvent.allCases.count, 5)
+        XCTAssertEqual(FoundationTelemetryEnvironment.allCases, [.development, .staging])
     }
 }

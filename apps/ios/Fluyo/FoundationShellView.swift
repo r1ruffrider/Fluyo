@@ -12,6 +12,7 @@ struct FoundationShellView: View {
     @State private var announcedState: FoundationShellState?
     @AccessibilityFocusState private var focusedTarget: FocusTarget?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     init(model: FoundationShellModel = FoundationShellModel()) {
         _model = State(initialValue: model)
@@ -19,7 +20,7 @@ struct FoundationShellView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.96, green: 0.94, blue: 0.88)
+            Color(uiColor: .systemGroupedBackground)
                 .ignoresSafeArea()
 
             ScrollView {
@@ -35,6 +36,7 @@ struct FoundationShellView: View {
             }
         }
         .task {
+            handleStateChange(model.state)
             await model.start()
         }
         .onChange(of: model.state) { _, newState in
@@ -49,8 +51,9 @@ struct FoundationShellView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Fluyo")
                 .font(.largeTitle.bold())
-                .foregroundStyle(Color(red: 0.08, green: 0.20, blue: 0.55))
+                .foregroundStyle(FoundationDesignTokens.headingColor(for: colorScheme))
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("brand-heading")
 
             Text("Internal iPhone foundation")
                 .font(.headline)
@@ -90,6 +93,7 @@ struct FoundationShellView: View {
                     showsBuildStatus = true
                 }
                 .accessibilityIdentifier("review-build-button")
+                .accessibilityFocused($focusedTarget, equals: .primaryAction)
 
             case .failure:
                 statusHeader(
@@ -108,7 +112,10 @@ struct FoundationShellView: View {
             }
         }
         .padding(24)
-        .background(.background, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(
+            Color(uiColor: .secondarySystemGroupedBackground),
+            in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+        )
         .overlay {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Color.primary.opacity(0.12), lineWidth: 1)
@@ -127,7 +134,7 @@ struct FoundationShellView: View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: systemImage)
                 .font(.system(size: 32, weight: .semibold))
-                .foregroundStyle(Color(red: 0.92, green: 0.30, blue: 0.24))
+                .foregroundStyle(FoundationDesignTokens.coral.color)
                 .accessibilityHidden(true)
 
             Text(title)
@@ -148,7 +155,7 @@ struct FoundationShellView: View {
                 .frame(minHeight: 44)
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color(red: 0.08, green: 0.20, blue: 0.55))
+        .tint(FoundationDesignTokens.cobalt.color)
     }
 
     private func handleStateChange(_ state: FoundationShellState) {
@@ -161,21 +168,36 @@ struct FoundationShellView: View {
             focusedTarget = nil
         }
 
-        guard announcedState != state else { return }
+        guard
+            let announcement = FoundationAccessibilityCopy.announcement(
+                for: state,
+                previouslyAnnounced: announcedState
+            )
+        else { return }
         announcedState = state
-        let announcement: String
-        switch state {
-        case .loading:
-            announcement = "Preparing this internal build"
-        case .signedOut:
-            announcement = "Internal foundation ready"
-        case .failure:
-            announcement = "Configuration unavailable. Retry after the setup is corrected."
-        }
         UIAccessibility.post(notification: .announcement, argument: announcement)
 
         if reduceMotion {
             UIAccessibility.post(notification: .layoutChanged, argument: nil)
+        }
+    }
+}
+
+enum FoundationAccessibilityCopy {
+    static func announcement(
+        for state: FoundationShellState,
+        previouslyAnnounced: FoundationShellState?
+    ) -> String? {
+        guard previouslyAnnounced != state else { return nil }
+        switch state {
+        case .loading:
+            return String(localized: "Preparing this internal build")
+        case .signedOut:
+            return String(localized: "Internal foundation ready")
+        case .failure:
+            return String(
+                localized: "Configuration unavailable. Retry after the setup is corrected."
+            )
         }
     }
 }
