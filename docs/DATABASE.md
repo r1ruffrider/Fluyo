@@ -108,6 +108,15 @@ its versions whose `published_at` is set. Draft versions may be edited until pub
 material changes require a new positive `content_version`. Attempts retain the exact positive version
 they received.
 
+Activity completion uses the unique verified-owner/idempotency-key constraint as its durable replay
+boundary. One transaction inserts the append-only attempt, advances the stable-activity lesson
+projection, and increments the learner's local practice day. A transaction-scoped advisory lock on
+the owner/lesson pair serializes concurrent projection updates, including the first write when there
+is no row to lock. Failed or stale submissions roll back all three. Stored responses make identical
+retries deterministic, while a changed request using the same key is rejected. Learning goals and
+timezone/reminder preferences use owner-keyed upserts; changing a timezone does not rewrite prior
+practice-day dates or their recorded timezone.
+
 The migration is additive: it does not alter or delete profiles, billing projections, entitlements,
 or the Stripe event ledger. Forward recovery uses a follow-up migration; an applied migration is never
 rewritten. Before merge, the migration must apply both to an empty database and to the preserved local

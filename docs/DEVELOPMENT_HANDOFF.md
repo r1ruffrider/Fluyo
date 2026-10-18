@@ -14,7 +14,7 @@ database and on the preserved development database without changing existing bil
 Adriana's exact-head audit counted 179 tests/checks, all passed, and all eight post-merge `main`
 checks passed.
 
-[Draft PR #29](https://github.com/r1ruffrider/Fluyo/pull/29) is Sprint 4 increment 4. It adds
+[PR #29](https://github.com/r1ruffrider/Fluyo/pull/29) is Sprint 4 increment 4. It adds
 idempotent server-managed starter catalog content and protected, cursor-paginated lesson and
 phrase-deck reads. Local validation passed the audit policy, Prisma
 schema, lint, typecheck, 149 tests, production build, formatting, and diff check. Running the seed
@@ -22,16 +22,38 @@ twice preserved exact catalog counts (one lesson, three activities and immutable
 four phrases, and one lesson/deck membership). A read-only database smoke returned the complete
 starter catalog without validation or answer fields. An isolated built API on port 4001 returned 200
 for health and 401 for unauthenticated catalog requests; it was stopped after verification. The
-existing services on ports 3000 and 4000 remain untouched. The exact PR head still requires the eight
-GitHub checks and Adriana's counted phase audit before her delegated merge gate. The primary
-checkout's local changes, stashes, credentials, and database contents remain preserved.
+existing services on ports 3000 and 4000 remain untouched. The primary checkout's local changes,
+stashes, credentials, and database contents remain preserved.
 
 Adriana's first PR #29 audit counted 167 checks: 165 passed and two adversarial cursor checks failed.
 A forged lesson cursor could carry a sort key outside PostgreSQL's integer range, and a phrase-deck
 cursor could carry a NUL byte; both reached Prisma instead of returning `400 invalid_request`. The
 decoder now bounds lesson sort keys to positive PostgreSQL integers and rejects NUL-bearing deck
 slugs. Boundary regression tests cover the maximum integer, maximum plus one, unsafe integers, and
-NUL text. The repaired head requires a fresh eight-check CI run and exact-head re-audit before merge.
+NUL text. The repaired head then received a fresh eight-check CI run and exact-head re-audit.
+
+The repaired head passed Adriana's 159-check re-audit and all eight exact-head checks. PR #29 merged
+as `0ee6f74bc536ea3d5e145c1bc780157f31e27336`; post-merge `main` CI run `39081587057` passed all
+eight jobs. Sprint 4 increment 5 is isolated on `codex/sprint-4-progress-writes`. It adds protected,
+idempotent activity submission; one-transaction attempt, progress, and practice-day writes; UTC
+bootstrap; streak calculation; goals; IANA timezone preferences; and reminder-preference storage.
+A scoped real-database smoke used only a synthetic owner and cleaned it afterward: one first attempt
+created one attempt/progress/practice-day row, identical replay returned the same attempt without an
+increment, changed content returned `idempotency_conflict`, invalid choice rolled back, and the
+preference bootstrapped to UTC. Exact-head CI and Adriana's increment audit remain pending.
+
+A follow-up concurrency probe initially failed because Prisma cannot deserialize PostgreSQL's `void`
+return from a direct advisory-lock select; its transaction rolled back and cleanup found no retained
+synthetic rows. The query now selects an integer marker from the transaction lock function. The same
+real-database probe then created the attempt successfully and removed its scoped synthetic rows.
+A two-request real-database concurrency probe completed two different activities for one synthetic
+owner and retained both completed activity IDs, two attempts, and a practice count of two; its rows
+were also removed afterward.
+
+The final local gate passed the dependency policy, Prisma schema, lint, typecheck, 176 tests (six
+policy, four shared, and 166 API), production build, formatting, and diff check. An isolated built API
+on port 4001 returned 200 for API/database health and 401 for unauthenticated attempt, goal, timezone,
+and reminder requests; it was stopped after verification without touching the development services.
 
 ## Sprint 3.5 completion — 2026-10-17
 
