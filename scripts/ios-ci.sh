@@ -139,9 +139,72 @@ run_xcodebuild() {
   echo "$log_name passed"
 }
 
+validate_app_configuration() {
+  local app_path="$1"
+  local expected_environment="$2"
+  python3 - "$app_path/Info.plist" "$expected_environment" "$SHORT_SHA" <<'PY'
+import plistlib
+import sys
+
+plist_path, expected_environment, expected_short_sha = sys.argv[1:]
+with open(plist_path, "rb") as handle:
+    values = plistlib.load(handle)
+
+def fail(field):
+    raise SystemExit(f"Built configuration failed validation for {field}")
+
+def boolean(field):
+    value = values.get(field)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.lower()
+        if normalized in {"yes", "true", "1"}:
+            return True
+        if normalized in {"no", "false", "0"}:
+            return False
+    fail(field)
+
+if values.get("FluyoEnvironment") != expected_environment:
+    fail("FluyoEnvironment")
+if values.get("CFBundleShortVersionString") != "0.1.0":
+    fail("CFBundleShortVersionString")
+if values.get("CFBundleVersion") != "1":
+    fail("CFBundleVersion")
+if values.get("FluyoSourceCommitShort") != expected_short_sha:
+    fail("FluyoSourceCommitShort")
+
+if expected_environment == "release":
+    if values.get("FluyoConfigurationClassification") != "inert_until_release_gate":
+        fail("FluyoConfigurationClassification")
+    if boolean("FluyoNetworkEnabled") or boolean("FluyoInternalBuild"):
+        fail("ReleaseNetworkPolicy")
+    for field in ("FluyoAPIBaseURL", "FluyoSupabaseURL", "FluyoSupabasePublishableKey"):
+        if values.get(field) not in (None, ""):
+            fail(field)
+else:
+    if values.get("FluyoConfigurationClassification") != "public_non_production_only":
+        fail("FluyoConfigurationClassification")
+    if not boolean("FluyoNetworkEnabled") or not boolean("FluyoInternalBuild"):
+        fail("InternalNetworkPolicy")
+    expected = {
+        "FluyoAPIBaseURL": "https://api.staging.fluyo.example.test/api/v1",
+        "FluyoSupabaseURL": "https://auth.staging.fluyo.example.test",
+        "FluyoSupabasePublishableKey": "synthetic_publishable_value",
+    }
+    for field, expected_value in expected.items():
+        if values.get(field) != expected_value:
+            fail(field)
+
+print(f"validated {expected_environment} app configuration")
+PY
+}
+
 if [[ "$LEG" == "minimum" ]]; then
   run_xcodebuild build-debug     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Debug" build "${PUBLIC_SETTINGS[@]}"
+  validate_app_configuration "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app" development
   run_xcodebuild test-minimum     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests"     -resultBundlePath "$RESULTS_ROOT/minimum.xcresult" test "${PUBLIC_SETTINGS[@]}"
+  validate_app_configuration "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app" development
   APP_PATH="$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"
   COMMAND_NAME="xcodebuild Debug build and full test on iOS 17"
 else
@@ -151,6 +214,9 @@ else
   for app in     "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
     test -d "$app"
   done
+  validate_app_configuration "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app" development
+  validate_app_configuration "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app" staging
+  validate_app_configuration "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app" release
   APP_PATH="$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"
   COMMAND_NAME="xcodebuild full test plus Debug, Staging, and inert Release builds"
 fi

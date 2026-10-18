@@ -65,6 +65,15 @@ describe("iOS unsigned foundation structure", () => {
       );
       expect(configuration).toContain("FLUYO_NETWORK_ENABLED = YES");
       expect(configuration).toContain("FLUYO_INTERNAL_BUILD = YES");
+      expect(configuration).toContain(
+        "FLUYO_API_BASE_URL = https:$(FLUYO_URL_SLASH)$(FLUYO_URL_SLASH)api.staging.fluyo.example.test/api/v1",
+      );
+      expect(configuration).toContain(
+        "FLUYO_SUPABASE_URL = https:$(FLUYO_URL_SLASH)$(FLUYO_URL_SLASH)auth.staging.fluyo.example.test",
+      );
+      expect(configuration).toContain(
+        "FLUYO_SUPABASE_PUBLISHABLE_KEY = synthetic_publishable_value",
+      );
     }
     expect(release).toContain("FLUYO_CONFIGURATION_CLASSIFICATION = inert_until_release_gate");
     expect(release).toContain("FLUYO_NETWORK_ENABLED = NO");
@@ -115,6 +124,15 @@ describe("iOS unsigned foundation structure", () => {
     expect(uiTests).toContain("NSForceRightToLeftWritingDirection");
     expect(uiTests).toContain("NSDoubleLocalizedStrings");
     expect(uiTests).toContain("testAccessibleNamesAndReadingOrderAreStable");
+    expect(uiTests).toContain("testNaturalDebugLaunchRendersAnInternalMarker");
+    expect(uiTests).not.toContain('FLUYO_UI_TEST_CONFIGURATION"] = "valid"');
+    expect(uiTests).not.toContain("assertHittableAfterBoundedScroll");
+    expect(uiTests).toMatch(
+      /testLandscapeAndLargeTextKeepPrimaryActionVisible[\s\S]*XCTAssertTrue\(app\.buttons\["review-build-button"\]\.isHittable\)/,
+    );
+    expect(uiTests).toMatch(
+      /testLoadingAndErrorRemainUsableInLandscape[\s\S]*XCTAssertTrue\(app\.buttons\["retry-button"\]\.isHittable\)/,
+    );
     expect(uiTests).toMatch(
       /override func setUpWithError\(\) throws \{\s*continueAfterFailure = false\s*\}/,
     );
@@ -160,6 +178,8 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain("The approved minimum iOS 17 simulator runtime is unavailable");
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
+    expect(script).toContain("validate_app_configuration");
+    expect(script).toContain("testNaturalDebugLaunchRendersAnInternalMarker");
     expect(script).toContain('node "$ROOT_DIR/scripts/ios-evidence.mjs" generate');
     expect(script).toContain('node "$ROOT_DIR/scripts/scan-ios-evidence.mjs"');
     expect(script).not.toContain('cp -R "$RESULTS_ROOT"');

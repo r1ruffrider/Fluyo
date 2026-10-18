@@ -13,6 +13,7 @@ struct FoundationShellView: View {
     @AccessibilityFocusState private var focusedTarget: FocusTarget?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     init(model: FoundationShellModel = FoundationShellModel()) {
         _model = State(initialValue: model)
@@ -44,6 +45,9 @@ struct FoundationShellView: View {
         }
         .sheet(isPresented: $showsBuildStatus) {
             BuildStatusView(marker: model.buildMarker)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            compactPrimaryAction
         }
     }
 
@@ -89,11 +93,9 @@ struct FoundationShellView: View {
                     accessibilityIdentifier: "signed-out-state"
                 )
 
-                primaryButton("Review build status") {
-                    showsBuildStatus = true
+                if verticalSizeClass != .compact {
+                    reviewBuildButton
                 }
-                .accessibilityIdentifier("review-build-button")
-                .accessibilityFocused($focusedTarget, equals: .primaryAction)
 
             case .failure:
                 statusHeader(
@@ -104,11 +106,9 @@ struct FoundationShellView: View {
                 )
                 .accessibilityFocused($focusedTarget, equals: .status)
 
-                primaryButton("Retry setup") {
-                    Task { await model.retry() }
+                if verticalSizeClass != .compact {
+                    retryButton
                 }
-                .accessibilityIdentifier("retry-button")
-                .accessibilityFocused($focusedTarget, equals: .primaryAction)
             }
         }
         .padding(24)
@@ -128,6 +128,42 @@ struct FoundationShellView: View {
             .font(.footnote)
             .foregroundStyle(.secondary)
             .accessibilityIdentifier("foundation-boundary")
+    }
+
+    @ViewBuilder
+    private var compactPrimaryAction: some View {
+        if verticalSizeClass == .compact {
+            switch model.state {
+            case .signedOut:
+                reviewBuildButton
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 8)
+                    .background(Color(uiColor: .systemGroupedBackground))
+            case .failure:
+                retryButton
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 8)
+                    .background(Color(uiColor: .systemGroupedBackground))
+            case .loading:
+                EmptyView()
+            }
+        }
+    }
+
+    private var reviewBuildButton: some View {
+        primaryButton("Review build status") {
+            showsBuildStatus = true
+        }
+        .accessibilityIdentifier("review-build-button")
+        .accessibilityFocused($focusedTarget, equals: .primaryAction)
+    }
+
+    private var retryButton: some View {
+        primaryButton("Retry setup") {
+            Task { await model.retry() }
+        }
+        .accessibilityIdentifier("retry-button")
+        .accessibilityFocused($focusedTarget, equals: .primaryAction)
     }
 
     private func statusHeader(
