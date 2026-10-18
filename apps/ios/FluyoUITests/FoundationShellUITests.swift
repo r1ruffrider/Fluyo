@@ -4,12 +4,13 @@ import XCTest
 final class FoundationShellUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
     }
 
     func testLoadingStateIsStaticAndHonest() {
         let app = launch(state: "loading")
 
-        XCTAssertTrue(app.otherElements["loading-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["loading-state"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Preparing this internal build"].exists)
         XCTAssertTrue(app.staticTexts["foundation-boundary"].exists)
     }
@@ -17,7 +18,7 @@ final class FoundationShellUITests: XCTestCase {
     func testSignedOutFoundationHasOneUsefulAction() {
         let app = launch(state: "signed_out")
 
-        XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["signed-out-state"].waitForExistence(timeout: 5))
         let button = app.buttons["review-build-button"]
         XCTAssertTrue(button.exists)
         XCTAssertGreaterThanOrEqual(button.frame.height, 44)
@@ -28,7 +29,7 @@ final class FoundationShellUITests: XCTestCase {
     func testFailureStateProvidesBoundedRetry() {
         let app = launch(state: "failure")
 
-        XCTAssertTrue(app.otherElements["error-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["error-state"].waitForExistence(timeout: 5))
         let button = app.buttons["retry-button"]
         XCTAssertTrue(button.exists)
         XCTAssertGreaterThanOrEqual(button.frame.height, 44)
@@ -54,7 +55,7 @@ final class FoundationShellUITests: XCTestCase {
             XCUIDevice.shared.orientation = .landscapeRight
 
             let identifier = state == "loading" ? "loading-state" : "error-state"
-            XCTAssertTrue(app.otherElements[identifier].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.staticTexts[identifier].waitForExistence(timeout: 5))
             if state == "failure" {
                 XCTAssertTrue(app.buttons["retry-button"].isHittable)
             }
@@ -67,7 +68,7 @@ final class FoundationShellUITests: XCTestCase {
             arguments: ["-UIAccessibilityReduceMotionEnabled", "YES"]
         )
 
-        XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["signed-out-state"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["review-build-button"].isHittable)
     }
 
@@ -130,7 +131,7 @@ final class FoundationShellUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["signed-out-state"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["build-marker"].exists)
     }
 
@@ -139,7 +140,7 @@ final class FoundationShellUITests: XCTestCase {
         app.launchEnvironment["FLUYO_UI_TEST_CONFIGURATION"] = "invalid"
         app.launch()
 
-        XCTAssertTrue(app.otherElements["error-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["error-state"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["retry-button"].isHittable)
         XCTAssertFalse(app.staticTexts["build-marker"].exists)
     }
@@ -150,7 +151,7 @@ final class FoundationShellUITests: XCTestCase {
             arguments: ["-AppleInterfaceStyle", "Dark"]
         )
 
-        XCTAssertTrue(app.otherElements["signed-out-state"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["signed-out-state"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["review-build-button"].isHittable)
     }
 

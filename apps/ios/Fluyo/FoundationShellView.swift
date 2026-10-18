@@ -77,17 +77,17 @@ struct FoundationShellView: View {
                 statusHeader(
                     systemImage: "hourglass",
                     title: "Preparing this internal build",
-                    message: "Checking the non-production setup. No account data is loaded."
+                    message: "Checking the non-production setup. No account data is loaded.",
+                    accessibilityIdentifier: "loading-state"
                 )
-                .accessibilityIdentifier("loading-state")
 
             case .signedOut:
                 statusHeader(
                     systemImage: "person.crop.circle.badge.questionmark",
                     title: "Foundation ready",
-                    message: "Live sign-in is planned for a later increment. This build proves the local shell only."
+                    message: "Live sign-in is planned for a later increment. This build proves the local shell only.",
+                    accessibilityIdentifier: "signed-out-state"
                 )
-                .accessibilityIdentifier("signed-out-state")
 
                 primaryButton("Review build status") {
                     showsBuildStatus = true
@@ -99,9 +99,9 @@ struct FoundationShellView: View {
                 statusHeader(
                     systemImage: "exclamationmark.triangle.fill",
                     title: "Configuration unavailable",
-                    message: "This internal build could not load its safe non-production setup. Try again after the configuration is corrected."
+                    message: "This internal build could not load its safe non-production setup. Try again after the configuration is corrected.",
+                    accessibilityIdentifier: "error-state"
                 )
-                .accessibilityIdentifier("error-state")
                 .accessibilityFocused($focusedTarget, equals: .status)
 
                 primaryButton("Retry setup") {
@@ -130,7 +130,12 @@ struct FoundationShellView: View {
             .accessibilityIdentifier("foundation-boundary")
     }
 
-    private func statusHeader(systemImage: String, title: LocalizedStringKey, message: LocalizedStringKey) -> some View {
+    private func statusHeader(
+        systemImage: String,
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        accessibilityIdentifier: String
+    ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: systemImage)
                 .font(.system(size: 32, weight: .semibold))
@@ -140,6 +145,7 @@ struct FoundationShellView: View {
             Text(title)
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier(accessibilityIdentifier)
 
             Text(message)
                 .font(.body)
