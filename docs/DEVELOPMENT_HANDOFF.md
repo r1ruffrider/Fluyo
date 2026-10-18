@@ -38,7 +38,7 @@ workflow must compile and test the exact head before the increment can pass. No 
 is permitted until Isabella, Fernanda, Danila, and Elana clear the exact head and the repository/platform checks
 are green.
 
-The 2026-10-19 full dependency audit no longer reports the tracked braces advisory. The fail-closed policy rejected the old exception as stale, so PR #39 removes that exact exception without changing dependencies, severity, or checks. Issue #21 should close only after this removal merges.
+A 2026-10-19 local audit response briefly omitted the tracked braces advisory and correctly caused the stale-exception guard to fail. GitHub Actions and Elana immediately returned GHSA-vfj7-8cjw-p6xm for the same lockfile, so the single local response was not reproducible. PR #39 retains the already-approved exact `braces@3.0.3` exception and October 30 expiry unchanged; issue #21 remains open.
 Apple accounts, identifier reservation, signing, production endpoints, physical-device claims, TestFlight or
 App Store actions, and spending remain separately gated. The proposed identifiers are repository settings only.
 
