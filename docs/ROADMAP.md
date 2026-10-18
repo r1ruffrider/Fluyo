@@ -112,12 +112,14 @@ Completion evidence (2026-10-17): [PR #23](https://github.com/r1ruffrider/Fluyo/
 Goal: deliver the authenticated product shell and canonical learning domain used by web and future mobile clients.
 
 - [x] Accept ADR 0005 and the Sprint 4 implementation plan before creating learning-domain tables.
-- [ ] Define and implement lessons, activities, phrase decks, progress, streak, goals, and notification preferences with ownership and retention rules.
-- [ ] Provide the next activity, recent progress, subscription/access state, loading/empty/error states, and accessible navigation.
-- [ ] Add versioned API contracts, authorization failures, idempotent progress writes, pagination, migrations, telemetry, and end-to-end tests.
-- [ ] Pass the standing counted phase audit for real reload, failure, mobile layout, accessibility, cross-session persistence, code quality, console, and all eight required checks.
+- [x] Define and implement lessons, activities, phrase decks, progress, streak, goals, and notification preferences with ownership and retention rules.
+- [x] Provide the next activity, recent progress, subscription/access state, loading/empty/error states, and accessible navigation.
+- [x] Add versioned API contracts, authorization failures, idempotent progress writes, pagination, migrations, telemetry, and end-to-end tests.
+- [x] Pass the standing counted phase audit for real reload, failure, mobile layout, accessibility, cross-session persistence, code quality, console, and all eight required checks.
 
 Implementation contract: [SPRINT_4_PLAN.md](SPRINT_4_PLAN.md).
+
+Completion evidence (2026-10-18): PRs #26–#32 delivered the accepted contract, request boundary, versioned schema and shared types, catalog reads, transactional progress writes, lifecycle/observability hooks, and authenticated dashboard. Elana's independent final phase audit counted 255 checks: 255 passed, zero failed, and zero unattempted. PR #32 merged as `0ced1d4a80a42ac1cdf6d2bcee63a3d64cb78f59`; post-merge `main` run `39099767691` passed all eight required jobs.
 
 ## Sprint 5 — Native Mobile Foundations
 
