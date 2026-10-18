@@ -200,6 +200,22 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
     expect(script).toContain("validate_app_configuration");
     expect(script).toContain("testNaturalDebugLaunchRendersAnInternalMarker");
+    expect(script).toContain("testUnapprovedPublicHostIsRejectedFromInternalConfiguration");
+    expect(read("apps/ios/FluyoTests/AppConfigurationTests.swift")).not.toContain("api.fluyo.com");
+    expect(script).toContain(
+      '"$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"',
+    );
+    expect(
+      script.match(
+        /validate_app_configuration "\$DERIVED_ROOT\/Tests\/Build\/Products\/Debug-iphonesimulator\/Fluyo\.app" development/g,
+      ),
+    ).toHaveLength(1);
+    expect(
+      script.match(
+        /validate_app_configuration "\$DERIVED_ROOT\/Debug\/Build\/Products\/Debug-iphonesimulator\/Fluyo\.app" development/g,
+      ),
+    ).toHaveLength(2);
+    expect(script).toContain("grep -Eaiq");
     expect(script).toContain('node "$ROOT_DIR/scripts/ios-evidence.mjs" generate');
     expect(script).toContain('node "$ROOT_DIR/scripts/scan-ios-evidence.mjs"');
     expect(script).not.toContain('cp -R "$RESULTS_ROOT"');

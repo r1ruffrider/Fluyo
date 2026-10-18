@@ -209,12 +209,13 @@ if [[ "$LEG" == "minimum" ]]; then
   COMMAND_NAME="xcodebuild Debug build and full test on iOS 17"
 else
   run_xcodebuild test-current     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests"     -resultBundlePath "$RESULTS_ROOT/current.xcresult" test "${PUBLIC_SETTINGS[@]}"
+  run_xcodebuild build-debug     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Debug" build "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-staging     -project "$PROJECT" -scheme "$SCHEME" -configuration Staging     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Staging" build "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-release     -project "$PROJECT" -scheme "$SCHEME" -configuration Release     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Release" build
-  for app in     "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
+  for app in     "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
     test -d "$app"
   done
-  validate_app_configuration "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app" development
+  validate_app_configuration "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app" development
   validate_app_configuration "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app" staging
   validate_app_configuration "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app" release
   APP_PATH="$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"
@@ -227,7 +228,7 @@ REQUIRED_TEST_NAMES=(
   testStagingConfigurationUsesOnlyPublicNonProductionValues
   testReleaseConfigurationIsInertAndHasNoMarker
   testReleaseMissingBuildIdentityFailsClosed
-  testProductionHostIsRejectedFromInternalConfiguration
+  testUnapprovedPublicHostIsRejectedFromInternalConfiguration
   testInitialLoadingAnnouncementIsLocalizedAndDeduplicated
   testNaturalDebugLaunchRendersAnInternalMarker
   testNaturalInvalidConfigurationFailsClosed
@@ -248,12 +249,12 @@ BUILD_SCAN="$WORK_ROOT/all-build-strings.txt"
 if [[ "$LEG" == "minimum" ]]; then
   find "$APP_PATH" -type f -print0 | xargs -0 strings >>"$BUILD_SCAN"
 else
-  for app in     "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
+  for app in     "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Staging/Build/Products/Staging-iphonesimulator/Fluyo.app"     "$DERIVED_ROOT/Release/Build/Products/Release-iphonesimulator/Fluyo.app"; do
     find "$app" -type f -print0 | xargs -0 strings >>"$BUILD_SCAN"
   done
 fi
 cat "$LOG_DIR"/*.log >>"$BUILD_SCAN"
-if grep -Eai '(sk_(live|test)_[A-Za-z0-9]{12,}|rk_(live|test)_[A-Za-z0-9]{12,}|eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|Authorization:[[:space:]]*Bearer[[:space:]]+[A-Za-z0-9._~-]{8,}|FLUYO_TEST_(ADRIANA|ELANA)_(EMAIL|PASSWORD)=|https?://(api|auth)\.fluyo\.(com|app))' "$BUILD_SCAN"; then
+if grep -Eaiq '(sk_(live|test)_[A-Za-z0-9]{12,}|rk_(live|test)_[A-Za-z0-9]{12,}|eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|Authorization:[[:space:]]*Bearer[[:space:]]+[A-Za-z0-9._~-]{8,}|FLUYO_TEST_(ADRIANA|ELANA)_(EMAIL|PASSWORD)=|https?://(api|auth)\.fluyo\.(com|app))' "$BUILD_SCAN"; then
   echo "Restricted value found in a built configuration or temporary tool output" >&2
   exit 1
 fi

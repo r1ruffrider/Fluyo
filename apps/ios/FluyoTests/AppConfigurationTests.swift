@@ -90,9 +90,9 @@ final class AppConfigurationTests: XCTestCase {
         }
     }
 
-    func testProductionHostIsRejectedFromInternalConfiguration() {
+    func testUnapprovedPublicHostIsRejectedFromInternalConfiguration() {
         var values = publicInfo(environment: "staging")
-        values["FluyoAPIBaseURL"] = "https://api.fluyo.com/api/v1"
+        values["FluyoAPIBaseURL"] = "https://api.fluyo.invalid/api/v1"
 
         XCTAssertThrowsError(try AppConfiguration.load(infoDictionary: values)) {
             XCTAssertEqual($0 as? AppConfigurationError, .invalidPublicConfiguration)
