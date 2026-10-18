@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -78,7 +79,7 @@ describe("iOS foundation readiness contract v1", () => {
   it("stays specification-only until every recorded decision and owner gate closes", () => {
     expect(policy.schemaVersion).toBe("1.0.0");
     expect(policy.status).toBe("specification_only");
-    expect(policy.sourceMainCommit).toMatch(/^[0-9a-f]{40}$/);
+    expect(policy.sourceMainCommit).toBe("a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1");
     expect(policy.lastReviewedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(policy.productionDataUsed).toBe(false);
     expect(policy.externalActionsPerformed).toBe(false);
@@ -111,8 +112,16 @@ describe("iOS foundation readiness contract v1", () => {
       "staging",
       "release",
     ]);
-    expect(asObject(configuration.development).classification).toBe("public_non_production_only");
-    expect(asObject(configuration.staging).classification).toBe("public_non_production_only");
+    expect(asObject(configuration.development)).toEqual({
+      classification: "public_non_production_only",
+      networkEnabled: true,
+      failClosedOnMissingValue: true,
+    });
+    expect(asObject(configuration.staging)).toEqual({
+      classification: "public_non_production_only",
+      networkEnabled: true,
+      failClosedOnMissingValue: true,
+    });
     expect(asObject(configuration.release)).toEqual({
       classification: "inert_until_release_gate",
       networkEnabled: false,
@@ -184,17 +193,18 @@ describe("iOS foundation readiness contract v1", () => {
     ]) {
       expect(validatesClosedRecord(mutation, allowedFields, propertyConstraints)).toBe(false);
     }
-    expect(asStrings(buildMarker.forbiddenFields, "buildMarker.forbiddenFields")).toEqual(
-      expect.arrayContaining([
-        "email",
-        "ownerId",
-        "correlationId",
-        "deviceId",
-        "endpoint",
-        "branch",
-        "filesystemPath",
-      ]),
-    );
+    expect(asStrings(buildMarker.forbiddenFields, "buildMarker.forbiddenFields")).toEqual([
+      "email",
+      "profileId",
+      "ownerId",
+      "correlationId",
+      "deviceId",
+      "providerProjectId",
+      "endpoint",
+      "branch",
+      "user",
+      "filesystemPath",
+    ]);
   });
 
   it("starts with an empty no-tracking privacy-manifest declaration", () => {
@@ -287,31 +297,34 @@ describe("iOS foundation readiness contract v1", () => {
     expect(syntheticCapture.policyReference).toBe("docs/TEST_ACCOUNT_GOVERNANCE.md");
     expect(syntheticCapture.status).toBe("blocked_until_capture_owners_and_checklist_are_approved");
     expect(syntheticCapture.allowedIdentityLabel).toBe("Signed in");
-    expect(asStrings(syntheticCapture.requiredChecks, "requiredChecks")).toEqual(
-      expect.arrayContaining([
-        "isolated_non_production_session",
-        "internal_environment_marker_visible",
-        "identity_and_billing_values_absent",
-        "product_and_privacy_review_complete",
-      ]),
-    );
+    expect(asStrings(syntheticCapture.requiredChecks, "requiredChecks")).toEqual([
+      "isolated_non_production_session",
+      "internal_environment_marker_visible",
+      "deterministic_synthetic_state",
+      "personal_status_bar_data_hidden",
+      "logs_and_developer_overlays_hidden",
+      "identity_and_billing_values_absent",
+      "product_and_privacy_review_complete",
+    ]);
   });
 
   it("keeps the asset manifest empty and requires complete provenance later", () => {
     expect(assets.status).toBe("empty_until_asset_ownership_is_approved");
     expect(assets.items).toEqual([]);
-    expect(asStrings(assets.requiredItemFields, "requiredItemFields")).toEqual(
-      expect.arrayContaining([
-        "repositorySourcePath",
-        "sourceHash",
-        "author",
-        "license",
-        "semanticRole",
-        "accessibilityLabel",
-        "containsBakedText",
-        "metadataStripped",
-      ]),
-    );
+    expect(asStrings(assets.requiredItemFields, "requiredItemFields")).toEqual([
+      "assetId",
+      "repositorySourcePath",
+      "sourceHash",
+      "author",
+      "license",
+      "modificationRecord",
+      "semanticRole",
+      "accessibilityLabel",
+      "cropAndSafeAreaEvidence",
+      "sizeBudgetBytes",
+      "containsBakedText",
+      "metadataStripped",
+    ]);
     expect(asStrings(assets.allowedInterimSources, "allowedInterimSources")).toEqual([
       "native_swiftui_shapes",
       "system_typography",
@@ -323,6 +336,9 @@ describe("iOS foundation readiness contract v1", () => {
     const scenarios = acceptance.scenarios;
     if (!Array.isArray(scenarios)) throw new Error("acceptance.scenarios must be an array");
     expect(scenarios).toHaveLength(23);
+    expect(createHash("sha256").update(JSON.stringify(scenarios)).digest("hex")).toBe(
+      "155bc468c1249f371ad99639c0fa135181e4161157449528d5d39ee95787fb15",
+    );
     expect(scenarios.map((scenario) => asObject(scenario).id)).toEqual([
       "ios_config_development",
       "ios_config_staging",
