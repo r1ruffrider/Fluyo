@@ -1,0 +1,13 @@
+{
+  "bundleVersion": "1.0.0",
+  "sourceImplementationCommit": "8b506202319dacd4635d20787cd47e1ef1d5b7b8",
+  "lastValidationDate": "2026-10-18",
+  "dataClass": "synthetic",
+  "productionDataUsed": false,
+  "files": ["README.md", "fixtures.json", "manifest.json", "openapi.json"],
+  "implementationSources": [
+    "packages/shared/src",
+    "apps/api/src controllers and DTOs",
+    "docs/API.md"
+  ]
+}

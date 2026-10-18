@@ -1,5 +1,23 @@
 # Development and billing verification handoff
 
+## Sprint 5 Increment 2 implementation checkpoint — 2026-10-18
+
+Increment 1 merged through PR #35 as `8b506202319dacd4635d20787cd47e1ef1d5b7b8`; post-merge
+`main` run `39101496376` passed all eight protected jobs. Increment 2 now adds the versioned
+[mobile contract v1](../contracts/mobile/v1/README.md) and deterministic synthetic fixture bundle for
+implemented HTTP endpoints only, plus shared-package compatibility, disclosure, privacy, retry, ownership,
+and UUID-v4 boundary tests.
+
+The bundle separates exact HTTP responses from nine no-response transport scenarios, models server-authoritative
+billing projection and ADR 0003 past-due grace access, and records factual dashboard empty/complete/entitlement,
+attempt replay/conflict, settings, failure, and account-switch behavior. Stripe Checkout/Portal/webhooks,
+Supabase provider payloads, internal learning lifecycle hooks, native callback/telemetry/RevenueCat, tester,
+campaign, social, store, and public-release APIs remain excluded. The audited implementation head `a697d6bd1576ca59fd0d6f6cb5897d7d676f90b0` passed all specialist gates:
+Isabella 31/31 combined checks, Fernanda 27/27, Danila 42/42, and Elana 295/295 independent checks with zero
+failed or unattempted. GitHub run `39102720332` passed all eight protected jobs. The full counted report is in
+[review-report.md](review-report.md). Any later documentation-only head still requires a fresh eight-check run
+before merge.
+
 ## Sprint 5 Increment 1 checkpoint — 2026-10-18
 
 The accepted [Sprint 5 plan](SPRINT_5_PLAN.md) is merged on `main` as
