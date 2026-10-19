@@ -6,7 +6,7 @@
   "productionDataUsed": false,
   "externalActionsPerformed": false,
   "projectScaffoldAuthorized": true,
-  "completionClaimAllowed": false,
+  "completionClaimAllowed": true,
   "approvedBaselines": {
     "minimumIosVersion": "17.0",
     "formFactor": "iphone_native_phone_first",

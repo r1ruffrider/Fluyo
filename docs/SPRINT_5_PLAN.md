@@ -80,10 +80,12 @@ Xcode 26.6 unsigned-simulator baselines. Minimum-version compatibility runs sepa
 `macos-14` / Xcode 16.2 image that supplies an iOS 17 simulator; exact-head sanitized evidence is accepted only
 after both lanes pass and their scenario union validates. Because GitHub schedules `macos-14` retirement for
 2026-11-02, the compatibility lane must be rechecked or replaced by 2026-11-01 without changing the iOS 17
-product baseline. The policy now authorizes the smallest repository scaffold while
-keeping `completionClaimAllowed` false until exact-head Mac, simulator, accessibility, artifact, roster, and
-Elana evidence passes. Apple accounts, identifier reservation, signing, production endpoints, physical-device
-claims, TestFlight/App Store work, and spending remain separately gated.
+product baseline. The smallest repository scaffold passed the exact-head Mac, simulator, accessibility,
+artifact, roster, and Elana gates, so the policy now permits the narrow internal Increment 3 completion claim.
+The 23 source rows remain an immutable readiness matrix; generated aggregate evidence records 22 passing
+simulator-applicable rows and the separately deferred physical-iPhone row. Apple accounts, identifier
+reservation, signing, production endpoints, physical-device claims, TestFlight/App Store work, and spending
+remain separately gated.
 
 - Add a SwiftUI workspace with unit and UI test targets and Debug, Staging, and Release configurations.
 - Load only non-secret endpoints and public client configuration through checked templates and protected CI values.

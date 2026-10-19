@@ -34,9 +34,14 @@ checked public non-production configuration with an inert Release path, determin
 error states, Dynamic Type and VoiceOver semantics, 44-point actions, static reduced-motion behavior, an empty
 no-tracking privacy manifest, typed no-op telemetry, system-only visuals, unit/UI targets, and traceable unsigned
 simulator evidence. Constructor injection is limited to configuration and shell-state seams. There is no network client in this increment, so reachability/connectivity behavior remains explicitly ordered with the first authorized live client in Increment 6. The current Windows host still cannot produce Mac or simulator evidence; the approved GitHub
-workflow must compile and test the exact head before the increment can pass. No completion or availability claim
-is permitted until Isabella, Fernanda, Danila, and Elana clear the exact head and the repository/platform checks
-are green.
+workflow compiled and tested candidate head `11e59c7ebe9e6b489bd239d6f78ac0fb59875ddd`. Protected run
+`39177793990` passed all eight jobs, and iOS run `39177793985` passed the minimum-iOS-17 lane, current-runtime
+lane, and sanitized aggregate. Generated evidence records 22 of 22 simulator-applicable rows passing; the 23
+source rows remain an immutable readiness matrix and physical-iPhone evidence remains unattempted for Sprint 5
+closeout. Isabella's product boundary review, Fernanda's 35/35 privacy gate, Danila's 31/31 UX/accessibility
+gate, and Elana's 423/423 independent candidate audit cleared the narrow internal Increment 3 completion claim.
+The final documentation/policy head still requires the same exact-head protected, platform, specialist, and
+Elana gates before merge.
 
 A 2026-10-19 local audit response briefly omitted the tracked braces advisory and correctly caused the stale-exception guard to fail. GitHub Actions and Elana immediately returned GHSA-vfj7-8cjw-p6xm for the same lockfile, so the single local response was not reproducible. PR #39 retains the already-approved exact `braces@3.0.3` exception and October 30 expiry unchanged; issue #21 remains open.
 Apple accounts, identifier reservation, signing, production endpoints, physical-device claims, TestFlight or

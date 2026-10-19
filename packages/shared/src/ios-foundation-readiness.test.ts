@@ -84,7 +84,7 @@ describe("iOS foundation readiness contract v1", () => {
     expect(policy.productionDataUsed).toBe(false);
     expect(policy.externalActionsPerformed).toBe(false);
     expect(policy.projectScaffoldAuthorized).toBe(true);
-    expect(policy.completionClaimAllowed).toBe(false);
+    expect(policy.completionClaimAllowed).toBe(true);
     expect(asStrings(policy.requiredDecisions, "requiredDecisions").sort()).toEqual(
       [
         "S5-D01",

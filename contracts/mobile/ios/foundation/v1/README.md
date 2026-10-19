@@ -6,9 +6,10 @@ non-production, unsigned, and unavailable through TestFlight or the App Store.
 
 The active product, ownership, identifier, device, accessibility, asset, and toolchain decisions remain in
 [`docs/SPRINT_5_DECISION_REGISTER.md`](../../../../../docs/SPRINT_5_DECISION_REGISTER.md). The policy keeps
-`projectScaffoldAuthorized` true for the approved repository scaffold and `completionClaimAllowed` false until
-the exact-head Mac, simulator, accessibility, artifact, secret-scan, roster, and Elana gates pass. It contains no
-account, signing credential, production endpoint, physical-device evidence, or capture value.
+`projectScaffoldAuthorized` true for the approved repository scaffold and now permits the narrow internal
+Increment 3 completion claim after the exact-head Mac, simulator, accessibility, artifact, secret-scan, roster,
+and Elana gates passed. It contains no account, signing credential, production endpoint, physical-device
+evidence, or capture value.
 It also records that no production data or external action was used to prepare this bundle.
 
 ## Boundaries
@@ -26,9 +27,9 @@ It also records that no production data or external action was used to prepare t
   [`docs/TEST_ACCOUNT_GOVERNANCE.md`](../../../../../docs/TEST_ACCOUNT_GOVERNANCE.md).
 - The asset manifest is empty until ownership and provenance are approved. Native shapes, system typography, and
   approved SF Symbols are the only interim sources.
-- The 23 evidence rows begin `unattempted`. The approved macOS/Xcode workflow may convert applicable unsigned
-  simulator, accessibility, asset, artifact, and binary/log rows only when it records exact execution evidence.
-  The physical-iPhone row remains unattempted until the separate Sprint 5 closeout device gate.
+- The 23 source evidence rows remain an immutable `unattempted` readiness matrix. Generated exact-head
+  aggregate evidence is the authoritative execution record: 22 simulator-applicable rows passed, while the
+  physical-iPhone row remains unattempted until the separate Sprint 5 closeout device gate.
 
 ## Evidence rule
 
