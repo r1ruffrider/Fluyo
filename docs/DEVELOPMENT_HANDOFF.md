@@ -16,6 +16,26 @@ approval boundary, missing secure access or secrets, an external account or spen
 irreversible work, or a material product decision. When one workstream is blocked, independent authorized
 workstreams continue.
 
+## Sprint 5 Increment 4 readiness checkpoint — 2026-10-19
+
+Increment 3 merged through PR #39 as c68faf7b7284d8c111aec93db4f982ee7ea3e5e0. Post-main protected run
+39308241296 passed all eight required jobs, and post-main iOS foundation run 39308241391 passed the minimum
+iOS 17 lane, current unsigned-simulator lane, and sanitized aggregate. Physical-iPhone evidence and every Apple
+account, identifier-reservation, signing, production, TestFlight/App Store, and spending action remain gated.
+
+Increment 4 is blocked from Android scaffolding because the Android SDK, device/form-factor/orientation,
+repository identifier, toolchain/CI, and accountable implementation/accessibility/asset owner decisions remain
+proposed or open. The repository-only Android foundation readiness bundle records the proposed minSdk 29,
+compileSdk 37, targetSdk 36, phone-first scope, accepted locale/motion boundaries, non-production configuration,
+empty repository Data safety inventory, typed no-op telemetry, blocked capture, empty asset ledger, and 29
+structured future evidence rows. It correctly describes a future installed APK as non-production debug-signed
+emulator evidence; no release/upload/Play signing is implied.
+
+This prerequisite creates no apps/android project, Gradle wrapper, dependency download, emulator, account,
+package reservation, signing key, Play Console resource, production value, physical-device claim, public
+capture, or external action. projectScaffoldAuthorized and completionClaimAllowed remain false. Marlon must
+accept the material Android baselines and appoint an accountable Android owner before scaffolding begins.
+
 ## Sprint 5 Increment 3 implementation checkpoint — 2026-10-19
 
 Increment 2 merged through PR #36 as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`; post-merge
