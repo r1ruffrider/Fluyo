@@ -1,17 +1,20 @@
 # iOS Foundation Readiness Contract v1
 
-This directory contains specification-only inputs for Sprint 5 Increment 3. It is not an Xcode project, does not
-authorize a SwiftUI scaffold, and does not establish an iOS availability or support claim.
+This directory contains the governing policy and evidence matrix for Sprint 5 Increment 3. Marlon approved the
+smallest unsigned SwiftUI simulator implementation on October 19, 2026. The implementation remains internal,
+non-production, unsigned, and unavailable through TestFlight or the App Store.
 
 The active product, ownership, identifier, device, accessibility, asset, and toolchain decisions remain in
 [`docs/SPRINT_5_DECISION_REGISTER.md`](../../../../../docs/SPRINT_5_DECISION_REGISTER.md). The policy keeps
-`projectScaffoldAuthorized` and `completionClaimAllowed` false until those gates close. It contains no endpoint,
-bundle identifier, account, signing, credential, device, production, or capture value.
+`projectScaffoldAuthorized` true for the approved repository scaffold and now permits the narrow internal
+Increment 3 completion claim after the exact-head Mac, simulator, accessibility, artifact, secret-scan, roster,
+and Elana gates passed. It contains no account, signing credential, production endpoint, physical-device
+evidence, or capture value.
 It also records that no production data or external action was used to prepare this bundle.
 
 ## Boundaries
 
-- Development and staging may eventually use public, non-production client configuration. Missing values fail
+- Development and staging may use checked public, non-production client configuration. Missing values fail
   closed and must show the constrained internal build marker. Release networking remains inert, and the marker
   is not rendered there, until its separately approved release gate.
 - The initial privacy-manifest baseline declares no tracking, tracking domains, collected data, or required-reason
@@ -24,13 +27,13 @@ It also records that no production data or external action was used to prepare t
   [`docs/TEST_ACCOUNT_GOVERNANCE.md`](../../../../../docs/TEST_ACCOUNT_GOVERNANCE.md).
 - The asset manifest is empty until ownership and provenance are approved. Native shapes, system typography, and
   approved SF Symbols are the only interim sources.
-- All 23 macOS, simulator, later physical-device, accessibility, asset, artifact, and binary/log scenarios remain
-  `unattempted`. Each scenario has explicit expected criteria. Windows or static review cannot convert any row
-  to PASS.
+- The 23 source evidence rows remain an immutable `unattempted` readiness matrix. Generated exact-head
+  aggregate evidence is the authoritative execution record: 22 simulator-applicable rows passed, while the
+  physical-iPhone row remains unattempted until the separate Sprint 5 closeout device gate.
 
 ## Evidence rule
 
-The eventual macOS/Xcode run must record the exact source commit and build identity; platform; host and
+The macOS/Xcode run must record the exact source commit and build identity; platform; host and
 toolchain versions; device model, class, kind, and OS; environment and accessibility setting; command; expected
 and observed result; artifact hash; and secret-scan result. A physical iPhone row remains separately unattempted
 until the Sprint 5 closeout device gate. Any head change invalidates earlier exact-head audit and protected-check evidence under
@@ -42,4 +45,11 @@ Reference sources for the eventual toolchain decision:
 - [Apple simulated and physical-device testing](https://developer.apple.com/documentation/Xcode/running-your-app-on-simulated-or-physical-devices)
 - [GitHub-hosted runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 
-These links are evidence sources, not approval of a deployment target, runner, account, identifier, or spend.
+The iOS 17 deployment target and split free public unsigned simulator CI are approved for this increment:
+`macos-14` / Xcode 16.2 supplies the temporary minimum-iOS-17 lane, while `macos-26` / Xcode 26.6 supplies the
+current-runtime lane. The exact-head aggregate must receive and validate both sanitized manifests. GitHub
+schedules the macOS 14 image for retirement on November 2, 2026, so a compatible minimum-runtime replacement
+must be rechecked by November 1, 2026. If that evidence lane becomes unavailable, the minimum-runtime scenario
+returns to `unattempted`; the gate is not reduced. The links and runner approval do not authorize an Apple
+account, identifier reservation, signing, physical-device claim, production configuration, TestFlight, App Store
+activity, or spend.

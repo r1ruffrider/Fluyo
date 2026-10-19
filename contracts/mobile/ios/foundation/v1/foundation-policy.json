@@ -1,12 +1,50 @@
 {
   "schemaVersion": "1.0.0",
-  "status": "specification_only",
-  "sourceMainCommit": "a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1",
-  "lastReviewedDate": "2026-10-18",
+  "status": "implementation_authorized",
+  "sourceMainCommit": "4dc05e81b3fae101077025f4ccb28f82bf48e72d",
+  "lastReviewedDate": "2026-10-19",
   "productionDataUsed": false,
   "externalActionsPerformed": false,
-  "projectScaffoldAuthorized": false,
-  "completionClaimAllowed": false,
+  "projectScaffoldAuthorized": true,
+  "completionClaimAllowed": true,
+  "approvedBaselines": {
+    "minimumIosVersion": "17.0",
+    "formFactor": "iphone_native_phone_first",
+    "ipadNativeSupportClaim": false,
+    "orientation": "portrait_primary_landscape_functional",
+    "interfaceLocale": "en",
+    "learningContentLanguage": "es",
+    "pseudoAndRtlTesting": true,
+    "identifiers": {
+      "status": "proposed_unreserved_repository_settings_only",
+      "development": "com.fluyo.app.dev",
+      "staging": "com.fluyo.app.staging",
+      "release": "com.fluyo.app"
+    },
+    "implementationOwner": "Adriana",
+    "accessibilityOwner": "Adriana",
+    "assetOwner": "Adriana",
+    "independentQaOwner": "Elana",
+    "ci": {
+      "currentRunner": "macos-26",
+      "currentXcode": "26.6",
+      "minimumCompatibilityRunner": "macos-14",
+      "minimumCompatibilityXcode": "16.2",
+      "minimumCompatibilityRuntime": "ios-17",
+      "minimumRunnerRecheckBy": "2026-11-01",
+      "artifact": "unsigned_simulator_only"
+    }
+  },
+  "remainingExternalGates": [
+    "apple_account",
+    "identifier_reservation",
+    "signing",
+    "production_endpoints",
+    "physical_device_claims",
+    "testflight",
+    "app_store",
+    "spending"
+  ],
   "requiredDecisions": [
     "S5-D01",
     "S5-D02",

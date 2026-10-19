@@ -1,0 +1,60 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Build status" : {
+
+    },
+    "Checking the non-production setup. No account data is loaded." : {
+
+    },
+    "Configuration unavailable" : {
+
+    },
+    "Done" : {
+
+    },
+    "Fluyo" : {
+
+    },
+    "Foundation ready" : {
+
+    },
+    "Internal foundation only" : {
+
+    },
+    "Internal foundation ready" : {
+
+    },
+    "Internal non-production build" : {
+
+    },
+    "Internal iPhone foundation" : {
+
+    },
+    "Live sign-in is planned for a later increment. This build proves the local shell only." : {
+
+    },
+    "No lessons, billing, audio, AI, account recovery, or store features are available in this foundation build." : {
+
+    },
+    "Preparing this internal build" : {
+
+    },
+    "Retry setup" : {
+
+    },
+    "Review build status" : {
+
+    },
+    "This internal build could not load its safe non-production setup. Try again after the configuration is corrected." : {
+
+    },
+    "Configuration unavailable. Retry after the setup is corrected." : {
+
+    },
+    "This unsigned simulator build does not provide sign-in, learning, billing, or public availability." : {
+
+    }
+  },
+  "version" : "1.0"
+}

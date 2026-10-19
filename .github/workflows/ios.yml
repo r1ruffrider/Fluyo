@@ -1,0 +1,137 @@
+name: iOS foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/ios/**"
+      - "contracts/mobile/ios/**"
+      - "packages/shared/src/ios-foundation-*.test.ts"
+      - "scripts/ios-ci.sh"
+      - "scripts/ios-evidence.mjs"
+      - "scripts/ios-evidence.test.mjs"
+      - "scripts/scan-ios-evidence.mjs"
+      - "scripts/scan-ios-evidence.test.mjs"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "contracts/mobile/ios/**"
+      - "packages/shared/src/ios-foundation-*.test.ts"
+      - "scripts/ios-ci.sh"
+      - "scripts/ios-evidence.mjs"
+      - "scripts/ios-evidence.test.mjs"
+      - "scripts/scan-ios-evidence.mjs"
+      - "scripts/scan-ios-evidence.test.mjs"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  minimum-ios:
+    name: minimum iOS 17 simulator evidence
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Build, test, and scan minimum runtime
+        run: bash scripts/ios-ci.sh
+        env:
+          FLUYO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          FLUYO_IOS_EVIDENCE_LEG: minimum
+          FLUYO_DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+          FLUYO_XCODE_PREFIX: Xcode 16.2
+
+      - name: Upload sanitized minimum-runtime evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-foundation-minimum-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/ios-minimum
+          if-no-files-found: error
+          retention-days: 7
+
+  current-ios:
+    name: current unsigned simulator build and tests
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Build, test, and scan current runtime
+        run: bash scripts/ios-ci.sh
+        env:
+          FLUYO_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          FLUYO_IOS_EVIDENCE_LEG: current
+          FLUYO_DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+          FLUYO_XCODE_PREFIX: Xcode 26.6
+
+      - name: Upload sanitized current-runtime evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-foundation-current-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/ios-current
+          if-no-files-found: error
+          retention-days: 7
+
+  aggregate-evidence:
+    name: sanitized iOS foundation evidence
+    needs: [minimum-ios, current-ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Download minimum-runtime evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-foundation-minimum-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/input/minimum
+
+      - name: Download current-runtime evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-foundation-current-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/input/current
+
+      - name: Validate exact-head evidence union
+        run: >
+          node scripts/ios-evidence.mjs aggregate
+          contracts/mobile/ios/foundation/v1/foundation-policy.json
+          artifacts/input/minimum/evidence-minimum.json
+          artifacts/input/current/evidence-current.json
+          artifacts/input/minimum/Fluyo-minimum-simulator.zip
+          artifacts/input/current/Fluyo-current-simulator.zip
+          artifacts/input/minimum/logs/minimum.log
+          artifacts/input/current/logs/current.log
+          artifacts/ios-foundation
+
+      - name: Scan aggregate evidence
+        run: node scripts/scan-ios-evidence.mjs artifacts/ios-foundation
+
+      - name: Upload sanitized aggregate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-foundation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/ios-foundation
+          if-no-files-found: error
+          retention-days: 7

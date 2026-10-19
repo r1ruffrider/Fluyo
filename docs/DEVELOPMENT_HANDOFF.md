@@ -16,27 +16,36 @@ approval boundary, missing secure access or secrets, an external account or spen
 irreversible work, or a material product decision. When one workstream is blocked, independent authorized
 workstreams continue.
 
-## Sprint 5 Increment 3 readiness checkpoint — 2026-10-18
+## Sprint 5 Increment 3 implementation checkpoint — 2026-10-19
 
 Increment 2 merged through PR #36 as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`; post-merge
 `main` run `39103456847` passed all eight required jobs. The test-account governance follow-up merged through
 PR #37 as `a0c7b63b9c6dd560c763fc1cc9df5d6e1dc4cfb1`; post-merge run `39162465474` also passed all
 eight jobs.
 
-Increment 3 remains blocked from SwiftUI scaffolding by proposed or unresolved product, ownership, device,
-accessibility, asset, and macOS/Xcode decisions in
-[SPRINT_5_DECISION_REGISTER.md](SPRINT_5_DECISION_REGISTER.md). The current Windows host has no
-`xcodebuild`, `swift`, or `simctl`, so it cannot provide build, simulator, UI, accessibility, artifact, or
-binary-scan evidence. No iOS completion or availability claim is permitted.
+The readiness contract merged through PR #38 as `4dc05e81b3fae101077025f4ccb28f82bf48e72d`;
+post-main run `39166750258` passed all eight required jobs. Marlon accepted iOS 17+, an iPhone-native
+phone-first target, portrait-primary layouts with functional landscape, no iPad-native support claim, English
+UI with Spanish learning content and pseudo/RTL probes, proposed unreserved repository identifiers, Adriana as
+interim iOS/accessibility/asset implementer, and free public `macos-26` / Xcode 26.6 unsigned simulator CI. The hosted current runner does not include an iOS 17 runtime, so minimum-version compatibility is a separate free public `macos-14` / Xcode 16.2 lane. A third job accepts only the exact-head sanitized union. GitHub schedules `macos-14` retirement for 2026-11-02; recheck or replace that lane by 2026-11-01 while preserving the accepted iOS 17 baseline.
 
-Independent repository work therefore adds a specification-only
-[iOS foundation readiness contract](../contracts/mobile/ios/foundation/v1/README.md). It keeps Release
-networking inert, limits development and staging to public non-production configuration, starts with an empty
-no-tracking privacy baseline, keeps telemetry as a bounded no-op, blocks capture, keeps the asset ledger empty,
-and records 23 structured platform scenarios as unattempted. It contains no endpoint, bundle identifier, Apple account,
-signing material, credential, device value, production value, or captured data, and it does not authorize an
-Xcode project. Isabella, Fernanda, Danila, and Elana must review the exact head; all eight protected checks must
-pass before this prerequisite can merge.
+Increment 3 now implements the smallest internal SwiftUI foundation: Debug/Staging/Release configurations,
+checked public non-production configuration with an inert Release path, deterministic loading/signed-out/safe
+error states, Dynamic Type and VoiceOver semantics, 44-point actions, static reduced-motion behavior, an empty
+no-tracking privacy manifest, typed no-op telemetry, system-only visuals, unit/UI targets, and traceable unsigned
+simulator evidence. Constructor injection is limited to configuration and shell-state seams. There is no network client in this increment, so reachability/connectivity behavior remains explicitly ordered with the first authorized live client in Increment 6. The current Windows host still cannot produce Mac or simulator evidence; the approved GitHub
+workflow compiled and tested candidate head `11e59c7ebe9e6b489bd239d6f78ac0fb59875ddd`. Protected run
+`39177793990` passed all eight jobs, and iOS run `39177793985` passed the minimum-iOS-17 lane, current-runtime
+lane, and sanitized aggregate. Generated evidence records 22 of 22 simulator-applicable rows passing; the 23
+source rows remain an immutable readiness matrix and physical-iPhone evidence remains unattempted for Sprint 5
+closeout. Isabella's product boundary review, Fernanda's 35/35 privacy gate, Danila's 31/31 UX/accessibility
+gate, and Elana's 423/423 independent candidate audit cleared the narrow internal Increment 3 completion claim.
+The final documentation/policy head still requires the same exact-head protected, platform, specialist, and
+Elana gates before merge.
+
+A 2026-10-19 local audit response briefly omitted the tracked braces advisory and correctly caused the stale-exception guard to fail. GitHub Actions and Elana immediately returned GHSA-vfj7-8cjw-p6xm for the same lockfile, so the single local response was not reproducible. PR #39 retains the already-approved exact `braces@3.0.3` exception and October 30 expiry unchanged; issue #21 remains open.
+Apple accounts, identifier reservation, signing, production endpoints, physical-device claims, TestFlight or
+App Store actions, and spending remain separately gated. The proposed identifiers are repository settings only.
 
 ## Sprint 5 Increment 2 implementation checkpoint — 2026-10-18
 

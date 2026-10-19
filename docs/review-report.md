@@ -1,71 +1,63 @@
-**Phase:** Sprint 5 Increment 2 — versioned mobile contracts and fixtures
-**Brief:** Version only the implemented, provider-neutral mobile HTTP contracts and deterministic sanitized fixtures, with compatibility, privacy, idempotency, ownership, failure, and accessibility validation, without claiming native availability or future APIs.
-**Audited implementation head:** `a697d6bd1576ca59fd0d6f6cb5897d7d676f90b0`
-**Tests conducted:** 295
-**Passed:** 295
+**Phase:** Sprint 5 Increment 3 — unsigned iOS foundation
+**Brief:** Prove an internal unsigned iOS 17+/current-runtime SwiftUI foundation with accessible loading, signed-out, and safe-error states; safe non-production and inert configuration; privacy-safe no-op telemetry; and exact-head sanitized simulator evidence, without claiming physical-device, signing, store, production, authentication, learning, or public availability behavior.
+**Audited implementation head:** `11e59c7ebe9e6b489bd239d6f78ac0fb59875ddd`
+**Tests conducted:** 423
+**Passed:** 423
 **Failed:** 0
-**Unattempted:** 0
+**Unattempted:** 1 — `ios_physical_iphone_evidence`, explicitly deferred to Sprint 5 closeout
 
 ### What was tested
 
-| Tests   | Count | Scope and evidence                                                                                                                                                                                                                                                                                                                                                                    | Result |
-| ------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1–242   |   242 | Full repository suite: 6 dependency-policy, 18 shared, 194 API, and 24 web tests. No skipped, failed, or todo tests. The focused 14-test mobile-contract run also passed but is a subset and was not counted twice.                                                                                                                                                                   | PASS   |
-| 243–251 |     9 | Exact SHA; branch/base/merge-base; eight-file diff scope; absence of application, API implementation, schema, lockfile, or dependency changes; manifest source SHA; no source drift from the pinned implementation; manifest file membership; `git diff --check`; changed-file Prettier validation.                                                                                   | PASS   |
-| 252–260 |     9 | OpenAPI 3.1/base path; all 17 operations across 13 implemented paths; public versus bearer-authenticated routes; foundation/display-only/monitoring/Sprint 6 stages; factual response statuses; 34 schemas and 86 valid references; response-schema/runtime tolerance boundary; request constraints against DTOs; UUID-v4 requirements.                                               | PASS   |
-| 261–267 |     7 | All 56 unique deterministic fixtures; request/response and per-case classifications; success fixture for every operation; synthetic/privacy metadata; forbidden secret/provider/contact/campaign/runtime leakage scan; restricted answer/validation/ownership field scan; separate-owner isolation fixture.                                                                           | PASS   |
-| 268–272 |     5 | `past_due` grace access; canceled/no-access projection; exact replay equality using the same key and payload; same-key/different-payload conflict; fresh-key repeated-correct attempt with no second progress award.                                                                                                                                                                  | PASS   |
-| 273–278 |     6 | Error status/envelope fidelity; correlation propagation and safe handling; positive `Retry-After`; all nine declared `ApiError` codes plus unknown mapping; nine no-response transport states; localized message/action/focus/live-announcement accessibility expectations.                                                                                                           | PASS   |
-| 279–285 |     7 | Tolerant response decoding and version rules; explicit exclusion of provider callbacks, hosted commerce, lifecycle, telemetry, offline sync, delivery, campaign/social, and store APIs; no native/store availability claim; progress-document accuracy; PR draft/CLEAN/MERGEABLE state; PR #35 merge provenance; post-main run `39101496376` at `8b50620` with eight successful jobs. | PASS   |
-| 286–287 |     2 | Independent local lint and TypeScript checks across shared, API, and web workspaces.                                                                                                                                                                                                                                                                                                  | PASS   |
-| 288–295 |     8 | Exact-head GitHub run `39102720332`: dependency audit policy, committed secret scan, Prisma schema, lint, typecheck, tests, build, and formatting. Each completed successfully on `a697d6bd…`.                                                                                                                                                                                        | PASS   |
+| Tests   | Count | Scope and evidence                                                                                                                                               | Result |
+| ------- | ----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1–289   |   289 | Full repository suite: 34 policy/script, 37 shared, 194 API, and 24 web tests.                                                                                   | PASS   |
+| 290–336 |    47 | Independent focused reruns: 28 iOS evidence/privacy/aggregation tests and 19 readiness/structure tests.                                                          | PASS   |
+| 337–344 |     8 | Protected repository run `39177793990`: dependency audit policy, committed secret scan, Prisma schema, lint, typecheck, tests, production build, and formatting. | PASS   |
+| 345–347 |     3 | iOS run `39177793985`: minimum iOS 17 lane, current-runtime lane, and fail-closed sanitized aggregate.                                                           | PASS   |
+| 348–401 |    54 | Native XCTest executions: both lanes ran 15 unit tests and 12 UI tests.                                                                                          | PASS   |
+| 402–423 |    22 | Formal simulator evidence rows: unique identifiers, all 18 required fields, passed result, passed secret scan, exact source binding, and archive hashes.         | PASS   |
 
 ### Code review
 
-Reviewed the full Increment 2 diff, the corresponding Nest controllers and DTOs, shared route and response contracts, billing projection rules, and API documentation.
+Reviewed the complete SwiftUI foundation, Xcode project and configurations, localized resources, privacy manifest, no-op telemetry, unit/UI suites, protected workflow, two-lane iOS workflow, evidence generation/aggregation/scanning scripts, governance contract, and handoff documents.
 
-- The manifest pins version `1.0.0`, its four bundle files, the validation date, and the immutable implementation baseline `8b506202319dacd4635d20787cd47e1ef1d5b7b8`.
-- The bundle describes 17 implemented operations on 13 paths. It excludes hosted billing flows, provider callbacks, internal learning lifecycle hooks, native telemetry, commerce adapters, offline learning sync, notification delivery, tester enrollment, campaigns, social publishing, and store APIs.
-- Request constraints match DTO behavior, including UUID-v4 path and idempotency identifiers. Response constraints avoid guarantees the server does not enforce.
-- Native response decoders must ignore unknown keys and handle unknown enum cases. Unsafe field/status/route/ownership/idempotency changes require a new major contract and deployment plan.
-- Billing fixtures preserve ADR 0003 `past_due` grace access and separately cover canceled/no-access projection. Clients consume server-projected entitlements and never infer access from a status enum.
-- Attempt fixtures prove initial success, exact replay, same-key changed-payload conflict, incorrect results, and a fresh-key repeated correct attempt without a second progress award.
-- Every fixture is deterministic synthetic data, marks the entire wire body restricted, separately restricts idempotency headers, and prohibits marketing attribution, marketing consent assumptions, logging, and ad-platform export.
-- Recursive guards and mutation cases reject answer/validation internals, owner/provider identifiers, credentials, tokens, receipts, device/campaign fields, stack/SQL/path/environment disclosure, and non-`.test` contact data.
-- Correlation IDs remain ephemeral support values. The contract accurately states that the current server accepts nonempty inbound values without enforcing a maximum length.
-- Every declared API error plus unknown fallback has localized action, preservation, focus, retry, and announcement behavior.
-- Nine non-HTTP transport states cover loading, timeout, cancellation, offline, disconnect, ambiguous write reconciliation, reconnect, account switch, and late-response discard without fabricating HTTP responses.
+- Debug and Staging accept only checked public non-production `.test` values and fail closed. Release contains empty client fields, has networking disabled, and renders no internal marker.
+- The real natural Debug launch reaches signed-out state within a bounded 15-second wait, renders the build marker, and does not render the error state. Tests do not inject a forced-valid configuration.
+- Loading, signed-out, and safe-error states passed localized announcement, focus, reading order, 44-point action, large-text, contrast, non-color status, portrait, landscape, pseudo-localization, RTL, dark-appearance, and reduced-motion checks.
+- Minimum evidence used Xcode 16.2, Swift 6.0.3, iPhone SE (3rd generation), and iOS 17.5. Current evidence used Xcode 26.6 and an iPhone 17 Pro Max on iOS 26.5.
+- The privacy manifest remains empty/no-tracking and telemetry remains typed no-op. No production endpoint, signing value, Apple account, live provider, authentication, learning, billing, AI, or store behavior entered scope.
+- The scanner rejects secrets, tokens, provider/signing identifiers, production endpoints, every email-shaped identity including `.test` and mixed-case/binary-like forms, and both governed test-account credential variable references.
+- Retained evidence contains only two unsigned simulator archives, two short sanitized summary logs, and `evidence.json`. Raw logs, xcresult bundles, simulator identifiers, and temporary paths are excluded.
+- The 23 source rows remain the immutable `unattempted` readiness matrix. Generated aggregate evidence is authoritative for execution and records 22 passing simulator-applicable rows; only the separately gated physical-iPhone row remains.
 
 ### Bugs and remediation
 
-| Severity | Location                           | Problem                                                                                                                                             | Action                                                                                                                                                                                                             |
-| -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| High     | Dashboard fixtures                 | Completed visible work was initially mislabeled `catalog_empty`, which would drive incorrect empty-state copy.                                      | Fixed: split all-visible-complete, true catalog-empty, and entitlement-required states; specialist and independent retests pass.                                                                                   |
-| High     | Fixture matrix and replay sequence | Write responses, phrase-deck empty, profile clear, billing access variants, exact replay, and repeat-without-second-award evidence were incomplete. | Fixed: added factual fixtures and replay/conflict/progress assertions; retests pass.                                                                                                                               |
-| High     | OpenAPI operation responses        | Early draft attached speculative 400/403/404 responses to operations that cannot emit them.                                                         | Fixed: narrowed every operation to reachable statuses and retained 403 only as a detached shared-envelope capability; retests pass.                                                                                |
-| High     | Privacy and disclosure validator   | Early guards could miss answer, validation, request-hash, owner, provider, receipt, device, token, and runtime-internal additions.                  | Fixed: recursive key/value scans, full normalized-bundle checks, and mutation cases now fail those families; Fernanda and Elana retests pass.                                                                      |
-| High     | Fixture privacy metadata           | Early metadata was provider-specific and did not consistently classify profile, learning, preference, billing, and attempt data.                    | Fixed: provider-neutral authentication metadata, whole-body restriction, idempotency-header restriction, and machine-checked per-case synthetic/privacy fields; retests pass.                                      |
-| Medium   | Correlation schema                 | Early schema claimed a 200-character server limit that the current boundary does not enforce.                                                       | Fixed: removed the unverified bound and documented accurate client handling; retests pass.                                                                                                                         |
-| Medium   | Bundle manifest/versioning         | Early version, source, validation date, and file metadata could drift independently.                                                                | Fixed: added `manifest.json` and consistency tests across OpenAPI, fixtures, source baseline, date, and file inventory; retests pass.                                                                              |
-| Medium   | Error and transport accessibility  | Early draft omitted two error mappings and represented transport behavior only as prose.                                                            | Fixed: every declared error plus unknown has a tested client expectation, and all nine transport states have structured localized/action/focus/preservation/announcement semantics; Danila and Elana retests pass. |
+| Severity | Location                              | Problem                                                                                                                             | Action                                                                                                                                                 |
+| -------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Blocker  | `FoundationShellView.swift`, UI tests | Accessibility XXXL landscape initially hid signed-out and retry actions.                                                            | Fixed: compact-height safe-area actions preserve immediate hittability; both simulator lanes pass unchanged assertions.                                |
+| Blocker  | App configuration/project/plist       | Generated custom plist keys initially did not reach the natural app runtime.                                                        | Fixed: explicit plist wiring, strict built-app validation, and natural-launch UI proof pass.                                                           |
+| Blocker  | iOS workflow/toolchains               | Earlier evidence lacked reliable minimum/current runtime execution and preinstalled simulators could disappear.                     | Fixed: split pinned lanes, isolated ephemeral simulator creation/cleanup, and exact-head aggregation pass.                                             |
+| High     | Accessibility state handling          | Initial loading announcement, signed-out focus, localized announcement strings, pseudo/RTL, and VoiceOver evidence were incomplete. | Fixed: deterministic announcement/focus bindings, localized resources, separate pseudo/RTL probes, and accessibility executions pass.                  |
+| High     | Evidence provenance and schema        | Early workflow could mislabel a merge checkout, emit incomplete evidence, or retain simulator identifiers and raw results.          | Fixed: exact-head checkout verification, 18-field scenario records, sanitized summaries, archive hashes, and strict aggregate validation pass.         |
+| High     | Evidence privacy scanner              | Early scanner allowed `.test` email identity and omitted several credential-reference forms.                                        | Fixed: every email-shaped identity and both governed credential variable references are denied; mutation tests and artifact re-scan pass.              |
+| Medium   | Runtime reliability                   | Natural Debug observation was too short on the current hosted simulator.                                                            | Fixed: bounded 15-second wait still requires signed-out state, real marker, and no error state; structure regression prevents a forced-valid shortcut. |
 
-No unresolved correctness, security, privacy, compatibility, accessibility, maintainability, or claim-integrity defect remains.
+No unresolved correctness, security, privacy, accessibility, maintainability, or evidence-integrity defect remains in the approved Increment 3 scope.
 
 ### Specialist gates
 
-- Isabella: PASS — 14/14 manual factual/product-claim checks and 17/17 independently executed exact-head checks.
-- Fernanda: PASS — 27/27 analytics, campaign-leakage, provider-neutrality, classification, and synthetic-data checks.
-- Danila: PASS — 42/42 UX, failure-state, transport, accessibility, scope, and privacy checks.
-- Elana: PASS — 295/295 independent phase checks, zero failed and zero unattempted.
+- Isabella: implementation and product-claim boundary passed; the final PR description must use the final exact head and completed run IDs.
+- Fernanda: PASS — 35/35 privacy, identity-leakage, social-claim, capture, and artifact checks.
+- Danila: PASS — 31/31 UX, accessibility, layout, localization, motion, configuration, and evidence controls.
+- Elana: PASS — 423/423 independent candidate checks, zero failed; one explicitly deferred physical-device row.
 
 ### Evidence and limits
 
-- This is a contract-artifact phase. There is intentionally no native application or store build to exercise; those surfaces belong to later increments.
-- No service, credential, database, fixture source, production system, external account, store, publishing, or spend action was mutated.
-- Specialist checks are reported separately and are not added to Elana's independent 295-test total.
-- The exact-head GitHub build independently passed; it was not double-counted as a separate local test.
-- The primary checkout, local changes, existing data, credentials, and stashes remained untouched.
+- The completion claim is limited to an internal, unsigned simulator foundation. It does not establish physical-device support, signing readiness, TestFlight/App Store availability, iPad-native support, production networking, live authentication, native learning, commerce, or public availability.
+- Apple accounts, identifier reservation, signing, production endpoints, physical-device evidence, TestFlight/App Store actions, and spending remain separately gated.
+- The temporary downloaded aggregate passed an independent local scan and was removed after review.
+- Any change after the audited implementation head requires fresh exact-head protected, iOS, specialist, and Elana gates before merge.
 
 ### Verdict
 
-**PASS** — Sprint 5 Increment 2 is cleared at the audited implementation head with 295 of 295 independent checks passed, zero failed, and zero unattempted. PR #36 was CLEAN/MERGEABLE with all eight required checks green at that head.
+**PASS** — Sprint 5 Increment 3 is cleared within its approved internal unsigned-simulator scope with 423 of 423 independent checks passed, zero failed, and the separately gated physical-iPhone row explicitly unattempted. The final policy/report head must repeat the exact-head gates before PR #39 may merge.

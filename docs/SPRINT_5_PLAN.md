@@ -72,17 +72,26 @@ passed all eight required jobs.
 ### 3. iOS foundation
 
 Readiness artifact: [`contracts/mobile/ios/foundation/v1`](../contracts/mobile/ios/foundation/v1/README.md)
-defines the specification-only configuration, privacy, no-op telemetry, capture, asset-provenance, and
-evidence rules that can be reviewed before an Xcode project exists. It contains no endpoint, bundle identifier,
-account, signing, credential, device, production, or capture value. It leaves every macOS, simulator,
-accessibility, artifact, and binary/log scenario unattempted and keeps `projectScaffoldAuthorized` and
-`completionClaimAllowed` false. This prerequisite does not approve the proposed decision-register rows,
-authorize a SwiftUI scaffold, or satisfy the Increment 3 exit gate.
+defines configuration, privacy, no-op telemetry, capture, asset-provenance, and evidence rules. PR #38 merged
+as `4dc05e81b3fae101077025f4ccb28f82bf48e72d` and post-main run `39166750258` passed all eight required jobs.
+Marlon then accepted the recorded iOS 17, iPhone-native, portrait-primary/functional-landscape, English UI,
+Spanish-learning, pseudo/RTL, proposed-unreserved identifier, interim ownership, and free public macOS 26 /
+Xcode 26.6 unsigned-simulator baselines. Minimum-version compatibility runs separately on the free public
+`macos-14` / Xcode 16.2 image that supplies an iOS 17 simulator; exact-head sanitized evidence is accepted only
+after both lanes pass and their scenario union validates. Because GitHub schedules `macos-14` retirement for
+2026-11-02, the compatibility lane must be rechecked or replaced by 2026-11-01 without changing the iOS 17
+product baseline. The smallest repository scaffold passed the exact-head Mac, simulator, accessibility,
+artifact, roster, and Elana gates, so the policy now permits the narrow internal Increment 3 completion claim.
+The 23 source rows remain an immutable readiness matrix; generated aggregate evidence records 22 passing
+simulator-applicable rows and the separately deferred physical-iPhone row. Apple accounts, identifier
+reservation, signing, production endpoints, physical-device claims, TestFlight/App Store work, and spending
+remain separately gated.
 
 - Add a SwiftUI workspace with unit and UI test targets and Debug, Staging, and Release configurations.
 - Load only non-secret endpoints and public client configuration through checked templates and protected CI values.
-- Establish dependency injection, structured concurrency boundaries, network reachability, localization, design-token ingestion, Dynamic Type through at least 200%, VoiceOver semantics, 44-by-44-point minimum targets, reduced motion, and a privacy-manifest baseline.
-- Add repository-owned vector artwork, app-icon, and static launch assets with recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and only short interruptible native transitions with static reduced-motion equivalents.
+- Establish constructor-injected configuration and shell-state seams plus an async, cancellation-safe model boundary. This increment makes no network request: connectivity/reachability behavior and its dependency injection move with the first authorized live client in Increment 6 and must land before any online/offline product claim.
+- Establish localization, design-token ingestion, Dynamic Type through at least 200%, VoiceOver semantics, 44-by-44-point minimum targets, reduced motion, and a privacy-manifest baseline.
+- Use native SwiftUI shapes, system typography, and approved SF Symbols while the asset ledger remains empty. Repository-owned vector artwork, app-icon, and launch assets require recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and separately audited exports before use.
 - Add deterministic sandbox/demo configuration. Production endpoints remain inert until their release gate.
 
 Exit gate: the project builds and its automated tests pass on a documented supported macOS/Xcode toolchain; an unsigned simulator artifact contains no secret and renders loading, signed-out, error, and reduced-motion states accessibly.
