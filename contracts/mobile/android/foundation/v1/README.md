@@ -24,13 +24,28 @@ apps/android project is created:
   for Android project settings only;
 - the pinned free hosted CI/toolchain proposal: JDK 17, AGP 9.4.0, Gradle 9.6.0,
   Kotlin and Compose Compiler plugin 2.4.10, Compose BOM 2026.09.00, AndroidX Baseline
-  Profile plugin 1.5.0, Profile Installer 1.4.1, and their checksums after
-  dependency-resolution proof;
+  Profile plugin 1.5.0, Profile Installer 1.4.1, and their checksums. An
+  isolated coordinate and checksum-resolution proof has passed; user acceptance remains required;
 - one accountable Android implementation, accessibility, asset, and maintenance owner.
 
 The proposed emulator matrix uses a small API 29 phone and a large current API 37
 Pixel-class profile. Physical Pixel- and Samsung-class evidence remains a separately
 approved Sprint 5 closeout gate.
+
+## Toolchain resolution proof
+
+toolchain-resolution-proof.json records the 2026-10-20 isolated coordinate and
+checksum proof against merged main 55c6f16f1418d83e7711b632b75c6573c3190ca3.
+Online refresh and strict offline replay both passed for the proposed Gradle, Android,
+Kotlin, Compose, Baseline Profile, and Profile Installer coordinates. The proof retains
+the sanitized Gradle verification metadata and locks 378 SHA-256 artifact entries
+across 267 components. It also records the verified JDK and Gradle
+distribution hashes.
+
+This proves repository availability and checksum reproducibility only. It did not
+install Android SDK packages, create apps/android, compile an application, start an
+emulator, or authorize any baseline, owner, signing, production, Play, physical-device,
+or spending decision. projectScaffoldAuthorized and completionClaimAllowed remain false.
 
 ## Signing terminology
 

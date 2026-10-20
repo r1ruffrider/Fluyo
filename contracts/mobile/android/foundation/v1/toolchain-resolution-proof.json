@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "coordinate_resolution_and_checksum_proof_passed_pending_user_acceptance",
+  "sourceMainCommit": "55c6f16f1418d83e7711b632b75c6573c3190ca3",
+  "verifiedDate": "2026-10-20",
+  "productionDataUsed": false,
+  "externalActionsPerformed": false,
+  "projectScaffoldCreated": false,
+  "repositoryModifiedByProbe": false,
+  "probeEnvironment": {
+    "platform": "windows_x64",
+    "jdkVendor": "Eclipse Temurin",
+    "jdkVersion": "17.0.20.1+1",
+    "jdkArchiveSha256": "e53a79c3c3d86865bd7e787903884331068e71321714ffd44f145785affc7cb0",
+    "gradleVersion": "9.6.0",
+    "gradleDistributionSha256": "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01"
+  },
+  "pluginResolution": [
+    {
+      "pluginId": "com.android.application",
+      "version": "9.4.0",
+      "marker": "com.android.application:com.android.application.gradle.plugin:9.4.0",
+      "implementation": "com.android.tools.build:gradle:9.4.0"
+    },
+    {
+      "pluginId": "org.jetbrains.kotlin.android",
+      "version": "2.4.10",
+      "marker": "org.jetbrains.kotlin.android:org.jetbrains.kotlin.android.gradle.plugin:2.4.10",
+      "implementation": "org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10"
+    },
+    {
+      "pluginId": "org.jetbrains.kotlin.plugin.compose",
+      "version": "2.4.10",
+      "marker": "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.4.10",
+      "implementation": "org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.4.10"
+    },
+    {
+      "pluginId": "androidx.baselineprofile",
+      "version": "1.5.0",
+      "marker": "androidx.baselineprofile:androidx.baselineprofile.gradle.plugin:1.5.0",
+      "implementation": "androidx.benchmark:benchmark-baseline-profile-gradle-plugin:1.5.0"
+    }
+  ],
+  "libraryResolution": [
+    {
+      "coordinate": "androidx.compose:compose-bom:2026.09.00",
+      "resolution": "passed"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui:1.12.1",
+      "resolution": "passed",
+      "source": "compose_bom_2026.09.00_mapping"
+    },
+    {
+      "coordinate": "androidx.profileinstaller:profileinstaller:1.4.1",
+      "resolution": "passed"
+    },
+    {
+      "coordinate": "androidx.benchmark:benchmark-macro-junit4:1.5.0",
+      "resolution": "passed"
+    }
+  ],
+  "artifactMetadataChecks": [
+    {
+      "name": "android_gradle_plugin_marker",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/application/com.android.application.gradle.plugin/9.4.0/com.android.application.gradle.plugin-9.4.0.pom",
+      "sha256": "60148d85975ef7468d2aabbd2541eed0f1645481634b81214d2c235c07920326"
+    },
+    {
+      "name": "android_gradle_plugin",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.4.0/gradle-9.4.0.pom",
+      "sha256": "7798ae7eff045309991594b02ff194dfb87ad582bca758c8169a48313fd11343"
+    },
+    {
+      "name": "kotlin_android_plugin_marker",
+      "url": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/android/org.jetbrains.kotlin.android.gradle.plugin/2.4.10/org.jetbrains.kotlin.android.gradle.plugin-2.4.10.pom",
+      "sha256": "19e2ce55f9c684289eb7e08b99f5635920b0a760bdc528d76aee14fed1c54a4d"
+    },
+    {
+      "name": "kotlin_gradle_plugin",
+      "url": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-gradle-plugin/2.4.10/kotlin-gradle-plugin-2.4.10.pom",
+      "sha256": "5bf8f2602e7ad4c7875f2a74f07360c4163e4803e0733edc8b69f20d10495a0b"
+    },
+    {
+      "name": "compose_plugin_marker",
+      "url": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/plugin/compose/org.jetbrains.kotlin.plugin.compose.gradle.plugin/2.4.10/org.jetbrains.kotlin.plugin.compose.gradle.plugin-2.4.10.pom",
+      "sha256": "a34cd5d78df696fd0f9c29a37c2ff700df7c2095117afdfe0c47c41b215a2f4c"
+    },
+    {
+      "name": "compose_compiler_plugin",
+      "url": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/compose-compiler-gradle-plugin/2.4.10/compose-compiler-gradle-plugin-2.4.10.pom",
+      "sha256": "c90ad507f2da1cab594a3ed9fe43cb65eb8aebecbaf2ec560e4ce8f6de950e6d"
+    },
+    {
+      "name": "compose_bom",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/2026.09.00/compose-bom-2026.09.00.pom",
+      "sha256": "74791c31313009659bd0bf09008bd514a163aa04452dd4cb82df2fb971c757c3"
+    },
+    {
+      "name": "compose_ui",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui/1.12.1/ui-1.12.1.pom",
+      "sha256": "9e026fe4bcd75595b11bb2330568887c323c7559718c5b75847f627bf654f393"
+    },
+    {
+      "name": "baseline_profile_plugin_marker",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/baselineprofile/androidx.baselineprofile.gradle.plugin/1.5.0/androidx.baselineprofile.gradle.plugin-1.5.0.pom",
+      "sha256": "e07ba8da09e3aff020680f6b70700db8ad43390408f5ab0ae95f22957a7e3b26"
+    },
+    {
+      "name": "baseline_profile_plugin",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-baseline-profile-gradle-plugin/1.5.0/benchmark-baseline-profile-gradle-plugin-1.5.0.pom",
+      "sha256": "eedf038c95300402bd2ce72d4db1a922de869e77d5b0d374d05419d1cef3b086"
+    },
+    {
+      "name": "profile_installer",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/profileinstaller/profileinstaller/1.4.1/profileinstaller-1.4.1.pom",
+      "sha256": "6dde43827b40535e4053d1c52d4b227a411556c289e65400c9a1cc61e2b41ce3"
+    },
+    {
+      "name": "macrobenchmark",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-macro-junit4/1.5.0/benchmark-macro-junit4-1.5.0.pom",
+      "sha256": "f4f46307018cdc041b51012a8fb772e573a621dbe5598a489d63d91420cd5f6f"
+    }
+  ],
+  "dependencyVerification": {
+    "mode": "strict_sha256",
+    "components": 267,
+    "artifacts": 378,
+    "sha256Entries": 378,
+    "metadataPath": "contracts/mobile/android/foundation/v1/verification-metadata.xml",
+    "generatedMetadataSha256": "c596b254b195a8d32a9d67fa49f45d6740e763ca062cfe4dc93c20ec765939c0",
+    "metadataSha256": "1b38f10259fd74e2220cb4e98e6900be57fe0787622ec0928638a1a0b1571a8f",
+    "strictOfflineReplay": "passed"
+  },
+  "executions": [
+    {
+      "mode": "online_refresh",
+      "command": "gradle --no-daemon --non-interactive --refresh-dependencies buildEnvironment resolveProof --console=plain",
+      "result": "passed"
+    },
+    {
+      "mode": "offline_strict",
+      "command": "gradle --offline --dependency-verification strict --no-daemon --non-interactive buildEnvironment resolveProof --console=plain",
+      "result": "passed"
+    }
+  ],
+  "observedResolutionNotes": [
+    "AGP 9.4.0 requested Kotlin Gradle Plugin 2.2.10 transitively; the explicit root plugin pin selected 2.4.10.",
+    "Compose BOM 2026.09.00 maps Compose UI to 1.12.1; that mapped component resolved in both online and offline runs.",
+    "The probe resolved coordinates and checksum metadata only; it did not install Android SDK packages or compile an Android application."
+  ],
+  "remainingGates": [
+    "marlon_accepts_android_baselines",
+    "marlon_assigns_android_owner",
+    "android_sdk_package_installation",
+    "android_project_scaffold",
+    "android_compile_and_test",
+    "android_emulator_evidence",
+    "physical_device_evidence",
+    "release_or_play_signing",
+    "production_or_store_actions"
+  ]
+}

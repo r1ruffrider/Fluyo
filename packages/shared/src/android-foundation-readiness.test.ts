@@ -85,7 +85,7 @@ describe("Android foundation readiness contract v1", () => {
     expect(policy.schemaVersion).toBe("1.0.0");
     expect(policy.status).toBe("specification_only");
     expect(policy.sourceMainCommit).toBe("c68faf7b7284d8c111aec93db4f982ee7ea3e5e0");
-    expect(policy.lastReviewedDate).toBe("2026-10-19");
+    expect(policy.lastReviewedDate).toBe("2026-10-20");
     expect(policy.productionDataUsed).toBe(false);
     expect(policy.externalActionsPerformed).toBe(false);
     expect(policy.projectScaffoldAuthorized).toBe(false);
@@ -122,7 +122,7 @@ describe("Android foundation readiness contract v1", () => {
       assetOwner: null,
       independentQaOwner: "Elana",
       ci: {
-        status: "proposed_requires_toolchain_resolution_proof",
+        status: "proposed_resolution_proof_passed_requires_user_acceptance",
         runner: "ubuntu-24.04",
         jdk: "17",
         androidGradlePlugin: "9.4.0",
@@ -136,6 +136,7 @@ describe("Android foundation readiness contract v1", () => {
         baselineProfilePlugin: "1.5.0",
         profileInstaller: "1.4.1",
         artifact: "non_production_debug_signed_emulator_only",
+        resolutionProof: "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json",
       },
     });
     expect(asStrings(policy.remainingExternalGates, "remainingExternalGates")).toEqual([
@@ -447,7 +448,12 @@ describe("Android foundation readiness contract v1", () => {
     expect(serialized).not.toMatch(/(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+/);
     expect(serialized).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/);
     expect(serialized).not.toMatch(/-----BEGIN [A-Z ]+PRIVATE KEY-----/);
-    expect(readdirSync(contractDirectory).sort()).toEqual(["README.md", "foundation-policy.json"]);
+    expect(readdirSync(contractDirectory).sort()).toEqual([
+      "README.md",
+      "foundation-policy.json",
+      "toolchain-resolution-proof.json",
+      "verification-metadata.xml",
+    ]);
     expect(() => readdirSync(resolve(__dirname, "../../../apps/android"))).toThrow();
   });
 });
