@@ -1,0 +1,542 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "specification_only",
+  "sourceMainCommit": "c68faf7b7284d8c111aec93db4f982ee7ea3e5e0",
+  "lastReviewedDate": "2026-10-19",
+  "productionDataUsed": false,
+  "externalActionsPerformed": false,
+  "projectScaffoldAuthorized": false,
+  "completionClaimAllowed": false,
+  "proposedBaselines": {
+    "minimumApi": 29,
+    "compileSdk": 37,
+    "targetSdk": 36,
+    "formFactor": "android_phone_first",
+    "tabletSupportClaim": false,
+    "foldableSupportClaim": false,
+    "orientation": "portrait_primary_landscape_functional",
+    "interfaceLocale": "en",
+    "learningContentLanguage": "es",
+    "pseudoAndRtlTesting": true,
+    "identifiers": {
+      "status": "proposed_unreserved_repository_settings_only",
+      "development": "com.fluyo.app.dev",
+      "staging": "com.fluyo.app.staging",
+      "production": "com.fluyo.app"
+    },
+    "implementationOwner": null,
+    "accessibilityOwner": null,
+    "assetOwner": null,
+    "independentQaOwner": "Elana",
+    "ci": {
+      "status": "proposed_requires_toolchain_resolution_proof",
+      "runner": "ubuntu-24.04",
+      "jdk": "17",
+      "androidGradlePlugin": "9.4.0",
+      "gradle": "9.6.0",
+      "buildTools": "36.0.0",
+      "minimumRuntimeApi": 29,
+      "currentRuntimeApi": 37,
+      "kotlinVersion": "2.4.10",
+      "composeCompilerPlugin": "2.4.10",
+      "composeBom": "2026.09.00",
+      "baselineProfilePlugin": "1.5.0",
+      "profileInstaller": "1.4.1",
+      "artifact": "non_production_debug_signed_emulator_only"
+    }
+  },
+  "remainingDecisionGates": [
+    "android_sdk_baseline",
+    "android_form_factor_and_orientation",
+    "android_repository_identifiers",
+    "android_toolchain_and_ci",
+    "android_implementation_accessibility_asset_owner"
+  ],
+  "remainingExternalGates": [
+    "google_play_account",
+    "package_name_reservation",
+    "release_signing",
+    "upload_signing",
+    "production_endpoints",
+    "physical_pixel_evidence",
+    "physical_samsung_evidence",
+    "app_links",
+    "play_internal_testing",
+    "play_store",
+    "spending"
+  ],
+  "requiredDecisions": [
+    "S5-D01",
+    "S5-D02",
+    "S5-D03",
+    "S5-D04",
+    "S5-D06",
+    "S5-D10",
+    "UX-OS-ANDROID",
+    "UX-DEVICE-ANDROID",
+    "UX-FORM-FACTOR",
+    "UX-ORIENTATION",
+    "UX-LOCALE",
+    "UX-PSEUDO-RTL",
+    "UX-A11Y-OWNERSHIP",
+    "UX-REDUCED-MOTION",
+    "UX-ASSET-OWNERSHIP",
+    "UX-TEST-TRACEABILITY"
+  ],
+  "configuration": {
+    "allowedEnvironments": ["development", "staging", "production"],
+    "publicFieldNames": [
+      "apiBaseUrl",
+      "supabaseUrl",
+      "supabasePublishableKey",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "versionCode",
+      "sourceCommitShort"
+    ],
+    "development": {
+      "classification": "public_non_production_only",
+      "networkEnabled": true,
+      "failClosedOnMissingValue": true
+    },
+    "staging": {
+      "classification": "public_non_production_only",
+      "networkEnabled": true,
+      "failClosedOnMissingValue": true
+    },
+    "production": {
+      "classification": "inert_until_release_gate",
+      "networkEnabled": false,
+      "failClosedOnMissingValue": true
+    },
+    "forbiddenConcepts": [
+      "serviceRole",
+      "clientSecret",
+      "accessToken",
+      "refreshToken",
+      "authorizationCode",
+      "cookie",
+      "keystore",
+      "keyAlias",
+      "storePassword",
+      "keyPassword",
+      "uploadKey",
+      "signingCertificate"
+    ]
+  },
+  "buildMarker": {
+    "requiredForEnvironments": ["development", "staging"],
+    "productionBehavior": "not_rendered_while_production_networking_is_inert",
+    "allowedFields": [
+      "platform",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "versionCode",
+      "sourceCommitShort"
+    ],
+    "propertyConstraints": {
+      "platform": { "const": "android" },
+      "environment": { "enum": ["development", "staging"] },
+      "isInternal": { "const": true },
+      "semanticVersion": { "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32 },
+      "versionCode": { "pattern": "^[1-9][0-9]*$", "maxLength": 10 },
+      "sourceCommitShort": { "pattern": "^[0-9a-f]{7,12}$" }
+    },
+    "forbiddenFields": [
+      "email",
+      "profileId",
+      "ownerId",
+      "correlationId",
+      "androidId",
+      "advertisingId",
+      "appSetId",
+      "providerProjectId",
+      "endpoint",
+      "branch",
+      "user",
+      "filesystemPath"
+    ]
+  },
+  "androidPrivacyBaseline": {
+    "status": "repository_draft_not_submitted",
+    "ads": false,
+    "tracking": false,
+    "collectedDataTypes": [],
+    "sharedDataTypes": [],
+    "runtimePermissions": [],
+    "thirdPartyTelemetrySdks": [],
+    "exportedComponents": [],
+    "backupOfSensitiveDataAllowed": false,
+    "rule": "declare_only_after_exact_manifest_dependency_and_sdk_inventory_and_privacy_approval"
+  },
+  "telemetry": {
+    "mode": "no_op",
+    "allowedEvents": [
+      "app_shell_loaded",
+      "app_shell_failed",
+      "app_shell_state_changed",
+      "network_state_changed",
+      "reduced_motion_applied"
+    ],
+    "allowedProperties": [
+      "platform",
+      "environment",
+      "isInternal",
+      "semanticVersion",
+      "versionCode",
+      "sourceCommitShort",
+      "outcome",
+      "durationBucket"
+    ],
+    "propertyConstraints": {
+      "platform": { "const": "android" },
+      "environment": { "enum": ["development", "staging"] },
+      "isInternal": { "const": true },
+      "semanticVersion": { "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "maxLength": 32 },
+      "versionCode": { "pattern": "^[1-9][0-9]*$", "maxLength": 10 },
+      "sourceCommitShort": { "pattern": "^[0-9a-f]{7,12}$" },
+      "outcome": {
+        "enum": ["loaded", "failed", "changed", "online", "offline", "applied"]
+      },
+      "durationBucket": {
+        "enum": ["under_100ms", "100_to_499ms", "500_to_1999ms", "2000ms_or_more"]
+      }
+    },
+    "futureAttributionRequiresSeparateAcceptedContract": true,
+    "forbiddenConcepts": [
+      "email",
+      "profileId",
+      "ownerId",
+      "accessToken",
+      "refreshToken",
+      "authorizationCode",
+      "cookie",
+      "requestBody",
+      "responseBody",
+      "url",
+      "query",
+      "referrer",
+      "utm",
+      "campaign",
+      "clickId",
+      "androidId",
+      "advertisingId",
+      "appSetId",
+      "installReferrer",
+      "ipAddress",
+      "userAgent",
+      "providerPayload",
+      "providerId",
+      "accessibilitySetting",
+      "crashStack",
+      "filesystemPath",
+      "lessonId",
+      "progress",
+      "selectedChoiceId",
+      "billingStatus",
+      "correlationId"
+    ]
+  },
+  "syntheticCapture": {
+    "policyReference": "docs/TEST_ACCOUNT_GOVERNANCE.md",
+    "status": "blocked_until_capture_owners_and_checklist_are_approved",
+    "allowedIdentityLabel": "Signed in",
+    "requiredChecks": [
+      "isolated_non_production_session",
+      "internal_environment_marker_visible",
+      "deterministic_synthetic_state",
+      "personal_status_bar_data_hidden",
+      "logs_and_developer_overlays_hidden",
+      "identity_and_billing_values_absent",
+      "product_and_privacy_review_complete"
+    ]
+  },
+  "assets": {
+    "status": "empty_until_asset_ownership_is_approved",
+    "items": [],
+    "requiredItemFields": [
+      "assetId",
+      "repositorySourcePath",
+      "sourceHash",
+      "author",
+      "license",
+      "modificationRecord",
+      "semanticRole",
+      "accessibilityLabel",
+      "cropAndSafeAreaEvidence",
+      "sizeBudgetBytes",
+      "containsBakedText",
+      "metadataStripped"
+    ],
+    "allowedInterimSources": [
+      "jetpack_compose_primitives",
+      "system_typography",
+      "approved_material_symbols"
+    ]
+  },
+  "acceptance": {
+    "evidenceRequiredFields": [
+      "sourceCommit",
+      "buildIdentifier",
+      "platform",
+      "runnerImage",
+      "jdkVersion",
+      "gradleVersion",
+      "androidGradlePluginVersion",
+      "kotlinVersion",
+      "composeCompilerPluginVersion",
+      "composeBomVersion",
+      "baselineProfilePluginVersion",
+      "profileInstallerVersion",
+      "deviceModel",
+      "deviceClass",
+      "deviceKind",
+      "deviceApi",
+      "environment",
+      "accessibilitySetting",
+      "command",
+      "expected",
+      "observed",
+      "result",
+      "artifactHash",
+      "secretScanResult",
+      "signingClassification"
+    ],
+    "scenarios": [
+      {
+        "id": "android_config_development",
+        "status": "unattempted",
+        "expectedCriteria": ["public non-production values only", "missing values fail closed"]
+      },
+      {
+        "id": "android_config_staging",
+        "status": "unattempted",
+        "expectedCriteria": ["public non-production values only", "missing values fail closed"]
+      },
+      {
+        "id": "android_production_inert",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "networking disabled",
+          "build marker not rendered",
+          "missing values fail closed"
+        ]
+      },
+      {
+        "id": "android_deterministic_launch",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "no indefinite progress state",
+          "no signed-out flash",
+          "one semantic end state"
+        ]
+      },
+      {
+        "id": "android_loading_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "localized meaningful label",
+          "one polite announcement",
+          "bounded resolution"
+        ]
+      },
+      {
+        "id": "android_signed_out_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "one safe primary action",
+          "logical focus order",
+          "no identity or provider detail"
+        ]
+      },
+      {
+        "id": "android_safe_error_accessible_state",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "focus moves to error or action",
+          "one announcement",
+          "state retained",
+          "bounded recovery",
+          "no raw internal detail"
+        ]
+      },
+      {
+        "id": "android_system_reduce_motion",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "system animation setting honored",
+          "immediate static semantic equivalent"
+        ]
+      },
+      {
+        "id": "android_motion_interruption_static_equivalent",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "transition is interruptible",
+          "interruption reaches the same semantic end state"
+        ]
+      },
+      {
+        "id": "android_pseudolocale_expansion",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "expanded strings remain visible without clipping or overlap",
+          "English fallback remains deterministic",
+          "probe does not establish a translated interface claim"
+        ]
+      },
+      {
+        "id": "android_rtl_geometry_and_semantics",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "leading and trailing geometry mirrors",
+          "directional semantics remain correct",
+          "probe does not establish an RTL-language support claim"
+        ]
+      },
+      {
+        "id": "android_font_scale_200_percent",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "text reaches 200 percent",
+          "no clipping or overlap",
+          "primary actions remain visible"
+        ]
+      },
+      {
+        "id": "android_talkback_order_and_names",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "logical traversal order",
+          "actionable names and values",
+          "decorative content hidden"
+        ]
+      },
+      {
+        "id": "android_minimum_touch_targets",
+        "status": "unattempted",
+        "expectedCriteria": ["every actionable target is at least 48 by 48 dp"]
+      },
+      {
+        "id": "android_focus_order_and_target",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "focus order follows reading order",
+          "status and error focus moves only when useful"
+        ]
+      },
+      {
+        "id": "android_contrast_and_non_color_status",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "contrast meets the approved threshold",
+          "state is not communicated by color alone"
+        ]
+      },
+      {
+        "id": "android_keyboard_and_switch_focus",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "supported controls are reachable",
+          "focus is visible",
+          "order remains logical"
+        ]
+      },
+      {
+        "id": "android_small_minimum_api_phone_emulator",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "API 29 phone profile launches",
+          "all foundation states fit",
+          "large text and primary actions remain usable"
+        ]
+      },
+      {
+        "id": "android_large_current_api_phone_emulator",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "API 37 Pixel-class profile launches",
+          "layout uses space without stretching or hiding state"
+        ]
+      },
+      {
+        "id": "android_physical_pixel_evidence",
+        "status": "unattempted",
+        "stage": "sprint_5_closeout",
+        "expectedCriteria": [
+          "install and launch evidence uses an approved non-production Pixel-class device and custodian"
+        ]
+      },
+      {
+        "id": "android_physical_samsung_evidence",
+        "status": "unattempted",
+        "stage": "sprint_5_closeout",
+        "expectedCriteria": [
+          "install and launch evidence uses an approved non-production Samsung device and custodian"
+        ]
+      },
+      {
+        "id": "android_portrait_layout",
+        "status": "unattempted",
+        "expectedCriteria": ["foundation states remain usable at supported font scales"]
+      },
+      {
+        "id": "android_landscape_fallback",
+        "status": "unattempted",
+        "expectedCriteria": ["auth, legal, error, and large-text states remain functional"]
+      },
+      {
+        "id": "android_tablet_foldable_probe_no_support_claim",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "compact medium expanded and resized windows remain usable and preserve state",
+          "probe does not establish a tablet or foldable support claim"
+        ]
+      },
+      {
+        "id": "android_asset_rendering_provenance_semantics",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "approved provenance exists",
+          "no baked-in text",
+          "semantic or decorative role is correct",
+          "safe crop is verified"
+        ]
+      },
+      {
+        "id": "android_manifest_sdk_data_safety_inventory",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "manifest permissions and exported components match exact implementation",
+          "dependency SDK inventory matches repository Data safety draft"
+        ]
+      },
+      {
+        "id": "android_baseline_profile_structure",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "baseline-profile module and generation path are structurally valid",
+          "no startup or performance improvement is claimed without measured evidence"
+        ]
+      },
+      {
+        "id": "android_debug_signing_classification",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "artifact is non-production debug-signed",
+          "no release upload or Play signing key is present or claimed"
+        ]
+      },
+      {
+        "id": "android_artifact_secret_identity_campaign_scan",
+        "status": "unattempted",
+        "expectedCriteria": [
+          "artifact and sanitized logs contain no secret token contact identity provider signing path campaign or production value",
+          "raw logs and test results are excluded from retained evidence"
+        ]
+      }
+    ]
+  }
+}

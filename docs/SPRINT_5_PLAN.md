@@ -104,7 +104,15 @@ Exit gate: the project builds and its automated tests pass on a documented suppo
 - Add repository-owned vector artwork, app-icon, and static launch assets with recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and only short interruptible native transitions with static reduced-motion equivalents.
 - Add deterministic sandbox/demo configuration. Production endpoints remain inert until their release gate.
 
-Exit gate: the project builds and its automated tests pass on the documented toolchain; an emulator artifact contains no secret and renders loading, signed-out, error, and reduced-motion states accessibly.
+Exit gate: the project builds and its automated tests pass on the documented toolchain; a non-production debug-signed emulator artifact contains no secret and renders loading, signed-out, error, and reduced-motion states accessibly.
+
+The specification-only [Android foundation readiness contract](../contracts/mobile/android/foundation/v1/README.md)
+records the proposed API, phone, locale, configuration, privacy, no-op telemetry, capture, asset, toolchain,
+signing-classification, and evidence boundaries. It does not authorize an Android project. The Android SDK,
+form-factor/orientation, repository identifiers, toolchain/CI, and accountable implementation/accessibility/asset
+owner decisions must be accepted before apps/android is created. Physical Pixel and Samsung evidence, Play
+accounts, release/upload signing, production endpoints, App Links, Play tracks, store work, and spending remain
+separately gated.
 
 ### 5. Supabase PKCE and secure session lifecycle
 
