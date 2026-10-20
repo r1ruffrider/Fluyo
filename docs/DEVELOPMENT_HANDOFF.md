@@ -36,6 +36,16 @@ package reservation, signing key, Play Console resource, production value, physi
 capture, or external action. projectScaffoldAuthorized and completionClaimAllowed remain false. Marlon must
 accept the material Android baselines and appoint an accountable Android owner before scaffolding begins.
 
+PR #40 merged the readiness prerequisite as 55c6f16f1418d83e7711b632b75c6573c3190ca3; post-main run
+39471055292 passed all eight required jobs. On 2026-10-20, a retained Gradle fixture and cross-platform driver
+regenerated the proposed graph in a fresh temporary project and Gradle user home, matched the LF-normalized
+metadata byte for byte, and passed strict offline replay. The graph verifies 440 SHA-256 artifact entries across
+270 components, including 22 AARs and exact Compose UI, Profile Installer, and Macrobenchmark AAR bytes. A
+path-scoped exact-head proof workflow repeats this dependency-only check; it is not an Android application or
+emulator workflow. The durable proof records exact JDK/Gradle hashes, plugin mappings, BOM resolution, binary
+hashes, and remaining gates. It did not install an Android SDK, create or compile an app, run an emulator, or
+change any approval gate.
+
 ## Sprint 5 Increment 3 implementation checkpoint — 2026-10-19
 
 Increment 2 merged through PR #36 as `b6a3243981f74b3c3436862ba3c84472ba77d7a0`; post-merge

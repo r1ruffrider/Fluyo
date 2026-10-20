@@ -69,9 +69,14 @@ minSdk 29, compileSdk 37, targetSdk 36, phone-first portrait-primary/functional-
 with Spanish learning content and pseudo/RTL probes, proposed unreserved repository identifiers, and a free
 Ubuntu 24.04, JDK 17, AGP 9.4.0, Gradle 9.6.0, Kotlin/Compose Compiler 2.4.10, Compose BOM
 2026.09.00, Baseline Profile plugin 1.5.0, and Profile Installer 1.4.1 emulator evidence proposal.
-Every pin and checksum still requires clean dependency-resolution proof before approval. The artifact term is
-non-production debug-signed emulator evidence; no release, upload, or Play signing
-is authorized.
+A reproducible coordinate and binary-checksum proof passed on 2026-10-20 against merged main
+55c6f16f1418d83e7711b632b75c6573c3190ca3. The retained Gradle fixture and driver create a fresh
+temporary project and Gradle user home, regenerate the online graph, compare the LF-normalized bytes, and perform
+strict offline replay. The graph covers 270 components and 440 artifact SHA-256 entries, including 22 AARs and
+exact Compose UI, Profile Installer, and Macrobenchmark AAR hashes. The path-scoped proof workflow is not an
+Android application or emulator workflow. This evidence does not approve the proposal; Marlon still must accept
+the toolchain and other Android baselines. The future artifact term is non-production debug-signed emulator
+evidence; no release, upload, or Play signing is authorized.
 
 projectScaffoldAuthorized and completionClaimAllowed remain false. Adriana may maintain this reversible
 contract/test bundle, but apps/android stays blocked until Marlon accepts the Android SDK, device/form-factor,

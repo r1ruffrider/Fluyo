@@ -24,13 +24,37 @@ apps/android project is created:
   for Android project settings only;
 - the pinned free hosted CI/toolchain proposal: JDK 17, AGP 9.4.0, Gradle 9.6.0,
   Kotlin and Compose Compiler plugin 2.4.10, Compose BOM 2026.09.00, AndroidX Baseline
-  Profile plugin 1.5.0, Profile Installer 1.4.1, and their checksums after
-  dependency-resolution proof;
+  Profile plugin 1.5.0, Profile Installer 1.4.1, and their checksums. An
+  isolated coordinate and checksum-resolution proof has passed; user acceptance remains required;
 - one accountable Android implementation, accessibility, asset, and maintenance owner.
 
 The proposed emulator matrix uses a small API 29 phone and a large current API 37
 Pixel-class profile. Physical Pixel- and Samsung-class evidence remains a separately
 approved Sprint 5 closeout gate.
+
+## Toolchain resolution proof
+
+toolchain-resolution-proof.json records the 2026-10-20 reproducible coordinate and
+binary checksum proof against merged main 55c6f16f1418d83e7711b632b75c6573c3190ca3.
+The repository retains the exact Gradle settings/build probe, a cross-platform driver,
+and LF-normalized verification metadata. The driver creates a fresh temporary project
+and Gradle user home, regenerates the online graph, compares it byte for byte with the
+retained metadata, then performs strict offline replay. The graph locks 440 SHA-256
+artifact entries across 270 components, including 22 AARs and exact Compose UI, Profile
+Installer, and Macrobenchmark AAR hashes.
+
+Gradle receives only a minimal allowlist of host/runtime variables; inherited account,
+provider, test-account, proxy-credential, and CI secret variables are excluded. Failure
+diagnostics retain only the named phase and process status. Commands, arguments, paths,
+identities, and raw Gradle output are never written to retained proof logs.
+
+The path-scoped Android toolchain-proof workflow independently repeats that process on
+the exact pull-request head. It is not an Android application or emulator workflow.
+This proves repository availability and exact dependency-byte reproducibility only. It
+did not install Android SDK packages, create apps/android, compile an application,
+start an emulator, or authorize any baseline, owner, signing, production, Play,
+physical-device, or spending decision. projectScaffoldAuthorized and
+completionClaimAllowed remain false.
 
 ## Signing terminology
 

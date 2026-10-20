@@ -1,0 +1,59 @@
+name: Android toolchain proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "contracts/mobile/android/foundation/v1/**"
+      - "packages/shared/src/android-foundation-*.test.ts"
+      - "packages/shared/src/android-toolchain-resolution-proof.test.ts"
+      - "scripts/android-toolchain-proof.mjs"
+      - "scripts/android-toolchain-proof.test.mjs"
+      - ".github/workflows/android-toolchain-proof.yml"
+  pull_request:
+    paths:
+      - "contracts/mobile/android/foundation/v1/**"
+      - "packages/shared/src/android-foundation-*.test.ts"
+      - "packages/shared/src/android-toolchain-resolution-proof.test.ts"
+      - "scripts/android-toolchain-proof.mjs"
+      - "scripts/android-toolchain-proof.test.mjs"
+      - ".github/workflows/android-toolchain-proof.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-toolchain-proof-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reproduce:
+    name: Reproduce Android dependency proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Temurin JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 9.6
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "9.6.0"
+          cache-disabled: true
+
+      - name: Reproduce fresh online graph and strict offline replay
+        run: node scripts/android-toolchain-proof.mjs verify

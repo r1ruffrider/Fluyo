@@ -1,74 +1,74 @@
-**Phase:** Sprint 5 Increment 4 prerequisite — Android foundation readiness
-**Brief:** Add only a specification-level Android foundation readiness contract and regression tests while keeping apps/android, scaffolding, runtime/completion, public/store/signing, production, and external-action claims blocked.
-**Audited implementation head:** 951a0e8fbe41b7f81038207a4302cdda85c09d2a
-**Tests conducted:** 356
-**Passed:** 356
+**Phase:** Sprint 5 Increment 4 preparation — reproducible Android toolchain resolution proof
+**Brief:** Retain an independently reproducible, repository-only Android coordinate and binary-checksum proof while keeping `apps/android` absent, all 29 runtime rows unattempted, and every baseline, ownership, scaffold, completion, signing, Play, production, device, and external-action gate closed.
+**Audited implementation head:** 070a1e926aac49990e3cf7008142cf300d7356d8
+**Tests conducted:** 407
+**Passed:** 407
 **Failed:** 0
-**Unattempted:** 29 — the complete future Android runtime/evidence matrix; no Android application exists in this prerequisite
+**Unattempted:** 29 — the complete Android runtime/device/accessibility/privacy/artifact matrix; no Android application exists in this phase
 
 ### What was tested
 
-| Tests   | Count | Scope and evidence                                                                                                                                        | Result |
-| ------- | ----: | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1–299   |   299 | Full repository suite: 34 policy/evidence, 47 shared, 194 API, and 24 web tests.                                                                          | PASS   |
-| 300–309 |    10 | Focused Android readiness suite: exact gates, proposed baselines, negative mutations, scenario digest, leakage patterns, and absence of apps/android.     | PASS   |
-| 310–317 |     8 | Protected run 39312211887: dependency policy, committed-secret scan, Prisma schema, lint, typecheck, tests, production build, and formatting.             | PASS   |
-| 318–356 |    39 | Independent policy, documentation, scope, source-binding, privacy, telemetry, capture, asset, toolchain, decision, evidence-arithmetic, and claim checks. | PASS   |
+| Tests   | Count | Scope and evidence                                                                                                                                                                                | Result |
+| ------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1–323   |   323 | Full repository suite: 48 policy/script, 57 shared, 194 API, and 24 web tests.                                                                                                                    | PASS   |
+| 324–343 |    20 | Focused Android readiness and toolchain-proof shared suites.                                                                                                                                      | PASS   |
+| 344–357 |    14 | Proof-driver suite: normalization, minimal child environment, bounded diagnostics, actual failing-child privacy mutation, descriptor/source/metadata/AAR validation, and fail-closed drift cases. | PASS   |
+| 358–365 |     8 | Local gates: dependency policy, Prisma generation, Prisma validation, lint, typecheck, formatting, production build, and diff integrity.                                                          | PASS   |
+| 366–373 |     8 | Protected run 39480523952: dependency policy, committed-secret scan, Prisma schema, lint, typecheck, tests, build, and formatting.                                                                | PASS   |
+| 374     |     1 | Exact-head proof run 39480523881: fresh online generation, LF byte comparison, and strict offline replay.                                                                                         | PASS   |
+| 375–377 |     3 | Independent official-repository SHA-256 verification of Compose UI, Profile Installer, and Macrobenchmark AARs.                                                                                   | PASS   |
+| 378–387 |    10 | Verification-metadata integrity: unique components/artifacts, one checksum per artifact, AAR count, enabled verification, and no signing-key exceptions.                                          | PASS   |
+| 388–407 |    20 | Independent exact-head code, policy, workflow, privacy, source-binding, gate, scenario, documentation, and claim review.                                                                          | PASS   |
 
-The 29 future Android rows are not counted as conducted. They remain immutable unattempted inputs until a separately authorized Android project and exact-head emulator evidence exist.
+The 29 future Android scenarios are not counted as conducted. They remain structured, immutable, and unattempted until Marlon accepts the five Android baseline/ownership groups and a separately authorized Android project produces exact-head runtime evidence.
 
-### Code and policy review
+### Code, workflow, and policy review
 
-The review covered the complete six-file prerequisite:
+The review covered the complete 14-file PR implementation: the path-scoped workflow; Android foundation policy, README, Gradle probe, resolution descriptor, and full verification metadata; shared readiness/proof tests; the cross-platform driver and its Node tests; and the decision register, Sprint plan, and development handoff.
 
-- contracts/mobile/android/foundation/v1/foundation-policy.json
-- contracts/mobile/android/foundation/v1/README.md
-- packages/shared/src/android-foundation-readiness.test.ts
-- docs/SPRINT_5_DECISION_REGISTER.md
-- docs/SPRINT_5_PLAN.md
-- docs/DEVELOPMENT_HANDOFF.md
+The retained Gradle probe applies no Android plugin and creates no Android project. It uses only `google()`, Maven Central, and the Gradle Plugin Portal with exact coordinates for AGP 9.4.0, Kotlin and Compose Compiler 2.4.10, Compose BOM 2026.09.00, Compose UI 1.12.1, Baseline Profile 1.5.0, Profile Installer 1.4.1, and Macrobenchmark 1.5.0.
 
-The policy binds to main commit c68faf7b7284d8c111aec93db4f982ee7ea3e5e0 and keeps status specification_only, projectScaffoldAuthorized false, completionClaimAllowed false, productionDataUsed false, and externalActionsPerformed false. No apps/android directory, Gradle wrapper, Android workflow, downloaded dependency, manifest, APK/AAB, keystore, account resource, production value, or binary artifact exists.
+The driver creates a fresh OS temporary project and Gradle user home, generates dependency verification metadata online, normalizes it to LF, compares it byte for byte with the retained file, then performs strict offline replay. Cleanup is bounded to the expected temporary parent and prefix. The proof is bound to exact settings, build, driver, and metadata digests.
 
-The proposed technical packet is minSdk 29, compileSdk 37, targetSdk 36, AGP 9.4.0, Gradle 9.6.0, JDK 17, Kotlin and Compose Compiler 2.4.10, Compose BOM 2026.09.00, Build Tools 36.0.0, Baseline Profile plugin 1.5.0, and Profile Installer 1.4.1. Every pin remains proposed and requires clean dependency-resolution and checksum proof before scaffold authorization. compileSdk 37 is build compatibility only and does not establish an API 37 runtime-support claim.
+The retained graph contains 270 components, 440 artifacts, 440 SHA-256 entries, and 22 AARs. Exact hashes for Compose UI `ui-android-1.12.1.aar`, Profile Installer 1.4.1, and Macrobenchmark JUnit4 1.5.0 match the retained metadata and independent official-repository downloads.
 
-Development and staging permit only checked public non-production configuration; production stays inert and fail-closed. The build marker and typed no-op telemetry use closed field sets and reject identity, token, provider, signing, device, campaign, path, answer, progress, billing, and diagnostic concepts. Future attribution requires a separate accepted contract.
+Gradle receives only an explicit host/runtime environment allowlist. Inherited provider, account, test-account, proxy-credential, cloud, Stripe, and CI secret values are excluded. Failure diagnostics contain only a bounded phase label and process status. A mutation-sensitive test executes the actual failing child-process path with injected secret, email, Windows path, command, argument, stdout, and stderr sentinels and proves none enters the child environment or thrown diagnostic.
 
-The repository Data safety record is an unsubmitted empty draft: no ads, tracking, collection, sharing, runtime permissions, exported components, third-party telemetry SDKs, or sensitive backup. Product capture remains blocked by test-account governance and the asset ledger remains empty.
+The exact-head workflow has read-only repository permission, checks out the pull-request head, installs only Node 24, Temurin JDK 17, and Gradle 9.6, disables Gradle caching, and runs the proof driver. It does not install an Android SDK, create `apps/android`, compile an application, start an emulator, upload an artifact, or invoke an external account or store action.
 
-The 29 future scenarios cover configuration, deterministic shell states, TalkBack/focus/touch/contrast/font scaling, reduced motion, pseudolocale and RTL probes, API 29/current API 37 emulators, portrait/landscape/adaptive windows, asset provenance, manifest/SDK/Data safety inventory, baseline-profile structure, non-production debug-signing classification, privacy scanning, and separately staged physical Pixel/Samsung evidence. All remain unattempted.
+Policy remains `specification_only`; `projectScaffoldAuthorized`, `completionClaimAllowed`, `productionDataUsed`, `externalActionsPerformed`, `projectScaffoldCreated`, and `repositoryModifiedByProbe` remain false. The five material Android baseline/ownership decisions remain open, the accountable Android owner remains unassigned, and all 29 source scenarios remain unattempted.
 
 ### Specialist gates
 
-- Isabella: PASS — 334/334 product, claim, decision, and factual-toolchain checks.
-- Fernanda: PASS — 30/30 privacy, signing, capture, attribution, device-ID, evidence, and external-action checks.
-- Danila: PASS — 26/26 UX, accessibility, toolchain, scenario, and governance checks.
-- Elana: PASS — 356/356 independent QA/code-review checks, zero failed; 29 future runtime rows intentionally unattempted.
+- Isabella: **PASS** — 49/49 product, claim, disclosure, source-binding, toolchain, and external-gate checks.
+- Fernanda: **PASS** — 43/43 privacy, environment, diagnostics, evidence-sanitization, social, capture, and claim-boundary checks.
+- Danila: **PASS** — 76/76 UX, readiness, toolchain-boundary, matrix, workflow, and privacy-diagnostic checks.
+- Elana: **PASS** — 407/407 independent phase-quality and code-review checks; 0 failed; 29 runtime rows separately unattempted.
 
 ### Bug and remediation table
 
-| Severity | Location                  | Problem                                                                                                                                                                        | Action                                                                                                                                 |
-| -------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| High     | Android artifact claim    | The original plan called an emulator artifact unsigned, but installed Android APKs are signed.                                                                                 | Fixed: all governing wording now says non-production debug-signed emulator evidence and separately blocks release/upload/Play signing. |
-| High     | Android SDK decision      | Earlier proposal coupled compileSdk and targetSdk at API 36, which is stale for the current Compose line.                                                                      | Fixed: compileSdk 37 and targetSdk 36 are separated, with no API 37 support inference.                                                 |
-| High     | Acceptance matrix         | Pseudolocale, RTL, baseline-profile, and adaptive-window behavior were incomplete.                                                                                             | Fixed: the digest-locked matrix has 29 criteria-complete unattempted rows.                                                             |
-| High     | Telemetry regression test | An unknown debugNote field incorrectly received a forbidden-concept assertion.                                                                                                 | Fixed: closed-record rejection and declared forbidden-concept checks are tested separately; focused suite passes 10/10.                |
-| None     | Final audited head        | No unresolved correctness, security, privacy, accessibility, test-integrity, decision-coherence, documentation, or claim-boundary defect remains in the repository-only slice. | No further remediation required.                                                                                                       |
+| Severity        | Location                                                  | Problem                                                                                                                                       | Action                                                                                                                                                           |
+| --------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| High — resolved | Initial toolchain proof                                   | The first draft recorded a result without retaining a reconstructible Gradle probe/driver and exact online/offline reproduction path.         | Fixed: retain exact settings/build sources, a cross-platform driver, source digests, fresh online generation, LF byte comparison, and strict offline replay.     |
+| High — resolved | Initial binary evidence                                   | The first draft recorded coordinate resolution without proving Android AAR bytes.                                                             | Fixed: resolve 22 AARs, bind all 440 artifacts to SHA-256 metadata, and independently verify three required AAR hashes.                                          |
+| High — resolved | `scripts/android-toolchain-proof.mjs` child environment   | The prior head passed the complete parent environment to Gradle/plugins, exposing inherited credentials to third-party build code.            | Fixed: use a minimal host/runtime allowlist and test the actual child path with injected GitHub, cloud, Stripe, test-account, email, password, and proxy values. |
+| High — resolved | `scripts/android-toolchain-proof.mjs` failure diagnostics | The prior head could retain executable, arguments, temporary paths, and raw Gradle stdout/stderr on failure.                                  | Fixed: emit phase/status only and mutation-test command, arguments, path, identity, secret, stdout, and stderr sentinels.                                        |
+| None unresolved | Exact implementation head                                 | No unresolved correctness, security, privacy, reproducibility, test-integrity, UX/readiness, documentation, or claim-boundary defect remains. | No further implementation repair required.                                                                                                                       |
 
-### Evidence limits and required decisions
+### Evidence limits and remaining gates
 
-This PASS clears only the reversible repository readiness prerequisite. It does not clear Android scaffolding or Increment 4 implementation.
+This PASS clears only repository availability and exact dependency-byte reproducibility for the proposed Android toolchain. It does not clear Android scaffolding or Increment 4 implementation.
 
 Marlon must still accept:
 
-1. minSdk 29, compileSdk 37, targetSdk 36;
-2. phone-first, portrait-primary, functional-landscape, state-preserving adaptive-window behavior, with no tablet/foldable support claim;
+1. minSdk 29, compileSdk 37, and targetSdk 36;
+2. phone-first, portrait-primary, functional-landscape, state-preserving adaptive-window behavior with no tablet/foldable support claim;
 3. proposed unreserved Android repository identifiers;
-4. the exact free hosted CI/toolchain proposal after dependency/checksum proof;
+4. the exact free hosted CI/toolchain proposal now supported by this checksum proof;
 5. one accountable Android implementation, accessibility, asset, and maintenance owner.
 
-Google Play accounts, package reservation, release/upload signing, production endpoints, App Links, physical Pixel/Samsung evidence, Play tracks, store work, and spending remain separate external gates.
+Google Play accounts, package reservation, release/upload/Play signing, production endpoints, App Links, physical Pixel/Samsung evidence, Play tracks, store work, publication, and spending remain separately gated. No Android SDK was installed, no project or APK/AAB was created, no emulator or physical device ran, and no runtime, accessibility, device-support, production, store, or public-availability claim is authorized.
 
 ### Verdict
 
-**PASS** — the Sprint 5 Increment 4 Android readiness prerequisite is cleared with 356 of 356 conducted checks passed and zero failed. All 29 future Android runtime/evidence rows remain correctly unattempted, and Android project scaffolding remains blocked pending the five material decisions above.
+**PASS** — the Sprint 5 Increment 4 Android toolchain-resolution proof is cleared with 407 of 407 conducted checks passed and zero failed. All 29 future Android runtime/evidence rows remain correctly unattempted, and Android scaffolding remains blocked pending Marlon’s five material baseline/ownership decisions.

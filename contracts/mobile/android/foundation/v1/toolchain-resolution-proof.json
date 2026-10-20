@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "1.1.0",
+  "status": "reproducible_coordinate_and_binary_checksum_proof_passed_pending_user_acceptance",
+  "sourceMainCommit": "55c6f16f1418d83e7711b632b75c6573c3190ca3",
+  "verifiedDate": "2026-10-20",
+  "productionDataUsed": false,
+  "externalActionsPerformed": false,
+  "projectScaffoldCreated": false,
+  "repositoryModifiedByProbe": false,
+  "probeEnvironment": {
+    "platform": "windows_x64",
+    "jdkVendor": "Eclipse Temurin",
+    "jdkVersion": "17.0.20.1+1",
+    "jdkArchiveSha256": "e53a79c3c3d86865bd7e787903884331068e71321714ffd44f145785affc7cb0",
+    "gradleVersion": "9.6.0",
+    "gradleDistributionSha256": "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01"
+  },
+  "probeFixture": {
+    "settingsPath": "contracts/mobile/android/foundation/v1/probe/settings.gradle.kts",
+    "settingsSha256": "0ed43acea5ce4ae42e48547b65181eea35ef4149ef1f9a17ab0f053f3d9ee1fd",
+    "buildPath": "contracts/mobile/android/foundation/v1/probe/build.gradle.kts",
+    "buildSha256": "9b040c025755aa990749f2ccb1d99f9f91392368869e199197eaebe0779a7a69",
+    "driverPath": "scripts/android-toolchain-proof.mjs",
+    "driverSha256": "a0a9549cc9a0e21b206582068045b6b83750c286489ed9c680df932ee1773cd0"
+  },
+  "reproduction": {
+    "freshTemporaryProject": true,
+    "freshGradleUserHome": true,
+    "metadataLineEndings": "LF",
+    "repositories": ["google", "mavenCentral", "gradlePluginPortal"],
+    "coordinates": [
+      "com.android.application:9.4.0",
+      "org.jetbrains.kotlin.android:2.4.10",
+      "org.jetbrains.kotlin.plugin.compose:2.4.10",
+      "androidx.baselineprofile:1.5.0",
+      "androidx.compose:compose-bom:2026.09.00",
+      "androidx.compose.ui:ui:1.12.1",
+      "androidx.profileinstaller:profileinstaller:1.4.1",
+      "androidx.benchmark:benchmark-macro-junit4:1.5.0",
+      "androidx.compose.ui:ui-android:1.12.1@aar",
+      "androidx.profileinstaller:profileinstaller:1.4.1@aar",
+      "androidx.benchmark:benchmark-macro-junit4:1.5.0@aar"
+    ],
+    "onlineCommand": "node scripts/android-toolchain-proof.mjs verify --gradle <path-to-gradle-9.6> --java-home <path-to-jdk-17>",
+    "onlineBehavior": "fresh online metadata generation with refreshed dependencies",
+    "offlineBehavior": "strict offline replay in the same isolated Gradle user home",
+    "childEnvironment": "minimal_allowlist_without_inherited_credentials",
+    "failureDiagnostics": "fixed_non_disclosing_status_only",
+    "retainedRawLogs": false
+  },
+  "pluginResolution": [
+    {
+      "pluginId": "com.android.application",
+      "version": "9.4.0",
+      "marker": "com.android.application:com.android.application.gradle.plugin:9.4.0",
+      "implementation": "com.android.tools.build:gradle:9.4.0"
+    },
+    {
+      "pluginId": "org.jetbrains.kotlin.android",
+      "version": "2.4.10",
+      "marker": "org.jetbrains.kotlin.android:org.jetbrains.kotlin.android.gradle.plugin:2.4.10",
+      "implementation": "org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10"
+    },
+    {
+      "pluginId": "org.jetbrains.kotlin.plugin.compose",
+      "version": "2.4.10",
+      "marker": "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.4.10",
+      "implementation": "org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.4.10"
+    },
+    {
+      "pluginId": "androidx.baselineprofile",
+      "version": "1.5.0",
+      "marker": "androidx.baselineprofile:androidx.baselineprofile.gradle.plugin:1.5.0",
+      "implementation": "androidx.benchmark:benchmark-baseline-profile-gradle-plugin:1.5.0"
+    }
+  ],
+  "libraryResolution": [
+    {
+      "coordinate": "androidx.compose:compose-bom:2026.09.00",
+      "resolution": "passed"
+    },
+    {
+      "coordinate": "androidx.compose.ui:ui:1.12.1",
+      "resolution": "passed",
+      "source": "compose_bom_2026.09.00_mapping"
+    },
+    {
+      "coordinate": "androidx.profileinstaller:profileinstaller:1.4.1",
+      "resolution": "passed"
+    },
+    {
+      "coordinate": "androidx.benchmark:benchmark-macro-junit4:1.5.0",
+      "resolution": "passed"
+    }
+  ],
+  "binaryResolution": [
+    {
+      "coordinate": "androidx.compose.ui:ui-android:1.12.1@aar",
+      "fileName": "ui-android-1.12.1.aar",
+      "sha256": "3f1ae17e237d9dc0a2a0f42cb04b85b8de6e12f67adc5f5c12173fe31e501cb2"
+    },
+    {
+      "coordinate": "androidx.profileinstaller:profileinstaller:1.4.1@aar",
+      "fileName": "profileinstaller-1.4.1.aar",
+      "sha256": "b519f9317ded1e2c1c2993038c0692e30da326ca99097d9331ff2d3a5861a428"
+    },
+    {
+      "coordinate": "androidx.benchmark:benchmark-macro-junit4:1.5.0@aar",
+      "fileName": "benchmark-macro-junit4-1.5.0.aar",
+      "sha256": "a931079e084f7abdce788272ebaa67584a95a88214d214b409342d865df32c67"
+    }
+  ],
+  "dependencyVerification": {
+    "mode": "strict_sha256",
+    "components": 270,
+    "artifacts": 440,
+    "sha256Entries": 440,
+    "aarEntries": 22,
+    "metadataPath": "contracts/mobile/android/foundation/v1/verification-metadata.xml",
+    "metadataSha256": "249da332a36b17c0d25610c0f802e89522204c2bd066e0d84a7503dd890b4480",
+    "freshOnlineGeneration": "passed",
+    "strictOfflineReplay": "passed"
+  },
+  "executions": [
+    {
+      "mode": "online_fresh_generation",
+      "command": "node scripts/android-toolchain-proof.mjs verify --gradle <path-to-gradle-9.6> --java-home <path-to-jdk-17>",
+      "result": "passed"
+    },
+    {
+      "mode": "offline_strict_replay",
+      "command": "same driver invocation performs strict offline replay after byte-for-byte retained metadata comparison",
+      "result": "passed"
+    }
+  ],
+  "observedResolutionNotes": [
+    "AGP 9.4.0 requested Kotlin Gradle Plugin 2.2.10 transitively; the explicit root plugin pin selected 2.4.10.",
+    "Compose BOM 2026.09.00 maps Compose UI to 1.12.1; both the mapped component and the exact ui-android AAR resolved.",
+    "The proof resolved coordinates and exact AAR bytes only; it did not install Android SDK packages or compile an Android application."
+  ],
+  "remainingGates": [
+    "marlon_accepts_android_baselines",
+    "marlon_assigns_android_owner",
+    "android_sdk_package_installation",
+    "android_project_scaffold",
+    "android_compile_and_test",
+    "android_emulator_evidence",
+    "physical_device_evidence",
+    "release_or_play_signing",
+    "production_or_store_actions"
+  ]
+}
