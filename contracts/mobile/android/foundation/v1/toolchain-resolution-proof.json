@@ -21,7 +21,7 @@
     "buildPath": "contracts/mobile/android/foundation/v1/probe/build.gradle.kts",
     "buildSha256": "9b040c025755aa990749f2ccb1d99f9f91392368869e199197eaebe0779a7a69",
     "driverPath": "scripts/android-toolchain-proof.mjs",
-    "driverSha256": "e372f42eeeef7ffddb4e4f67891304ac20ad6350e714bb63d9948c0e0a94d062"
+    "driverSha256": "a0a9549cc9a0e21b206582068045b6b83750c286489ed9c680df932ee1773cd0"
   },
   "reproduction": {
     "freshTemporaryProject": true,
@@ -44,6 +44,8 @@
     "onlineCommand": "node scripts/android-toolchain-proof.mjs verify --gradle <path-to-gradle-9.6> --java-home <path-to-jdk-17>",
     "onlineBehavior": "fresh online metadata generation with refreshed dependencies",
     "offlineBehavior": "strict offline replay in the same isolated Gradle user home",
+    "childEnvironment": "minimal_allowlist_without_inherited_credentials",
+    "failureDiagnostics": "fixed_non_disclosing_status_only",
     "retainedRawLogs": false
   },
   "pluginResolution": [

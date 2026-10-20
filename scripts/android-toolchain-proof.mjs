@@ -143,11 +143,45 @@ const parseArguments = (arguments_) => {
   return result;
 };
 
-const commandDisplay = (executable, args) =>
-  [executable, ...args].map((part) => JSON.stringify(part)).join(" ");
+const childEnvironmentAllowlist = new Set([
+  "APPDATA",
+  "CI",
+  "ComSpec",
+  "GITHUB_ACTIONS",
+  "HOME",
+  "JAVA_HOME",
+  "LANG",
+  "LC_ALL",
+  "LOCALAPPDATA",
+  "PATH",
+  "PATHEXT",
+  "Path",
+  "PROGRAMDATA",
+  "RUNNER_ARCH",
+  "RUNNER_OS",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "USERPROFILE",
+  "WINDIR",
+]);
 
-const run = (executable, args, options = {}) => {
-  const environment = { ...process.env, ...options.env };
+export function buildChildEnvironment(parent = process.env, overrides = {}) {
+  const environment = {};
+  for (const [key, value] of Object.entries({ ...parent, ...overrides })) {
+    if (childEnvironmentAllowlist.has(key) && typeof value === "string") {
+      environment[key] = value;
+    }
+  }
+  return environment;
+}
+
+export const commandFailureMessage = (label, status) =>
+  `Android toolchain proof ${label} failed (status: ${status ?? "spawn_error"})`;
+
+export const runCommand = (executable, args, options = {}) => {
+  const environment = buildChildEnvironment(process.env, options.env);
   let command = executable;
   let commandArgs = args;
   if (process.platform === "win32" && /\.(?:bat|cmd)$/i.test(executable)) {
@@ -161,7 +195,8 @@ const run = (executable, args, options = {}) => {
     ].join(" ");
     commandArgs = ["-NoProfile", "-NonInteractive", "-Command", invocation];
   }
-  const result = spawnSync(command, commandArgs, {
+  const spawn = options.spawn ?? spawnSync;
+  const result = spawn(command, commandArgs, {
     cwd: options.cwd,
     env: environment,
     encoding: "utf8",
@@ -169,14 +204,7 @@ const run = (executable, args, options = {}) => {
     windowsHide: true,
   });
   if (result.error || result.status !== 0) {
-    const summary = normalizeLf(`${result.stdout ?? ""}\n${result.stderr ?? ""}`)
-      .split("\n")
-      .filter(Boolean)
-      .slice(-20)
-      .join("\n");
-    throw new Error(
-      `Command failed (${result.status ?? "spawn"}): ${commandDisplay(executable, args)}\n${summary}`,
-    );
+    throw new Error(commandFailureMessage(options.label ?? "command", result.status));
   }
   return normalizeLf(`${result.stdout ?? ""}\n${result.stderr ?? ""}`);
 };
@@ -210,7 +238,10 @@ export async function verify({ gradle, javaHome }) {
   };
   validateProofDescriptor(proof, sources);
 
-  const version = run(gradle, ["--version"], { env: { JAVA_HOME: javaHome } });
+  const version = runCommand(gradle, ["--version"], {
+    env: { JAVA_HOME: javaHome },
+    label: "runtime check",
+  });
   assert(/Gradle 9\.6\.0\b/.test(version), "Gradle 9.6.0 is required");
   assert(/JVM:\s+17(?:\.|\s)/.test(version), "JDK 17 is required");
 
@@ -231,7 +262,7 @@ export async function verify({ gradle, javaHome }) {
       "--no-daemon",
       "--non-interactive",
     ];
-    run(
+    runCommand(
       gradle,
       [
         ...shared,
@@ -242,7 +273,7 @@ export async function verify({ gradle, javaHome }) {
         "resolveProof",
         "--console=plain",
       ],
-      { env: { JAVA_HOME: javaHome } },
+      { env: { JAVA_HOME: javaHome }, label: "online generation" },
     );
 
     const generatedPath = path.join(projectDirectory, "gradle", "verification-metadata.xml");
@@ -251,7 +282,7 @@ export async function verify({ gradle, javaHome }) {
     const retained = normalizeLf(sources.metadata);
     assert(generated === retained, "freshly generated metadata differs from retained metadata");
 
-    run(
+    runCommand(
       gradle,
       [
         ...shared,
@@ -262,7 +293,7 @@ export async function verify({ gradle, javaHome }) {
         "resolveProof",
         "--console=plain",
       ],
-      { env: { JAVA_HOME: javaHome } },
+      { env: { JAVA_HOME: javaHome }, label: "strict offline replay" },
     );
   } finally {
     safeRemove(workspace);

@@ -43,6 +43,11 @@ retained metadata, then performs strict offline replay. The graph locks 440 SHA-
 artifact entries across 270 components, including 22 AARs and exact Compose UI, Profile
 Installer, and Macrobenchmark AAR hashes.
 
+Gradle receives only a minimal allowlist of host/runtime variables; inherited account,
+provider, test-account, proxy-credential, and CI secret variables are excluded. Failure
+diagnostics retain only the named phase and process status. Commands, arguments, paths,
+identities, and raw Gradle output are never written to retained proof logs.
+
 The path-scoped Android toolchain-proof workflow independently repeats that process on
 the exact pull-request head. It is not an Android application or emulator workflow.
 This proves repository availability and exact dependency-byte reproducibility only. It

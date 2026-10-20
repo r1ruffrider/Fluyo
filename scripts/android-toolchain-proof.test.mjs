@@ -5,8 +5,11 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  buildChildEnvironment,
+  commandFailureMessage,
   inspectVerificationMetadata,
   normalizeLf,
+  runCommand,
   validateProofDescriptor,
 } from "./android-toolchain-proof.mjs";
 
@@ -29,6 +32,79 @@ const expectFailure = (label, callback) => {
 
 test("normalizes CRLF and CR bytes deterministically", () => {
   assert.equal(normalizeLf("one\r\ntwo\rthree\n"), "one\ntwo\nthree\n");
+});
+
+test("passes only a minimal non-secret environment to Gradle", () => {
+  const environment = buildChildEnvironment(
+    {
+      PATH: "safe-path",
+      JAVA_HOME: "safe-java",
+      TEMP: "safe-temp",
+      GITHUB_TOKEN: "github-secret",
+      FLUYO_TEST_ADRIANA_EMAIL: "learner@example.test",
+      FLUYO_TEST_ELANA_PASSWORD: "test-account-secret",
+      AWS_SECRET_ACCESS_KEY: "aws-secret",
+      STRIPE_SECRET_KEY: "stripe-secret",
+      HTTP_PROXY: "https://user:password@proxy.invalid",
+    },
+    { CI: "true" },
+  );
+
+  assert.deepEqual(environment, {
+    PATH: "safe-path",
+    JAVA_HOME: "safe-java",
+    TEMP: "safe-temp",
+    CI: "true",
+  });
+  assert.doesNotMatch(JSON.stringify(environment), /(?:secret|@|password)/i);
+});
+
+test("reports command failures without commands, paths, identities, or raw output", () => {
+  const message = commandFailureMessage("online generation", 1);
+  assert.equal(message, "Android toolchain proof online generation failed (status: 1)");
+  assert.doesNotMatch(
+    message,
+    /(?:C:\\Users\\|\/home\/|learner@example\.test|token|password|gradle(?:\.bat)?|raw output)/i,
+  );
+});
+
+test("the failing command path filters secrets and never includes child output", () => {
+  const captured = {};
+  const sentinel = "sentinel-provider-secret";
+  const email = "learner@example.test";
+  const temporaryPath = "C:\\Users\\runner\\AppData\\Local\\Temp\\proof";
+  assert.throws(
+    () =>
+      runCommand("private-gradle-command", ["--secret-argument", temporaryPath], {
+        label: "online generation",
+        env: {
+          PATH: "safe-path",
+          GITHUB_TOKEN: sentinel,
+          FLUYO_TEST_ADRIANA_EMAIL: email,
+        },
+        spawn(command, args, options) {
+          captured.command = command;
+          captured.args = args;
+          captured.environment = options.env;
+          return {
+            status: 1,
+            stdout: `raw output ${sentinel} ${email}`,
+            stderr: `diagnostic ${temporaryPath}`,
+          };
+        },
+      }),
+    (error) => {
+      assert.equal(error.message, "Android toolchain proof online generation failed (status: 1)");
+      assert.doesNotMatch(
+        error.message,
+        /(?:private-gradle-command|secret-argument|sentinel|learner@|C:\\Users\\|raw output|diagnostic)/i,
+      );
+      return true;
+    },
+  );
+  assert.equal(captured.environment.PATH, "safe-path");
+  assert.equal("GITHUB_TOKEN" in captured.environment, false);
+  assert.equal("FLUYO_TEST_ADRIANA_EMAIL" in captured.environment, false);
 });
 
 test("validates the retained descriptor, sources, binaries, and metadata", () => {
