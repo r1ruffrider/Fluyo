@@ -34,18 +34,22 @@ approved Sprint 5 closeout gate.
 
 ## Toolchain resolution proof
 
-toolchain-resolution-proof.json records the 2026-10-20 isolated coordinate and
-checksum proof against merged main 55c6f16f1418d83e7711b632b75c6573c3190ca3.
-Online refresh and strict offline replay both passed for the proposed Gradle, Android,
-Kotlin, Compose, Baseline Profile, and Profile Installer coordinates. The proof retains
-the sanitized Gradle verification metadata and locks 378 SHA-256 artifact entries
-across 267 components. It also records the verified JDK and Gradle
-distribution hashes.
+toolchain-resolution-proof.json records the 2026-10-20 reproducible coordinate and
+binary checksum proof against merged main 55c6f16f1418d83e7711b632b75c6573c3190ca3.
+The repository retains the exact Gradle settings/build probe, a cross-platform driver,
+and LF-normalized verification metadata. The driver creates a fresh temporary project
+and Gradle user home, regenerates the online graph, compares it byte for byte with the
+retained metadata, then performs strict offline replay. The graph locks 440 SHA-256
+artifact entries across 270 components, including 22 AARs and exact Compose UI, Profile
+Installer, and Macrobenchmark AAR hashes.
 
-This proves repository availability and checksum reproducibility only. It did not
-install Android SDK packages, create apps/android, compile an application, start an
-emulator, or authorize any baseline, owner, signing, production, Play, physical-device,
-or spending decision. projectScaffoldAuthorized and completionClaimAllowed remain false.
+The path-scoped Android toolchain-proof workflow independently repeats that process on
+the exact pull-request head. It is not an Android application or emulator workflow.
+This proves repository availability and exact dependency-byte reproducibility only. It
+did not install Android SDK packages, create apps/android, compile an application,
+start an emulator, or authorize any baseline, owner, signing, production, Play,
+physical-device, or spending decision. projectScaffoldAuthorized and
+completionClaimAllowed remain false.
 
 ## Signing terminology
 

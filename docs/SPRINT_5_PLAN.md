@@ -110,9 +110,12 @@ The specification-only [Android foundation readiness contract](../contracts/mobi
 records the proposed API, phone, locale, configuration, privacy, no-op telemetry, capture, asset, toolchain,
 signing-classification, and evidence boundaries. It does not authorize an Android project. The Android SDK,
 form-factor/orientation, repository identifiers, toolchain/CI, and accountable implementation/accessibility/asset
-owner decisions must be accepted before apps/android is created. An isolated 2026-10-20 coordinate and checksum
-proof passed online refresh and strict offline replay for the proposed toolchain, covering 267 components and 378
-verified artifact hashes; it does not authorize a scaffold or clear any of the 29 runtime evidence rows. Physical
+owner decisions must be accepted before apps/android is created. A reproducible 2026-10-20 coordinate and
+binary-checksum proof retained the exact Gradle fixture and driver, regenerated the graph in a fresh project and
+Gradle user home, matched LF-normalized metadata byte for byte, and passed strict offline replay. It covers 270
+components and 440 artifact hashes, including 22 AARs and exact Compose UI, Profile Installer, and Macrobenchmark
+AAR bytes. Its path-scoped workflow is not an Android application or emulator workflow and does not authorize a
+scaffold or clear any of the 29 runtime evidence rows. Physical
 Pixel and Samsung evidence, Play accounts, release/upload signing, production endpoints, App Links, Play tracks,
 store work, and spending remain separately gated.
 

@@ -122,7 +122,8 @@ describe("Android foundation readiness contract v1", () => {
       assetOwner: null,
       independentQaOwner: "Elana",
       ci: {
-        status: "proposed_resolution_proof_passed_requires_user_acceptance",
+        status:
+          "proposed_reproducible_resolution_and_binary_checksum_proof_passed_requires_user_acceptance",
         runner: "ubuntu-24.04",
         jdk: "17",
         androidGradlePlugin: "9.4.0",
@@ -451,6 +452,7 @@ describe("Android foundation readiness contract v1", () => {
     expect(readdirSync(contractDirectory).sort()).toEqual([
       "README.md",
       "foundation-policy.json",
+      "probe",
       "toolchain-resolution-proof.json",
       "verification-metadata.xml",
     ]);
