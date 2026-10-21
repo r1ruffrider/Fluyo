@@ -55,9 +55,12 @@ the exact pull-request head. It is not an Android application or emulator workfl
 This proves repository availability and exact dependency-byte reproducibility only. It
 did not install Android SDK packages, create apps/android, compile an application,
 start an emulator, or authorize any baseline, owner, signing, production, Play,
-physical-device, or spending decision. The later user approval authorizes the scaffold;
-completionClaimAllowed remains false until exact-head runtime evidence and independent
-QA pass.
+physical-device, or spending decision. The later user approval authorized the scaffold.
+The exact-head repository, API 29, API 37, sanitized aggregate, roster, and independent
+QA gates passed for candidate `04fb0b04b49a94f129b73c8f80f5e5af3d1c15d4`, so the
+policy now permits only the narrow internal Increment 4 emulator-foundation completion
+claim. A new head still requires fresh protected, dependency-proof, Android-evidence,
+artifact-scan, and independent-QA checks before merge.
 
 ## Signing terminology
 
@@ -114,7 +117,7 @@ Safe during implementation:
 > Fluyo is building an internal Android emulator foundation on the approved repository
 > baseline.
 
-Safe only after a future exact-head implementation audit passes:
+Safe after the exact-head implementation audit and required finalization checks pass:
 
 > An internal, non-production, debug-signed Android emulator foundation renders the
 > audited shell states on the recorded emulator matrix.

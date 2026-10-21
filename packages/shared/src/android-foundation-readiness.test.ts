@@ -83,7 +83,7 @@ const assets = asObject(policy.assets);
 const acceptance = asObject(policy.acceptance);
 
 describe("Android foundation readiness contract v1", () => {
-  it("records the accepted scaffold gate while keeping completion closed", () => {
+  it("records the accepted scaffold and narrow emulator-foundation completion gates", () => {
     expect(policy.schemaVersion).toBe("1.1.0");
     expect(policy.status).toBe("implementation_authorized");
     expect(policy.sourceMainCommit).toBe("b8a1ca5f84d91575f3e67983291dcb29c5b4e113");
@@ -91,7 +91,7 @@ describe("Android foundation readiness contract v1", () => {
     expect(policy.productionDataUsed).toBe(false);
     expect(policy.externalActionsPerformed).toBe(false);
     expect(policy.projectScaffoldAuthorized).toBe(true);
-    expect(policy.completionClaimAllowed).toBe(false);
+    expect(policy.completionClaimAllowed).toBe(true);
     expect(asStrings(policy.remainingDecisionGates, "remainingDecisionGates")).toEqual([]);
     expect(asObject(policy.approval)).toEqual({
       date: "2026-10-21",

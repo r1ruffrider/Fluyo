@@ -114,8 +114,10 @@ binary-checksum proof retained the exact Gradle fixture and driver, regenerated 
 Gradle user home, matched LF-normalized metadata byte for byte, and passed strict offline replay. It covers 270
 components and 440 artifact hashes, including 22 AARs and exact Compose UI, Profile Installer, and Macrobenchmark
 AAR bytes. Its path-scoped workflow did not itself authorize a scaffold or clear any of the 29 runtime evidence
-rows; the later explicit approval authorizes the smallest internal implementation. Completion remains false until
-27 emulator/static-applicable rows pass and the two physical rows stay explicitly deferred. Physical
+rows; the later explicit approval authorized the smallest internal implementation. Candidate
+`04fb0b04b49a94f129b73c8f80f5e5af3d1c15d4` passed all 27 emulator/static-applicable rows with zero failures,
+while the two physical rows stayed explicitly deferred. The narrow internal, non-production, debug-signed
+emulator-foundation completion claim is therefore allowed after its finalization head repeats the required gates. Physical
 Pixel and Samsung evidence, Play accounts, release/upload signing, production endpoints, App Links, Play tracks,
 store work, and spending remain separately gated.
 

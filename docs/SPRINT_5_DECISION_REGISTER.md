@@ -78,9 +78,11 @@ exact Compose UI, Profile Installer, and Macrobenchmark AAR hashes. The path-sco
 Android application or emulator workflow. The accepted implementation artifact term is non-production
 debug-signed emulator evidence; no release, upload, or Play signing is authorized.
 
-projectScaffoldAuthorized is true and completionClaimAllowed remains false until the exact-head implementation,
-emulator, artifact, roster, and independent QA gates pass. Adriana is the interim Android implementation,
-accessibility, asset, and maintenance owner. Physical
+projectScaffoldAuthorized and completionClaimAllowed are true for the narrow internal, non-production,
+debug-signed emulator foundation. Candidate `04fb0b04b49a94f129b73c8f80f5e5af3d1c15d4` passed the exact-head
+repository, API 29, API 37, sanitized aggregate, roster, and independent QA gates: 27 applicable rows passed,
+zero failed, and the physical Pixel and Samsung rows remained unattempted. Adriana is the interim Android
+implementation, accessibility, asset, and maintenance owner. Physical
 Pixel/Samsung evidence, Play accounts, package reservation, production endpoints, App Links, Play tracks, store
 work, and spending remain separate external gates.
 
