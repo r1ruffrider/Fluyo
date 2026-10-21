@@ -4,6 +4,16 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+apps/android/.gradle/
+apps/android/**/build/
+apps/android/local.properties
+apps/android/**/captures/
+apps/android/**/screenshots/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p12
 
 # Environment and secrets
 .env
