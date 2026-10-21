@@ -141,9 +141,21 @@ jobs:
             fi
             if [[ -n "$EMULATOR_PID" ]]; then
               kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+              wait "$EMULATOR_PID" >/dev/null 2>&1 || true
             fi
             rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"
-            rm -rf "$AVD_HOME"
+            local cleanup_failed=1
+            for cleanup_attempt in 1 2 3 4 5; do
+              if rm -rf "$AVD_HOME" >/dev/null 2>&1; then
+                cleanup_failed=0
+                break
+              fi
+              sleep 1
+            done
+            if [[ "$cleanup_failed" -ne 0 || -e "$AVD_HOME" ]]; then
+              echo "Android emulator cleanup failed; category=temporary_state; raw output was discarded"
+              exit 1
+            fi
           }
           trap cleanup EXIT
           COMMON=(--no-daemon --warning-mode=fail -Pandroid.sdk.channel=3 "-PfluyoSourceCommitShort=$SHORT_SHA")

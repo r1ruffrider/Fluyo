@@ -290,6 +290,11 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("en[-_]r?XA");
     expect(workflowText).toContain("ar[-_]r?XB");
     expect(workflowText).toContain("trap cleanup EXIT");
+    expect(workflowText).toContain('wait "$EMULATOR_PID"');
+    expect(workflowText).toContain("for cleanup_attempt in 1 2 3 4 5");
+    expect(workflowText).toContain(
+      "Android emulator cleanup failed; category=temporary_state; raw output was discarded",
+    );
     expect(workflowText).toContain("start_emulator");
     expect(workflowText).toContain("start_minimum_emulator");
     expect(workflowText).toContain("start_current_emulator");
