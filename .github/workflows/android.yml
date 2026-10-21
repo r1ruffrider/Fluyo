@@ -309,7 +309,7 @@ jobs:
             cp apps/android/app/build/outputs/apk/staging/debug/app-staging-debug.apk "$TEMP/Fluyo-staging-debug.apk"
             cp apps/android/app/build/outputs/apk/production/debug/app-production-debug.apk "$TEMP/Fluyo-production-inert-debug.apk"
             ARTIFACT="$OUT/Fluyo-current-emulator.zip"
-            ACCESSIBILITY_SETTING="bounded_uiautomator_black_box_api37"
+            ACCESSIBILITY_SETTING="compose_semantics_system_input_api37"
             CURRENT_RUNTIME_TEST_COUNT="7"
           fi
           for apk in "$TEMP"/*.apk; do
@@ -341,7 +341,7 @@ jobs:
           accessibilitySetting=$ACCESSIBILITY_SETTING
           currentRuntimeTestsPerFlavor=$CURRENT_RUNTIME_TEST_COUNT
           EOF
-          node -e 'const fs=require("fs"); const current=process.argv[2]==="current"; fs.writeFileSync(process.argv[1], JSON.stringify({sourceCommit:process.env.SOURCE_SHA,buildIdentifier:process.env.GITHUB_RUN_ID+"-"+process.env.GITHUB_RUN_ATTEMPT+"-"+process.argv[2],runnerImage:"ubuntu-24.04",deviceModel:process.argv[3],deviceClass:process.argv[4],deviceApi:Number(process.argv[5]),environment:process.argv[6],accessibilitySetting:current?"bounded_uiautomator_black_box_api37":"compose_semantics_api29",command:current?"pinned Gradle build, bounded UiAutomator black-box checks, manifest, signing, and privacy gate":"pinned Gradle build, Compose semantics instrumentation, manifest, signing, and privacy gate"},null,2)+"\n")' "$TEMP/metadata.json" "${{ matrix.leg }}" "${{ matrix.device }}" "${{ matrix.device_class }}" "${{ matrix.sdk }}" "${{ matrix.environment }}"
+          node -e 'const fs=require("fs"); const current=process.argv[2]==="current"; fs.writeFileSync(process.argv[1], JSON.stringify({sourceCommit:process.env.SOURCE_SHA,buildIdentifier:process.env.GITHUB_RUN_ID+"-"+process.env.GITHUB_RUN_ATTEMPT+"-"+process.argv[2],runnerImage:"ubuntu-24.04",deviceModel:process.argv[3],deviceClass:process.argv[4],deviceApi:Number(process.argv[5]),environment:process.argv[6],accessibilitySetting:current?"compose_semantics_system_input_api37":"compose_semantics_api29",command:current?"pinned Gradle build, Compose semantics plus system input checks, manifest, signing, and privacy gate":"pinned Gradle build, Compose semantics instrumentation, manifest, signing, and privacy gate"},null,2)+"\n")' "$TEMP/metadata.json" "${{ matrix.leg }}" "${{ matrix.device }}" "${{ matrix.device_class }}" "${{ matrix.sdk }}" "${{ matrix.environment }}"
           node scripts/android-evidence.mjs generate "${{ matrix.leg }}" contracts/mobile/android/foundation/v1/foundation-policy.json "$TEMP/metadata.json" "$ARTIFACT" "$OUT/evidence-${{ matrix.leg }}.json"
           node scripts/scan-android-evidence.mjs "$OUT"
           rm -rf "$TEMP"

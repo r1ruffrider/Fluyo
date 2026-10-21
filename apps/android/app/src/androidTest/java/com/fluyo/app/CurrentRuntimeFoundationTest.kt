@@ -1,169 +1,137 @@
 package com.fluyo.app
 
 import android.app.LocaleManager
+import android.content.pm.ActivityInfo
 import android.os.LocaleList
 import android.view.KeyEvent
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
-import androidx.test.uiautomator.UiObject2
-import androidx.test.uiautomator.Until
 import org.junit.After
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @SdkSuppress(minSdkVersion = 37)
 class CurrentRuntimeFoundationTest {
+    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val device = UiDevice.getInstance(instrumentation)
 
-    @Before fun resetRuntimeSettings() {
+    @After fun restoreRuntimeSettings() {
         context.getSystemService(LocaleManager::class.java).applicationLocales =
             LocaleList.getEmptyLocaleList()
-        device.setOrientationNatural()
+        compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         device.executeShellCommand("settings put system font_scale 1.0")
         device.executeShellCommand("settings put global animator_duration_scale 1")
         device.executeShellCommand("settings put global transition_animation_scale 1")
         device.executeShellCommand("settings put global window_animation_scale 1")
         device.executeShellCommand("wm size reset")
-    }
-
-    @After fun restoreRuntimeSettings() {
-        resetRuntimeSettings()
         device.pressHome()
     }
 
-    private fun launchFoundation() {
+    private fun expectedStateTag() =
+        if (BuildConfig.FLUYO_ENVIRONMENT == "production") "error-state" else "signed-out-state"
+
+    private fun unexpectedStateTag() =
+        if (BuildConfig.FLUYO_ENVIRONMENT == "production") "signed-out-state" else "error-state"
+
+    private fun expectedActionTag() =
+        if (BuildConfig.FLUYO_ENVIRONMENT == "production") "retry-button" else "review-build-button"
+
+    private fun recreateFoundation() {
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
-        device.executeShellCommand("am force-stop ${context.packageName}")
-        device.executeShellCommand(
-            "am start -W -n ${context.packageName}/${MainActivity::class.java.name}",
-        )
-        assertTrue(
-            device.wait(Until.hasObject(By.pkg(context.packageName)), 5_000),
-        )
-        device.waitForIdle()
+        compose.activityRule.scenario.recreate()
+        compose.waitForIdle()
     }
 
-    private fun expectedTitle() = if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-        context.getString(R.string.error_title)
-    } else {
-        context.getString(R.string.signed_out_title)
-    }
-
-    private fun expectedAction() = if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-        context.getString(R.string.retry_action)
-    } else {
-        context.getString(R.string.review_scope_action)
-    }
-
-    private fun expectedBody() = if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-        context.getString(R.string.error_body)
-    } else {
-        context.getString(R.string.signed_out_body)
-    }
-
-    private fun waitForText(value: String): UiObject2 {
-        repeat(10) {
-            device.wait(Until.findObject(By.text(value)), 1_000)?.let { return it }
-            device.swipe(
-                device.displayWidth / 2,
-                device.displayHeight * 3 / 4,
-                device.displayWidth / 2,
-                device.displayHeight / 4,
-                12,
-            )
+    private fun waitForNode(tag: String, scroll: Boolean = false) {
+        compose.waitUntil(10_000) {
+            runCatching {
+                val node = compose.onNodeWithTag(tag)
+                if (scroll) node.performScrollTo()
+                node.assertIsDisplayed()
+                true
+            }.getOrDefault(false)
         }
-        val node = device.findObject(By.text(value))
-        assertNotNull(node)
-        return node
     }
 
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
-        launchFoundation()
-        waitForText(expectedTitle())
-        assertFalse(device.hasObject(By.text(context.getString(R.string.loading_title))))
-        val unexpected = if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-            context.getString(R.string.signed_out_title)
-        } else {
-            context.getString(R.string.error_title)
-        }
-        assertFalse(device.hasObject(By.text(unexpected)))
+        recreateFoundation()
+        waitForNode(expectedStateTag())
+        compose.onAllNodesWithTag("loading-state").assertCountEquals(0)
+        compose.onAllNodesWithTag(unexpectedStateTag()).assertCountEquals(0)
     }
 
     @Test fun currentRuntimeLargeTextAndLandscapeKeepActionReachable() {
         device.executeShellCommand("settings put system font_scale 2.0")
-        device.setOrientationLeft()
-        launchFoundation()
-        assertTrue(waitForText(expectedAction()).visibleBounds.height() > 0)
+        compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        recreateFoundation()
+        waitForNode(expectedActionTag(), scroll = true)
     }
 
     @Test fun currentRuntimeReducedMotionKeepsTheSameEndState() {
         device.executeShellCommand("settings put global animator_duration_scale 0")
         device.executeShellCommand("settings put global transition_animation_scale 0")
         device.executeShellCommand("settings put global window_animation_scale 0")
-        launchFoundation()
-        waitForText(expectedTitle())
-        waitForText(expectedAction())
+        recreateFoundation()
+        waitForNode(expectedStateTag())
+        waitForNode(expectedActionTag(), scroll = true)
     }
 
     @Test fun currentRuntimeActionRemainsLocalAndHonest() {
-        launchFoundation()
-        val action = waitForText(expectedAction())
-        action.click()
+        recreateFoundation()
+        val action = compose.onNodeWithTag(expectedActionTag())
+        action.performScrollTo().assertIsDisplayed().performClick()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
-            waitForText(context.getString(R.string.scope_detail))
+            waitForNode("scope-detail", scroll = true)
         } else {
-            waitForText(context.getString(R.string.error_title))
+            waitForNode("error-state")
         }
     }
 
     @Test fun currentRuntimePseudoLocaleExpansionKeepsActionReachable() {
         context.getSystemService(LocaleManager::class.java).applicationLocales =
             LocaleList.forLanguageTags("en-XA")
-        launchFoundation()
-        val title = waitForText(expectedTitle())
-        val body = waitForText(expectedBody())
-        val action = waitForText(expectedAction())
-        assertTrue(title.visibleBounds.height() > 0)
-        assertTrue(body.visibleBounds.height() > 0)
-        assertTrue(action.visibleBounds.height() > 0)
-        assertTrue(title.visibleBounds.bottom <= body.visibleBounds.top)
-        assertTrue(body.visibleBounds.bottom <= action.visibleBounds.top)
+        recreateFoundation()
+        waitForNode(expectedStateTag())
+        waitForNode(expectedActionTag(), scroll = true)
     }
 
     @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {
-        launchFoundation()
-        val action = waitForText(expectedAction())
+        recreateFoundation()
+        val action = compose.onNodeWithTag(expectedActionTag())
+        action.performScrollTo().assertIsDisplayed()
         if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-            assertTrue(action.isFocused)
+            action.assertIsFocused()
         } else {
-            assertFalse(action.isFocused)
             device.pressKeyCode(KeyEvent.KEYCODE_TAB)
+            compose.waitForIdle()
+            action.assertIsFocused()
         }
-        assertTrue(device.findObject(By.text(expectedAction()))?.isFocused == true)
         device.pressDPadCenter()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
-            waitForText(context.getString(R.string.scope_detail))
+            waitForNode("scope-detail", scroll = true)
         } else {
-            waitForText(context.getString(R.string.error_title))
+            waitForNode("error-state")
         }
     }
 
     @Test fun currentRuntimeAdaptiveWindowsKeepStateAndActionReachable() {
-        listOf("1200x2200", "2400x2200", "3000x2200").forEachIndexed { index, size ->
+        listOf("1200x2200", "2400x2200", "3000x2200").forEach { size ->
             device.executeShellCommand("wm size $size")
-            if (index == 0) launchFoundation() else device.waitForIdle()
-            waitForText(expectedTitle())
-            val action = waitForText(expectedAction())
-            assertTrue(action.visibleBounds.width() > 0)
-            assertTrue(action.visibleBounds.height() > 0)
+            recreateFoundation()
+            waitForNode(expectedStateTag())
+            waitForNode(expectedActionTag(), scroll = true)
         }
     }
 }

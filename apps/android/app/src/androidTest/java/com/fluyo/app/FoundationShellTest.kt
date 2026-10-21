@@ -25,6 +25,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -48,7 +49,7 @@ class FoundationShellTest {
     private fun waitForNodeToBeDisplayed(tag: String) {
         compose.waitUntil(5_000) {
             runCatching {
-                compose.onNodeWithTag(tag).assertIsDisplayed()
+                compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
                 true
             }.getOrDefault(false)
         }

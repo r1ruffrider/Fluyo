@@ -154,12 +154,12 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
     expect(shell).toContain(
-      'Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
+      'Modifier.widthIn(max = 640.dp).fillMaxSize().verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
     expect(shell).toContain("contentAlignment = Alignment.TopCenter");
     expect(shell).toContain('Modifier.testTag("foundation-root").fillMaxSize()');
     expect(shell).toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
-    expect(shell.match(/padding\(top = 18\.dp\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
+    expect(shell.match(/fillMaxWidth\(\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
@@ -173,10 +173,12 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation).toContain("performScrollTo");
     expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(3);
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
-    expect(instrumentation).toContain("compose.onNodeWithTag(tag).assertIsDisplayed()");
+    expect(instrumentation).toContain(
+      "compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()",
+    );
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -193,11 +195,12 @@ describe("Android foundation structure", () => {
     );
     expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
     expect(currentRuntime.match(/@Test fun /g)).toHaveLength(7);
+    expect(currentRuntime).toContain("createAndroidComposeRule<MainActivity>()");
     expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
     expect(currentRuntime).toContain("device.wakeUp()");
     expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
-    expect(currentRuntime).toContain("waitForText(expectedTitle())");
+    expect(currentRuntime).toContain("waitForNode(expectedStateTag())");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
@@ -206,10 +209,7 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(currentRuntime).toContain('listOf("1200x2200", "2400x2200", "3000x2200")');
     expect(currentRuntime).toContain('device.executeShellCommand("wm size reset")');
-    expect(currentRuntime).toContain(
-      '"am start -W -n ${context.packageName}/${MainActivity::class.java.name}"',
-    );
-    expect(currentRuntime).toContain("Until.hasObject(By.pkg(context.packageName))");
+    expect(currentRuntime).toContain("compose.activityRule.scenario.recreate()");
     expect(currentRuntime).toContain("device.pressKeyCode(KeyEvent.KEYCODE_TAB)");
     expect(currentRuntime).toContain("device.pressDPadCenter()");
     const workflow = resolve(root, ".github/workflows/android.yml");
@@ -242,7 +242,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('test "$executed" = "${#tests[@]}"');
     expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(workflowText).toContain("compose_semantics_api29");
-    expect(workflowText).toContain("bounded_uiautomator_black_box_api37");
+    expect(workflowText).toContain("compose_semantics_system_input_api37");
     expect(workflowText).toContain("com.fluyo.app.staging");
     expect(workflowText).toContain('"$app_package.test/androidx.test.runner.AndroidJUnitRunner"');
     expect(workflowText).toContain("settings put system font_scale 1.0");

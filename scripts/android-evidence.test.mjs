@@ -16,7 +16,7 @@ const metadata = (source, leg) => ({
   deviceApi: leg === "minimum" ? 29 : 37,
   environment: leg === "minimum" ? "development" : "staging_and_inert_production",
   accessibilitySetting:
-    leg === "minimum" ? "compose_semantics_api29" : "bounded_uiautomator_black_box_api37",
+    leg === "minimum" ? "compose_semantics_api29" : "compose_semantics_system_input_api37",
   command:
     leg === "minimum"
       ? "pinned API 29 Compose semantics lane"

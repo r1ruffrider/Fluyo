@@ -4,7 +4,7 @@ import path from "node:path";
 
 const physical = ["android_physical_pixel_evidence", "android_physical_samsung_evidence"];
 const minimumMode = "compose_semantics_api29";
-const currentMode = "bounded_uiautomator_black_box_api37";
+const currentMode = "compose_semantics_system_input_api37";
 export const scenarioProofById = {
   android_config_development: {
     leg: "minimum",
