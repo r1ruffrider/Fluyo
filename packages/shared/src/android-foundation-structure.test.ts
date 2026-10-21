@@ -172,9 +172,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).toContain('onNodeWithTag("foundation-scroll")');
-    expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.ScrollBy)");
-    expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation.match(/performScrollTo/g)).toHaveLength(3);
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
