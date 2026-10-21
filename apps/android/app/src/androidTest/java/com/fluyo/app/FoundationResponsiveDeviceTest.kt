@@ -59,9 +59,9 @@ class FoundationResponsiveDeviceTest {
     }
 
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
+        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
         changedFontScale = true
         device.executeShellCommand("settings put system font_scale 2.0")
-        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
         waitForFontScale(scenario, 1.9f)
         waitForNode("signed-out-state")
         waitForNode("review-build-button", scroll = true)

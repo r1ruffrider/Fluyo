@@ -198,7 +198,7 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain("waitForFontScale(scenario, 1.9f)");
     expect(responsive).toContain("activity.resources.configuration.fontScale >= expected");
     expect(responsive).toContain(
-      'device.executeShellCommand("settings put system font_scale 2.0")\n        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }\n        waitForFontScale(scenario, 1.9f)',
+      'val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }\n        changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForFontScale(scenario, 1.9f)',
     );
     expect(responsive).not.toContain("settings get system font_scale");
     expect(responsive).not.toContain("ActivityScenarioRule");
@@ -333,6 +333,26 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("adb uninstall com.fluyo.app.staging.test");
     expect(workflowText).toContain("adb uninstall com.fluyo.app.test");
     expect(workflowText).toContain('CURRENT_RUNTIME_TEST_COUNT="7"');
+    expect(workflowText).toContain(
+      "Android artifact inspection failed; category=$1; raw output was discarded",
+    );
+    for (const category of [
+      "tool_unavailable",
+      "signature_verification",
+      "signing_classification",
+      "permission_inventory",
+      "unexpected_permission",
+      "manifest_inventory",
+      "activity_inventory",
+      "activity_identity",
+      "provider_inventory",
+      "provider_identity",
+      "receiver_inventory",
+      "service_inventory",
+      "exported_inventory",
+    ]) {
+      expect(workflowText).toContain(`artifact_inspection_fail ${category}`);
+    }
     expect(workflowText).toContain(
       'rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"',
     );
