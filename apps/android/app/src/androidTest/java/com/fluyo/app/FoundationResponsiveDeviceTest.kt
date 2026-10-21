@@ -75,6 +75,15 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("font scale")
     }
 
+    private inline fun boundedStage(sentinel: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (error: Throwable) {
+            if (error is AssertionError && error.message == sentinel) throw error
+            throw AssertionError(sentinel)
+        }
+    }
+
     private fun launchFoundationAtAppliedFontScale() {
         val packageName = context.packageName
         try {
@@ -90,12 +99,14 @@ class FoundationResponsiveDeviceTest {
     }
 
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
-        changedFontScale = true
-        device.executeShellCommand("settings put system font_scale 2.0")
-        waitForSystemFontScale(1.9f)
-        launchFoundationAtAppliedFontScale()
-        waitForNode("signed-out-state")
-        waitForNode("review-build-button", scroll = true)
+        boundedStage("font scale") {
+            changedFontScale = true
+            device.executeShellCommand("settings put system font_scale 2.0")
+            waitForSystemFontScale(1.9f)
+        }
+        boundedStage("runtime launch") { launchFoundationAtAppliedFontScale() }
+        boundedStage("node missing") { waitForNode("signed-out-state") }
+        boundedStage("scroll action") { waitForNode("review-build-button", scroll = true) }
     }
 
     @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {

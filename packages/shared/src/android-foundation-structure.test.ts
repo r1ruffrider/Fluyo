@@ -204,6 +204,10 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain("waitForSystemFontScale(1.9f)");
     expect(responsive).toContain('throw AssertionError("font scale")');
     expect(responsive).toContain('throw AssertionError("runtime launch")');
+    expect(responsive).toContain('boundedStage("font scale")');
+    expect(responsive).toContain('boundedStage("runtime launch")');
+    expect(responsive).toContain('boundedStage("node missing")');
+    expect(responsive).toContain('boundedStage("scroll action")');
     expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
     expect(responsive).not.toContain("am force-stop");
     expect(responsive).not.toContain("am start");
@@ -214,8 +218,11 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain(
       "check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))",
     );
-    expect(responsive).toContain(
-      'changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForSystemFontScale(1.9f)\n        launchFoundationAtAppliedFontScale()',
+    expect(responsive.indexOf("changedFontScale = true")).toBeLessThan(
+      responsive.indexOf('device.executeShellCommand("settings put system font_scale 2.0")'),
+    );
+    expect(responsive.indexOf("waitForSystemFontScale(1.9f)")).toBeLessThan(
+      responsive.indexOf('boundedStage("runtime launch")'),
     );
     expect(responsive).not.toContain("ActivityScenarioRule");
     expect(responsive).toContain("activeScenario?.close()");

@@ -143,10 +143,13 @@ for (const file of xmlFiles.sort()) {
     const failureTag = body.match(/<(failure|error)\b([^>]*)>/);
     const kind = failureTag?.[1] ?? null;
     if (!kind) continue;
-    const sourceLineMatch = body.match(/FoundationShellTest\.kt:(\d{1,5})/);
+    const className = attribute(attributes, "classname");
+    const sourceName = className.split(".").at(-1)?.split("$")[0] ?? "unknown";
+    const escapedSourceName = sourceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
     failures.push({
-      className: attribute(attributes, "classname"),
+      className,
       testName: attribute(attributes, "name"),
       kind,
       category: boundedStageCategory(failureTag[2], body) ?? failureCategory(failureTag[2]),

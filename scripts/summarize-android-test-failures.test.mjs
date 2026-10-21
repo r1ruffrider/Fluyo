@@ -141,13 +141,13 @@ test("ignores semantics-tree bounds outside the failure message", () => {
   try {
     fs.writeFileSync(
       path.join(root, "TEST-count.xml"),
-      '<testsuite><testcase classname="Shell" name="marker"><failure message="Expected exactly 0 nodes but found 1">at com.fluyo.app.FoundationShellTest.marker(FoundationShellTest.kt:109) boundsInRoot width height learner@example.test</failure></testcase></testsuite>',
+      '<testsuite><testcase classname="com.fluyo.app.FoundationShellTest" name="marker"><failure message="Expected exactly 0 nodes but found 1">at com.fluyo.app.FoundationShellTest.marker(FoundationShellTest.kt:109) boundsInRoot width height learner@example.test</failure></testcase></testsuite>',
     );
     const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
     assert.equal(result.status, 0);
     assert.deepEqual(JSON.parse(result.stdout).failures, [
       {
-        className: "Shell",
+        className: "com.fluyo.app.FoundationShellTest",
         testName: "marker",
         kind: "failure",
         category: "count",
@@ -157,6 +157,22 @@ test("ignores semantics-tree bounds outside the failure message", () => {
       },
     ]);
     assert.doesNotMatch(result.stdout, /bounds|width|height|example\.test/i);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("binds source lines to the reported test class only", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-source-"));
+  try {
+    fs.writeFileSync(
+      path.join(root, "TEST-source.xml"),
+      '<testsuite><testcase classname="com.fluyo.app.FoundationResponsiveDeviceTest" name="largeText"><failure message="opaque">FoundationShellTest.kt:64\nFoundationResponsiveDeviceTest.kt:92</failure></testcase></testsuite>',
+    );
+    const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+    assert.equal(result.status, 0);
+    assert.equal(JSON.parse(result.stdout).failures[0].sourceLine, 92);
+    assert.doesNotMatch(result.stdout, /FoundationShellTest|FoundationResponsiveDeviceTest\.kt/i);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
