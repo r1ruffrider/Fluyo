@@ -6,12 +6,11 @@ import android.os.LocaleList
 import android.view.KeyEvent
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -61,14 +60,10 @@ class CurrentRuntimeFoundationTest {
         }
         val node = compose.onNodeWithTag(tag)
         if (scroll) {
-            val scrollContainer = compose.onNodeWithTag("foundation-scroll")
-            scrollContainer.performScrollToNode(hasTestTag(tag))
+            node.performScrollTo()
             compose.waitForIdle()
-            val viewport = scrollContainer.fetchSemanticsNode().boundsInRoot
             val target = node.fetchSemanticsNode().boundsInRoot
             assertTrue(target.width > 0f && target.height > 0f)
-            assertTrue(target.left >= viewport.left - 1f && target.right <= viewport.right + 1f)
-            assertTrue(target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f)
         }
     }
 

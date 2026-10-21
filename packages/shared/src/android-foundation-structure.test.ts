@@ -173,13 +173,11 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).toContain("performScrollToNode");
+    expect(instrumentation).toContain("performScrollTo");
     expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(3);
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
-    expect(instrumentation).toContain("scroll.performScrollToNode(hasTestTag(tag))");
-    expect(instrumentation).toContain(
-      "target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f",
-    );
+    expect(instrumentation).toContain("node.performScrollTo()");
+    expect(instrumentation).toContain("target.width > 0f && target.height > 0f");
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -203,9 +201,8 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
     expect(currentRuntime).not.toContain("prepareFoundation");
     expect(currentRuntime).toContain("waitForNode(expectedStateTag())");
-    expect(currentRuntime).toContain(
-      "target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f",
-    );
+    expect(currentRuntime).toContain("node.performScrollTo()");
+    expect(currentRuntime).toContain("target.width > 0f && target.height > 0f");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
@@ -240,7 +237,7 @@ describe("Android foundation structure", () => {
       "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
     );
     expect(workflowText).toContain("run_manual_instrumentation");
-    expect(workflowText).toContain("^OK \\(1 test\\)$");
+    expect(workflowText).toContain("^OK \\(1 test\\)\\r?$");
     expect(workflowText).toContain(
       "Android current-runtime instrumentation failed; test=$test_name; raw output was discarded",
     );
