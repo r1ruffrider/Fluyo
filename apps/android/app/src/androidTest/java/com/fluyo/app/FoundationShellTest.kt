@@ -3,10 +3,12 @@ package com.fluyo.app
 import android.content.res.Configuration
 import android.os.LocaleList
 import android.view.View
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,8 +42,13 @@ class FoundationShellTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val valid = AppConfiguration("development", "https://api.dev.fluyo.example.test/api/v1", "https://auth.dev.fluyo.example.test", "synthetic_public_value", true, true, "0.1.0", 1, "abcdef1")
 
+    private fun setFoundationContent(content: @Composable () -> Unit) {
+        compose.runOnUiThread { compose.activity.setContent(content = content) }
+        compose.waitForIdle()
+    }
+
     @Test fun loadingHasOneSemanticStateAndMarker() {
-        compose.setContent { MaterialTheme { FoundationShell(FoundationShellState.Loading, valid) {} } }
+        setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.Loading, valid) {} } }
         val loading = compose.onNodeWithTag("loading-state").assertIsDisplayed().fetchSemanticsNode()
         assertEquals(LiveRegionMode.Polite, loading.config[SemanticsProperties.LiveRegion])
         compose.onAllNodesWithTag("signed-out-state").assertCountEquals(0)
@@ -50,7 +57,7 @@ class FoundationShellTest {
     }
 
     @Test fun signedOutActionIsHonestFocusedAndAtLeast48Dp() {
-        compose.setContent { MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} } }
+        setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} } }
         compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
         val action = compose.onNodeWithTag("review-build-button")
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
@@ -64,14 +71,14 @@ class FoundationShellTest {
     }
 
     @Test fun safeErrorFocusesRetryAndOmitsInternalDetail() {
-        compose.setContent { MaterialTheme { FoundationShell(FoundationShellState.Failure, valid.copy(apiBaseUrl = "")) {} } }
+        setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.Failure, valid.copy(apiBaseUrl = "")) {} } }
         compose.onNodeWithTag("error-state").assertIsDisplayed()
         compose.onNodeWithTag("retry-button").assertHeightIsAtLeast(48.dp).assertIsFocused()
         compose.onNodeWithTag("internal-build-marker").assertIsDisplayed()
     }
 
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
-        compose.setContent {
+        setFoundationContent {
             val current = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(current.density, 2f)) {
                 MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} }
@@ -86,7 +93,7 @@ class FoundationShellTest {
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {
         var direction by mutableStateOf(LayoutDirection.Ltr)
-        compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides direction) { MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} } } }
+        setFoundationContent { CompositionLocalProvider(LocalLayoutDirection provides direction) { MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} } } }
         val ltr = compose.onNodeWithTag("brand-heading").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         compose.runOnIdle { direction = LayoutDirection.Rtl }
         compose.waitForIdle()
@@ -115,7 +122,7 @@ class FoundationShellTest {
     @Test fun resizePreservesTheNewestStateAndExpandedScope() {
         var width by mutableStateOf(320.dp)
         var state by mutableStateOf<FoundationShellState>(FoundationShellState.Loading)
-        compose.setContent {
+        setFoundationContent {
             Box(Modifier.width(width).height(520.dp)) {
                 MaterialTheme { FoundationShell(state, valid) {} }
             }

@@ -112,9 +112,17 @@ describe("Android foundation structure", () => {
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     expect(shell).not.toMatch(/Text\(\s*"/);
     const strings = text("app/src/main/res/values/strings.xml");
+    const expanded = text("app/src/debug/res/values-en-rXA/strings.xml");
+    const rtl = text("app/src/debug/res/values-ar-rXB/strings.xml");
+    const names = (source: string) =>
+      [...source.matchAll(/<string name="([^"]+)"/g)].map((match) => match[1]).sort();
     expect(strings).toContain("does not include sign-in, lessons, billing, or public access");
     expect(strings).toContain("Spanish learning-content sample");
     expect(strings).toContain("¿Dónde está la estación?");
+    expect(names(expanded)).toEqual(names(strings));
+    expect(names(rtl)).toEqual(names(strings));
+    expect(expanded).toContain("one two three");
+    expect(rtl).toContain("اختبار");
   });
 
   it("includes the exact emulator, accessibility, and baseline-profile seams", () => {
@@ -127,6 +135,9 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("heightIn(min = 48.dp)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
+    const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
+    expect(instrumentation).toContain("compose.activity.setContent");
+    expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
   });
 
   it("uses light and dark text pairs above the WCAG normal-text threshold", () => {

@@ -60,7 +60,6 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
-            isPseudoLocalesEnabled = true
         }
         release {
             isDebuggable = false
