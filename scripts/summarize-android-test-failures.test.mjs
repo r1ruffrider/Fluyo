@@ -24,7 +24,7 @@ test("reports only bounded test identity and failure kind", () => {
           testName: "loadingHasOneState",
           kind: "failure",
           category: "assertion",
-          frameworkFailureType: null,
+          frameworkFailureCategory: null,
           runtimeCategories: [],
           sourceLine: null,
         },
@@ -51,7 +51,7 @@ test("maps raw assertion details to a closed category without retaining text", (
         testName: "largeText",
         kind: "failure",
         category: "visibility",
-        frameworkFailureType: null,
+        frameworkFailureCategory: null,
         runtimeCategories: [],
         sourceLine: null,
       },
@@ -77,7 +77,7 @@ test("ignores semantics-tree bounds outside the failure message", () => {
         testName: "marker",
         kind: "failure",
         category: "count",
-        frameworkFailureType: null,
+        frameworkFailureCategory: null,
         runtimeCategories: [],
         sourceLine: 109,
       },
@@ -103,7 +103,7 @@ test("maps known runtime types to closed categories without retaining raw identi
         testName: "launch",
         kind: "error",
         category: "runtime_error",
-        frameworkFailureType: null,
+        frameworkFailureCategory: null,
         runtimeCategories: ["illegal_state"],
         sourceLine: null,
       },
@@ -194,28 +194,25 @@ test("maps infrastructure and launch failures to fixed categories without retain
   }
 });
 
-test("retains only allowlisted framework failure types", () => {
+test("maps only exact framework failure types to fixed categories", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-type-"));
   try {
     fs.writeFileSync(
       path.join(root, "TEST-type.xml"),
-      '<testsuite><testcase classname="Shell" name="launch"><failure type="com.android.tools.utp.plugins.host.device.info.DeviceInfoPluginException" message="learner@example.test">C:\\private\\path</failure></testcase></testsuite>',
+      '<testsuite><testcase classname="Shell" name="launch"><failure type="java.lang.AssertionError" message="learner@example.test">C:\\private\\path</failure></testcase></testsuite>',
     );
     const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
     assert.equal(result.status, 0);
-    assert.equal(
-      JSON.parse(result.stdout).failures[0].frameworkFailureType,
-      "com.android.tools.utp.plugins.host.device.info.DeviceInfoPluginException",
-    );
+    assert.equal(JSON.parse(result.stdout).failures[0].frameworkFailureCategory, "assertion");
     assert.doesNotMatch(result.stdout, /example\.test|private/i);
 
     fs.writeFileSync(
       path.join(root, "TEST-type.xml"),
-      '<testsuite><testcase classname="Shell" name="launch"><failure type="provider.private.CustomerIdentityException">raw</failure></testcase></testsuite>',
+      '<testsuite><testcase classname="Shell" name="launch"><failure type="com.android.provider.private.CustomerIdentityException">raw</failure></testcase></testsuite>',
     );
     const denied = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
-    assert.equal(JSON.parse(denied.stdout).failures[0].frameworkFailureType, null);
-    assert.doesNotMatch(denied.stdout, /provider|CustomerIdentity/i);
+    assert.equal(JSON.parse(denied.stdout).failures[0].frameworkFailureCategory, null);
+    assert.doesNotMatch(denied.stdout, /provider|CustomerIdentity|com\.android/i);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

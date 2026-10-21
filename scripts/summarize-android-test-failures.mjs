@@ -44,13 +44,21 @@ const attribute = (tag, name) => {
   const match = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
   return safeIdentifier(match?.[1] ?? "unknown");
 };
-const frameworkFailureType = (tag) => {
+const frameworkFailureCategory = (tag) => {
   const match = tag.match(/(?:^|\s)type="([^"]*)"/);
   const value = match?.[1] ?? "";
-  if (!/^(?:java|junit|org\.junit|android|androidx|com\.android)\.[A-Za-z0-9_.$-]+$/.test(value)) {
-    return null;
-  }
-  return safeIdentifier(value);
+  const allowed = new Map([
+    ["java.lang.AssertionError", "assertion"],
+    ["junit.framework.AssertionFailedError", "assertion"],
+    ["org.junit.ComparisonFailure", "comparison"],
+    ["java.lang.IllegalStateException", "illegal_state"],
+    ["java.lang.SecurityException", "permission_denied"],
+    ["java.lang.ClassNotFoundException", "class_loading"],
+    ["java.lang.NoClassDefFoundError", "class_loading"],
+    ["androidx.compose.ui.test.ComposeTimeoutException", "timeout"],
+    ["java.util.concurrent.TimeoutException", "timeout"],
+  ]);
+  return allowed.get(value) ?? null;
 };
 
 const failureCategory = (body) => {
@@ -112,7 +120,7 @@ for (const file of xmlFiles.sort()) {
       testName: attribute(attributes, "name"),
       kind,
       category: failureCategory(failureTag[2]),
-      frameworkFailureType: frameworkFailureType(failureTag[2]),
+      frameworkFailureCategory: frameworkFailureCategory(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,
     });
