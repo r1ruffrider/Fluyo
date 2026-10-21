@@ -39,6 +39,15 @@ class FoundationShellTest {
         compose.waitForIdle()
     }
 
+    private inline fun boundedStage(sentinel: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (error: Throwable) {
+            if (error is AssertionError && error.message == sentinel) throw error
+            throw AssertionError(sentinel)
+        }
+    }
+
     @Test fun loadingHasOneSemanticStateAndMarker() {
         setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.Loading, valid) {} } }
         val loading = compose.onNodeWithTag("loading-state").assertIsDisplayed().fetchSemanticsNode()
@@ -60,9 +69,21 @@ class FoundationShellTest {
 
     @Test fun safeErrorFocusesRetryAndOmitsInternalDetail() {
         setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.Failure, valid.copy(apiBaseUrl = "")) {} } }
-        compose.onNodeWithTag("error-state").assertIsDisplayed()
-        compose.onNodeWithTag("retry-button").assertHeightIsAtLeast(48.dp).assertIsFocused()
-        compose.onNodeWithTag("internal-build-marker").assertIsDisplayed()
+        boundedStage("error state") {
+            compose.onNodeWithTag("error-state").assertIsDisplayed()
+        }
+        boundedStage("focus target") {
+            compose.waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    compose.onNodeWithTag("retry-button").assertIsFocused()
+                    true
+                }.getOrDefault(false)
+            }
+            compose.onNodeWithTag("retry-button").assertHeightIsAtLeast(48.dp).assertIsFocused()
+        }
+        boundedStage("marker state") {
+            compose.onNodeWithTag("internal-build-marker").assertIsDisplayed()
+        }
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {

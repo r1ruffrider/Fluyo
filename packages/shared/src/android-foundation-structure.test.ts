@@ -187,6 +187,10 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain(
       'compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell", substring = true)',
     );
+    expect(instrumentation).toContain('boundedStage("error state")');
+    expect(instrumentation).toContain('boundedStage("focus target")');
+    expect(instrumentation).toContain('boundedStage("marker state")');
+    expect(instrumentation).toContain("compose.waitUntil(timeoutMillis = 5_000)");
     expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
     const responsive = text(
       "app/src/androidTest/java/com/fluyo/app/FoundationResponsiveDeviceTest.kt",
@@ -334,6 +338,9 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('failure_category="loading_present"');
     expect(workflowText).toContain('failure_category="unexpected_state"');
     expect(workflowText).toContain('failure_category="runtime_cleanup"');
+    expect(workflowText).toContain('failure_category="error_state"');
+    expect(workflowText).toContain('failure_category="focus_target"');
+    expect(workflowText).toContain('failure_category="marker_state"');
     expect(workflowText).toContain('failure_category="test_failure"');
     expect(workflowText).toContain('failure_category="zero_tests"');
     expect(workflowText).toContain('failure_category="summary_mismatch"');

@@ -308,6 +308,12 @@ jobs:
               failure_category="unexpected_state"
             elif grep -q 'AssertionError: runtime cleanup' "$INSTRUMENT_LOG"; then
               failure_category="runtime_cleanup"
+            elif grep -q 'AssertionError: error state' "$INSTRUMENT_LOG"; then
+              failure_category="error_state"
+            elif grep -q 'AssertionError: focus target' "$INSTRUMENT_LOG"; then
+              failure_category="focus_target"
+            elif grep -q 'AssertionError: marker state' "$INSTRUMENT_LOG"; then
+              failure_category="marker_state"
             elif [[ "$status" -ne 0 ]]; then
               failure_category="process_status"
             elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then
