@@ -243,6 +243,16 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(workflowText).toContain("compose_semantics_api29");
     expect(workflowText).toContain("compose_semantics_system_input_api37");
+    const androidReadme = readFileSync(resolve(root, "apps/android/README.md"), "utf8");
+    const contractReadme = readFileSync(
+      resolve(root, "contracts/mobile/android/foundation/v1/README.md"),
+      "utf8",
+    );
+    const handoff = readFileSync(resolve(root, "docs/DEVELOPMENT_HANDOFF.md"), "utf8");
+    for (const governedText of [androidReadme, contractReadme, handoff]) {
+      expect(governedText).toContain("exactly seven Compose-semantics checks per flavor");
+      expect(governedText).not.toMatch(/six bounded UiAutomator black-box checks/i);
+    }
     expect(workflowText).toContain("com.fluyo.app.staging");
     expect(workflowText).toContain('"$app_package.test/androidx.test.runner.AndroidJUnitRunner"');
     expect(workflowText).toContain("settings put system font_scale 1.0");

@@ -58,7 +58,7 @@ export const scenarioProofById = {
     leg: "minimum",
     mode: minimumMode,
     command: "API 29 200-percent Compose density instrumentation",
-    observed: "pinned primary action remained displayed and reachable at 200 percent font scale",
+    observed: "primary action remained displayed and scroll-reachable at 200 percent font scale",
   },
   android_talkback_order_and_names: {
     leg: "minimum",
@@ -127,13 +127,14 @@ export const scenarioProofById = {
   android_production_inert: {
     leg: "current",
     mode: currentMode,
-    command: "production build inspection plus seven-test API 37 black-box run",
+    command:
+      "production build inspection plus seven-method API 37 Compose-semantics and system-input run",
     observed: "production stayed inert, marker-free, and in the safe error state",
   },
   android_pseudolocale_expansion: {
     leg: "current",
     mode: currentMode,
-    command: "API 37 en-XA UiAutomator expansion check",
+    command: "API 37 en-XA Compose-semantics expansion check",
     observed: "packaged en-XA end state and action remained reachable",
   },
   android_keyboard_and_switch_focus: {
@@ -147,7 +148,7 @@ export const scenarioProofById = {
   android_large_current_api_phone_emulator: {
     leg: "current",
     mode: currentMode,
-    command: "seven-test API 37 large-phone black-box lane per flavor",
+    command: "seven-method API 37 Compose-semantics and system-input lane per flavor",
     observed:
       "API 37 launch, large text, landscape, motion, locale, action, and adaptive-window checks passed",
   },

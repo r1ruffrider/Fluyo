@@ -98,13 +98,12 @@ and a fail-closed sanitized aggregate. Physical Pixel and Samsung rows stay unat
 until their separate device/custody gate.
 
 The minimum API 29 lane supplies Compose semantics and accessibility instrumentation.
-The current API 37 lane runs exactly six bounded UiAutomator black-box checks per flavor
-for end-state honesty, action reachability under 200% text and landscape, reduced motion,
-the local-only action, en-XA expansion, and keyboard/D-pad action access. It retains no
-UI hierarchy, screenshot, video, logcat, raw emulator
-output, or raw instrumentation result. These checks do not establish API 37 Compose-rule
-parity, broad accessibility compliance, physical-device support, capture readiness, or
-Play readiness.
+The current API 37 lane runs exactly seven Compose-semantics checks per flavor, with system input
+and window controls for end-state honesty, action reachability under 200% text and landscape,
+reduced motion, the local-only action, en-XA expansion, keyboard/D-pad action access, and
+adaptive-window usability. It retains no UI hierarchy, screenshot, video, logcat, raw emulator
+output, or raw instrumentation result. These checks do not establish broad accessibility
+compliance, physical-device support, capture readiness, or Play readiness.
 
 ## Claim boundary
 

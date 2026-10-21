@@ -23,9 +23,9 @@ does not establish public API 37 support. The evidence matrix records only the e
 API 29 and API 37 emulator executions that pass.
 
 The API 29 lane runs the full Compose semantics and accessibility instrumentation suite.
-The API 37 lane runs exactly six bounded UiAutomator black-box checks per flavor for the
-honest end state and action, 200% text in landscape, reduced motion, local-only action
-behavior, en-XA expansion, and keyboard/D-pad action access. Raw
-emulator and instrumentation output is temporary and deleted unconditionally. This
-current-runtime lane does not claim Compose-rule parity, general accessibility
-compliance, device support, capture readiness, or Play readiness.
+The API 37 lane runs exactly seven Compose-semantics checks per flavor, with system input and
+window controls for the honest end state and action, 200% text in landscape, reduced motion,
+local-only action behavior, en-XA expansion, keyboard/D-pad action access, and adaptive-window
+usability. Raw emulator and instrumentation output is temporary and deleted unconditionally.
+This current-runtime lane does not establish general accessibility compliance, device support,
+capture readiness, or Play readiness.

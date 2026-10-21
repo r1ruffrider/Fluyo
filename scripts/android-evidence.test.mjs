@@ -20,7 +20,7 @@ const metadata = (source, leg) => ({
   command:
     leg === "minimum"
       ? "pinned API 29 Compose semantics lane"
-      : "pinned API 37 bounded UiAutomator black-box lane",
+      : "pinned API 37 Compose-semantics plus system-input lane",
 });
 
 test("partitions all 27 applicable scenarios and leaves two physical rows", () => {
@@ -35,11 +35,11 @@ test("partitions all 27 applicable scenarios and leaves two physical rows", () =
   );
   assert.match(
     scenarioProofById.android_large_current_api_phone_emulator.command,
-    /seven-test API 37 large-phone black-box lane per flavor/,
+    /seven-method API 37 Compose-semantics and system-input lane per flavor/,
   );
   assert.doesNotMatch(
     scenarioProofById.android_font_scale_200_percent.observed,
-    /48 dp|touch target/i,
+    /48 dp|touch target|pinned/i,
   );
   assert.match(scenarioProofById.android_minimum_touch_targets.observed, /at least 48 dp/i);
   assert.equal(scenarioProofById.android_pseudolocale_expansion.leg, "current");
