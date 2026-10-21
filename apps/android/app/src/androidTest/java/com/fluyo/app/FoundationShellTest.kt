@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -56,16 +58,12 @@ class FoundationShellTest {
         compose.onNodeWithTag("internal-build-marker").assertIsDisplayed()
     }
 
-    @Test fun signedOutActionIsHonestFocusedAndAtLeast48Dp() {
+    @Test fun signedOutActionIsHonestFocusableAndAtLeast48Dp() {
         setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} } }
         compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
         val action = compose.onNodeWithTag("review-build-button")
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
-        compose.waitUntil(5_000) {
-            runCatching {
-                action.fetchSemanticsNode().config[SemanticsProperties.Focused]
-            }.getOrDefault(false)
-        }
+        action.performSemanticsAction(SemanticsActions.RequestFocus)
         action.assertIsFocused().performClick()
         compose.onNodeWithTag("scope-detail").assertIsDisplayed().assertTextContains("local shell")
     }

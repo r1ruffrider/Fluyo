@@ -44,7 +44,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
     val actionFocus = remember { FocusRequester() }
     var scopeExpanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
-        if (state == FoundationShellState.SignedOut || state == FoundationShellState.Failure) {
+        if (state == FoundationShellState.Failure) {
             repeat(5) {
                 withFrameNanos { }
                 if (actionFocus.requestFocus()) return@LaunchedEffect
