@@ -54,6 +54,12 @@ class FoundationShellTest {
         val action = compose.onNodeWithTag("review-build-button")
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         action.performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                action.assertIsFocused()
+                true
+            }.getOrDefault(false)
+        }
         action.assertIsFocused().performClick()
         compose.onNodeWithTag("scope-detail").assertIsDisplayed().assertTextContains("local shell")
     }

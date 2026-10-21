@@ -175,6 +175,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
+    expect(instrumentation).toContain("compose.waitUntil(timeoutMillis = 5_000)");
     expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
     const responsive = text(
@@ -182,10 +183,11 @@ describe("Android foundation structure", () => {
     );
     expect(responsive.match(/@Test fun /g)).toHaveLength(2);
     expect(responsive).toContain("ActivityScenarioRule(MainActivity::class.java)");
-    expect(responsive).toContain("device.findObject(By.res(tag))");
+    expect(responsive).toContain("device.wait(Until.findObject(By.res(tag)), 1_500)");
     expect(responsive).toContain(
-      'device.findObject(By.res("foundation-scroll"))?.scroll(Direction.DOWN, 0.8f)',
+      'device.wait(Until.findObject(By.res("foundation-scroll")), 1_000)',
     );
+    expect(responsive).toContain("?.scroll(Direction.DOWN, 0.8f)");
     expect(responsive).toContain('throw AssertionError("node missing")');
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 2.0")',
@@ -232,10 +234,11 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).not.toContain("scenario.close()");
     expect(currentRuntime).not.toContain("createAndroidComposeRule");
     expect(currentRuntime).not.toContain("device.pressHome()");
-    expect(currentRuntime).toContain("device.findObject(By.res(tag))");
+    expect(currentRuntime).toContain("device.wait(Until.findObject(By.res(tag)), 1_500)");
     expect(currentRuntime).toContain(
-      'device.findObject(By.res("foundation-scroll"))?.scroll(Direction.DOWN, 0.8f)',
+      'device.wait(Until.findObject(By.res("foundation-scroll")), 1_000)',
     );
+    expect(currentRuntime).toContain("?.scroll(Direction.DOWN, 0.8f)");
     expect(currentRuntime).toContain("bounds.width() > 0 && bounds.height() > 0");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");

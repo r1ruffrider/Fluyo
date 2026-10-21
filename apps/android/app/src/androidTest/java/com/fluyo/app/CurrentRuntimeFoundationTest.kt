@@ -11,6 +11,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
+import androidx.test.uiautomator.Until
 import org.junit.After
 import org.junit.Before
 import org.junit.Assert.assertTrue
@@ -84,12 +85,13 @@ class CurrentRuntimeFoundationTest {
 
     private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {
         repeat(8) {
-            device.findObject(By.res(tag))?.let { node ->
+            device.wait(Until.findObject(By.res(tag)), 1_500)?.let { node ->
                 val bounds = node.visibleBounds
                 if (bounds.width() > 0 && bounds.height() > 0) return node
             }
             if (scroll) {
-                device.findObject(By.res("foundation-scroll"))?.scroll(Direction.DOWN, 0.8f)
+                device.wait(Until.findObject(By.res("foundation-scroll")), 1_000)
+                    ?.scroll(Direction.DOWN, 0.8f)
             }
             device.waitForIdle()
         }
