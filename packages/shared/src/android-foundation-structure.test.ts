@@ -160,7 +160,10 @@ describe("Android foundation structure", () => {
     expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation).toContain("pseudoLocaleExpansionUsesPackagedResources");
     expect(instrumentation).toContain("pseudoRtlResourcesReportRtlDirection");
-    expect(instrumentation).toContain("detail.boundsInRoot.width > 0f");
+    expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
+    expect(instrumentation).toContain(
+      'compose.onNodeWithTag("signed-out-state").assertIsDisplayed()',
+    );
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
   });
 

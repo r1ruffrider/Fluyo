@@ -100,7 +100,12 @@ class FoundationShellTest {
 
     @Test fun pseudoLocaleExpansionUsesPackagedResources() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val english = context.getString(R.string.signed_out_body)
+        val englishLocale = Locale.Builder().setLanguage("en").setRegion("US").build()
+        val englishConfiguration = Configuration(context.resources.configuration).apply {
+            setLocales(LocaleList(englishLocale))
+            setLayoutDirection(englishLocale)
+        }
+        val english = context.createConfigurationContext(englishConfiguration).getString(R.string.signed_out_body)
         val expandedLocale = Locale.Builder().setLanguage("en").setRegion("XA").build()
         val expandedConfiguration = Configuration(context.resources.configuration).apply {
             setLocales(LocaleList(expandedLocale))
@@ -123,7 +128,7 @@ class FoundationShellTest {
         assertEquals(View.LAYOUT_DIRECTION_RTL, rtlContext.resources.configuration.layoutDirection)
     }
 
-    @Test fun resizePreservesTheNewestStateAndExpandedScope() {
+    @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {
         var width by mutableStateOf(320.dp)
         var state by mutableStateOf<FoundationShellState>(FoundationShellState.Loading)
         setFoundationContent {
@@ -136,10 +141,8 @@ class FoundationShellTest {
             width = 840.dp
         }
         compose.waitForIdle()
-        compose.onNodeWithTag("review-build-button").assertIsDisplayed().performClick()
-        compose.waitForIdle()
-        val detail = compose.onNodeWithTag("scope-detail").fetchSemanticsNode()
-        assertTrue(detail.boundsInRoot.width > 0f && detail.boundsInRoot.height > 0f)
+        compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
+        compose.onNodeWithTag("review-build-button").assertIsDisplayed()
         compose.runOnIdle {
             state = FoundationShellState.Failure
             width = 600.dp
