@@ -102,6 +102,17 @@ class CurrentRuntimeFoundationTest {
         throw AssertionError("runtime launch")
     }
 
+    private fun waitForApplicationLocale(languageTag: String) {
+        repeat(20) {
+            val locales = context.getSystemService(LocaleManager::class.java).applicationLocales
+            if (!locales.isEmpty && locales[0].toLanguageTag().equals(languageTag, ignoreCase = true)) {
+                return
+            }
+            SystemClock.sleep(250)
+        }
+        throw AssertionError("runtime launch")
+    }
+
     private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {
         repeat(8) {
             device.wait(Until.findObject(By.res(tag)), 1_500)?.let { node ->
@@ -188,9 +199,14 @@ class CurrentRuntimeFoundationTest {
         changedLocale = true
         context.getSystemService(LocaleManager::class.java).applicationLocales =
             LocaleList.forLanguageTags("en-XA")
-        recreateFoundation()
-        waitForNode(expectedStateTag())
-        waitForNode(expectedActionTag(), scroll = true)
+        waitForApplicationLocale("en-XA")
+        try {
+            scenario.onActivity { }
+            waitForNode(expectedStateTag())
+            waitForNode(expectedActionTag(), scroll = true)
+        } catch (_: Throwable) {
+            throw AssertionError("node missing")
+        }
     }
 
     @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {

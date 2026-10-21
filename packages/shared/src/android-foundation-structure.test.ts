@@ -192,7 +192,7 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("modifier = modifier.onFocusChanged { focusState ->");
     expect(shell).toContain("isFocused = focusState.isFocused");
     expect(shell).toContain("onFocusChanged(isFocused)");
-    expect(shell).toContain("}.semantics { focused = isFocused }");
+    expect(shell).not.toContain("focused = isFocused");
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
     expect(instrumentation.match(/@Test fun /g)).toHaveLength(4);
     expect(instrumentation).toContain("compose.activity.setContent");
@@ -315,6 +315,17 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
+    expect(currentRuntime).toContain("private fun waitForApplicationLocale(languageTag: String)");
+    expect(currentRuntime).toContain("applicationLocales");
+    const currentPseudoLocale = currentRuntime.match(
+      /@Test fun currentRuntimePseudoLocaleExpansionKeepsActionReachable\(\) \{([\s\S]*?)\n    \}\n\n    @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder/,
+    )?.[1];
+    expect(currentPseudoLocale).toBeDefined();
+    expect(currentPseudoLocale).toContain('waitForApplicationLocale("en-XA")');
+    expect(currentPseudoLocale).toContain("scenario.onActivity { }");
+    expect(currentPseudoLocale).toContain("waitForNode(expectedStateTag())");
+    expect(currentPseudoLocale).toContain("waitForNode(expectedActionTag(), scroll = true)");
+    expect(currentPseudoLocale).not.toContain("recreateFoundation()");
     expect(currentRuntime).toContain("currentRuntimeKeyboardAndDpadReachActionInLogicalOrder");
     expect(currentRuntime).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(currentRuntime).toContain('listOf("1200x2200", "2400x2200", "3000x2200")');

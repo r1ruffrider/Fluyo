@@ -132,7 +132,7 @@ private fun FoundationActionButton(
         modifier = modifier.onFocusChanged { focusState ->
             isFocused = focusState.isFocused
             onFocusChanged(isFocused)
-        }.semantics { focused = isFocused },
+        },
         border = if (isFocused) BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary) else null,
         content = { content() },
     )
