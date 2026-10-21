@@ -178,6 +178,9 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
     expect(instrumentation).toContain("node.performScrollTo()");
     expect(instrumentation).toContain("target.width > 0f && target.height > 0f");
+    expect(instrumentation).toContain('throw AssertionError("node count")');
+    expect(instrumentation).toContain('throw AssertionError("scroll action")');
+    expect(instrumentation).toContain('throw AssertionError("node width")');
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -238,8 +241,12 @@ describe("Android foundation structure", () => {
     );
     expect(workflowText).toContain("run_manual_instrumentation");
     expect(workflowText).toContain("^OK \\(1 test\\)\\r?$");
+    expect(workflowText).toContain('failure_category="process_status"');
+    expect(workflowText).toContain('failure_category="test_failure"');
+    expect(workflowText).toContain('failure_category="zero_tests"');
+    expect(workflowText).toContain('failure_category="summary_mismatch"');
     expect(workflowText).toContain(
-      "Android current-runtime instrumentation failed; test=$test_name; raw output was discarded",
+      "Android current-runtime instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded",
     );
     expect(workflowText).toContain('test "$executed" = "${#tests[@]}"');
     expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");

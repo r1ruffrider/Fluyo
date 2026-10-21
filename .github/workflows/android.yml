@@ -250,10 +250,19 @@ jobs:
                 >"$INSTRUMENT_LOG" 2>&1
               local status=$?
               set -e
-              if [[ "$status" -ne 0 ]] || grep -q 'FAILURES!!!' "$INSTRUMENT_LOG" || \
-                ! grep -Eq $'^OK \(1 test\)\r?$' "$INSTRUMENT_LOG"; then
+              failure_category=""
+              if [[ "$status" -ne 0 ]]; then
+                failure_category="process_status"
+              elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then
+                failure_category="test_failure"
+              elif grep -Eq $'^OK \(0 tests\)\r?$' "$INSTRUMENT_LOG"; then
+                failure_category="zero_tests"
+              elif ! grep -Eq $'^OK \(1 test\)\r?$' "$INSTRUMENT_LOG"; then
+                failure_category="summary_mismatch"
+              fi
+              if [[ -n "$failure_category" ]]; then
                 rm -f "$INSTRUMENT_LOG"
-                echo "Android current-runtime instrumentation failed; test=$test_name; raw output was discarded"
+                echo "Android current-runtime instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded"
                 exit 1
               fi
               executed=$((executed + 1))

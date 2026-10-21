@@ -47,14 +47,26 @@ class FoundationShellTest {
     }
 
     private fun waitForNodeToBeDisplayed(tag: String) {
-        compose.waitUntil(5_000) {
-            compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
+        try {
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
+            }
+        } catch (_: Throwable) {
+            throw AssertionError("node count")
         }
         val node = compose.onNodeWithTag(tag)
-        node.performScrollTo()
+        try {
+            node.performScrollTo()
+        } catch (_: Throwable) {
+            throw AssertionError("scroll action")
+        }
         compose.waitForIdle()
-        val target = node.fetchSemanticsNode().boundsInRoot
-        assertTrue(target.width > 0f && target.height > 0f)
+        try {
+            val target = node.fetchSemanticsNode().boundsInRoot
+            assertTrue("node width", target.width > 0f && target.height > 0f)
+        } catch (_: Throwable) {
+            throw AssertionError("node width")
+        }
     }
 
     @Test fun loadingHasOneSemanticStateAndMarker() {
