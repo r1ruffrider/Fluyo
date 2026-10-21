@@ -237,6 +237,7 @@ jobs:
               currentRuntimeActionRemainsLocalAndHonest
               currentRuntimePseudoLocaleExpansionKeepsActionReachable
               currentRuntimeKeyboardAndDpadReachActionInLogicalOrder
+              currentRuntimeExpandedWindowKeepsStateAndActionReachable
             )
             adb install -r "$app_apk" >"$INSTRUMENT_LOG" 2>&1
             adb install -r "$test_apk" >>"$INSTRUMENT_LOG" 2>&1
@@ -261,7 +262,7 @@ jobs:
             adb uninstall "$app_package.test" >/dev/null 2>&1 || true
             adb uninstall "$app_package" >/dev/null 2>&1 || true
             rm -f "$INSTRUMENT_LOG"
-            echo "Android current-runtime instrumentation passed exactly 6 tests; raw output was discarded"
+            echo "Android current-runtime instrumentation passed exactly $CURRENT_RUNTIME_TEST_COUNT tests; raw output was discarded"
           }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
@@ -309,7 +310,7 @@ jobs:
             cp apps/android/app/build/outputs/apk/production/debug/app-production-debug.apk "$TEMP/Fluyo-production-inert-debug.apk"
             ARTIFACT="$OUT/Fluyo-current-emulator.zip"
             ACCESSIBILITY_SETTING="bounded_uiautomator_black_box_api37"
-            CURRENT_RUNTIME_TEST_COUNT="6"
+            CURRENT_RUNTIME_TEST_COUNT="7"
           fi
           for apk in "$TEMP"/*.apk; do
             apksigner verify --print-certs "$apk" >"$TEMP/signing.txt"

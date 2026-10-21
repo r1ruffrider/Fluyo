@@ -1,6 +1,5 @@
 package com.fluyo.app
 
-import android.content.Intent
 import android.app.LocaleManager
 import android.os.LocaleList
 import android.view.KeyEvent
@@ -31,6 +30,7 @@ class CurrentRuntimeFoundationTest {
         device.executeShellCommand("settings put global animator_duration_scale 1")
         device.executeShellCommand("settings put global transition_animation_scale 1")
         device.executeShellCommand("settings put global window_animation_scale 1")
+        device.executeShellCommand("wm size reset")
     }
 
     @After fun restoreRuntimeSettings() {
@@ -42,10 +42,11 @@ class CurrentRuntimeFoundationTest {
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
         device.executeShellCommand("am force-stop ${context.packageName}")
-        context.startActivity(
-            Intent(context, MainActivity::class.java).addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK,
-            ),
+        device.executeShellCommand(
+            "am start -W -n ${context.packageName}/${MainActivity::class.java.name}",
+        )
+        assertTrue(
+            device.wait(Until.hasObject(By.pkg(context.packageName)), 5_000),
         )
         device.waitForIdle()
     }
@@ -153,5 +154,14 @@ class CurrentRuntimeFoundationTest {
         } else {
             waitForText(context.getString(R.string.error_title))
         }
+    }
+
+    @Test fun currentRuntimeExpandedWindowKeepsStateAndActionReachable() {
+        device.executeShellCommand("wm size 3000x2200")
+        launchFoundation()
+        waitForText(expectedTitle())
+        val action = waitForText(expectedAction())
+        assertTrue(action.visibleBounds.width() > 0)
+        assertTrue(action.visibleBounds.height() > 0)
     }
 }

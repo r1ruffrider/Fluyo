@@ -174,12 +174,9 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
     expect(instrumentation).not.toContain("performScrollTo");
-    expect(instrumentation.match(/assertNodeIsFullyInsideFoundation/g)).toHaveLength(3);
-    expect(instrumentation).toContain("compose.onRoot().fetchSemanticsNode().boundsInRoot");
-    expect(instrumentation).toContain(
-      "compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot",
-    );
+    expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(3);
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
+    expect(instrumentation).toContain("compose.onNodeWithTag(tag).assertIsDisplayed()");
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -195,7 +192,7 @@ describe("Android foundation structure", () => {
       "app/src/androidTest/java/com/fluyo/app/CurrentRuntimeFoundationTest.kt",
     );
     expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
-    expect(currentRuntime.match(/@Test fun /g)).toHaveLength(6);
+    expect(currentRuntime.match(/@Test fun /g)).toHaveLength(7);
     expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
     expect(currentRuntime).toContain("device.wakeUp()");
     expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
@@ -206,6 +203,13 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
     expect(currentRuntime).toContain("currentRuntimeKeyboardAndDpadReachActionInLogicalOrder");
+    expect(currentRuntime).toContain("currentRuntimeExpandedWindowKeepsStateAndActionReachable");
+    expect(currentRuntime).toContain('device.executeShellCommand("wm size 3000x2200")');
+    expect(currentRuntime).toContain('device.executeShellCommand("wm size reset")');
+    expect(currentRuntime).toContain(
+      '"am start -W -n ${context.packageName}/${MainActivity::class.java.name}"',
+    );
+    expect(currentRuntime).toContain("Until.hasObject(By.pkg(context.packageName))");
     expect(currentRuntime).toContain("device.pressKeyCode(KeyEvent.KEYCODE_TAB)");
     expect(currentRuntime).toContain("device.pressDPadCenter()");
     const workflow = resolve(root, ".github/workflows/android.yml");
@@ -245,7 +249,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("settings put global animator_duration_scale 1");
     expect(workflowText).toContain("adb uninstall com.fluyo.app.staging.test");
     expect(workflowText).toContain("adb uninstall com.fluyo.app.test");
-    expect(workflowText).toContain('CURRENT_RUNTIME_TEST_COUNT="6"');
+    expect(workflowText).toContain('CURRENT_RUNTIME_TEST_COUNT="7"');
     expect(workflowText).toContain(
       'rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"',
     );

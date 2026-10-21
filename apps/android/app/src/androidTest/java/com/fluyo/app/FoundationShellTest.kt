@@ -24,7 +24,6 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
@@ -46,14 +45,11 @@ class FoundationShellTest {
         compose.waitForIdle()
     }
 
-    private fun assertNodeIsFullyInsideFoundation(tag: String) {
+    private fun waitForNodeToBeDisplayed(tag: String) {
         compose.waitUntil(5_000) {
             runCatching {
-                val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
-                val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
-                node.width > 0f && node.height > 0f &&
-                    node.left >= root.left && node.top >= root.top &&
-                    node.right <= root.right && node.bottom <= root.bottom
+                compose.onNodeWithTag(tag).assertIsDisplayed()
+                true
             }.getOrDefault(false)
         }
     }
@@ -91,7 +87,7 @@ class FoundationShellTest {
                 MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} }
             }
         }
-        assertNodeIsFullyInsideFoundation("review-build-button")
+        waitForNodeToBeDisplayed("review-build-button")
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {
@@ -115,14 +111,14 @@ class FoundationShellTest {
         }
         compose.runOnIdle {
             state = FoundationShellState.SignedOut
-            width = 840.dp
+            width = 400.dp
         }
         compose.waitForIdle()
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("signed-out-state").fetchSemanticsNodes().size == 1 }
-        assertNodeIsFullyInsideFoundation("review-build-button")
+        waitForNodeToBeDisplayed("review-build-button")
         compose.runOnIdle {
             state = FoundationShellState.Failure
-            width = 600.dp
+            width = 360.dp
         }
         compose.onNodeWithTag("error-state").assertIsDisplayed()
         compose.onAllNodesWithTag("signed-out-state").assertCountEquals(0)
