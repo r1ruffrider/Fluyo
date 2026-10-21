@@ -112,20 +112,13 @@ describe("Android foundation structure", () => {
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     const app = text("app/build.gradle.kts");
     expect(shell).not.toMatch(/Text\(\s*"/);
-    expect(app).toContain('localeFilters += listOf("en", "en-rXA", "ar-rXB")');
+    expect(app).toContain('localeFilters += listOf("en", "b+en+XA", "b+ar+XB")');
     expect(app).toContain("isPseudoLocalesEnabled = true");
     const strings = text("app/src/main/res/values/strings.xml");
-    const expanded = text("app/src/debug/res/values-en-rXA/strings.xml");
-    const rtl = text("app/src/debug/res/values-ar-rXB/strings.xml");
-    const names = (source: string) =>
-      [...source.matchAll(/<string name="([^"]+)"/g)].map((match) => match[1]).sort();
     expect(strings).toContain("does not include sign-in, lessons, billing, or public access");
     expect(strings).toContain("Spanish learning-content sample");
     expect(strings).toContain("¿Dónde está la estación?");
-    expect(names(expanded)).toEqual(names(strings));
-    expect(names(rtl)).toEqual(names(strings));
-    expect(expanded).toContain("one two three");
-    expect(rtl).toContain("اختبار");
+    expect(strings).not.toContain('translatable="false"');
   });
 
   it("includes the exact emulator, accessibility, and baseline-profile seams", () => {

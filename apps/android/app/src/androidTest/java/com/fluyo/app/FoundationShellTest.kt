@@ -134,6 +134,7 @@ class FoundationShellTest {
             width = 840.dp
         }
         compose.onNodeWithTag("review-build-button").assertIsDisplayed().performClick()
+        compose.waitForIdle()
         compose.onNodeWithTag("scope-detail").assertIsDisplayed()
         compose.runOnIdle {
             state = FoundationShellState.Failure
