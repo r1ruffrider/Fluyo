@@ -138,18 +138,17 @@ class CurrentRuntimeFoundationTest {
         assertTrue(body.visibleBounds.bottom <= action.visibleBounds.top)
     }
 
-    @Test fun currentRuntimeKeyboardProxyReachesAndOperatesTheAction() {
+    @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {
         launchFoundation()
-        waitForText(expectedAction())
-        var focused = false
-        repeat(8) {
-            if (!focused) {
-                device.pressKeyCode(KeyEvent.KEYCODE_TAB)
-                focused = device.findObject(By.text(expectedAction()))?.isFocused == true
-            }
+        val action = waitForText(expectedAction())
+        if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
+            assertTrue(action.isFocused)
+        } else {
+            assertFalse(action.isFocused)
+            device.pressKeyCode(KeyEvent.KEYCODE_TAB)
         }
-        assertTrue(focused)
-        device.pressKeyCode(KeyEvent.KEYCODE_ENTER)
+        assertTrue(device.findObject(By.text(expectedAction()))?.isFocused == true)
+        device.pressDPadCenter()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
             waitForText(context.getString(R.string.scope_detail))
         } else {

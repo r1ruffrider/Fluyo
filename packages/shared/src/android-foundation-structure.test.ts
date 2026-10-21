@@ -149,6 +149,8 @@ describe("Android foundation structure", () => {
     expect(text("baselineprofile/build.gradle.kts")).not.toContain("managedDevices");
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     expect(shell).toContain("heightIn(min = 48.dp)");
+    expect(shell).toContain("collectIsFocusedAsState");
+    expect(shell).toContain("BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
     expect(shell).toContain("fillMaxHeight()");
@@ -190,7 +192,9 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
-    expect(currentRuntime).toContain("currentRuntimeKeyboardProxyReachesAndOperatesTheAction");
+    expect(currentRuntime).toContain("currentRuntimeKeyboardAndDpadReachActionInLogicalOrder");
+    expect(currentRuntime).toContain("device.pressKeyCode(KeyEvent.KEYCODE_TAB)");
+    expect(currentRuntime).toContain("device.pressDPadCenter()");
     const workflow = resolve(root, ".github/workflows/android.yml");
     const workflowText = readFileSync(workflow, "utf8");
     expect(workflowText).toContain("verify_packaged_pseudo_locales");

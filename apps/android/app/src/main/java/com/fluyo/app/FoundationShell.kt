@@ -1,6 +1,9 @@
 package com.fluyo.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -84,11 +87,11 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
                 )
             }
             when (state) {
-                FoundationShellState.SignedOut -> Button(
+                FoundationShellState.SignedOut -> FoundationActionButton(
                     onClick = { scopeExpanded = !scopeExpanded },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("review-build-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.review_scope_action)) }
-                FoundationShellState.Failure -> Button(
+                FoundationShellState.Failure -> FoundationActionButton(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("retry-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.retry_action)) }
@@ -96,6 +99,23 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
             }
         }
     }
+}
+
+@Composable
+private fun FoundationActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    content: @Composable () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        interactionSource = interactionSource,
+        border = if (isFocused) BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary) else null,
+        content = { content() },
+    )
 }
 
 @Composable

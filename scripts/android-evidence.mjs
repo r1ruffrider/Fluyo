@@ -135,9 +135,11 @@ export const scenarioProofById = {
   },
   android_keyboard_and_switch_focus: {
     leg: "current",
-    mode: currentMode,
-    command: "API 37 keyboard-D-pad proxy UiAutomator check",
-    observed: "the action received keyboard focus and operated locally",
+    mode: "uiautomator_keyboard_dpad_plus_explicit_focus_border",
+    command:
+      "API 37 deterministic error focus or first-Tab signed-out focus and D-pad-center check plus focus-border structure assertion",
+    observed:
+      "the sole action received deterministic logical focus, exposed a focus border, and operated by D-pad",
   },
   android_large_current_api_phone_emulator: {
     leg: "current",
