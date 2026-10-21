@@ -7,6 +7,7 @@ const allowedPhases = new Set([
   "unit_test",
   "assemble_internal",
   "assemble_production_inert",
+  "compile_instrumentation",
   "lint",
   "instrumentation_internal",
   "instrumentation_production_inert",

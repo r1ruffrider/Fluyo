@@ -90,6 +90,7 @@ describe("Android foundation structure", () => {
     expect(workflow).toContain("summarize-android-test-failures.mjs");
     expect(workflow).toContain("run_gradle_phase unit_test");
     expect(workflow).toContain("run_gradle_phase assemble_internal");
+    expect(workflow).toContain("run_gradle_phase compile_instrumentation");
     expect(workflow).toContain("run_gradle_phase instrumentation_internal");
     expect(workflow).toContain('--phase "$phase"');
     expect(workflow).not.toContain("--stacktrace");

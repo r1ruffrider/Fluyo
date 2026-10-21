@@ -137,12 +137,16 @@ jobs:
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleDevelopmentDebug
+            run_gradle_phase compile_instrumentation :app:compileDevelopmentDebugAndroidTestKotlin
             run_gradle_phase instrumentation_internal :app:smallApi29DevelopmentDebugAndroidTest
           else
             run_gradle_phase unit_test :app:testStagingDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleStagingDebug
             run_gradle_phase assemble_production_inert :app:assembleProductionDebug
             run_gradle_phase lint :app:lintDevelopmentDebug
+            run_gradle_phase compile_instrumentation \
+              :app:compileStagingDebugAndroidTestKotlin \
+              :app:compileProductionDebugAndroidTestKotlin
             run_gradle_phase instrumentation_internal :app:largeApi37StagingDebugAndroidTest
             run_gradle_phase instrumentation_production_inert :app:largeApi37ProductionDebugAndroidTest
             run_gradle_phase baseline_profile :app:generateDevelopmentBaselineProfile
