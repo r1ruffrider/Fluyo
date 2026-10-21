@@ -2,8 +2,6 @@ package com.fluyo.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -125,12 +123,13 @@ private fun FoundationActionButton(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
+    var isFocused by remember { mutableStateOf(false) }
     Button(
         onClick = onClick,
-        modifier = modifier.onFocusChanged { focusState -> onFocusChanged(focusState.isFocused) }.semantics { focused = isFocused },
-        interactionSource = interactionSource,
+        modifier = modifier.onFocusChanged { focusState ->
+            isFocused = focusState.isFocused
+            onFocusChanged(isFocused)
+        }.semantics { focused = isFocused },
         border = if (isFocused) BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary) else null,
         content = { content() },
     )

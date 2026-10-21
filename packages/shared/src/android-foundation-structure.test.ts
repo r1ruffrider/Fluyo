@@ -156,7 +156,7 @@ describe("Android foundation structure", () => {
     expect(text("baselineprofile/build.gradle.kts")).not.toContain("managedDevices");
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     expect(shell).toContain("heightIn(min = 48.dp)");
-    expect(shell).toContain("collectIsFocusedAsState");
+    expect(shell).not.toContain("collectIsFocusedAsState");
     expect(shell).toContain("BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
@@ -188,8 +188,11 @@ describe("Android foundation structure", () => {
     );
     expect(shell).toContain("if (settledFrames >= 3) return@LaunchedEffect");
     expect(shell).toContain(
-      "modifier = modifier.onFocusChanged { focusState -> onFocusChanged(focusState.isFocused) }.semantics { focused = isFocused }",
+      "modifier = modifier.onFocusChanged { focusState ->",
     );
+    expect(shell).toContain("isFocused = focusState.isFocused");
+    expect(shell).toContain("onFocusChanged(isFocused)");
+    expect(shell).toContain("}.semantics { focused = isFocused }");
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
     expect(instrumentation.match(/@Test fun /g)).toHaveLength(4);
     expect(instrumentation).toContain("compose.activity.setContent");
