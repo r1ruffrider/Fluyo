@@ -206,10 +206,15 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain('throw AssertionError("runtime launch")');
     expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
     expect(responsive).not.toContain("am force-stop");
-    expect(responsive).toContain('"am start -W -n $packageName/com.fluyo.app.MainActivity"');
+    expect(responsive).not.toContain("am start");
+    expect(responsive).toContain("Intent(context, MainActivity::class.java)");
+    expect(responsive).toContain(
+      "activeActivity = instrumentation.startActivitySync(intent) as MainActivity",
+    );
     expect(responsive).toContain(
       "check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))",
     );
+    expect(responsive).toContain("instrumentation.runOnMainSync { activity.finish() }");
     expect(responsive).toContain(
       'changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForSystemFontScale(1.9f)\n        launchFoundationAtAppliedFontScale()',
     );
