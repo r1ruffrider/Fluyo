@@ -154,11 +154,11 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
     expect(shell).toContain(
-      'Modifier.widthIn(max = 640.dp).fillMaxSize().verticalScroll(contentScroll).testTag("foundation-scroll")',
+      'Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
     expect(shell).toContain("contentAlignment = Alignment.TopCenter");
     expect(shell).toContain('Modifier.testTag("foundation-root").fillMaxSize()');
-    expect(shell).toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
+    expect(shell).not.toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
     expect(shell.match(/fillMaxWidth\(\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
     expect(shell).toContain(

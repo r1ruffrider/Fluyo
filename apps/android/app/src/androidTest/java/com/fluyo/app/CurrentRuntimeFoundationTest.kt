@@ -54,19 +54,23 @@ class CurrentRuntimeFoundationTest {
         compose.waitForIdle()
     }
 
+    private fun prepareFoundation() {
+        device.wakeUp()
+        device.executeShellCommand("wm dismiss-keyguard")
+        compose.waitForIdle()
+    }
+
     private fun waitForNode(tag: String, scroll: Boolean = false) {
         compose.waitUntil(10_000) {
-            runCatching {
-                val node = compose.onNodeWithTag(tag)
-                if (scroll) node.performScrollTo()
-                node.assertIsDisplayed()
-                true
-            }.getOrDefault(false)
+            compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
         }
+        val node = compose.onNodeWithTag(tag)
+        if (scroll) node.performScrollTo()
+        node.assertIsDisplayed()
     }
 
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
-        recreateFoundation()
+        prepareFoundation()
         waitForNode(expectedStateTag())
         compose.onAllNodesWithTag("loading-state").assertCountEquals(0)
         compose.onAllNodesWithTag(unexpectedStateTag()).assertCountEquals(0)

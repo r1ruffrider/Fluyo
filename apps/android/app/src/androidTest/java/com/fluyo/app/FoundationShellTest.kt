@@ -48,11 +48,9 @@ class FoundationShellTest {
 
     private fun waitForNodeToBeDisplayed(tag: String) {
         compose.waitUntil(5_000) {
-            runCatching {
-                compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
-                true
-            }.getOrDefault(false)
+            compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
         }
+        compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
     }
 
     @Test fun loadingHasOneSemanticStateAndMarker() {

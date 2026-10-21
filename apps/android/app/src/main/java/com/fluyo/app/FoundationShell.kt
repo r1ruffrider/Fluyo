@@ -60,7 +60,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
-            modifier = Modifier.widthIn(max = 640.dp).fillMaxSize().verticalScroll(contentScroll).testTag("foundation-scroll"),
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll"),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("brand-heading").semantics { heading(); traversalIndex = 0f })
