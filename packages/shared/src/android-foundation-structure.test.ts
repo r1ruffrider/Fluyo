@@ -164,13 +164,21 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
     expect(instrumentation).not.toContain("performScrollTo");
-    expect(instrumentation).toContain("pseudoLocaleExpansionUsesPackagedResources");
-    expect(instrumentation).toContain("pseudoRtlResourcesReportRtlDirection");
+    expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
       'compose.onNodeWithTag("signed-out-state").assertIsDisplayed()',
     );
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
+    const workflow = resolve(root, ".github/workflows/android.yml");
+    const workflowText = readFileSync(workflow, "utf8");
+    expect(workflowText).toContain("verify_packaged_pseudo_locales");
+    expect(workflowText).toContain('aapt2\" dump resources');
+    expect(workflowText).toContain("en[-_]r?XA");
+    expect(workflowText).toContain("ar[-_]r?XB");
+    expect(workflowText).toContain('rm -f "$resource_table"');
+    expect(app).not.toContain("FORCE_4KB_PAGES");
+    expect(text("baselineprofile/build.gradle.kts")).not.toContain("FORCE_4KB_PAGES");
   });
 
   it("uses light and dark text pairs above the WCAG normal-text threshold", () => {

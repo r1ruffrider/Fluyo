@@ -1,7 +1,5 @@
 package com.fluyo.app
 
-import android.content.res.Configuration
-import android.view.View
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -31,8 +29,6 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
-import java.util.Locale
 import org.junit.Rule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -94,24 +90,6 @@ class FoundationShellTest {
         val rtl = compose.onNodeWithTag("brand-heading").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         assertTrue(ltr.width > 0f && rtl.width > 0f && rtl.left > ltr.left)
         compose.onNodeWithTag("review-build-button").assertIsDisplayed()
-    }
-
-    @Test fun pseudoLocaleExpansionUsesPackagedResources() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val packagedLocales = context.resources.assets.locales.map { it.replace('_', '-') }
-        assertTrue(packagedLocales.any { it.equals("en-XA", ignoreCase = true) })
-    }
-
-    @Test fun pseudoRtlResourcesReportRtlDirection() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val rtlLocale = Locale.forLanguageTag("ar-XB")
-        val packagedLocales = context.resources.assets.locales.map { it.replace('_', '-') }
-        assertTrue(packagedLocales.any { it.equals("ar-XB", ignoreCase = true) })
-        val rtlConfiguration = Configuration(context.resources.configuration).apply {
-            setLayoutDirection(rtlLocale)
-        }
-        val rtlContext = context.createConfigurationContext(rtlConfiguration)
-        assertEquals(View.LAYOUT_DIRECTION_RTL, rtlContext.resources.configuration.layoutDirection)
     }
 
     @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {

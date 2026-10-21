@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_4KB_PAGES
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -86,7 +84,6 @@ android {
                 device = "Pixel 9 Pro XL"
                 apiLevel = 37
                 systemImageSource = "google"
-                pageAlignment = FORCE_4KB_PAGES
             }
         }
     }

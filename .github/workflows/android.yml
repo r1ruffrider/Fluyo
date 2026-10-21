@@ -134,14 +134,32 @@ jobs:
               exit "$status"
             fi
           }
+          verify_packaged_pseudo_locales() {
+            local apk="$1"
+            local resource_table="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-resources.txt"
+            "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump resources "$apk" >"$resource_table"
+            if ! grep -Eqi 'en[-_]r?XA' "$resource_table"; then
+              rm -f "$resource_table"
+              echo "Android pseudo-locale packaging check failed: expansion probe missing"
+              exit 1
+            fi
+            if ! grep -Eqi 'ar[-_]r?XB' "$resource_table"; then
+              rm -f "$resource_table"
+              echo "Android pseudo-locale packaging check failed: RTL probe missing"
+              exit 1
+            fi
+            rm -f "$resource_table"
+          }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleDevelopmentDebug
+            verify_packaged_pseudo_locales app/build/outputs/apk/development/debug/app-development-debug.apk
             run_gradle_phase compile_instrumentation :app:compileDevelopmentDebugAndroidTestKotlin
             run_gradle_phase instrumentation_internal :app:smallApi29DevelopmentDebugAndroidTest
           else
             run_gradle_phase unit_test :app:testStagingDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleStagingDebug
+            verify_packaged_pseudo_locales app/build/outputs/apk/staging/debug/app-staging-debug.apk
             run_gradle_phase assemble_production_inert :app:assembleProductionDebug
             run_gradle_phase lint :app:lintDevelopmentDebug
             run_gradle_phase compile_instrumentation \
