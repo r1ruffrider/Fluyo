@@ -133,6 +133,8 @@ jobs:
               adb shell settings put global window_animation_scale 1 >/dev/null 2>&1 || true
               adb uninstall com.fluyo.app.staging.test >/dev/null 2>&1 || true
               adb uninstall com.fluyo.app.staging >/dev/null 2>&1 || true
+              adb uninstall com.fluyo.app.dev.test >/dev/null 2>&1 || true
+              adb uninstall com.fluyo.app.dev >/dev/null 2>&1 || true
               adb uninstall com.fluyo.app.test >/dev/null 2>&1 || true
               adb uninstall com.fluyo.app >/dev/null 2>&1 || true
               adb emu kill >/dev/null 2>&1 || true
@@ -176,22 +178,27 @@ jobs:
             fi
             rm -f "$RESOURCE_TABLE"
           }
-          start_current_emulator() {
+          start_emulator() {
+            local avd_name="$1"
+            local image_package="$2"
+            local device_profile="$3"
+            local runtime_label="$4"
+            local memory="$5"
             export ANDROID_AVD_HOME="$AVD_HOME"
             local last_phase="unknown"
             for attempt in 1 2; do
               rm -rf "$AVD_HOME"
               mkdir -p "$AVD_HOME"
               if ! echo no | avdmanager create avd --force \
-                --name fluyo-api37 \
-                --package "system-images;android-37.0;google_apis;x86_64" \
-                --device "pixel_9_pro_xl" >"$EMULATOR_LOG" 2>&1; then
+                --name "$avd_name" \
+                --package "$image_package" \
+                --device "$device_profile" >"$EMULATOR_LOG" 2>&1; then
                 last_phase="avd_creation"
                 continue
               fi
-              "$ANDROID_HOME/emulator/emulator" -avd fluyo-api37 \
+              "$ANDROID_HOME/emulator/emulator" -avd "$avd_name" \
                 -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save \
-                -no-metrics -wipe-data -accel on -cores 2 -memory 4096 \
+                -no-metrics -wipe-data -accel on -cores 2 -memory "$memory" \
                 -gpu swiftshader_indirect >"$EMULATOR_LOG" 2>&1 &
               EMULATOR_PID=$!
               if ! timeout 180 adb wait-for-device >"$INSTRUMENT_LOG" 2>&1; then
@@ -208,7 +215,7 @@ jobs:
                 adb shell settings put global transition_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
                 adb shell settings put global window_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
                 rm -f "$EMULATOR_LOG" "$INSTRUMENT_LOG"
-                echo "Android current-runtime emulator became ready; raw output was discarded"
+                echo "Android $runtime_label emulator became ready; raw output was discarded"
                 return
               fi
               adb emu kill >/dev/null 2>&1 || true
@@ -221,10 +228,132 @@ jobs:
               avd_creation|device_connection|boot_completion) ;;
               *) last_phase="unknown" ;;
             esac
-            echo "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded"
+            echo "Android $runtime_label setup failed; phase=$last_phase; category=unavailable; raw output was discarded"
             exit 1
           }
-          run_manual_instrumentation() {
+          start_minimum_emulator() {
+            start_emulator \
+              fluyo-api29 \
+              "system-images;android-29;google_apis;x86_64" \
+              pixel_2 \
+              minimum-runtime \
+              3072
+          }
+          start_current_emulator() {
+            start_emulator \
+              fluyo-api37 \
+              "system-images;android-37.0;google_apis;x86_64" \
+              pixel_9_pro_xl \
+              current-runtime \
+              4096
+          }
+          wait_for_font_scale() {
+            local minimum="$1"
+            local maximum="$2"
+            for attempt in $(seq 1 20); do
+              local value
+              value="$(adb shell settings get system font_scale 2>/dev/null | tr -d '\r')"
+              if awk -v value="$value" -v minimum="$minimum" -v maximum="$maximum" \
+                'BEGIN { exit !(value + 0 >= minimum && value + 0 <= maximum) }'; then
+                return
+              fi
+              sleep 1
+            done
+            echo "Android minimum-runtime font-scale setup failed; category=setting_unavailable; raw output was discarded"
+            exit 1
+          }
+          run_instrumentation_method() {
+            local runtime_label="$1"
+            local app_package="$2"
+            local test_identifier="$3"
+            local test_name="${test_identifier##*#}"
+            : >"$INSTRUMENT_LOG"
+            set +e
+            adb shell am instrument -w -r \
+              -e class "com.fluyo.app.$test_identifier" \
+              "$app_package.test/androidx.test.runner.AndroidJUnitRunner" \
+              >"$INSTRUMENT_LOG" 2>&1
+            local status=$?
+            set -e
+            local failure_category=""
+            if grep -q 'AssertionError: state missing' "$INSTRUMENT_LOG"; then
+              failure_category="state_missing"
+            elif grep -q 'AssertionError: node missing' "$INSTRUMENT_LOG"; then
+              failure_category="node_missing"
+            elif grep -q 'AssertionError: node count' "$INSTRUMENT_LOG"; then
+              failure_category="node_count"
+            elif grep -q 'AssertionError: node geometry' "$INSTRUMENT_LOG"; then
+              failure_category="node_geometry"
+            elif grep -q 'AssertionError: scroll action' "$INSTRUMENT_LOG"; then
+              failure_category="scroll_action"
+            elif grep -q 'AssertionError: font scale' "$INSTRUMENT_LOG"; then
+              failure_category="font_scale"
+            elif grep -q 'AssertionError: runtime launch' "$INSTRUMENT_LOG"; then
+              failure_category="runtime_launch"
+            elif grep -q 'AssertionError: loading present' "$INSTRUMENT_LOG"; then
+              failure_category="loading_present"
+            elif grep -q 'AssertionError: unexpected state' "$INSTRUMENT_LOG"; then
+              failure_category="unexpected_state"
+            elif grep -q 'AssertionError: runtime cleanup' "$INSTRUMENT_LOG"; then
+              failure_category="runtime_cleanup"
+            elif [[ "$status" -ne 0 ]]; then
+              failure_category="process_status"
+            elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then
+              failure_category="test_failure"
+            elif grep -Eq $'^OK \(0 tests\)\r?$' "$INSTRUMENT_LOG"; then
+              failure_category="zero_tests"
+            elif ! grep -Eq $'^OK \(1 test\)\r?$' "$INSTRUMENT_LOG"; then
+              failure_category="summary_mismatch"
+            fi
+            if [[ -n "$failure_category" ]]; then
+              rm -f "$INSTRUMENT_LOG"
+              echo "Android $runtime_label instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded"
+              exit 1
+            fi
+          }
+          install_instrumentation_artifacts() {
+            local app_apk="$1"
+            local test_apk="$2"
+            adb install -r "$app_apk" >"$INSTRUMENT_LOG" 2>&1
+            adb install -r "$test_apk" >>"$INSTRUMENT_LOG" 2>&1
+          }
+          run_minimum_instrumentation() {
+            local app_package="$1"
+            local app_apk="$2"
+            local test_apk="$3"
+            local test_identifier
+            local executed=0
+            local tests=(
+              FoundationShellTest#loadingHasOneSemanticStateAndMarker
+              FoundationShellTest#signedOutActionIsHonestFocusableAndAtLeast48Dp
+              FoundationShellTest#safeErrorFocusesRetryAndOmitsInternalDetail
+              FoundationShellTest#rtlMirrorsLeadingGeometryAndKeepsActionSemantics
+              NaturalLaunchTest#naturalFlavorLaunchResolvesToTheOnlyAllowedEndState
+              NaturalLaunchTest#landscapeRecreationPreservesAReachableAction
+              NaturalLaunchTest#systemAnimationScaleZeroKeepsTheSameSemanticEndState
+              FoundationResponsiveDeviceTest#twoHundredPercentFontKeepsThePrimaryActionReachable
+              FoundationResponsiveDeviceTest#resizePreservesTheNewestStateAcrossWindowClasses
+            )
+            install_instrumentation_artifacts "$app_apk" "$test_apk"
+            for test_identifier in "${tests[@]}"; do
+              adb shell settings put system font_scale 1.0 >"$INSTRUMENT_LOG" 2>&1
+              wait_for_font_scale 0.99 1.01
+              if [[ "$test_identifier" == *#twoHundredPercentFontKeepsThePrimaryActionReachable ]]; then
+                adb shell settings put system font_scale 2.0 >"$INSTRUMENT_LOG" 2>&1
+                wait_for_font_scale 1.9 2.1
+              fi
+              run_instrumentation_method minimum-runtime "$app_package" "$test_identifier"
+              executed=$((executed + 1))
+            done
+            test "$executed" = "${#tests[@]}"
+            adb shell settings put system font_scale 1.0 >"$INSTRUMENT_LOG" 2>&1
+            wait_for_font_scale 0.99 1.01
+            adb uninstall "$app_package.test" >/dev/null 2>&1 || true
+            adb uninstall "$app_package" >/dev/null 2>&1 || true
+            rm -f "$INSTRUMENT_LOG"
+            echo "Android minimum-runtime instrumentation passed exactly ${#tests[@]} tests; raw output was discarded"
+          }
+          run_current_instrumentation() {
             local app_package="$1"
             local app_apk="$2"
             local test_apk="$3"
@@ -239,44 +368,12 @@ jobs:
               currentRuntimeKeyboardAndDpadReachActionInLogicalOrder
               currentRuntimeAdaptiveWindowsKeepStateAndActionReachable
             )
-            adb install -r "$app_apk" >"$INSTRUMENT_LOG" 2>&1
-            adb install -r "$test_apk" >>"$INSTRUMENT_LOG" 2>&1
+            install_instrumentation_artifacts "$app_apk" "$test_apk"
             for test_name in "${tests[@]}"; do
-              : >"$INSTRUMENT_LOG"
-              set +e
-              adb shell am instrument -w -r \
-                -e class "com.fluyo.app.CurrentRuntimeFoundationTest#$test_name" \
-                "$app_package.test/androidx.test.runner.AndroidJUnitRunner" \
-                >"$INSTRUMENT_LOG" 2>&1
-              local status=$?
-              set -e
-              failure_category=""
-              if grep -q 'AssertionError: state missing' "$INSTRUMENT_LOG"; then
-                failure_category="state_missing"
-              elif grep -q 'AssertionError: node missing' "$INSTRUMENT_LOG"; then
-                failure_category="node_missing"
-              elif grep -q 'AssertionError: runtime launch' "$INSTRUMENT_LOG"; then
-                failure_category="runtime_launch"
-              elif grep -q 'AssertionError: loading present' "$INSTRUMENT_LOG"; then
-                failure_category="loading_present"
-              elif grep -q 'AssertionError: unexpected state' "$INSTRUMENT_LOG"; then
-                failure_category="unexpected_state"
-              elif grep -q 'AssertionError: runtime cleanup' "$INSTRUMENT_LOG"; then
-                failure_category="runtime_cleanup"
-              elif [[ "$status" -ne 0 ]]; then
-                failure_category="process_status"
-              elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then
-                failure_category="test_failure"
-              elif grep -Eq $'^OK \(0 tests\)\r?$' "$INSTRUMENT_LOG"; then
-                failure_category="zero_tests"
-              elif ! grep -Eq $'^OK \(1 test\)\r?$' "$INSTRUMENT_LOG"; then
-                failure_category="summary_mismatch"
-              fi
-              if [[ -n "$failure_category" ]]; then
-                rm -f "$INSTRUMENT_LOG"
-                echo "Android current-runtime instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded"
-                exit 1
-              fi
+              run_instrumentation_method \
+                current-runtime \
+                "$app_package" \
+                "CurrentRuntimeFoundationTest#$test_name"
               executed=$((executed + 1))
             done
             test "$executed" = "${#tests[@]}"
@@ -289,8 +386,12 @@ jobs:
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleDevelopmentDebug
             verify_packaged_pseudo_locales app/build/outputs/apk/development/debug/app-development-debug.apk
-            run_gradle_phase compile_instrumentation :app:compileDevelopmentDebugAndroidTestKotlin
-            run_gradle_phase instrumentation_internal :app:smallApi29DevelopmentDebugAndroidTest
+            run_gradle_phase compile_instrumentation :app:assembleDevelopmentDebugAndroidTest
+            start_minimum_emulator
+            run_minimum_instrumentation \
+              com.fluyo.app.dev \
+              app/build/outputs/apk/development/debug/app-development-debug.apk \
+              app/build/outputs/apk/androidTest/development/debug/app-development-debug-androidTest.apk
           else
             run_gradle_phase unit_test :app:testStagingDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleStagingDebug
@@ -301,11 +402,11 @@ jobs:
               :app:assembleStagingDebugAndroidTest \
               :app:assembleProductionDebugAndroidTest
             start_current_emulator
-            run_manual_instrumentation \
+            run_current_instrumentation \
               com.fluyo.app.staging \
               app/build/outputs/apk/staging/debug/app-staging-debug.apk \
               app/build/outputs/apk/androidTest/staging/debug/app-staging-debug-androidTest.apk
-            run_manual_instrumentation \
+            run_current_instrumentation \
               com.fluyo.app \
               app/build/outputs/apk/production/debug/app-production-debug.apk \
               app/build/outputs/apk/androidTest/production/debug/app-production-debug-androidTest.apk

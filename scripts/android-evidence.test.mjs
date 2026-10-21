@@ -41,6 +41,14 @@ test("partitions all 27 applicable scenarios and leaves two physical rows", () =
     scenarioProofById.android_font_scale_200_percent.observed,
     /48 dp|touch target|pinned/i,
   );
+  assert.match(
+    scenarioProofById.android_font_scale_200_percent.command,
+    /externally preconfigured 200-percent Compose semantics instrumentation/,
+  );
+  assert.match(
+    scenarioProofById.android_small_minimum_api_phone_emulator.command,
+    /nine isolated-method API 29 small-phone instrumentation lane/,
+  );
   assert.match(scenarioProofById.android_minimum_touch_targets.observed, /at least 48 dp/i);
   assert.equal(scenarioProofById.android_pseudolocale_expansion.leg, "current");
   assert.equal(scenarioProofById.android_keyboard_and_switch_focus.leg, "current");

@@ -57,7 +57,7 @@ export const scenarioProofById = {
   android_font_scale_200_percent: {
     leg: "minimum",
     mode: minimumMode,
-    command: "API 29 200-percent Compose density instrumentation",
+    command: "API 29 externally preconfigured 200-percent Compose semantics instrumentation",
     observed: "primary action remained displayed and scroll-reachable at 200 percent font scale",
   },
   android_talkback_order_and_names: {
@@ -89,7 +89,7 @@ export const scenarioProofById = {
   android_small_minimum_api_phone_emulator: {
     leg: "minimum",
     mode: minimumMode,
-    command: "complete API 29 small-phone instrumentation lane",
+    command: "nine isolated-method API 29 small-phone instrumentation lane",
     observed: "API 29 foundation build, launch, state, text, motion, and action checks passed",
   },
   android_portrait_layout: {

@@ -22,7 +22,9 @@ Compose BOM 2026.09, minSdk 29, compileSdk 37, and targetSdk 36. Compiling with 
 does not establish public API 37 support. The evidence matrix records only the exact
 API 29 and API 37 emulator executions that pass.
 
-The API 29 lane runs the full Compose semantics and accessibility instrumentation suite.
+The API 29 lane runs exactly nine isolated Compose semantics and accessibility methods. It applies
+the 200% system font scale before starting that method's instrumentation process, then resets the
+setting before the next method, so configuration changes cannot invalidate the process under test.
 The API 37 lane runs exactly seven Compose-semantics checks per flavor, with system input and
 window controls for the honest end state and action, 200% text in landscape, reduced motion,
 local-only action behavior, en-XA expansion, keyboard/D-pad action access, and adaptive-window

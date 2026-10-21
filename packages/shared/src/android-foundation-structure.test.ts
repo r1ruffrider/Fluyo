@@ -97,7 +97,8 @@ describe("Android foundation structure", () => {
     expect(workflow).toContain("run_gradle_phase unit_test");
     expect(workflow).toContain("run_gradle_phase assemble_internal");
     expect(workflow).toContain("run_gradle_phase compile_instrumentation");
-    expect(workflow).toContain("run_gradle_phase instrumentation_internal");
+    expect(workflow).toContain("run_minimum_instrumentation");
+    expect(workflow).toContain("run_current_instrumentation");
     expect(workflow).toContain('--phase "$phase"');
     expect(workflow).not.toContain("--stacktrace");
     expect(workflow).not.toMatch(/(?:cat|tee)\s+[^\n]*RAW_LOG/);
@@ -198,9 +199,8 @@ describe("Android foundation structure", () => {
     );
     expect(responsive).toContain("?.scroll(Direction.DOWN, 0.8f)");
     expect(responsive).toContain('throw AssertionError("node missing")');
-    expect(responsive).toContain(
-      'device.executeShellCommand("settings put system font_scale 2.0")',
-    );
+    expect(responsive).not.toContain("settings put system font_scale");
+    expect(responsive).not.toContain("changedFontScale");
     expect(responsive).toContain("waitForSystemFontScale(1.9f)");
     expect(responsive).toContain('throw AssertionError("font scale")');
     expect(responsive).toContain('throw AssertionError("runtime launch")');
@@ -218,17 +218,11 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain(
       "check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))",
     );
-    expect(responsive.indexOf("changedFontScale = true")).toBeLessThan(
-      responsive.indexOf('device.executeShellCommand("settings put system font_scale 2.0")'),
-    );
     expect(responsive.indexOf("waitForSystemFontScale(1.9f)")).toBeLessThan(
       responsive.indexOf('boundedStage("runtime launch")'),
     );
     expect(responsive).not.toContain("ActivityScenarioRule");
     expect(responsive).toContain("activeScenario?.close()");
-    expect(responsive).toContain(
-      'device.executeShellCommand("settings put system font_scale 1.0")',
-    );
     expect(responsive).toContain(
       "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE",
     );
@@ -296,6 +290,8 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("en[-_]r?XA");
     expect(workflowText).toContain("ar[-_]r?XB");
     expect(workflowText).toContain("trap cleanup EXIT");
+    expect(workflowText).toContain("start_emulator");
+    expect(workflowText).toContain("start_minimum_emulator");
     expect(workflowText).toContain("start_current_emulator");
     expect(workflowText).toContain('"emulator"');
     expect(workflowText).toContain('test -x "$ANDROID_HOME/emulator/emulator"');
@@ -308,8 +304,10 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('"$AAPT" dump xmltree "$apk" AndroidManifest.xml');
     expect(workflowText).not.toMatch(/^\s+apksigner\s/m);
     expect(workflowText).not.toMatch(/^\s+aapt\s/m);
-    expect(workflowText).toContain('"$ANDROID_HOME/emulator/emulator" -avd fluyo-api37');
-    expect(workflowText).toContain("-no-metrics -wipe-data -accel on -cores 2 -memory 4096");
+    expect(workflowText).toContain('"$ANDROID_HOME/emulator/emulator" -avd "$avd_name"');
+    expect(workflowText).toContain('-no-metrics -wipe-data -accel on -cores 2 -memory "$memory"');
+    expect(workflowText).toContain("fluyo-api29");
+    expect(workflowText).toContain("fluyo-api37");
     expect(workflowText).toContain("for attempt in 1 2");
     expect(workflowText).toContain("timeout 360 bash -c");
     expect(workflowText).toContain('last_phase="avd_creation"');
@@ -318,9 +316,11 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("adb shell input keyevent KEYCODE_WAKEUP");
     expect(workflowText).toContain("adb shell wm dismiss-keyguard");
     expect(workflowText).toContain(
-      "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
+      "Android $runtime_label setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
     );
-    expect(workflowText).toContain("run_manual_instrumentation");
+    expect(workflowText).toContain("run_minimum_instrumentation");
+    expect(workflowText).toContain("run_current_instrumentation");
+    expect(workflowText).toContain("run_instrumentation_method");
     expect(workflowText).toContain("^OK \\(1 test\\)\\r?$");
     expect(workflowText).toContain('failure_category="process_status"');
     expect(workflowText).toContain('failure_category="state_missing"');
@@ -333,10 +333,20 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('failure_category="zero_tests"');
     expect(workflowText).toContain('failure_category="summary_mismatch"');
     expect(workflowText).toContain(
-      "Android current-runtime instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded",
+      "Android $runtime_label instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded",
     );
     expect(workflowText).toContain('test "$executed" = "${#tests[@]}"');
     expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
+    expect(workflowText).toContain(
+      "FoundationResponsiveDeviceTest#twoHundredPercentFontKeepsThePrimaryActionReachable",
+    );
+    expect(workflowText).toContain(
+      "FoundationResponsiveDeviceTest#resizePreservesTheNewestStateAcrossWindowClasses",
+    );
+    expect(workflowText).toContain("settings put system font_scale 2.0");
+    expect(workflowText).toContain("wait_for_font_scale 1.9 2.1");
+    expect(workflowText).toContain(":app:assembleDevelopmentDebugAndroidTest");
+    expect(workflowText).not.toContain(":app:smallApi29DevelopmentDebugAndroidTest");
     expect(workflowText).toContain("compose_semantics_api29");
     expect(workflowText).toContain("compose_semantics_system_input_api37");
     const androidReadme = readFileSync(resolve(root, "apps/android/README.md"), "utf8");
@@ -346,6 +356,9 @@ describe("Android foundation structure", () => {
     );
     const handoff = readFileSync(resolve(root, "docs/DEVELOPMENT_HANDOFF.md"), "utf8");
     for (const governedText of [androidReadme, contractReadme, handoff]) {
+      expect(governedText).toMatch(
+        /API 29[^.\n]*runs exactly nine isolated Compose semantics and accessibility/,
+      );
       expect(governedText).toContain("exactly seven Compose-semantics checks per flavor");
       expect(governedText).not.toMatch(/six bounded UiAutomator black-box checks/i);
     }
@@ -355,6 +368,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("settings put system accelerometer_rotation 1");
     expect(workflowText).toContain("settings put global animator_duration_scale 1");
     expect(workflowText).toContain("adb uninstall com.fluyo.app.staging.test");
+    expect(workflowText).toContain("adb uninstall com.fluyo.app.dev.test");
     expect(workflowText).toContain("adb uninstall com.fluyo.app.test");
     expect(workflowText).toContain('CURRENT_RUNTIME_TEST_COUNT="7"');
     expect(workflowText).toContain(

@@ -37,7 +37,8 @@ roster, and Elana gates pass. Adriana is interim Android implementation, accessi
 owner. Package reservation, release/upload/Play signing, Play Console, production, physical-device claims,
 public capture, spending, and all other external actions remain blocked.
 
-The runtime evidence split is deliberate: API 29 runs the full Compose semantics and accessibility suite, while
+The runtime evidence split is deliberate: API 29 runs exactly nine isolated Compose semantics and accessibility
+methods, applying 200% system font scale before that method's process starts and resetting it afterward, while
 API 37 runs exactly seven Compose-semantics checks per flavor, with system input and window controls for the
 honest end state/action, 200% text in landscape, reduced motion, local-only behavior, en-XA expansion,
 keyboard/D-pad action access, and adaptive-window usability. The workflow restores emulator settings and deletes

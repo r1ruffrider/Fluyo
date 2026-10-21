@@ -19,7 +19,6 @@ class FoundationResponsiveDeviceTest {
     private val context = instrumentation.targetContext
     private val device = UiDevice.getInstance(instrumentation)
     private var activeScenario: ActivityScenario<MainActivity>? = null
-    private var changedFontScale = false
     private var changedOrientation = false
 
     @After fun restoreRuntimeSettings() {
@@ -39,13 +38,6 @@ class FoundationResponsiveDeviceTest {
             cleanupFailed = true
         }
         activeScenario = null
-        if (changedFontScale) {
-            try {
-                device.executeShellCommand("settings put system font_scale 1.0")
-            } catch (_: Throwable) {
-                cleanupFailed = true
-            }
-        }
         if (cleanupFailed) throw AssertionError("runtime cleanup")
     }
 
@@ -99,11 +91,7 @@ class FoundationResponsiveDeviceTest {
     }
 
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
-        boundedStage("font scale") {
-            changedFontScale = true
-            device.executeShellCommand("settings put system font_scale 2.0")
-            waitForSystemFontScale(1.9f)
-        }
+        boundedStage("font scale") { waitForSystemFontScale(1.9f) }
         boundedStage("runtime launch") { launchFoundationAtAppliedFontScale() }
         boundedStage("node missing") { waitForNode("signed-out-state") }
         boundedStage("scroll action") { waitForNode("review-build-button", scroll = true) }

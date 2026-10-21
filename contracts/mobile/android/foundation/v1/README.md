@@ -97,7 +97,9 @@ evidence, source-bound artifact hashes, a non-production debug-signing classific
 and a fail-closed sanitized aggregate. Physical Pixel and Samsung rows stay unattempted
 until their separate device/custody gate.
 
-The minimum API 29 lane supplies Compose semantics and accessibility instrumentation.
+The minimum API 29 lane runs exactly nine isolated Compose semantics and accessibility methods. It
+applies the 200% system font scale before that method's instrumentation process starts and resets
+the setting before the next method, avoiding an in-process configuration-change race.
 The current API 37 lane runs exactly seven Compose-semantics checks per flavor, with system input
 and window controls for end-state honesty, action reachability under 200% text and landscape,
 reduced motion, the local-only action, en-XA expansion, keyboard/D-pad action access, and
