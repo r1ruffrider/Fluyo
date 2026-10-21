@@ -25,7 +25,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -43,6 +42,13 @@ class FoundationShellTest {
 
     private fun setFoundationContent(content: @Composable () -> Unit) {
         compose.runOnUiThread { compose.activity.setContent(content = content) }
+        compose.waitForIdle()
+    }
+
+    private fun scrollToBottom() {
+        compose.onNodeWithTag("foundation-scroll").performSemanticsAction(SemanticsActions.ScrollBy) { scroll ->
+            scroll(0f, Float.MAX_VALUE)
+        }
         compose.waitForIdle()
     }
 
@@ -80,8 +86,8 @@ class FoundationShellTest {
             }
         }
         val action = compose.onNodeWithTag("review-build-button")
-        compose.waitForIdle()
-        action.performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        scrollToBottom()
+        action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {
@@ -109,7 +115,8 @@ class FoundationShellTest {
         }
         compose.waitForIdle()
         compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
-        compose.onNodeWithTag("review-build-button").performScrollTo().assertIsDisplayed()
+        scrollToBottom()
+        compose.onNodeWithTag("review-build-button").assertIsDisplayed()
         compose.runOnIdle {
             state = FoundationShellState.Failure
             width = 600.dp

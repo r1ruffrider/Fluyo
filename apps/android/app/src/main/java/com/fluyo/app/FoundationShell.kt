@@ -57,10 +57,10 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
     }
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding().padding(20.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopCenter,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight().widthIn(max = 640.dp).verticalScroll(contentScroll),
+            modifier = Modifier.fillMaxWidth().widthIn(max = 640.dp).verticalScroll(contentScroll).testTag("foundation-scroll"),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("brand-heading").semantics { heading(); traversalIndex = 0f })

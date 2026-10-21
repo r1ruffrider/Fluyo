@@ -153,10 +153,11 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
-    expect(shell).toContain("fillMaxHeight()");
+    expect(shell).not.toContain("fillMaxHeight()");
     expect(shell).toContain(
-      "Modifier.fillMaxWidth().fillMaxHeight().widthIn(max = 640.dp).verticalScroll(contentScroll)",
+      'Modifier.fillMaxWidth().widthIn(max = 640.dp).verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
+    expect(shell).toContain("contentAlignment = Alignment.TopCenter");
     expect(shell).not.toContain("Modifier.weight(1f)");
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
     expect(shell).toContain(
@@ -171,7 +172,9 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation.match(/performScrollTo/g)).toHaveLength(3);
+    expect(instrumentation).toContain('onNodeWithTag("foundation-scroll")');
+    expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.ScrollBy)");
+    expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -203,6 +206,14 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("ar[-_]r?XB");
     expect(workflowText).toContain("trap cleanup EXIT");
     expect(workflowText).toContain("start_current_emulator");
+    expect(workflowText).toContain("for attempt in 1 2");
+    expect(workflowText).toContain("timeout 360 bash -c");
+    expect(workflowText).toContain('last_phase="avd_creation"');
+    expect(workflowText).toContain('last_phase="device_connection"');
+    expect(workflowText).toContain('last_phase="boot_completion"');
+    expect(workflowText).toContain(
+      "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
+    );
     expect(workflowText).toContain("run_manual_instrumentation");
     expect(workflowText).toContain("^OK \\(6 tests\\)$");
     expect(workflowText).toContain("compose_semantics_api29");

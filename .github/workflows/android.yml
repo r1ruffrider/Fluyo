@@ -175,24 +175,49 @@ jobs:
             rm -f "$RESOURCE_TABLE"
           }
           start_current_emulator() {
-            mkdir -p "$AVD_HOME"
             export ANDROID_AVD_HOME="$AVD_HOME"
-            echo no | avdmanager create avd --force \
-              --name fluyo-api37 \
-              --package "system-images;android-37.0;google_apis;x86_64" \
-              --device "pixel_9_pro_xl" >"$EMULATOR_LOG" 2>&1
-            emulator -avd fluyo-api37 \
-              -no-window -no-audio -no-boot-anim -no-snapshot -wipe-data \
-              -gpu swiftshader_indirect >"$EMULATOR_LOG" 2>&1 &
-            EMULATOR_PID=$!
-            timeout 180 adb wait-for-device >"$INSTRUMENT_LOG" 2>&1
-            timeout 180 bash -c \
-              'until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" == "1" ]]; do sleep 2; done' \
-              >"$INSTRUMENT_LOG" 2>&1
-            adb shell settings put system font_scale 1.0 >"$INSTRUMENT_LOG" 2>&1
-            adb shell settings put global animator_duration_scale 1 >"$INSTRUMENT_LOG" 2>&1
-            adb shell settings put global transition_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
-            adb shell settings put global window_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
+            local last_phase="unknown"
+            for attempt in 1 2; do
+              rm -rf "$AVD_HOME"
+              mkdir -p "$AVD_HOME"
+              if ! echo no | avdmanager create avd --force \
+                --name fluyo-api37 \
+                --package "system-images;android-37.0;google_apis;x86_64" \
+                --device "pixel_9_pro_xl" >"$EMULATOR_LOG" 2>&1; then
+                last_phase="avd_creation"
+                continue
+              fi
+              emulator -avd fluyo-api37 \
+                -no-window -no-audio -no-boot-anim -no-snapshot -wipe-data \
+                -gpu swiftshader_indirect >"$EMULATOR_LOG" 2>&1 &
+              EMULATOR_PID=$!
+              if ! timeout 180 adb wait-for-device >"$INSTRUMENT_LOG" 2>&1; then
+                last_phase="device_connection"
+              elif ! timeout 360 bash -c \
+                'until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" == "1" ]]; do sleep 2; done' \
+                >"$INSTRUMENT_LOG" 2>&1; then
+                last_phase="boot_completion"
+              else
+                adb shell settings put system font_scale 1.0 >"$INSTRUMENT_LOG" 2>&1
+                adb shell settings put global animator_duration_scale 1 >"$INSTRUMENT_LOG" 2>&1
+                adb shell settings put global transition_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
+                adb shell settings put global window_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
+                rm -f "$EMULATOR_LOG" "$INSTRUMENT_LOG"
+                echo "Android current-runtime emulator became ready; raw output was discarded"
+                return
+              fi
+              adb emu kill >/dev/null 2>&1 || true
+              kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+              EMULATOR_PID=""
+              adb kill-server >/dev/null 2>&1 || true
+              rm -f "$EMULATOR_LOG" "$INSTRUMENT_LOG"
+            done
+            case "$last_phase" in
+              avd_creation|device_connection|boot_completion) ;;
+              *) last_phase="unknown" ;;
+            esac
+            echo "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded"
+            exit 1
           }
           run_manual_instrumentation() {
             local app_package="$1"
