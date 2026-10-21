@@ -21,7 +21,6 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
@@ -136,7 +135,7 @@ class FoundationShellTest {
         }
         compose.onNodeWithTag("review-build-button").assertIsDisplayed().performClick()
         compose.waitForIdle()
-        val detail = compose.onNodeWithTag("scope-detail").assertExists().fetchSemanticsNode()
+        val detail = compose.onNodeWithTag("scope-detail").fetchSemanticsNode()
         assertTrue(detail.boundsInRoot.width > 0f && detail.boundsInRoot.height > 0f)
         compose.runOnIdle {
             state = FoundationShellState.Failure
