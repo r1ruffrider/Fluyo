@@ -24,7 +24,7 @@ test("reports only bounded test identity and failure kind", () => {
           testName: "loadingHasOneState",
           kind: "failure",
           category: "assertion",
-          exceptionTypes: [],
+          runtimeCategories: [],
           sourceLine: null,
         },
       ],
@@ -50,7 +50,7 @@ test("maps raw assertion details to a closed category without retaining text", (
         testName: "largeText",
         kind: "failure",
         category: "visibility",
-        exceptionTypes: [],
+        runtimeCategories: [],
         sourceLine: null,
       },
     ]);
@@ -75,7 +75,7 @@ test("ignores semantics-tree bounds outside the failure message", () => {
         testName: "marker",
         kind: "failure",
         category: "count",
-        exceptionTypes: [],
+        runtimeCategories: [],
         sourceLine: 109,
       },
     ]);
@@ -85,12 +85,12 @@ test("ignores semantics-tree bounds outside the failure message", () => {
   }
 });
 
-test("reports only bounded exception class names from runtime failures", () => {
+test("maps known runtime types to closed categories without retaining raw identifiers", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-exception-"));
   try {
     fs.writeFileSync(
       path.join(root, "TEST-runtime.xml"),
-      '<testsuite><testcase classname="Shell" name="launch"><error message="runtime error">java.lang.IllegalStateException: learner@example.test\nCaused by: android.app.ForegroundServiceStartNotAllowedException: C:\\private\\path</error></testcase></testsuite>',
+      '<testsuite><testcase classname="Shell" name="launch"><error message="runtime error">java.lang.IllegalStateException: learner@example.test\nCaused by: opaque_sensitive_exception: C:\\private\\CustomerAccountError</error></testcase></testsuite>',
     );
     const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
     assert.equal(result.status, 0);
@@ -100,14 +100,14 @@ test("reports only bounded exception class names from runtime failures", () => {
         testName: "launch",
         kind: "error",
         category: "runtime_error",
-        exceptionTypes: [
-          "android.app.ForegroundServiceStartNotAllowedException",
-          "java.lang.IllegalStateException",
-        ],
+        runtimeCategories: ["illegal_state"],
         sourceLine: null,
       },
     ]);
-    assert.doesNotMatch(result.stdout, /example\.test|private|runtime error/i);
+    assert.doesNotMatch(
+      result.stdout,
+      /example\.test|private|runtime error|opaque_sensitive_exception|CustomerAccount/i,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -119,6 +119,25 @@ test("reports an empty bounded summary when failure occurred before instrumentat
     const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
     assert.equal(result.status, 0);
     assert.deepEqual(JSON.parse(result.stdout), { structuredReports: 0, failures: [] });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("maps orchestration crashes to fixed categories without retaining diagnostics", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-crash-"));
+  try {
+    fs.writeFileSync(
+      path.join(root, "TEST-crash.xml"),
+      '<testsuite><testcase classname="Shell" name="launch"><failure message="Test failed to run to completion. Instrumentation run failed because process crashed: learner@example.test provider-private-sentinel">raw detail</failure></testcase></testsuite>',
+    );
+    const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+    assert.equal(result.status, 0);
+    assert.deepEqual(JSON.parse(result.stdout).failures[0].runtimeCategories, [
+      "instrumentation_abort",
+      "process_crash",
+    ]);
+    assert.doesNotMatch(result.stdout, /example\.test|provider-private-sentinel|raw detail/i);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

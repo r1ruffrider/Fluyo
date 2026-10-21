@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">[!! Fļüÿö ïñţëřñåļ ƒöüñðåţïöñ !!]</string>
+    <string name="brand_name">[!! Fļüÿö !!]</string>
+    <string name="loading_title">[!! Þřëþåřïñĝ ÿöüř ïñţëřñåļ ƒöüñðåţïöñ !!]</string>
+    <string name="loading_body">[!! Çĥëçķïñĝ ţĥïš ñöñ-þřöðüçţïöñ þüïļð. Ţĥïš ŵïļļ ƒïñïšĥ šĥöřţļÿ. !!]</string>
+    <string name="signed_out_title">[!! Řëåðÿ ƒöř ţĥë ñëχţ šmåļļ šţëþ !!]</string>
+    <string name="signed_out_body">[!! Ţĥïš ïñţëřñåļ ƒöüñðåţïöñ ðöëš ñöţ ïñçļüðë šïĝñ-ïñ, ļëššöñš, þïļļïñĝ, öř þüþļïç åççëšš. !!]</string>
+    <string name="review_scope_action">[!! Řëvïëŵ þüïļð šçöþë !!]</string>
+    <string name="scope_detail">[!! Ţĥë þüïļð þřövëš ļöçåļ šĥëļļ, ļåÿöüţ, åñð åççëššïþïļïţÿ þëĥåvïöř öñļÿ. !!]</string>
+    <string name="error_title">[!! Ţĥïš þüïļð ïš ñöţ çöñƒïĝüřëð !!]</string>
+    <string name="error_body">[!! Üšë åñ åþþřövëð ñöñ-þřöðüçţïöñ çöñƒïĝüřåţïöñ, ţĥëñ ţřÿ åĝåïñ. !!]</string>
+    <string name="retry_action">[!! Çĥëçķ åĝåïñ !!]</string>
+    <string name="internal_marker">[!! Ïñţëřñåļ %1$s þüïļð · %2$s (%3$d) · %4$s !!]</string>
+    <string name="spanish_sample_label">[!! Šþåñïšĥ ļëåřñïñĝ-çöñţëñţ šåɱþļë !!]</string>
+    <string name="spanish_sample">[!! ¿Ðóñðë ëšţá ļå ëšţåçïóñ? !!]</string>
+</resources>

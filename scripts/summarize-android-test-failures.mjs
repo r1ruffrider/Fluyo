@@ -39,16 +39,28 @@ const failureCategory = (body) => {
   return "assertion";
 };
 
-const exceptionTypes = (body) =>
-  [
-    ...new Set(
-      [...body.matchAll(/\b([A-Za-z_$][A-Za-z0-9_.$]*(?:Exception|Error))\b/g)].map((match) =>
-        safeIdentifier(match[1]),
-      ),
-    ),
-  ]
-    .sort()
-    .slice(0, 6);
+const runtimeCategories = (body) => {
+  const categories = [];
+  const mappings = [
+    ["activity_lifecycle", /\b(?:ActivityScenario|NoActivityResumedException)\b/],
+    ["assertion", /\bAssertionError\b/],
+    ["class_loading", /\b(?:ClassNotFoundException|NoClassDefFoundError)\b/],
+    ["illegal_state", /\bIllegalStateException\b/],
+    [
+      "instrumentation_abort",
+      /(?:instrumentation run failed|test failed to run to completion|INSTRUMENTATION_(?:ABORTED|FAILED))/i,
+    ],
+    [
+      "process_crash",
+      /(?:\bProcessCrash\b|\bProcessCrashedException\b|\bprocess (?:crash|crashed)\b)/i,
+    ],
+    ["timeout", /\b(?:ComposeTimeoutException|TimeoutException)\b/],
+  ];
+  for (const [category, pattern] of mappings) {
+    if (pattern.test(body)) categories.push(category);
+  }
+  return categories;
+};
 
 const failures = [];
 for (const file of xmlFiles.sort()) {
@@ -65,7 +77,7 @@ for (const file of xmlFiles.sort()) {
       testName: attribute(attributes, "name"),
       kind,
       category: failureCategory(failureTag[2]),
-      exceptionTypes: exceptionTypes(body),
+      runtimeCategories: runtimeCategories(body),
       sourceLine,
     });
   }

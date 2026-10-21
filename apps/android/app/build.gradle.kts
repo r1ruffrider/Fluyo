@@ -19,7 +19,6 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        testInstrumentationRunnerArguments["clearPackageData"] = "true"
         buildConfigField("String", "FLUYO_API_BASE_URL", "\"\"")
         buildConfigField("String", "FLUYO_SUPABASE_URL", "\"\"")
         buildConfigField("String", "FLUYO_SUPABASE_PUBLISHABLE_KEY", "\"\"")
@@ -76,7 +75,6 @@ android {
     }
     packaging { resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}") }
     testOptions {
-        execution = "ANDROIDX_TEST_ORCHESTRATOR"
         animationsDisabled = true
         managedDevices.localDevices {
             create("smallApi29") {
@@ -131,6 +129,5 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.4.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    androidTestUtil("androidx.test:orchestrator:1.6.1")
     baselineProfile(project(":baselineprofile"))
 }

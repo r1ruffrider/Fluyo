@@ -114,11 +114,19 @@ describe("Android foundation structure", () => {
     expect(shell).not.toMatch(/Text\(\s*"/);
     expect(app).not.toContain("localeFilters");
     expect(app).toContain("isPseudoLocalesEnabled = true");
+    expect(app).not.toContain("ANDROIDX_TEST_ORCHESTRATOR");
+    expect(app).not.toContain("androidx.test:orchestrator");
     const strings = text("app/src/main/res/values/strings.xml");
     expect(strings).toContain("does not include sign-in, lessons, billing, or public access");
     expect(strings).toContain("Spanish learning-content sample");
     expect(strings).toContain("¿Dónde está la estación?");
     expect(strings).not.toContain('translatable="false"');
+    expect(text("app/src/debug/res/values-en-rXA/strings.xml")).toContain(
+      "[!! Řëåðÿ ƒöř ţĥë ñëχţ šmåļļ šţëþ !!]",
+    );
+    expect(text("app/src/debug/res/values-ar-rXB/strings.xml")).toContain(
+      "الخطوة الداخلية التالية",
+    );
   });
 
   it("includes the exact emulator, accessibility, and baseline-profile seams", () => {
@@ -145,6 +153,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation).toContain("pseudoLocaleExpansionUsesPackagedResources");
     expect(instrumentation).toContain("pseudoRtlResourcesReportRtlDirection");
+    expect(instrumentation).toContain("detail.boundsInRoot.width > 0f");
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
   });
 
