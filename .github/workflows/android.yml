@@ -116,7 +116,8 @@ jobs:
           chmod +x gradlew
           SHORT_SHA="${SOURCE_SHA:0:12}"
           RAW_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-raw.log"
-          trap 'rm -f "$RAW_LOG"' EXIT
+          RESOURCE_TABLE="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-resources.txt"
+          trap 'rm -f "$RAW_LOG" "$RESOURCE_TABLE"' EXIT
           COMMON=(--no-daemon --warning-mode=fail -Pandroid.sdk.channel=3 "-PfluyoSourceCommitShort=$SHORT_SHA")
           run_gradle_phase() {
             local phase="$1"
@@ -136,19 +137,18 @@ jobs:
           }
           verify_packaged_pseudo_locales() {
             local apk="$1"
-            local resource_table="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-resources.txt"
-            "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump resources "$apk" >"$resource_table"
-            if ! grep -Eqi 'en[-_]r?XA' "$resource_table"; then
-              rm -f "$resource_table"
+            "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump resources "$apk" >"$RESOURCE_TABLE"
+            if ! grep -Eqi 'en[-_]r?XA' "$RESOURCE_TABLE"; then
+              rm -f "$RESOURCE_TABLE"
               echo "Android pseudo-locale packaging check failed: expansion probe missing"
               exit 1
             fi
-            if ! grep -Eqi 'ar[-_]r?XB' "$resource_table"; then
-              rm -f "$resource_table"
+            if ! grep -Eqi 'ar[-_]r?XB' "$RESOURCE_TABLE"; then
+              rm -f "$RESOURCE_TABLE"
               echo "Android pseudo-locale packaging check failed: RTL probe missing"
               exit 1
             fi
-            rm -f "$resource_table"
+            rm -f "$RESOURCE_TABLE"
           }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest

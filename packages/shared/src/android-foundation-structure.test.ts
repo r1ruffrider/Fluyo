@@ -176,7 +176,8 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('aapt2\" dump resources');
     expect(workflowText).toContain("en[-_]r?XA");
     expect(workflowText).toContain("ar[-_]r?XB");
-    expect(workflowText).toContain('rm -f "$resource_table"');
+    expect(workflowText).toContain('trap \'rm -f "$RAW_LOG" "$RESOURCE_TABLE"\' EXIT');
+    expect(workflowText).toContain('rm -f "$RESOURCE_TABLE"');
     expect(app).not.toContain("FORCE_4KB_PAGES");
     expect(text("baselineprofile/build.gradle.kts")).not.toContain("FORCE_4KB_PAGES");
   });
