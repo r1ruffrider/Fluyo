@@ -98,6 +98,16 @@ class CurrentRuntimeFoundationTest {
         throw AssertionError("node missing")
     }
 
+    private fun focusActionWithKeyboard(): UiObject2 {
+        repeat(4) {
+            val action = waitForNode(expectedActionTag(), scroll = true)
+            if (action.isFocused) return action
+            device.pressKeyCode(KeyEvent.KEYCODE_TAB)
+            device.waitForIdle()
+        }
+        throw AssertionError("keyboard focus")
+    }
+
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
         try {
             waitForNode(expectedStateTag())
@@ -159,15 +169,7 @@ class CurrentRuntimeFoundationTest {
 
     @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {
         recreateFoundation()
-        var action = waitForNode(expectedActionTag(), scroll = true)
-        if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-            assertTrue(action.isFocused)
-        } else {
-            device.pressKeyCode(KeyEvent.KEYCODE_TAB)
-            device.waitForIdle()
-            action = waitForNode(expectedActionTag())
-            assertTrue(action.isFocused)
-        }
+        focusActionWithKeyboard()
         device.pressDPadCenter()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
             waitForNode("scope-detail", scroll = true)

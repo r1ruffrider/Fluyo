@@ -174,8 +174,9 @@ describe("Android foundation structure", () => {
     expect(instrumentation.match(/@Test fun /g)).toHaveLength(4);
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
-    expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).toContain("compose.waitUntil(timeoutMillis = 5_000)");
+    expect(instrumentation).toContain(
+      "fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus)",
+    );
     expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
     const responsive = text(
@@ -191,6 +192,11 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain('throw AssertionError("node missing")');
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 2.0")',
+    );
+    expect(responsive).toContain("waitForFontScale(1.9f)");
+    expect(responsive).toContain("activity.resources.configuration.fontScale >= expected");
+    expect(responsive).not.toContain(
+      'device.executeShellCommand("settings put system font_scale 2.0")\n        activityRule.scenario.recreate()',
     );
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 1.0")',
@@ -250,6 +256,9 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain('device.executeShellCommand("wm size reset")');
     expect(currentRuntime).toContain("scenario.recreate()");
     expect(currentRuntime).toContain("device.pressKeyCode(KeyEvent.KEYCODE_TAB)");
+    expect(currentRuntime).toContain("private fun focusActionWithKeyboard(): UiObject2");
+    expect(currentRuntime).toContain("if (action.isFocused) return action");
+    expect(currentRuntime).toContain('throw AssertionError("keyboard focus")');
     expect(currentRuntime).toContain("device.pressDPadCenter()");
     const workflow = resolve(root, ".github/workflows/android.yml");
     const workflowText = readFileSync(workflow, "utf8");

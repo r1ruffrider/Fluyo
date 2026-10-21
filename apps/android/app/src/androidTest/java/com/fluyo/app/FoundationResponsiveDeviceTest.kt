@@ -45,10 +45,22 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("node missing")
     }
 
+    private fun waitForFontScale(expected: Float) {
+        repeat(20) {
+            var applied = false
+            activityRule.scenario.onActivity { activity ->
+                applied = activity.resources.configuration.fontScale >= expected
+            }
+            if (applied) return
+            Thread.sleep(250)
+        }
+        throw AssertionError("font scale")
+    }
+
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
         changedFontScale = true
         device.executeShellCommand("settings put system font_scale 2.0")
-        activityRule.scenario.recreate()
+        waitForFontScale(1.9f)
         waitForNode("signed-out-state")
         waitForNode("review-build-button", scroll = true)
     }
