@@ -58,7 +58,7 @@ export const scenarioProofById = {
     leg: "minimum",
     mode: minimumMode,
     command: "API 29 200-percent Compose density instrumentation",
-    observed: "scrollable primary action remained visible and at least 48 dp",
+    observed: "pinned primary action remained within the foundation viewport and at least 48 dp",
   },
   android_talkback_order_and_names: {
     leg: "minimum",

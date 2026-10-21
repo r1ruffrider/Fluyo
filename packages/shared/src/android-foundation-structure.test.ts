@@ -157,6 +157,7 @@ describe("Android foundation structure", () => {
       'Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
     expect(shell).toContain("contentAlignment = Alignment.TopCenter");
+    expect(shell).toContain('testTag("foundation-root")');
     expect(shell).toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
     expect(shell.match(/padding\(top = 18\.dp\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
@@ -173,6 +174,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
     expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation.match(/assertNodeIsFullyInsideFoundation/g)).toHaveLength(3);
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -217,7 +219,11 @@ describe("Android foundation structure", () => {
       "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
     );
     expect(workflowText).toContain("run_manual_instrumentation");
-    expect(workflowText).toContain("^OK \\(6 tests\\)$");
+    expect(workflowText).toContain("^OK \\(1 test\\)$");
+    expect(workflowText).toContain(
+      "Android current-runtime instrumentation failed; test=$test_name; raw output was discarded",
+    );
+    expect(workflowText).toContain('test "$executed" = "$CURRENT_RUNTIME_TEST_COUNT"');
     expect(workflowText).toContain("compose_semantics_api29");
     expect(workflowText).toContain("bounded_uiautomator_black_box_api37");
     expect(workflowText).toContain("com.fluyo.app.staging");

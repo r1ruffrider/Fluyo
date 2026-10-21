@@ -45,6 +45,14 @@ class FoundationShellTest {
         compose.waitForIdle()
     }
 
+    private fun assertNodeIsFullyInsideFoundation(tag: String) {
+        val root = compose.onNodeWithTag("foundation-root").fetchSemanticsNode().boundsInRoot
+        val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        assertTrue(node.width > 0f && node.height > 0f)
+        assertTrue(node.left >= root.left && node.top >= root.top)
+        assertTrue(node.right <= root.right && node.bottom <= root.bottom)
+    }
+
     @Test fun loadingHasOneSemanticStateAndMarker() {
         setFoundationContent { MaterialTheme { FoundationShell(FoundationShellState.Loading, valid) {} } }
         val loading = compose.onNodeWithTag("loading-state").assertIsDisplayed().fetchSemanticsNode()
@@ -79,7 +87,8 @@ class FoundationShellTest {
             }
         }
         val action = compose.onNodeWithTag("review-build-button")
-        action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        assertNodeIsFullyInsideFoundation("review-build-button")
+        action.assertHeightIsAtLeast(48.dp)
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {
@@ -107,7 +116,7 @@ class FoundationShellTest {
         }
         compose.waitForIdle()
         compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
-        compose.onNodeWithTag("review-build-button").assertIsDisplayed()
+        assertNodeIsFullyInsideFoundation("review-build-button")
         compose.runOnIdle {
             state = FoundationShellState.Failure
             width = 600.dp

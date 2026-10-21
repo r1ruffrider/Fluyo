@@ -226,19 +226,36 @@ jobs:
             local app_package="$1"
             local app_apk="$2"
             local test_apk="$3"
+            local test_name
+            local executed=0
+            local tests=(
+              currentRuntimeLaunchHasOneHonestEndState
+              currentRuntimeLargeTextAndLandscapeKeepActionReachable
+              currentRuntimeReducedMotionKeepsTheSameEndState
+              currentRuntimeActionRemainsLocalAndHonest
+              currentRuntimePseudoLocaleExpansionKeepsActionReachable
+              currentRuntimeKeyboardAndDpadReachActionInLogicalOrder
+            )
             adb install -r "$app_apk" >"$INSTRUMENT_LOG" 2>&1
             adb install -r "$test_apk" >>"$INSTRUMENT_LOG" 2>&1
-            set +e
-            adb shell am instrument -w -r \
-              "$app_package.test/androidx.test.runner.AndroidJUnitRunner" \
-              >>"$INSTRUMENT_LOG" 2>&1
-            local status=$?
-            set -e
-            if [[ "$status" -ne 0 ]] || grep -q 'FAILURES!!!' "$INSTRUMENT_LOG" || \
-              ! grep -Eq '^OK \(6 tests\)$' "$INSTRUMENT_LOG"; then
-              echo "Android current-runtime instrumentation failed; raw output was discarded"
-              exit 1
-            fi
+            for test_name in "${tests[@]}"; do
+              : >"$INSTRUMENT_LOG"
+              set +e
+              adb shell am instrument -w -r \
+                -e class "com.fluyo.app.CurrentRuntimeFoundationTest#$test_name" \
+                "$app_package.test/androidx.test.runner.AndroidJUnitRunner" \
+                >"$INSTRUMENT_LOG" 2>&1
+              local status=$?
+              set -e
+              if [[ "$status" -ne 0 ]] || grep -q 'FAILURES!!!' "$INSTRUMENT_LOG" || \
+                ! grep -Eq '^OK \(1 test\)$' "$INSTRUMENT_LOG"; then
+                rm -f "$INSTRUMENT_LOG"
+                echo "Android current-runtime instrumentation failed; test=$test_name; raw output was discarded"
+                exit 1
+              fi
+              executed=$((executed + 1))
+            done
+            test "$executed" = "$CURRENT_RUNTIME_TEST_COUNT"
             adb uninstall "$app_package.test" >/dev/null 2>&1 || true
             adb uninstall "$app_package" >/dev/null 2>&1 || true
             rm -f "$INSTRUMENT_LOG"
