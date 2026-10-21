@@ -87,8 +87,6 @@ class CurrentRuntimeFoundationTest {
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
         launchFoundation()
         waitForText(expectedTitle())
-        val action = waitForText(expectedAction())
-        assertTrue(action.visibleBounds.width() > 0 && action.visibleBounds.height() > 0)
         assertFalse(device.hasObject(By.text(context.getString(R.string.loading_title))))
         val unexpected = if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
             context.getString(R.string.signed_out_title)

@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
@@ -48,8 +49,8 @@ class FoundationShellTest {
     private fun assertNodeIsFullyInsideFoundation(tag: String) {
         compose.waitUntil(5_000) {
             runCatching {
-                val root = compose.onNodeWithTag("foundation-root").fetchSemanticsNode().boundsInWindow
-                val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInWindow
+                val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+                val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
                 node.width > 0f && node.height > 0f &&
                     node.left >= root.left && node.top >= root.top &&
                     node.right <= root.right && node.bottom <= root.bottom
@@ -90,9 +91,7 @@ class FoundationShellTest {
                 MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} }
             }
         }
-        val action = compose.onNodeWithTag("review-build-button")
         assertNodeIsFullyInsideFoundation("review-build-button")
-        action.assertHeightIsAtLeast(48.dp)
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {

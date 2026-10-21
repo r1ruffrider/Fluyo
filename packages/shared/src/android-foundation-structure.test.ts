@@ -175,7 +175,10 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
     expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation.match(/assertNodeIsFullyInsideFoundation/g)).toHaveLength(3);
-    expect(instrumentation.match(/boundsInWindow/g)).toHaveLength(2);
+    expect(instrumentation).toContain("compose.onRoot().fetchSemanticsNode().boundsInRoot");
+    expect(instrumentation).toContain(
+      "compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot",
+    );
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
@@ -197,6 +200,7 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("device.wakeUp()");
     expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
+    expect(currentRuntime).toContain("waitForText(expectedTitle())");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
