@@ -203,8 +203,8 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
     expect(currentRuntime).toContain("currentRuntimeKeyboardAndDpadReachActionInLogicalOrder");
-    expect(currentRuntime).toContain("currentRuntimeExpandedWindowKeepsStateAndActionReachable");
-    expect(currentRuntime).toContain('device.executeShellCommand("wm size 3000x2200")');
+    expect(currentRuntime).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
+    expect(currentRuntime).toContain('listOf("1200x2200", "2400x2200", "3000x2200")');
     expect(currentRuntime).toContain('device.executeShellCommand("wm size reset")');
     expect(currentRuntime).toContain(
       '"am start -W -n ${context.packageName}/${MainActivity::class.java.name}"',
@@ -239,7 +239,8 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain(
       "Android current-runtime instrumentation failed; test=$test_name; raw output was discarded",
     );
-    expect(workflowText).toContain('test "$executed" = "$CURRENT_RUNTIME_TEST_COUNT"');
+    expect(workflowText).toContain('test "$executed" = "${#tests[@]}"');
+    expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(workflowText).toContain("compose_semantics_api29");
     expect(workflowText).toContain("bounded_uiautomator_black_box_api37");
     expect(workflowText).toContain("com.fluyo.app.staging");

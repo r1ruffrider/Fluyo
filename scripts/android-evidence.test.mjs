@@ -24,11 +24,24 @@ const metadata = (source, leg) => ({
 });
 
 test("partitions all 27 applicable scenarios and leaves two physical rows", () => {
-  assert.equal(scenarioIdsByLeg.minimum.length, 18);
-  assert.equal(scenarioIdsByLeg.current.length, 9);
+  assert.equal(scenarioIdsByLeg.minimum.length, 17);
+  assert.equal(scenarioIdsByLeg.current.length, 10);
   assert.equal(new Set([...scenarioIdsByLeg.minimum, ...scenarioIdsByLeg.current]).size, 27);
   assert.equal(scenarioProofById.android_rtl_geometry_and_semantics.leg, "minimum");
-  assert.equal(scenarioProofById.android_tablet_foldable_probe_no_support_claim.leg, "minimum");
+  assert.equal(scenarioProofById.android_tablet_foldable_probe_no_support_claim.leg, "current");
+  assert.match(
+    scenarioProofById.android_tablet_foldable_probe_no_support_claim.command,
+    /seven-test API 37 lane with compact-medium-expanded runtime resize probe/,
+  );
+  assert.match(
+    scenarioProofById.android_large_current_api_phone_emulator.command,
+    /seven-test API 37 large-phone black-box lane per flavor/,
+  );
+  assert.doesNotMatch(
+    scenarioProofById.android_font_scale_200_percent.observed,
+    /48 dp|touch target/i,
+  );
+  assert.match(scenarioProofById.android_minimum_touch_targets.observed, /at least 48 dp/i);
   assert.equal(scenarioProofById.android_pseudolocale_expansion.leg, "current");
   assert.equal(scenarioProofById.android_keyboard_and_switch_focus.leg, "current");
 });

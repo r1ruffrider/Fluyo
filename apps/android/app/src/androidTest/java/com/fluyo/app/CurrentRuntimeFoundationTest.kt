@@ -156,12 +156,14 @@ class CurrentRuntimeFoundationTest {
         }
     }
 
-    @Test fun currentRuntimeExpandedWindowKeepsStateAndActionReachable() {
-        device.executeShellCommand("wm size 3000x2200")
-        launchFoundation()
-        waitForText(expectedTitle())
-        val action = waitForText(expectedAction())
-        assertTrue(action.visibleBounds.width() > 0)
-        assertTrue(action.visibleBounds.height() > 0)
+    @Test fun currentRuntimeAdaptiveWindowsKeepStateAndActionReachable() {
+        listOf("1200x2200", "2400x2200", "3000x2200").forEachIndexed { index, size ->
+            device.executeShellCommand("wm size $size")
+            if (index == 0) launchFoundation() else device.waitForIdle()
+            waitForText(expectedTitle())
+            val action = waitForText(expectedAction())
+            assertTrue(action.visibleBounds.width() > 0)
+            assertTrue(action.visibleBounds.height() > 0)
+        }
     }
 }

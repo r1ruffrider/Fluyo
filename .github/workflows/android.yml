@@ -237,7 +237,7 @@ jobs:
               currentRuntimeActionRemainsLocalAndHonest
               currentRuntimePseudoLocaleExpansionKeepsActionReachable
               currentRuntimeKeyboardAndDpadReachActionInLogicalOrder
-              currentRuntimeExpandedWindowKeepsStateAndActionReachable
+              currentRuntimeAdaptiveWindowsKeepStateAndActionReachable
             )
             adb install -r "$app_apk" >"$INSTRUMENT_LOG" 2>&1
             adb install -r "$test_apk" >>"$INSTRUMENT_LOG" 2>&1
@@ -258,11 +258,11 @@ jobs:
               fi
               executed=$((executed + 1))
             done
-            test "$executed" = "$CURRENT_RUNTIME_TEST_COUNT"
+            test "$executed" = "${#tests[@]}"
             adb uninstall "$app_package.test" >/dev/null 2>&1 || true
             adb uninstall "$app_package" >/dev/null 2>&1 || true
             rm -f "$INSTRUMENT_LOG"
-            echo "Android current-runtime instrumentation passed exactly $CURRENT_RUNTIME_TEST_COUNT tests; raw output was discarded"
+            echo "Android current-runtime instrumentation passed exactly ${#tests[@]} tests; raw output was discarded"
           }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest

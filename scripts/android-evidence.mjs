@@ -58,7 +58,7 @@ export const scenarioProofById = {
     leg: "minimum",
     mode: minimumMode,
     command: "API 29 200-percent Compose density instrumentation",
-    observed: "pinned primary action remained within the foundation viewport and at least 48 dp",
+    observed: "pinned primary action remained displayed and reachable at 200 percent font scale",
   },
   android_talkback_order_and_names: {
     leg: "minimum",
@@ -106,10 +106,11 @@ export const scenarioProofById = {
       "auth and legal surfaces are absent by scope; error and large-text foundation actions remained functional",
   },
   android_tablet_foldable_probe_no_support_claim: {
-    leg: "minimum",
-    mode: minimumMode,
-    command: "API 29 compact-medium-expanded Compose resize probe",
-    observed: "resizing preserved the newest usable state without a support claim",
+    leg: "current",
+    mode: currentMode,
+    command: "seven-test API 37 lane with compact-medium-expanded runtime resize probe",
+    observed:
+      "compact, medium, and expanded resizing preserved the newest usable state without a support claim",
   },
   android_asset_rendering_provenance_semantics: {
     leg: "minimum",
@@ -126,7 +127,7 @@ export const scenarioProofById = {
   android_production_inert: {
     leg: "current",
     mode: currentMode,
-    command: "production build inspection plus six-test API 37 black-box run",
+    command: "production build inspection plus seven-test API 37 black-box run",
     observed: "production stayed inert, marker-free, and in the safe error state",
   },
   android_pseudolocale_expansion: {
@@ -146,8 +147,9 @@ export const scenarioProofById = {
   android_large_current_api_phone_emulator: {
     leg: "current",
     mode: currentMode,
-    command: "six-test API 37 large-phone black-box lane per flavor",
-    observed: "API 37 launch, large text, landscape, motion, locale, and action checks passed",
+    command: "seven-test API 37 large-phone black-box lane per flavor",
+    observed:
+      "API 37 launch, large text, landscape, motion, locale, action, and adaptive-window checks passed",
   },
   android_manifest_sdk_data_safety_inventory: {
     leg: "current",
