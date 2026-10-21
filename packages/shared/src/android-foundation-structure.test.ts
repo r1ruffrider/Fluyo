@@ -173,15 +173,18 @@ describe("Android foundation structure", () => {
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
     );
-    expect(shell).toContain("repeat(10)");
+    expect(shell).toContain("repeat(120)");
     expect(shell).toContain("contentScroll.scrollTo(contentScroll.maxValue)");
     expect(shell.indexOf("contentScroll.scrollTo(contentScroll.maxValue)")).toBeLessThan(
       shell.indexOf("actionFocus.requestFocus()"),
     );
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
-    expect(shell).toContain("if (actionFocus.requestFocus()) return@LaunchedEffect");
-    expect(shell).toContain("modifier = modifier.semantics { focused = isFocused }");
+    expect(shell).toContain("actionFocus.requestFocus()");
+    expect(shell).toContain("if (actionIsFocused) return@LaunchedEffect");
+    expect(shell).toContain(
+      "modifier = modifier.onFocusChanged { focusState -> onFocusChanged(focusState.isFocused) }.semantics { focused = isFocused }",
+    );
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
     expect(instrumentation.match(/@Test fun /g)).toHaveLength(4);
     expect(instrumentation).toContain("compose.activity.setContent");

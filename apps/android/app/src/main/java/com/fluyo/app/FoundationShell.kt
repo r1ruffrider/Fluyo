@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -46,16 +47,19 @@ fun FluyoFoundationApp(model: FoundationShellModel = viewModel()) {
 fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration, onRetry: () -> Unit) {
     val actionFocus = remember { FocusRequester() }
     val contentScroll = rememberScrollState()
+    var actionIsFocused by remember { mutableStateOf(false) }
     var scopeExpanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
         if (state == FoundationShellState.Failure) {
-            repeat(10) {
+            repeat(120) {
                 withFrameNanos { }
                 if (contentScroll.maxValue > 0) {
                     contentScroll.scrollTo(contentScroll.maxValue)
                     withFrameNanos { }
                 }
-                if (actionFocus.requestFocus()) return@LaunchedEffect
+                actionFocus.requestFocus()
+                withFrameNanos { }
+                if (actionIsFocused) return@LaunchedEffect
             }
         }
     }
@@ -93,10 +97,12 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
             when (state) {
                 FoundationShellState.SignedOut -> FoundationActionButton(
                     onClick = { scopeExpanded = !scopeExpanded },
+                    onFocusChanged = { actionIsFocused = it },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("review-build-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.review_scope_action)) }
                 FoundationShellState.Failure -> FoundationActionButton(
                     onClick = onRetry,
+                    onFocusChanged = { actionIsFocused = it },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("retry-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.retry_action)) }
                 FoundationShellState.Loading -> Unit
@@ -108,6 +114,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
 @Composable
 private fun FoundationActionButton(
     onClick: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -115,7 +122,7 @@ private fun FoundationActionButton(
     val isFocused by interactionSource.collectIsFocusedAsState()
     Button(
         onClick = onClick,
-        modifier = modifier.semantics { focused = isFocused },
+        modifier = modifier.onFocusChanged { focusState -> onFocusChanged(focusState.isFocused) }.semantics { focused = isFocused },
         interactionSource = interactionSource,
         border = if (isFocused) BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary) else null,
         content = { content() },
