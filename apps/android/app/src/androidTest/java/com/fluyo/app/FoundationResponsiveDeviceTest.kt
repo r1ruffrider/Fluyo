@@ -15,7 +15,9 @@ import org.junit.Test
 
 @SdkSuppress(maxSdkVersion = 36)
 class FoundationResponsiveDeviceTest {
-    private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = instrumentation.targetContext
+    private val device = UiDevice.getInstance(instrumentation)
     private var activeScenario: ActivityScenario<MainActivity>? = null
     private var changedFontScale = false
     private var changedOrientation = false
@@ -46,23 +48,37 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("node missing")
     }
 
-    private fun waitForFontScale(scenario: ActivityScenario<MainActivity>, expected: Float) {
+    private fun waitForSystemFontScale(expected: Float) {
         repeat(20) {
-            var applied = false
-            scenario.onActivity { activity ->
-                applied = activity.resources.configuration.fontScale >= expected
-            }
-            if (applied) return
+            val applied = device.executeShellCommand("settings get system font_scale")
+                .trim()
+                .toFloatOrNull()
+            if (applied != null && applied >= expected) return
             Thread.sleep(250)
         }
         throw AssertionError("font scale")
     }
 
+    private fun launchFoundationFromStoppedState() {
+        val packageName = context.packageName
+        try {
+            device.wakeUp()
+            device.executeShellCommand("wm dismiss-keyguard")
+            device.executeShellCommand("am force-stop $packageName")
+            device.executeShellCommand(
+                "am start -W -n $packageName/com.fluyo.app.MainActivity",
+            )
+            check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))
+        } catch (_: Throwable) {
+            throw AssertionError("runtime launch")
+        }
+    }
+
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
-        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
         changedFontScale = true
         device.executeShellCommand("settings put system font_scale 2.0")
-        waitForFontScale(scenario, 1.9f)
+        waitForSystemFontScale(1.9f)
+        launchFoundationFromStoppedState()
         waitForNode("signed-out-state")
         waitForNode("review-build-button", scroll = true)
     }

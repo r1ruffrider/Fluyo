@@ -69,11 +69,16 @@ describe("Android foundation structure", () => {
     expect(manifest).toContain('android:fullBackupContent="false"');
     expect(manifest).toContain('android:icon="@android:drawable/sym_def_app_icon"');
     expect(manifest).toContain('android:name="androidx.profileinstaller.ProfileInstallReceiver"');
-    expect(manifest).toContain('tools:node="remove"');
+    expect((manifest.match(/tools:node="remove"/g) ?? []).length).toBe(3);
+    expect((manifest.match(/<permission\b/g) ?? []).length).toBe(1);
+    expect((manifest.match(/<uses-permission\b/g) ?? []).length).toBe(1);
+    expect(manifest).toContain(
+      'android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"',
+    );
     const extractionRules = text("app/src/main/res/xml/data_extraction_rules.xml");
     expect(extractionRules).toContain('<exclude domain="root" path="." />');
     expect((extractionRules.match(/<exclude /g) ?? []).length).toBe(2);
-    expect(manifest).not.toMatch(/<uses-permission|<provider|<service/);
+    expect(manifest).not.toMatch(/<provider|<service/);
     expect(text("app/build.gradle.kts")).toContain("isShrinkResources = true");
     const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
     expect(workflow).toContain("com.fluyo.app.MainActivity");
@@ -195,12 +200,18 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 2.0")',
     );
-    expect(responsive).toContain("waitForFontScale(scenario, 1.9f)");
-    expect(responsive).toContain("activity.resources.configuration.fontScale >= expected");
+    expect(responsive).toContain("waitForSystemFontScale(1.9f)");
+    expect(responsive).toContain('throw AssertionError("font scale")');
+    expect(responsive).toContain('throw AssertionError("runtime launch")');
+    expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
+    expect(responsive).toContain('device.executeShellCommand("am force-stop $packageName")');
+    expect(responsive).toContain('"am start -W -n $packageName/com.fluyo.app.MainActivity"');
     expect(responsive).toContain(
-      'val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }\n        changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForFontScale(scenario, 1.9f)',
+      "check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))",
     );
-    expect(responsive).not.toContain("settings get system font_scale");
+    expect(responsive).toContain(
+      'changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForSystemFontScale(1.9f)\n        launchFoundationFromStoppedState()',
+    );
     expect(responsive).not.toContain("ActivityScenarioRule");
     expect(responsive).toContain("activeScenario?.close()");
     expect(responsive).toContain(

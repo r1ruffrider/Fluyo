@@ -70,6 +70,8 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
       ["node count", "node_count"],
       ["scroll action", "scroll_action"],
       ["node geometry", "node_geometry"],
+      ["font scale", "font_scale"],
+      ["runtime launch", "runtime_launch"],
       ["content setup", "content_setup"],
       ["state transition", "state_transition"],
       ["failure transition", "failure_transition"],
@@ -85,7 +87,7 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
       assert.equal(JSON.parse(result.stdout).failures[0].category, category);
       assert.doesNotMatch(
         result.stdout,
-        /example\.test|private|node missing|node count|scroll action|node geometry|content setup|state transition|failure transition|content teardown/i,
+        /example\.test|private|node missing|node count|scroll action|node geometry|font scale|runtime launch|content setup|state transition|failure transition|content teardown/i,
       );
     }
   } finally {
