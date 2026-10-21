@@ -85,6 +85,7 @@ const boundedStageCategory = (tag, body) => {
     ["node_geometry", "node geometry", /AssertionError: node geometry(?:\r?\n|$)/],
     ["font_scale", "font scale", /AssertionError: font scale(?:\r?\n|$)/],
     ["runtime_launch", "runtime launch", /AssertionError: runtime launch(?:\r?\n|$)/],
+    ["runtime_cleanup", "runtime cleanup", /AssertionError: runtime cleanup(?:\r?\n|$)/],
     ["content_setup", "content setup", /AssertionError: content setup(?:\r?\n|$)/],
     ["state_transition", "state transition", /AssertionError: state transition(?:\r?\n|$)/],
     ["failure_transition", "failure transition", /AssertionError: failure transition(?:\r?\n|$)/],

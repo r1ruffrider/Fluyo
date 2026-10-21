@@ -133,7 +133,17 @@ function archiveEntryKind(name) {
 function scanBuffer(buffer, label, depth = 0) {
   if (!looksLikeZip(buffer)) {
     const raw = buffer.toString("latin1");
-    return [...new Set([...scanText(raw, label), ...scanText(raw.replaceAll("\0", ""), label)])];
+    const evenLength = buffer.length - (buffer.length % 2);
+    const oddLength = buffer.length - 1 - ((buffer.length - 1) % 2);
+    const utf16Even = evenLength > 0 ? buffer.subarray(0, evenLength).toString("utf16le") : "";
+    const utf16Odd = oddLength > 0 ? buffer.subarray(1, 1 + oddLength).toString("utf16le") : "";
+    return [
+      ...new Set([
+        ...scanText(raw, label),
+        ...scanText(utf16Even, label),
+        ...scanText(utf16Odd, label),
+      ]),
+    ];
   }
   const findings = [];
   if (depth >= MAX_ARCHIVE_DEPTH) {

@@ -77,6 +77,32 @@ test("rejects restricted content compressed inside an APK or ZIP", () => {
   }
 });
 
+test("rejects UTF-16 contact identity without joining unrelated binary records", () => {
+  const directory = mkdtempSync(join(tmpdir(), "fluyo-android-scan-"));
+  try {
+    const encodedIdentity = join(directory, "utf16.bin");
+    writeFileSync(encodedIdentity, Buffer.from("learner@example.test", "utf16le"));
+    assert.ok(
+      scanTargets([encodedIdentity]).some((finding) => finding.includes("email-shaped identity")),
+    );
+
+    const separatedRecords = join(directory, "records.dex");
+    writeFileSync(
+      separatedRecords,
+      Buffer.concat([
+        Buffer.from("learner", "ascii"),
+        Buffer.from([0]),
+        Buffer.from("@example", "ascii"),
+        Buffer.from([0]),
+        Buffer.from(".test", "ascii"),
+      ]),
+    );
+    assert.deepEqual(scanTargets([separatedRecords]), []);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("recursively scans an APK compressed inside an aggregate ZIP", () => {
   const directory = mkdtempSync(join(tmpdir(), "fluyo-android-scan-"));
   try {

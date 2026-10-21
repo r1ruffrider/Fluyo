@@ -23,14 +23,30 @@ class FoundationResponsiveDeviceTest {
     private var changedOrientation = false
 
     @After fun restoreRuntimeSettings() {
+        var cleanupFailed = false
         if (changedOrientation) {
-            activeScenario?.onActivity {
-                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            try {
+                activeScenario?.onActivity {
+                    it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            } catch (_: Throwable) {
+                cleanupFailed = true
             }
         }
-        activeScenario?.close()
+        try {
+            activeScenario?.close()
+        } catch (_: Throwable) {
+            cleanupFailed = true
+        }
         activeScenario = null
-        if (changedFontScale) device.executeShellCommand("settings put system font_scale 1.0")
+        if (changedFontScale) {
+            try {
+                device.executeShellCommand("settings put system font_scale 1.0")
+            } catch (_: Throwable) {
+                cleanupFailed = true
+            }
+        }
+        if (cleanupFailed) throw AssertionError("runtime cleanup")
     }
 
     private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {

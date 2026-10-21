@@ -255,6 +255,7 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain('throw AssertionError("loading present")');
     expect(currentRuntime).toContain('throw AssertionError("unexpected state")');
     expect(currentRuntime).toContain('throw AssertionError("runtime cleanup")');
+    expect(responsive).toContain('throw AssertionError("runtime cleanup")');
     expect(currentRuntime).toContain('throw AssertionError("runtime launch")');
     expect(currentRuntime).not.toContain("createEmptyComposeRule()");
     expect(currentRuntime).not.toContain("ActivityScenario.launch(MainActivity::class.java)");
