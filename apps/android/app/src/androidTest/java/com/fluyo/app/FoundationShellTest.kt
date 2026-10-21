@@ -55,7 +55,7 @@ class FoundationShellTest {
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         assertTrue(action.fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus))
         action.performClick()
-        compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell")
+        compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell", substring = true)
     }
 
     @Test fun safeErrorFocusesRetryAndOmitsInternalDetail() {

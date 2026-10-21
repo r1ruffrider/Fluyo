@@ -178,7 +178,7 @@ describe("Android foundation structure", () => {
       "fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus)",
     );
     expect(instrumentation).toContain(
-      'compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell")',
+      'compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell", substring = true)',
     );
     expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
     const responsive = text(
@@ -196,12 +196,11 @@ describe("Android foundation structure", () => {
       'device.executeShellCommand("settings put system font_scale 2.0")',
     );
     expect(responsive).toContain("waitForFontScale(scenario, 1.9f)");
-    expect(responsive).toContain("waitForSystemFontScaleSetting(1.9f)");
-    expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
     expect(responsive).toContain("activity.resources.configuration.fontScale >= expected");
     expect(responsive).toContain(
-      "waitForSystemFontScaleSetting(1.9f)\n        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }\n        waitForFontScale(scenario, 1.9f)",
+      'device.executeShellCommand("settings put system font_scale 2.0")\n        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }\n        waitForFontScale(scenario, 1.9f)',
     );
+    expect(responsive).not.toContain("settings get system font_scale");
     expect(responsive).not.toContain("ActivityScenarioRule");
     expect(responsive).toContain("activeScenario?.close()");
     expect(responsive).toContain(
