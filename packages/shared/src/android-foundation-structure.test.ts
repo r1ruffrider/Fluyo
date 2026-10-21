@@ -122,13 +122,19 @@ describe("Android foundation structure", () => {
     expect(app).not.toContain("ANDROIDX_TEST_ORCHESTRATOR");
     expect(app).not.toContain("androidx.test:orchestrator");
     const strings = text("app/src/main/res/values/strings.xml");
+    const expandedStrings = text("app/src/debug/res/values-en-rXA/strings.xml");
     expect(strings).toContain("does not include sign-in, lessons, billing, or public access");
     expect(strings).toContain("Spanish learning-content sample");
     expect(strings).toContain("¿Dónde está la estación?");
     expect(strings).not.toContain('translatable="false"');
-    expect(text("app/src/debug/res/values-en-rXA/strings.xml")).toContain(
-      "[!! Řëåðÿ ƒöř ţĥë ñëχţ šmåļļ šţëþ !!]",
-    );
+    expect(expandedStrings).toContain("[!! Řëåðÿ ƒöř ţĥë ñëχţ šmåļļ šţëþ !!]");
+    const englishBody = strings.match(/<string name="signed_out_body">([^<]+)<\/string>/)?.[1];
+    const expandedBody = expandedStrings.match(
+      /<string name="signed_out_body">([^<]+)<\/string>/,
+    )?.[1];
+    expect(englishBody).toBeTruthy();
+    expect(expandedBody).toBeTruthy();
+    expect(expandedBody!.length).toBeGreaterThan(englishBody!.length);
     expect(text("app/src/debug/res/values-ar-rXB/strings.xml")).toContain(
       "الخطوة الداخلية التالية",
     );

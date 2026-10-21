@@ -44,6 +44,14 @@ const attribute = (tag, name) => {
   const match = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
   return safeIdentifier(match?.[1] ?? "unknown");
 };
+const frameworkFailureType = (tag) => {
+  const match = tag.match(/(?:^|\s)type="([^"]*)"/);
+  const value = match?.[1] ?? "";
+  if (!/^(?:java|junit|org\.junit|android|androidx|com\.android)\.[A-Za-z0-9_.$-]+$/.test(value)) {
+    return null;
+  }
+  return safeIdentifier(value);
+};
 
 const failureCategory = (body) => {
   const normalized = body.toLowerCase();
@@ -104,6 +112,7 @@ for (const file of xmlFiles.sort()) {
       testName: attribute(attributes, "name"),
       kind,
       category: failureCategory(failureTag[2]),
+      frameworkFailureType: frameworkFailureType(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,
     });

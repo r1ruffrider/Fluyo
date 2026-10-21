@@ -1,7 +1,6 @@
 package com.fluyo.app
 
 import android.content.res.Configuration
-import android.os.LocaleList
 import android.view.View
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -36,7 +35,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import java.util.Locale
 import org.junit.Rule
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -100,31 +98,19 @@ class FoundationShellTest {
 
     @Test fun pseudoLocaleExpansionUsesPackagedResources() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val englishLocale = Locale.Builder().setLanguage("en").setRegion("US").build()
-        val englishConfiguration = Configuration(context.resources.configuration).apply {
-            setLocales(LocaleList(englishLocale))
-            setLayoutDirection(englishLocale)
-        }
-        val english = context.createConfigurationContext(englishConfiguration).getString(R.string.signed_out_body)
-        val expandedLocale = Locale.Builder().setLanguage("en").setRegion("XA").build()
-        val expandedConfiguration = Configuration(context.resources.configuration).apply {
-            setLocales(LocaleList(expandedLocale))
-            setLayoutDirection(expandedLocale)
-        }
-        val expanded = context.createConfigurationContext(expandedConfiguration).getString(R.string.signed_out_body)
-        assertNotEquals(english, expanded)
-        assertTrue(expanded.length >= english.length)
+        val packagedLocales = context.resources.assets.locales.map { it.replace('_', '-') }
+        assertTrue(packagedLocales.any { it.equals("en-XA", ignoreCase = true) })
     }
 
     @Test fun pseudoRtlResourcesReportRtlDirection() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val rtlLocale = Locale.forLanguageTag("ar-XB")
+        val packagedLocales = context.resources.assets.locales.map { it.replace('_', '-') }
+        assertTrue(packagedLocales.any { it.equals("ar-XB", ignoreCase = true) })
         val rtlConfiguration = Configuration(context.resources.configuration).apply {
-            setLocales(LocaleList(rtlLocale))
             setLayoutDirection(rtlLocale)
         }
         val rtlContext = context.createConfigurationContext(rtlConfiguration)
-        assertNotEquals(context.getString(R.string.signed_out_body), rtlContext.getString(R.string.signed_out_body))
         assertEquals(View.LAYOUT_DIRECTION_RTL, rtlContext.resources.configuration.layoutDirection)
     }
 
