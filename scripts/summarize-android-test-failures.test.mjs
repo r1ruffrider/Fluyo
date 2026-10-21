@@ -169,3 +169,23 @@ test("maps orchestration crashes to fixed categories without retaining diagnosti
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("maps infrastructure and launch failures to fixed categories without retaining diagnostics", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-infrastructure-"));
+  try {
+    fs.writeFileSync(
+      path.join(root, "TEST-infrastructure.xml"),
+      '<testsuite><testcase classname="Shell" name="launch"><failure message="Test run failed to complete because the emulator became unavailable: learner@example.test">Unable to resolve activity C:\\private\\path</failure></testcase></testsuite>',
+    );
+    const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+    assert.equal(result.status, 0);
+    assert.deepEqual(JSON.parse(result.stdout).failures[0].runtimeCategories, [
+      "instrumentation_abort",
+      "activity_launch",
+      "device_infrastructure",
+    ]);
+    assert.doesNotMatch(result.stdout, /example\.test|private|emulator became unavailable/i);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -66,8 +66,17 @@ const runtimeCategories = (body) => {
     ["illegal_state", /\bIllegalStateException\b/],
     [
       "instrumentation_abort",
-      /(?:instrumentation run failed|test failed to run to completion|INSTRUMENTATION_(?:ABORTED|FAILED))/i,
+      /(?:instrumentation run failed|test (?:run )?failed to (?:run to completion|complete)|failed to run all tests|no test results|INSTRUMENTATION_(?:ABORTED|FAILED))/i,
     ],
+    [
+      "activity_launch",
+      /(?:unable to resolve activity|activity (?:was )?not started|failed to launch activity)/i,
+    ],
+    [
+      "device_infrastructure",
+      /(?:device setup failed|device became unavailable|emulator.*(?:offline|disconnected|unavailable))/i,
+    ],
+    ["permission_denied", /(?:permission denial|permission denied|securityexception)/i],
     [
       "process_crash",
       /(?:\bProcessCrash\b|\bProcessCrashedException\b|\bprocess (?:crash|crashed)\b)/i,

@@ -101,8 +101,10 @@ class FoundationShellTest {
     @Test fun pseudoLocaleExpansionUsesPackagedResources() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val english = context.getString(R.string.signed_out_body)
+        val expandedLocale = Locale.Builder().setLanguage("en").setRegion("XA").build()
         val expandedConfiguration = Configuration(context.resources.configuration).apply {
-            setLocales(LocaleList(Locale.forLanguageTag("en-XA")))
+            setLocales(LocaleList(expandedLocale))
+            setLayoutDirection(expandedLocale)
         }
         val expanded = context.createConfigurationContext(expandedConfiguration).getString(R.string.signed_out_body)
         assertNotEquals(english, expanded)
@@ -133,6 +135,7 @@ class FoundationShellTest {
             state = FoundationShellState.SignedOut
             width = 840.dp
         }
+        compose.waitForIdle()
         compose.onNodeWithTag("review-build-button").assertIsDisplayed().performClick()
         compose.waitForIdle()
         val detail = compose.onNodeWithTag("scope-detail").fetchSemanticsNode()

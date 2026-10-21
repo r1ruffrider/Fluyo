@@ -86,7 +86,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
             if (scopeExpanded && state == FoundationShellState.SignedOut) {
                 Text(
                     stringResource(R.string.scope_detail),
-                    modifier = Modifier.fillMaxWidth().testTag("scope-detail"),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail"),
                 )
                 Spacer(Modifier.height(8.dp))
             }

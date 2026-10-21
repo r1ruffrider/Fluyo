@@ -147,7 +147,9 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("fillMaxHeight()");
     expect(shell).toContain("Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll)");
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
-    expect(shell).toContain('modifier = Modifier.fillMaxWidth().testTag("scope-detail")');
+    expect(shell).toContain(
+      'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
+    );
     expect(shell).toContain("repeat(5)");
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
