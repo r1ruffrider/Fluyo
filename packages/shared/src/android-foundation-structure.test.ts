@@ -353,6 +353,13 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain(
       "Android artifact inspection failed; category=$1; raw output was discarded",
     );
+    for (const inventoryAssertion of [
+      `test "$(grep -c 'E: activity' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail activity_inventory`,
+      `test "$(grep -c 'E: provider' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail provider_inventory`,
+      `test "$(grep -c 'android:exported.*0xffffffff' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail exported_inventory`,
+    ]) {
+      expect(workflowText).toContain(inventoryAssertion);
+    }
     for (const category of [
       "tool_unavailable",
       "signature_verification",

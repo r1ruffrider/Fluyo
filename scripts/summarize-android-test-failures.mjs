@@ -44,6 +44,10 @@ const attribute = (tag, name) => {
   const match = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
   return safeIdentifier(match?.[1] ?? "unknown");
 };
+const rawAttribute = (tag, name) => {
+  const match = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
+  return match?.[1] ?? "";
+};
 const frameworkFailureCategory = (tag) => {
   const match = tag.match(/(?:^|\s)type="([^"]*)"/);
   const value = match?.[1] ?? "";
@@ -73,21 +77,27 @@ const failureCategory = (body) => {
   return "assertion";
 };
 
-const boundedStageCategory = (body) => {
+const boundedStageCategory = (tag, body) => {
   const stages = [
-    ["node_missing", /AssertionError: node missing(?:\r?\n|$)/],
-    ["node_count", /AssertionError: node count(?:\r?\n|$)/],
-    ["scroll_action", /AssertionError: scroll action(?:\r?\n|$)/],
-    ["node_geometry", /AssertionError: node geometry(?:\r?\n|$)/],
-    ["font_scale", /AssertionError: font scale(?:\r?\n|$)/],
-    ["runtime_launch", /AssertionError: runtime launch(?:\r?\n|$)/],
-    ["content_setup", /AssertionError: content setup(?:\r?\n|$)/],
-    ["state_transition", /AssertionError: state transition(?:\r?\n|$)/],
-    ["failure_transition", /AssertionError: failure transition(?:\r?\n|$)/],
-    ["content_teardown", /AssertionError: content teardown(?:\r?\n|$)/],
+    ["node_missing", "node missing", /AssertionError: node missing(?:\r?\n|$)/],
+    ["node_count", "node count", /AssertionError: node count(?:\r?\n|$)/],
+    ["scroll_action", "scroll action", /AssertionError: scroll action(?:\r?\n|$)/],
+    ["node_geometry", "node geometry", /AssertionError: node geometry(?:\r?\n|$)/],
+    ["font_scale", "font scale", /AssertionError: font scale(?:\r?\n|$)/],
+    ["runtime_launch", "runtime launch", /AssertionError: runtime launch(?:\r?\n|$)/],
+    ["content_setup", "content setup", /AssertionError: content setup(?:\r?\n|$)/],
+    ["state_transition", "state transition", /AssertionError: state transition(?:\r?\n|$)/],
+    ["failure_transition", "failure transition", /AssertionError: failure transition(?:\r?\n|$)/],
+    ["content_teardown", "content teardown", /AssertionError: content teardown(?:\r?\n|$)/],
   ];
-  for (const [category, pattern] of stages) {
+  for (const [category, , pattern] of stages) {
     if (pattern.test(body)) return category;
+  }
+  const message = rawAttribute(tag, "message");
+  for (const [category, sentinel] of stages) {
+    if (message === sentinel || message === `java.lang.AssertionError: ${sentinel}`) {
+      return category;
+    }
   }
   return null;
 };
@@ -138,7 +148,7 @@ for (const file of xmlFiles.sort()) {
       className: attribute(attributes, "classname"),
       testName: attribute(attributes, "name"),
       kind,
-      category: boundedStageCategory(body) ?? failureCategory(failureTag[2]),
+      category: boundedStageCategory(failureTag[2], body) ?? failureCategory(failureTag[2]),
       frameworkFailureCategory: frameworkFailureCategory(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,

@@ -95,6 +95,45 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
   }
 });
 
+test("maps only exact bounded reachability sentinels from the failure message", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-message-"));
+  try {
+    const cases = [
+      ["node missing", "node_missing"],
+      ["node count", "node_count"],
+      ["scroll action", "scroll_action"],
+      ["node geometry", "node_geometry"],
+      ["font scale", "font_scale"],
+      ["runtime launch", "runtime_launch"],
+      ["content setup", "content_setup"],
+      ["state transition", "state_transition"],
+      ["failure transition", "failure_transition"],
+      ["content teardown", "content_teardown"],
+    ];
+    for (const [sentinel, category] of cases) {
+      fs.writeFileSync(
+        path.join(root, "TEST-stage.xml"),
+        `<testsuite><testcase classname="Shell" name="reachability"><failure message="${sentinel}">java.lang.AssertionError\nlearner@example.test C:\\\\private\\\\path</failure></testcase></testsuite>`,
+      );
+      const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+      assert.equal(result.status, 0);
+      assert.equal(JSON.parse(result.stdout).failures[0].category, category);
+      assert.doesNotMatch(result.stdout, /example\.test|private|node missing|runtime launch/i);
+    }
+
+    fs.writeFileSync(
+      path.join(root, "TEST-stage.xml"),
+      '<testsuite><testcase classname="Shell" name="reachability"><failure message="runtime launch learner@example.test">java.lang.AssertionError</failure></testcase></testsuite>',
+    );
+    const adversarial = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+    assert.equal(adversarial.status, 0);
+    assert.equal(JSON.parse(adversarial.stdout).failures[0].category, "assertion");
+    assert.doesNotMatch(adversarial.stdout, /example\.test|runtime launch/i);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("ignores semantics-tree bounds outside the failure message", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-body-"));
   try {

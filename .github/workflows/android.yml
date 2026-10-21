@@ -348,13 +348,13 @@ jobs:
             "$AAPT" dump permissions "$apk" >"$TEMP/permissions.txt" || artifact_inspection_fail permission_inventory
             if grep -q "uses-permission:" "$TEMP/permissions.txt"; then artifact_inspection_fail unexpected_permission; fi
             "$AAPT" dump xmltree "$apk" AndroidManifest.xml >"$TEMP/manifest.txt" || artifact_inspection_fail manifest_inventory
-            test "$(grep -c 'E: activity' "$TEMP/manifest.txt")" -eq 1 || artifact_inspection_fail activity_inventory
+            test "$(grep -c 'E: activity' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail activity_inventory
             grep -q 'com.fluyo.app.MainActivity' "$TEMP/manifest.txt" || artifact_inspection_fail activity_identity
-            test "$(grep -c 'E: provider' "$TEMP/manifest.txt")" -eq 1 || artifact_inspection_fail provider_inventory
+            test "$(grep -c 'E: provider' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail provider_inventory
             grep -q 'androidx.startup.InitializationProvider' "$TEMP/manifest.txt" || artifact_inspection_fail provider_identity
             test "$(grep -c 'E: receiver' "$TEMP/manifest.txt" || true)" -eq 0 || artifact_inspection_fail receiver_inventory
             test "$(grep -c 'E: service' "$TEMP/manifest.txt" || true)" -eq 0 || artifact_inspection_fail service_inventory
-            test "$(grep -c 'android:exported.*0xffffffff' "$TEMP/manifest.txt")" -eq 1 || artifact_inspection_fail exported_inventory
+            test "$(grep -c 'android:exported.*0xffffffff' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail exported_inventory
           done
           node scripts/scan-android-evidence.mjs "$TEMP"
           (cd "$TEMP" && zip -q -9 "$ARTIFACT" ./*.apk)
