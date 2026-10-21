@@ -72,6 +72,7 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
       ["content setup", "content_setup"],
       ["state transition", "state_transition"],
       ["failure transition", "failure_transition"],
+      ["content teardown", "content_teardown"],
     ];
     for (const [sentinel, category] of cases) {
       fs.writeFileSync(
@@ -83,7 +84,7 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
       assert.equal(JSON.parse(result.stdout).failures[0].category, category);
       assert.doesNotMatch(
         result.stdout,
-        /example\.test|private|node count|scroll action|node geometry|content setup|state transition|failure transition/i,
+        /example\.test|private|node count|scroll action|node geometry|content setup|state transition|failure transition|content teardown/i,
       );
     }
   } finally {

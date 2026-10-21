@@ -81,6 +81,7 @@ const boundedStageCategory = (body) => {
     ["content_setup", /AssertionError: content setup(?:\r?\n|$)/],
     ["state_transition", /AssertionError: state transition(?:\r?\n|$)/],
     ["failure_transition", /AssertionError: failure transition(?:\r?\n|$)/],
+    ["content_teardown", /AssertionError: content teardown(?:\r?\n|$)/],
   ];
   for (const [category, pattern] of stages) {
     if (pattern.test(body)) return category;

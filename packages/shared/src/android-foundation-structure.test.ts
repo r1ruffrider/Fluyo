@@ -184,6 +184,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain('throw AssertionError("content setup")');
     expect(instrumentation).toContain('throw AssertionError("state transition")');
     expect(instrumentation).toContain('throw AssertionError("failure transition")');
+    expect(instrumentation).toContain('throw AssertionError("content teardown")');
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -200,7 +201,7 @@ describe("Android foundation structure", () => {
     );
     expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
     expect(currentRuntime.match(/@Test fun /g)).toHaveLength(7);
-    expect(currentRuntime).toContain("createAndroidComposeRule<MainActivity>()");
+    expect(currentRuntime).toContain("createEmptyComposeRule()");
     expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
     expect(currentRuntime).toContain("device.wakeUp()");
     expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
@@ -211,6 +212,10 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain('throw AssertionError("loading present")');
     expect(currentRuntime).toContain('throw AssertionError("unexpected state")');
     expect(currentRuntime).toContain('throw AssertionError("runtime cleanup")');
+    expect(currentRuntime).toContain('throw AssertionError("runtime launch")');
+    expect(currentRuntime).toContain("createEmptyComposeRule()");
+    expect(currentRuntime).toContain("ActivityScenario.launch(MainActivity::class.java)");
+    expect(currentRuntime).not.toContain("createAndroidComposeRule");
     expect(currentRuntime).not.toContain("device.pressHome()");
     expect(currentRuntime).toContain("node.performScrollTo()");
     expect(currentRuntime).toContain("target.width > 0f && target.height > 0f");
@@ -222,7 +227,7 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(currentRuntime).toContain('listOf("1200x2200", "2400x2200", "3000x2200")');
     expect(currentRuntime).toContain('device.executeShellCommand("wm size reset")');
-    expect(currentRuntime).toContain("compose.activityRule.scenario.recreate()");
+    expect(currentRuntime).toContain("scenario.recreate()");
     expect(currentRuntime).toContain("device.pressKeyCode(KeyEvent.KEYCODE_TAB)");
     expect(currentRuntime).toContain("device.pressDPadCenter()");
     const workflow = resolve(root, ".github/workflows/android.yml");
@@ -251,6 +256,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("^OK \\(1 test\\)\\r?$");
     expect(workflowText).toContain('failure_category="process_status"');
     expect(workflowText).toContain('failure_category="state_missing"');
+    expect(workflowText).toContain('failure_category="runtime_launch"');
     expect(workflowText).toContain('failure_category="loading_present"');
     expect(workflowText).toContain('failure_category="unexpected_state"');
     expect(workflowText).toContain('failure_category="runtime_cleanup"');

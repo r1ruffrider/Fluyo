@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
+import org.junit.After
 import org.junit.Rule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -44,6 +45,15 @@ class FoundationShellTest {
     private fun setFoundationContent(content: @Composable () -> Unit) {
         compose.runOnUiThread { compose.activity.setContent(content = content) }
         compose.waitForIdle()
+    }
+
+    @After fun disposeFoundationContent() {
+        try {
+            compose.runOnUiThread { compose.activity.setContent {} }
+            compose.waitForIdle()
+        } catch (_: Throwable) {
+            throw AssertionError("content teardown")
+        }
     }
 
     private fun waitForNodeToBeDisplayed(tag: String) {

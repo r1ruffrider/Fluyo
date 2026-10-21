@@ -4,9 +4,10 @@ import android.app.LocaleManager
 import android.content.pm.ActivityInfo
 import android.os.LocaleList
 import android.view.KeyEvent
+import androidx.test.core.app.ActivityScenario
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -15,13 +16,14 @@ import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 @SdkSuppress(minSdkVersion = 37)
 class CurrentRuntimeFoundationTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule val compose = createEmptyComposeRule()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val device = UiDevice.getInstance(instrumentation)
@@ -30,6 +32,18 @@ class CurrentRuntimeFoundationTest {
     private var changedFontScale = false
     private var changedMotionScale = false
     private var changedWindowSize = false
+    private lateinit var scenario: ActivityScenario<MainActivity>
+
+    @Before fun launchFoundation() {
+        try {
+            device.wakeUp()
+            device.executeShellCommand("wm dismiss-keyguard")
+            scenario = ActivityScenario.launch(MainActivity::class.java)
+            compose.waitForIdle()
+        } catch (_: Throwable) {
+            throw AssertionError("runtime launch")
+        }
+    }
 
     @After fun restoreRuntimeSettings() {
         try {
@@ -38,7 +52,9 @@ class CurrentRuntimeFoundationTest {
                     LocaleList.getEmptyLocaleList()
             }
             if (changedOrientation) {
-                compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                scenario.onActivity {
+                    it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
             }
             if (changedFontScale) {
                 device.executeShellCommand("settings put system font_scale 1.0")
@@ -50,6 +66,9 @@ class CurrentRuntimeFoundationTest {
             }
             if (changedWindowSize) {
                 device.executeShellCommand("wm size reset")
+            }
+            if (::scenario.isInitialized) {
+                scenario.close()
             }
         } catch (_: Throwable) {
             throw AssertionError("runtime cleanup")
@@ -68,7 +87,7 @@ class CurrentRuntimeFoundationTest {
     private fun recreateFoundation() {
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
-        compose.activityRule.scenario.recreate()
+        scenario.recreate()
         compose.waitForIdle()
     }
 
@@ -107,7 +126,9 @@ class CurrentRuntimeFoundationTest {
         changedFontScale = true
         changedOrientation = true
         device.executeShellCommand("settings put system font_scale 2.0")
-        compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        scenario.onActivity {
+            it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
         recreateFoundation()
         waitForNode(expectedActionTag(), scroll = true)
     }
