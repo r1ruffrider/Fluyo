@@ -89,10 +89,12 @@ jobs:
           fi
           sdkmanager --channel="$SDK_CHANNEL" \
             "platform-tools" \
+            "emulator" \
             "$PLATFORM_PACKAGE" \
             "build-tools;36.0.0" \
             "$IMAGE_PACKAGE"
           test -d "$ANDROID_HOME/platforms/android-37.0"
+          test -x "$ANDROID_HOME/emulator/emulator"
           ln -sfn "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
           if [[ "${{ matrix.leg }}" == "current" ]]; then
             test -d "$ANDROID_HOME/system-images/android-37.0"
@@ -187,8 +189,9 @@ jobs:
                 last_phase="avd_creation"
                 continue
               fi
-              emulator -avd fluyo-api37 \
-                -no-window -no-audio -no-boot-anim -no-snapshot -wipe-data \
+              "$ANDROID_HOME/emulator/emulator" -avd fluyo-api37 \
+                -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save \
+                -no-metrics -wipe-data -accel on -cores 2 -memory 4096 \
                 -gpu swiftshader_indirect >"$EMULATOR_LOG" 2>&1 &
               EMULATOR_PID=$!
               if ! timeout 180 adb wait-for-device >"$INSTRUMENT_LOG" 2>&1; then

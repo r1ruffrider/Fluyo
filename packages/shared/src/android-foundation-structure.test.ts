@@ -153,12 +153,12 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
-    expect(shell).not.toContain("fillMaxHeight()");
     expect(shell).toContain(
-      'Modifier.fillMaxWidth().widthIn(max = 640.dp).verticalScroll(contentScroll).testTag("foundation-scroll")',
+      'Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
     expect(shell).toContain("contentAlignment = Alignment.TopCenter");
-    expect(shell).not.toContain("Modifier.weight(1f)");
+    expect(shell).toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
+    expect(shell.match(/padding\(top = 18\.dp\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
@@ -172,7 +172,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation.match(/performScrollTo/g)).toHaveLength(3);
+    expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -204,6 +204,10 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("ar[-_]r?XB");
     expect(workflowText).toContain("trap cleanup EXIT");
     expect(workflowText).toContain("start_current_emulator");
+    expect(workflowText).toContain('"emulator"');
+    expect(workflowText).toContain('test -x "$ANDROID_HOME/emulator/emulator"');
+    expect(workflowText).toContain('"$ANDROID_HOME/emulator/emulator" -avd fluyo-api37');
+    expect(workflowText).toContain("-no-metrics -wipe-data -accel on -cores 2 -memory 4096");
     expect(workflowText).toContain("for attempt in 1 2");
     expect(workflowText).toContain("timeout 360 bash -c");
     expect(workflowText).toContain('last_phase="avd_creation"');

@@ -60,40 +60,44 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().widthIn(max = 640.dp).verticalScroll(contentScroll).testTag("foundation-scroll"),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxSize(),
         ) {
-            Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("brand-heading").semantics { heading(); traversalIndex = 0f })
-            when (state) {
-                FoundationShellState.Loading -> FoundationStateCopy(stringResource(R.string.loading_title), stringResource(R.string.loading_body), "loading-state")
-                FoundationShellState.SignedOut -> FoundationStateCopy(stringResource(R.string.signed_out_title), stringResource(R.string.signed_out_body), "signed-out-state")
-                FoundationShellState.Failure -> FoundationStateCopy(stringResource(R.string.error_title), stringResource(R.string.error_body), "error-state")
-            }
-            if (configuration.isInternal && configuration.environment != "production") {
-                Text(
-                    stringResource(R.string.internal_marker, configuration.environment, configuration.semanticVersion, configuration.versionCode, configuration.sourceCommitShort),
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.testTag("internal-build-marker"),
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.spanish_sample_label))
-                Text(buildAnnotatedString { withStyle(SpanStyle(localeList = LocaleList(Locale("es")))) { append(stringResource(R.string.spanish_sample)) } }, modifier = Modifier.testTag("spanish-learning-sample"))
-            }
-            if (scopeExpanded && state == FoundationShellState.SignedOut) {
-                Text(
-                    stringResource(R.string.scope_detail),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail"),
-                )
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll"),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("brand-heading").semantics { heading(); traversalIndex = 0f })
+                when (state) {
+                    FoundationShellState.Loading -> FoundationStateCopy(stringResource(R.string.loading_title), stringResource(R.string.loading_body), "loading-state")
+                    FoundationShellState.SignedOut -> FoundationStateCopy(stringResource(R.string.signed_out_title), stringResource(R.string.signed_out_body), "signed-out-state")
+                    FoundationShellState.Failure -> FoundationStateCopy(stringResource(R.string.error_title), stringResource(R.string.error_body), "error-state")
+                }
+                if (configuration.isInternal && configuration.environment != "production") {
+                    Text(
+                        stringResource(R.string.internal_marker, configuration.environment, configuration.semanticVersion, configuration.versionCode, configuration.sourceCommitShort),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.testTag("internal-build-marker"),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.spanish_sample_label))
+                    Text(buildAnnotatedString { withStyle(SpanStyle(localeList = LocaleList(Locale("es")))) { append(stringResource(R.string.spanish_sample)) } }, modifier = Modifier.testTag("spanish-learning-sample"))
+                }
+                if (scopeExpanded && state == FoundationShellState.SignedOut) {
+                    Text(
+                        stringResource(R.string.scope_detail),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail"),
+                    )
+                }
             }
             when (state) {
                 FoundationShellState.SignedOut -> FoundationActionButton(
                     onClick = { scopeExpanded = !scopeExpanded },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("review-build-button").semantics { traversalIndex = 2f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 18.dp).heightIn(min = 48.dp).focusRequester(actionFocus).testTag("review-build-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.review_scope_action)) }
                 FoundationShellState.Failure -> FoundationActionButton(
                     onClick = onRetry,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("retry-button").semantics { traversalIndex = 2f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 18.dp).heightIn(min = 48.dp).focusRequester(actionFocus).testTag("retry-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.retry_action)) }
                 FoundationShellState.Loading -> Unit
             }
