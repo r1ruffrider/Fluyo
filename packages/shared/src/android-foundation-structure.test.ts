@@ -62,14 +62,15 @@ describe("Android foundation structure", () => {
 
   it("limits the manifest to one exported launcher activity and disables backup", () => {
     const manifest = text("app/src/main/AndroidManifest.xml");
-    expect((manifest.match(/<activity\b/g) ?? []).length).toBe(1);
+    expect((manifest.match(/<activity\b/g) ?? []).length).toBe(2);
     expect((manifest.match(/android:exported="true"/g) ?? []).length).toBe(1);
     expect(manifest).toContain('android:allowBackup="false"');
     expect(manifest).toContain('android:dataExtractionRules="@xml/data_extraction_rules"');
     expect(manifest).toContain('android:fullBackupContent="false"');
     expect(manifest).toContain('android:icon="@android:drawable/sym_def_app_icon"');
+    expect(manifest).toContain('android:name="androidx.compose.ui.tooling.PreviewActivity"');
     expect(manifest).toContain('android:name="androidx.profileinstaller.ProfileInstallReceiver"');
-    expect((manifest.match(/tools:node="remove"/g) ?? []).length).toBe(3);
+    expect((manifest.match(/tools:node="remove"/g) ?? []).length).toBe(4);
     expect((manifest.match(/<permission\b/g) ?? []).length).toBe(1);
     expect((manifest.match(/<uses-permission\b/g) ?? []).length).toBe(1);
     expect(manifest).toContain(
@@ -204,13 +205,13 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain('throw AssertionError("font scale")');
     expect(responsive).toContain('throw AssertionError("runtime launch")');
     expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
-    expect(responsive).toContain('device.executeShellCommand("am force-stop $packageName")');
+    expect(responsive).not.toContain("am force-stop");
     expect(responsive).toContain('"am start -W -n $packageName/com.fluyo.app.MainActivity"');
     expect(responsive).toContain(
       "check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))",
     );
     expect(responsive).toContain(
-      'changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForSystemFontScale(1.9f)\n        launchFoundationFromStoppedState()',
+      'changedFontScale = true\n        device.executeShellCommand("settings put system font_scale 2.0")\n        waitForSystemFontScale(1.9f)\n        launchFoundationAtAppliedFontScale()',
     );
     expect(responsive).not.toContain("ActivityScenarioRule");
     expect(responsive).toContain("activeScenario?.close()");

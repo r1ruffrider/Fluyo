@@ -59,12 +59,11 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("font scale")
     }
 
-    private fun launchFoundationFromStoppedState() {
+    private fun launchFoundationAtAppliedFontScale() {
         val packageName = context.packageName
         try {
             device.wakeUp()
             device.executeShellCommand("wm dismiss-keyguard")
-            device.executeShellCommand("am force-stop $packageName")
             device.executeShellCommand(
                 "am start -W -n $packageName/com.fluyo.app.MainActivity",
             )
@@ -78,7 +77,7 @@ class FoundationResponsiveDeviceTest {
         changedFontScale = true
         device.executeShellCommand("settings put system font_scale 2.0")
         waitForSystemFontScale(1.9f)
-        launchFoundationFromStoppedState()
+        launchFoundationAtAppliedFontScale()
         waitForNode("signed-out-state")
         waitForNode("review-build-button", scroll = true)
     }
