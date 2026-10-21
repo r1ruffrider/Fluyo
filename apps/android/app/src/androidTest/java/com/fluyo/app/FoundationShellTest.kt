@@ -28,12 +28,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import java.util.Locale
 import org.junit.Rule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -83,8 +83,6 @@ class FoundationShellTest {
             }
         }
         val action = compose.onNodeWithTag("review-build-button")
-        compose.waitUntil(5_000) { runCatching { action.fetchSemanticsNode().boundsInRoot.height > 0f }.getOrDefault(false) }
-        action.performScrollTo()
         compose.waitForIdle()
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
@@ -100,20 +98,26 @@ class FoundationShellTest {
         compose.onNodeWithTag("review-build-button").assertIsDisplayed()
     }
 
-    @Test fun pseudoLocalesExpandResourcesAndReportRtlDirection() {
+    @Test fun pseudoLocaleExpansionUsesPackagedResources() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val english = context.getString(R.string.signed_out_body)
         val expandedConfiguration = Configuration(context.resources.configuration).apply {
-            setLocales(LocaleList.forLanguageTags("en-XA"))
+            setLocales(LocaleList(Locale.forLanguageTag("en-XA")))
         }
         val expanded = context.createConfigurationContext(expandedConfiguration).getString(R.string.signed_out_body)
         assertNotEquals(english, expanded)
         assertTrue(expanded.length >= english.length)
+    }
 
+    @Test fun pseudoRtlResourcesReportRtlDirection() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val rtlLocale = Locale.forLanguageTag("ar-XB")
         val rtlConfiguration = Configuration(context.resources.configuration).apply {
-            setLocales(LocaleList.forLanguageTags("ar-XB"))
+            setLocales(LocaleList(rtlLocale))
+            setLayoutDirection(rtlLocale)
         }
         val rtlContext = context.createConfigurationContext(rtlConfiguration)
+        assertNotEquals(context.getString(R.string.signed_out_body), rtlContext.getString(R.string.signed_out_body))
         assertEquals(View.LAYOUT_DIRECTION_RTL, rtlContext.resources.configuration.layoutDirection)
     }
 

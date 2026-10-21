@@ -136,6 +136,7 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
     expect(shell).toContain("fillMaxHeight()");
+    expect(shell).toContain("Modifier.weight(1f).fillMaxWidth().verticalScroll");
     expect(shell).toContain("repeat(5)");
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
@@ -143,6 +144,9 @@ describe("Android foundation structure", () => {
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
+    expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation).toContain("pseudoLocaleExpansionUsesPackagedResources");
+    expect(instrumentation).toContain("pseudoRtlResourcesReportRtlDirection");
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
   });
 
