@@ -113,6 +113,23 @@ class CurrentRuntimeFoundationTest {
         throw AssertionError("runtime launch")
     }
 
+    private fun waitForActivityLocale(languageTag: String) {
+        repeat(20) {
+            var settled = false
+            runCatching {
+                scenario.onActivity { activity ->
+                    val locales = activity.resources.configuration.locales
+                    settled =
+                        !locales.isEmpty &&
+                            locales[0].toLanguageTag().equals(languageTag, ignoreCase = true)
+                }
+            }
+            if (settled) return
+            SystemClock.sleep(250)
+        }
+        throw AssertionError("runtime launch")
+    }
+
     private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {
         repeat(8) {
             device.wait(Until.findObject(By.res(tag)), 1_500)?.let { node ->
@@ -200,9 +217,18 @@ class CurrentRuntimeFoundationTest {
         context.getSystemService(LocaleManager::class.java).applicationLocales =
             LocaleList.forLanguageTags("en-XA")
         waitForApplicationLocale("en-XA")
+        waitForActivityLocale("en-XA")
         try {
             scenario.onActivity { }
+        } catch (_: Throwable) {
+            throw AssertionError("runtime launch")
+        }
+        try {
             waitForNode(expectedStateTag())
+        } catch (_: Throwable) {
+            throw AssertionError("state missing")
+        }
+        try {
             waitForNode(expectedActionTag(), scroll = true)
         } catch (_: Throwable) {
             throw AssertionError("node missing")

@@ -51,17 +51,17 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
         if (state == FoundationShellState.Failure) {
             var settledFrames = 0
             var previousMax = -1
-            repeat(120) {
+            repeat(240) {
                 withFrameNanos { }
                 val target = contentScroll.maxValue
                 if (target > 0 && contentScroll.value != target) {
                     contentScroll.scrollTo(target)
                     withFrameNanos { }
                 }
-                actionFocus.requestFocus()
+                val focusRequestSucceeded = runCatching { actionFocus.requestFocus() }.isSuccess
                 withFrameNanos { }
                 val currentMax = contentScroll.maxValue
-                if (actionIsFocused && contentScroll.value == currentMax && currentMax == previousMax) {
+                if (focusRequestSucceeded && actionIsFocused && contentScroll.value == currentMax && currentMax == previousMax) {
                     settledFrames += 1
                     if (settledFrames >= 30) return@LaunchedEffect
                 } else {

@@ -173,7 +173,7 @@ describe("Android foundation structure", () => {
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
     );
-    expect(shell).toContain("repeat(120)");
+    expect(shell).toContain("repeat(240)");
     expect(shell).toContain("var settledFrames = 0");
     expect(shell).toContain("var previousMax = -1");
     expect(shell).toContain("target > 0 && contentScroll.value != target");
@@ -184,8 +184,9 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
     expect(shell).toContain("actionFocus.requestFocus()");
+    expect(shell).toContain("runCatching { actionFocus.requestFocus() }.isSuccess");
     expect(shell).toContain(
-      "if (actionIsFocused && contentScroll.value == currentMax && currentMax == previousMax)",
+      "if (focusRequestSucceeded && actionIsFocused && contentScroll.value == currentMax && currentMax == previousMax)",
     );
     expect(shell).toContain("if (settledFrames >= 30) return@LaunchedEffect");
     expect(shell).toContain("previousMax = currentMax");
@@ -316,12 +317,18 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
     expect(currentRuntime).toContain("private fun waitForApplicationLocale(languageTag: String)");
+    expect(currentRuntime).toContain("private fun waitForActivityLocale(languageTag: String)");
+    expect(currentRuntime).toContain("activity.resources.configuration.locales");
     expect(currentRuntime).toContain("applicationLocales");
     const currentPseudoLocale = currentRuntime.match(
       /@Test fun currentRuntimePseudoLocaleExpansionKeepsActionReachable\(\) \{([\s\S]*?)\n    \}\n\n    @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder/,
     )?.[1];
     expect(currentPseudoLocale).toBeDefined();
     expect(currentPseudoLocale).toContain('waitForApplicationLocale("en-XA")');
+    expect(currentPseudoLocale).toContain('waitForActivityLocale("en-XA")');
+    expect(currentPseudoLocale!.indexOf('waitForApplicationLocale("en-XA")')).toBeLessThan(
+      currentPseudoLocale!.indexOf('waitForActivityLocale("en-XA")'),
+    );
     expect(currentPseudoLocale).toContain("scenario.onActivity { }");
     expect(currentPseudoLocale).toContain("waitForNode(expectedStateTag())");
     expect(currentPseudoLocale).toContain("waitForNode(expectedActionTag(), scroll = true)");
