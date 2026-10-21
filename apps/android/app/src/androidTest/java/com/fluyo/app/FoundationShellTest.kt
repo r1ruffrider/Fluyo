@@ -51,8 +51,14 @@ class FoundationShellTest {
         compose.waitUntil(5_000) {
             compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
         }
-        compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(tag))
-        compose.onNodeWithTag(tag).assertIsDisplayed()
+        val scroll = compose.onNodeWithTag("foundation-scroll")
+        scroll.performScrollToNode(hasTestTag(tag))
+        compose.waitForIdle()
+        val viewport = scroll.fetchSemanticsNode().boundsInRoot
+        val target = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        assertTrue(target.width > 0f && target.height > 0f)
+        assertTrue(target.left >= viewport.left - 1f && target.right <= viewport.right + 1f)
+        assertTrue(target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f)
     }
 
     @Test fun loadingHasOneSemanticStateAndMarker() {

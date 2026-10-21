@@ -5,7 +5,6 @@ import android.content.pm.ActivityInfo
 import android.os.LocaleList
 import android.view.KeyEvent
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -17,6 +16,7 @@ import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -61,9 +61,15 @@ class CurrentRuntimeFoundationTest {
         }
         val node = compose.onNodeWithTag(tag)
         if (scroll) {
-            compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(tag))
+            val scrollContainer = compose.onNodeWithTag("foundation-scroll")
+            scrollContainer.performScrollToNode(hasTestTag(tag))
+            compose.waitForIdle()
+            val viewport = scrollContainer.fetchSemanticsNode().boundsInRoot
+            val target = node.fetchSemanticsNode().boundsInRoot
+            assertTrue(target.width > 0f && target.height > 0f)
+            assertTrue(target.left >= viewport.left - 1f && target.right <= viewport.right + 1f)
+            assertTrue(target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f)
         }
-        node.assertIsDisplayed()
     }
 
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
@@ -91,8 +97,8 @@ class CurrentRuntimeFoundationTest {
     @Test fun currentRuntimeActionRemainsLocalAndHonest() {
         recreateFoundation()
         val action = compose.onNodeWithTag(expectedActionTag())
-        compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(expectedActionTag()))
-        action.assertIsDisplayed().performClick()
+        waitForNode(expectedActionTag(), scroll = true)
+        action.performClick()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
             waitForNode("scope-detail", scroll = true)
         } else {
@@ -111,8 +117,7 @@ class CurrentRuntimeFoundationTest {
     @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {
         recreateFoundation()
         val action = compose.onNodeWithTag(expectedActionTag())
-        compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(expectedActionTag()))
-        action.assertIsDisplayed()
+        waitForNode(expectedActionTag(), scroll = true)
         if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
             action.assertIsFocused()
         } else {

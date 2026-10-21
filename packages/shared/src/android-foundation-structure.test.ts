@@ -176,8 +176,9 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("performScrollToNode");
     expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(3);
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
+    expect(instrumentation).toContain("scroll.performScrollToNode(hasTestTag(tag))");
     expect(instrumentation).toContain(
-      'compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(tag))',
+      "target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f",
     );
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
@@ -202,6 +203,9 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
     expect(currentRuntime).not.toContain("prepareFoundation");
     expect(currentRuntime).toContain("waitForNode(expectedStateTag())");
+    expect(currentRuntime).toContain(
+      "target.top >= viewport.top - 1f && target.bottom <= viewport.bottom + 1f",
+    );
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
