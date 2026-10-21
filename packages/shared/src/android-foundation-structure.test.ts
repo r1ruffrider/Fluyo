@@ -135,6 +135,9 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("heightIn(min = 48.dp)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
+    expect(shell).toContain("fillMaxHeight()");
+    expect(shell).toContain("repeat(5)");
+    expect(shell).toContain("if (actionFocus.requestFocus()) return@LaunchedEffect");
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);

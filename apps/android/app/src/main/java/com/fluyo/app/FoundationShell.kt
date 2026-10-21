@@ -45,8 +45,10 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
     var scopeExpanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
         if (state == FoundationShellState.SignedOut || state == FoundationShellState.Failure) {
-            withFrameNanos { }
-            actionFocus.requestFocus()
+            repeat(5) {
+                withFrameNanos { }
+                if (actionFocus.requestFocus()) return@LaunchedEffect
+            }
         }
     }
     Box(
@@ -54,7 +56,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().widthIn(max = 640.dp).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().fillMaxHeight().widthIn(max = 640.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("brand-heading").semantics { heading(); traversalIndex = 0f })
