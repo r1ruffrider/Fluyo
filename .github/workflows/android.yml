@@ -141,6 +141,20 @@ jobs:
             fi
             if [[ -n "$EMULATOR_PID" ]]; then
               kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+              for shutdown_attempt in $(seq 1 20); do
+                if ! kill -0 "$EMULATOR_PID" >/dev/null 2>&1; then
+                  break
+                fi
+                if [[ -r "/proc/$EMULATOR_PID/stat" ]] && [[ "$(awk '{print $3}' "/proc/$EMULATOR_PID/stat")" == "Z" ]]; then
+                  break
+                fi
+                sleep 1
+              done
+              if kill -0 "$EMULATOR_PID" >/dev/null 2>&1; then
+                if [[ ! -r "/proc/$EMULATOR_PID/stat" ]] || [[ "$(awk '{print $3}' "/proc/$EMULATOR_PID/stat")" != "Z" ]]; then
+                  kill -9 "$EMULATOR_PID" >/dev/null 2>&1 || true
+                fi
+              fi
               wait "$EMULATOR_PID" >/dev/null 2>&1 || true
             fi
             rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"
@@ -281,7 +295,7 @@ jobs:
             local test_name="${test_identifier##*#}"
             : >"$INSTRUMENT_LOG"
             set +e
-            adb shell am instrument -w -r \
+            timeout 120 adb shell am instrument -w -r \
               -e class "com.fluyo.app.$test_identifier" \
               "$app_package.test/androidx.test.runner.AndroidJUnitRunner" \
               >"$INSTRUMENT_LOG" 2>&1
@@ -314,6 +328,8 @@ jobs:
               failure_category="focus_target"
             elif grep -q 'AssertionError: marker state' "$INSTRUMENT_LOG"; then
               failure_category="marker_state"
+            elif [[ "$status" -eq 124 ]]; then
+              failure_category="method_timeout"
             elif [[ "$status" -ne 0 ]]; then
               failure_category="process_status"
             elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then

@@ -75,11 +75,14 @@ class FoundationShellTest {
         boundedStage("focus target") {
             compose.waitUntil(timeoutMillis = 5_000) {
                 runCatching {
-                    compose.onNodeWithTag("retry-button").assertIsFocused()
+                    compose.onNodeWithTag("error-state").assertIsFocused()
                     true
                 }.getOrDefault(false)
             }
-            compose.onNodeWithTag("retry-button").assertHeightIsAtLeast(48.dp).assertIsFocused()
+            compose.onNodeWithTag("error-state").assertIsFocused()
+        }
+        boundedStage("node geometry") {
+            compose.onNodeWithTag("retry-button").performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         }
         boundedStage("marker state") {
             compose.onNodeWithTag("internal-build-marker").assertIsDisplayed()

@@ -173,23 +173,16 @@ describe("Android foundation structure", () => {
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
     );
-    expect(shell).toContain("repeat(240)");
-    expect(shell).toContain("var settledFrames = 0");
-    expect(shell).toContain("var previousMax = -1");
-    expect(shell).toContain("target > 0 && contentScroll.value != target");
-    expect(shell).toContain("contentScroll.scrollTo(target)");
-    expect(shell.indexOf("contentScroll.scrollTo(target)")).toBeLessThan(
-      shell.indexOf("actionFocus.requestFocus()"),
-    );
+    expect(shell).toContain("repeat(120)");
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
-    expect(shell).toContain("actionFocus.requestFocus()");
-    expect(shell).toContain("runCatching { actionFocus.requestFocus() }.isSuccess");
-    expect(shell).toContain(
-      "if (focusRequestSucceeded && actionIsFocused && contentScroll.value == currentMax && currentMax == previousMax)",
-    );
-    expect(shell).toContain("if (settledFrames >= 30) return@LaunchedEffect");
-    expect(shell).toContain("previousMax = currentMax");
+    expect(shell).toContain("errorFocus.requestFocus()");
+    expect(shell).toContain("runCatching { errorFocus.requestFocus() }.getOrDefault(false)");
+    expect(shell).toContain("if (focusRequestSucceeded && errorIsFocused) return@LaunchedEffect");
+    expect(shell).toContain("Modifier.focusRequester(errorFocus)");
+    expect(shell).toContain(".onFocusChanged { errorIsFocused = it.isFocused }");
+    expect(shell).toContain(".focusable()");
+    expect(shell).toContain("if (errorIsFocused)");
     expect(shell).toContain("modifier = modifier.onFocusChanged { focusState ->");
     expect(shell).toContain("isFocused = focusState.isFocused");
     expect(shell).toContain("onFocusChanged(isFocused)");
@@ -206,6 +199,11 @@ describe("Android foundation structure", () => {
     );
     expect(instrumentation).toContain('boundedStage("error state")');
     expect(instrumentation).toContain('boundedStage("focus target")');
+    expect(instrumentation).toContain('compose.onNodeWithTag("error-state").assertIsFocused()');
+    expect(instrumentation).toContain('boundedStage("node geometry")');
+    expect(instrumentation).toContain(
+      'compose.onNodeWithTag("retry-button").performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)',
+    );
     expect(instrumentation).toContain('boundedStage("marker state")');
     expect(instrumentation).toContain("compose.waitUntil(timeoutMillis = 5_000)");
     expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
@@ -397,12 +395,17 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('failure_category="error_state"');
     expect(workflowText).toContain('failure_category="focus_target"');
     expect(workflowText).toContain('failure_category="marker_state"');
+    expect(workflowText).toContain('failure_category="method_timeout"');
     expect(workflowText).toContain('failure_category="test_failure"');
     expect(workflowText).toContain('failure_category="zero_tests"');
     expect(workflowText).toContain('failure_category="summary_mismatch"');
     expect(workflowText).toContain(
       "Android $runtime_label instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded",
     );
+    expect(workflowText).toContain("timeout 120 adb shell am instrument -w -r");
+    expect(workflowText).toContain("for shutdown_attempt in $(seq 1 20)");
+    expect(workflowText).toContain('kill -0 "$EMULATOR_PID"');
+    expect(workflowText).toContain('kill -9 "$EMULATOR_PID"');
     expect(workflowText).toContain('test "$executed" = "${#tests[@]}"');
     expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
     expect(workflowText).toContain(

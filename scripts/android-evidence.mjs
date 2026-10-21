@@ -34,7 +34,8 @@ export const scenarioProofById = {
     leg: "minimum",
     mode: minimumMode,
     command: "API 29 error-state Compose semantics instrumentation",
-    observed: "safe error state, focused recovery action, and bounded copy passed",
+    observed:
+      "safe error state, focused error heading, reachable recovery action, and bounded copy passed",
   },
   android_system_reduce_motion: {
     leg: "minimum",
@@ -78,7 +79,7 @@ export const scenarioProofById = {
     mode: "compose_focus_api29_plus_static_traversal_inspection",
     command: "API 29 focus-request assertions plus static traversal-index inspection",
     observed:
-      "signed-out and error actions received useful deterministic focus; static reading order was explicit",
+      "the error heading received deterministic focus; the signed-out action exposed requestable focus semantics and static reading order was explicit",
   },
   android_contrast_and_non_color_status: {
     leg: "minimum",

@@ -2,8 +2,11 @@ package com.fluyo.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,31 +46,18 @@ fun FluyoFoundationApp(model: FoundationShellModel = viewModel()) {
 
 @Composable
 fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration, onRetry: () -> Unit) {
-    val actionFocus = remember { FocusRequester() }
+    val errorFocus = remember { FocusRequester() }
     val contentScroll = rememberScrollState()
     var actionIsFocused by remember { mutableStateOf(false) }
+    var errorIsFocused by remember { mutableStateOf(false) }
     var scopeExpanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
         if (state == FoundationShellState.Failure) {
-            var settledFrames = 0
-            var previousMax = -1
-            repeat(240) {
+            repeat(120) {
                 withFrameNanos { }
-                val target = contentScroll.maxValue
-                if (target > 0 && contentScroll.value != target) {
-                    contentScroll.scrollTo(target)
-                    withFrameNanos { }
-                }
-                val focusRequestSucceeded = runCatching { actionFocus.requestFocus() }.isSuccess
+                val focusRequestSucceeded = runCatching { errorFocus.requestFocus() }.getOrDefault(false)
                 withFrameNanos { }
-                val currentMax = contentScroll.maxValue
-                if (focusRequestSucceeded && actionIsFocused && contentScroll.value == currentMax && currentMax == previousMax) {
-                    settledFrames += 1
-                    if (settledFrames >= 30) return@LaunchedEffect
-                } else {
-                    settledFrames = 0
-                }
-                previousMax = currentMax
+                if (focusRequestSucceeded && errorIsFocused) return@LaunchedEffect
             }
         }
     }
@@ -83,7 +73,27 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
             when (state) {
                 FoundationShellState.Loading -> FoundationStateCopy(stringResource(R.string.loading_title), stringResource(R.string.loading_body), "loading-state")
                 FoundationShellState.SignedOut -> FoundationStateCopy(stringResource(R.string.signed_out_title), stringResource(R.string.signed_out_body), "signed-out-state")
-                FoundationShellState.Failure -> FoundationStateCopy(stringResource(R.string.error_title), stringResource(R.string.error_body), "error-state")
+                FoundationShellState.Failure -> FoundationStateCopy(
+                    stringResource(R.string.error_title),
+                    stringResource(R.string.error_body),
+                    "error-state",
+                    modifier =
+                        Modifier.focusRequester(errorFocus)
+                            .onFocusChanged { errorIsFocused = it.isFocused }
+                            .focusable()
+                            .then(
+                                if (errorIsFocused) {
+                                    Modifier.border(
+                                        3.dp,
+                                        MaterialTheme.colorScheme.primary,
+                                        RoundedCornerShape(8.dp),
+                                    )
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .padding(8.dp),
+                )
             }
             if (configuration.isInternal && configuration.environment != "production") {
                 Text(
@@ -106,12 +116,12 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
                 FoundationShellState.SignedOut -> FoundationActionButton(
                     onClick = { scopeExpanded = !scopeExpanded },
                     onFocusChanged = { actionIsFocused = it },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("review-build-button").semantics { traversalIndex = 2f },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("review-build-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.review_scope_action)) }
                 FoundationShellState.Failure -> FoundationActionButton(
                     onClick = onRetry,
                     onFocusChanged = { actionIsFocused = it },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(actionFocus).testTag("retry-button").semantics { traversalIndex = 2f },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("retry-button").semantics { traversalIndex = 2f },
                 ) { Text(stringResource(R.string.retry_action)) }
                 FoundationShellState.Loading -> Unit
             }
@@ -139,9 +149,14 @@ private fun FoundationActionButton(
 }
 
 @Composable
-private fun FoundationStateCopy(title: String, body: String, tag: String) {
+private fun FoundationStateCopy(
+    title: String,
+    body: String,
+    tag: String,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = Modifier.testTag(tag).semantics { traversalIndex = 1f; liveRegion = LiveRegionMode.Polite },
+        modifier = modifier.testTag(tag).semantics { traversalIndex = 1f; liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
