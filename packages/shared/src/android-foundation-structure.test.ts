@@ -112,8 +112,8 @@ describe("Android foundation structure", () => {
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     const app = text("app/build.gradle.kts");
     expect(shell).not.toMatch(/Text\(\s*"/);
-    expect(app).toContain('localeFilters += listOf("en", "en-XA", "ar-XB")');
-    expect(app).not.toContain('localeFilters += listOf("en", "en-rXA", "ar-rXB")');
+    expect(app).toContain('localeFilters += listOf("en", "en-rXA", "ar-rXB")');
+    expect(app).toContain("isPseudoLocalesEnabled = true");
     const strings = text("app/src/main/res/values/strings.xml");
     const expanded = text("app/src/debug/res/values-en-rXA/strings.xml");
     const rtl = text("app/src/debug/res/values-ar-rXB/strings.xml");
