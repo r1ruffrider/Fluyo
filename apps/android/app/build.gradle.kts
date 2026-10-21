@@ -80,11 +80,6 @@ android {
                 apiLevel = 29
                 systemImageSource = "google"
             }
-            create("largeApi37") {
-                device = "Pixel 9 Pro XL"
-                apiLevel = 37
-                systemImageSource = "google"
-            }
         }
     }
     lint {

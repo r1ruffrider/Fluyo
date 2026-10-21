@@ -97,6 +97,14 @@ evidence, source-bound artifact hashes, a non-production debug-signing classific
 and a fail-closed sanitized aggregate. Physical Pixel and Samsung rows stay unattempted
 until their separate device/custody gate.
 
+The minimum API 29 lane supplies Compose semantics and accessibility instrumentation.
+The current API 37 lane supplies bounded UiAutomator black-box evidence for end-state
+honesty, action reachability under 200% text and landscape, reduced motion, and the
+local-only action. It retains no UI hierarchy, screenshot, video, logcat, raw emulator
+output, or raw instrumentation result. These checks do not establish API 37 Compose-rule
+parity, broad accessibility compliance, physical-device support, capture readiness, or
+Play readiness.
+
 ## Claim boundary
 
 Safe during implementation:

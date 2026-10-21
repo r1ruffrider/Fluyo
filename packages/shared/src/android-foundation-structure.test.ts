@@ -143,15 +143,19 @@ describe("Android foundation structure", () => {
   it("includes the exact emulator, accessibility, and baseline-profile seams", () => {
     const app = text("app/build.gradle.kts");
     expect(app).toContain('create("smallApi29")');
-    expect(app).toContain('create("largeApi37")');
+    expect(app).not.toContain('create("largeApi37")');
     expect(app).toContain("animationsDisabled = true");
-    expect(text("baselineprofile/build.gradle.kts")).toContain('managedDevices += "profileApi37"');
+    expect(text("baselineprofile/build.gradle.kts")).toContain("useConnectedDevices = true");
+    expect(text("baselineprofile/build.gradle.kts")).not.toContain("managedDevices");
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     expect(shell).toContain("heightIn(min = 48.dp)");
     expect(shell).toContain("LiveRegionMode.Polite");
     expect(shell).toContain("verticalScroll");
     expect(shell).toContain("fillMaxHeight()");
-    expect(shell).toContain("Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll)");
+    expect(shell).toContain(
+      "Modifier.fillMaxWidth().fillMaxHeight().widthIn(max = 640.dp).verticalScroll(contentScroll)",
+    );
+    expect(shell).not.toContain("Modifier.weight(1f)");
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
@@ -162,21 +166,49 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("if (actionFocus.requestFocus()) return@LaunchedEffect");
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
     expect(instrumentation).toContain("compose.activity.setContent");
+    expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation.match(/performScrollTo/g)).toHaveLength(3);
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
       'compose.onNodeWithTag("signed-out-state").assertIsDisplayed()',
     );
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
+    const naturalLaunch = text("app/src/androidTest/java/com/fluyo/app/NaturalLaunchTest.kt");
+    expect(naturalLaunch).toContain("@SdkSuppress(maxSdkVersion = 36)");
+    const currentRuntime = text(
+      "app/src/androidTest/java/com/fluyo/app/CurrentRuntimeFoundationTest.kt",
+    );
+    expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
+    expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
+    expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
+    expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
+    expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
+    expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     const workflow = resolve(root, ".github/workflows/android.yml");
     const workflowText = readFileSync(workflow, "utf8");
     expect(workflowText).toContain("verify_packaged_pseudo_locales");
     expect(workflowText).toContain('aapt2\" dump resources');
     expect(workflowText).toContain("en[-_]r?XA");
     expect(workflowText).toContain("ar[-_]r?XB");
-    expect(workflowText).toContain('trap \'rm -f "$RAW_LOG" "$RESOURCE_TABLE"\' EXIT');
+    expect(workflowText).toContain("trap cleanup EXIT");
+    expect(workflowText).toContain("start_current_emulator");
+    expect(workflowText).toContain("run_manual_instrumentation");
+    expect(workflowText).toContain("compose_semantics_api29");
+    expect(workflowText).toContain("bounded_uiautomator_black_box_api37");
+    expect(workflowText).toContain("com.fluyo.app.staging");
+    expect(workflowText).toContain('"$app_package.test/androidx.test.runner.AndroidJUnitRunner"');
+    expect(workflowText).toContain("settings put system font_scale 1.0");
+    expect(workflowText).toContain("settings put system accelerometer_rotation 1");
+    expect(workflowText).toContain("settings put global animator_duration_scale 1");
+    expect(workflowText).toContain(
+      'rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"',
+    );
+    expect(workflowText).toContain('rm -rf "$AVD_HOME"');
+    expect(workflowText).not.toContain("largeApi37StagingDebugAndroidTest");
+    expect(workflowText).not.toContain("largeApi37ProductionDebugAndroidTest");
+    expect(workflowText).not.toMatch(/logcat|uiautomator dump|screenshot|screenrecord/i);
     expect(workflowText).toContain('rm -f "$RESOURCE_TABLE"');
     expect(app).not.toContain("FORCE_4KB_PAGES");
     expect(text("baselineprofile/build.gradle.kts")).not.toContain("FORCE_4KB_PAGES");

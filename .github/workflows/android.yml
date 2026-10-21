@@ -117,7 +117,27 @@ jobs:
           SHORT_SHA="${SOURCE_SHA:0:12}"
           RAW_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-raw.log"
           RESOURCE_TABLE="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-resources.txt"
-          trap 'rm -f "$RAW_LOG" "$RESOURCE_TABLE"' EXIT
+          EMULATOR_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-emulator.log"
+          INSTRUMENT_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-instrument.log"
+          AVD_HOME="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-avd"
+          EMULATOR_PID=""
+          cleanup() {
+            if adb get-state >/dev/null 2>&1; then
+              adb shell settings put system font_scale 1.0 >/dev/null 2>&1 || true
+              adb shell settings put system accelerometer_rotation 1 >/dev/null 2>&1 || true
+              adb shell settings put system user_rotation 0 >/dev/null 2>&1 || true
+              adb shell settings put global animator_duration_scale 1 >/dev/null 2>&1 || true
+              adb shell settings put global transition_animation_scale 1 >/dev/null 2>&1 || true
+              adb shell settings put global window_animation_scale 1 >/dev/null 2>&1 || true
+              adb emu kill >/dev/null 2>&1 || true
+            fi
+            if [[ -n "$EMULATOR_PID" ]]; then
+              kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+            fi
+            rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"
+            rm -rf "$AVD_HOME"
+          }
+          trap cleanup EXIT
           COMMON=(--no-daemon --warning-mode=fail -Pandroid.sdk.channel=3 "-PfluyoSourceCommitShort=$SHORT_SHA")
           run_gradle_phase() {
             local phase="$1"
@@ -150,6 +170,47 @@ jobs:
             fi
             rm -f "$RESOURCE_TABLE"
           }
+          start_current_emulator() {
+            mkdir -p "$AVD_HOME"
+            export ANDROID_AVD_HOME="$AVD_HOME"
+            echo no | avdmanager create avd --force \
+              --name fluyo-api37 \
+              --package "system-images;android-37.0;google_apis;x86_64" \
+              --device "pixel_9_pro_xl" >"$EMULATOR_LOG" 2>&1
+            emulator -avd fluyo-api37 \
+              -no-window -no-audio -no-boot-anim -no-snapshot -wipe-data \
+              -gpu swiftshader_indirect >"$EMULATOR_LOG" 2>&1 &
+            EMULATOR_PID=$!
+            timeout 180 adb wait-for-device >"$INSTRUMENT_LOG" 2>&1
+            timeout 180 bash -c \
+              'until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" == "1" ]]; do sleep 2; done' \
+              >"$INSTRUMENT_LOG" 2>&1
+            adb shell settings put system font_scale 1.0 >"$INSTRUMENT_LOG" 2>&1
+            adb shell settings put global animator_duration_scale 1 >"$INSTRUMENT_LOG" 2>&1
+            adb shell settings put global transition_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
+            adb shell settings put global window_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1
+          }
+          run_manual_instrumentation() {
+            local app_package="$1"
+            local app_apk="$2"
+            local test_apk="$3"
+            adb install -r "$app_apk" >"$INSTRUMENT_LOG" 2>&1
+            adb install -r "$test_apk" >>"$INSTRUMENT_LOG" 2>&1
+            set +e
+            adb shell am instrument -w -r \
+              "$app_package.test/androidx.test.runner.AndroidJUnitRunner" \
+              >>"$INSTRUMENT_LOG" 2>&1
+            local status=$?
+            set -e
+            if [[ "$status" -ne 0 ]] || grep -q 'FAILURES!!!' "$INSTRUMENT_LOG" || \
+              ! grep -Eq '^OK \([0-9]+ tests?\)$' "$INSTRUMENT_LOG"; then
+              echo "Android current-runtime instrumentation failed; raw output was discarded"
+              exit 1
+            fi
+            adb uninstall "$app_package.test" >/dev/null 2>&1 || true
+            adb uninstall "$app_package" >/dev/null 2>&1 || true
+            rm -f "$INSTRUMENT_LOG"
+          }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
             run_gradle_phase assemble_internal :app:assembleDevelopmentDebug
@@ -163,10 +224,17 @@ jobs:
             run_gradle_phase assemble_production_inert :app:assembleProductionDebug
             run_gradle_phase lint :app:lintDevelopmentDebug
             run_gradle_phase compile_instrumentation \
-              :app:compileStagingDebugAndroidTestKotlin \
-              :app:compileProductionDebugAndroidTestKotlin
-            run_gradle_phase instrumentation_internal :app:largeApi37StagingDebugAndroidTest
-            run_gradle_phase instrumentation_production_inert :app:largeApi37ProductionDebugAndroidTest
+              :app:assembleStagingDebugAndroidTest \
+              :app:assembleProductionDebugAndroidTest
+            start_current_emulator
+            run_manual_instrumentation \
+              com.fluyo.app.staging \
+              app/build/outputs/apk/staging/debug/app-staging-debug.apk \
+              app/build/outputs/apk/androidTest/staging/debug/app-staging-debug-androidTest.apk
+            run_manual_instrumentation \
+              com.fluyo.app \
+              app/build/outputs/apk/production/debug/app-production-debug.apk \
+              app/build/outputs/apk/androidTest/production/debug/app-production-debug-androidTest.apk
             run_gradle_phase baseline_profile :app:generateDevelopmentBaselineProfile
           fi
           echo "Android matrix leg completed with raw output discarded"
@@ -182,10 +250,12 @@ jobs:
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             cp apps/android/app/build/outputs/apk/development/debug/app-development-debug.apk "$TEMP/Fluyo-development-debug.apk"
             ARTIFACT="$OUT/Fluyo-minimum-emulator.zip"
+            ACCESSIBILITY_SETTING="compose_semantics_api29"
           else
             cp apps/android/app/build/outputs/apk/staging/debug/app-staging-debug.apk "$TEMP/Fluyo-staging-debug.apk"
             cp apps/android/app/build/outputs/apk/production/debug/app-production-debug.apk "$TEMP/Fluyo-production-inert-debug.apk"
             ARTIFACT="$OUT/Fluyo-current-emulator.zip"
+            ACCESSIBILITY_SETTING="bounded_uiautomator_black_box_api37"
           fi
           for apk in "$TEMP"/*.apk; do
             apksigner verify --print-certs "$apk" >"$TEMP/signing.txt"
@@ -213,8 +283,9 @@ jobs:
           environment=${{ matrix.environment }}
           result=passed
           signingClassification=non_production_debug_signed
+          accessibilitySetting=$ACCESSIBILITY_SETTING
           EOF
-          node -e 'const fs=require("fs"); fs.writeFileSync(process.argv[1], JSON.stringify({sourceCommit:process.env.SOURCE_SHA,buildIdentifier:process.env.GITHUB_RUN_ID+"-"+process.env.GITHUB_RUN_ATTEMPT+"-"+process.argv[2],runnerImage:"ubuntu-24.04",deviceModel:process.argv[3],deviceClass:process.argv[4],deviceApi:Number(process.argv[5]),environment:process.argv[6],accessibilitySetting:"automated_emulator_matrix",command:"pinned Gradle build, unit, instrumentation, manifest, signing, and privacy gate"},null,2)+"\n")' "$TEMP/metadata.json" "${{ matrix.leg }}" "${{ matrix.device }}" "${{ matrix.device_class }}" "${{ matrix.sdk }}" "${{ matrix.environment }}"
+          node -e 'const fs=require("fs"); const current=process.argv[2]==="current"; fs.writeFileSync(process.argv[1], JSON.stringify({sourceCommit:process.env.SOURCE_SHA,buildIdentifier:process.env.GITHUB_RUN_ID+"-"+process.env.GITHUB_RUN_ATTEMPT+"-"+process.argv[2],runnerImage:"ubuntu-24.04",deviceModel:process.argv[3],deviceClass:process.argv[4],deviceApi:Number(process.argv[5]),environment:process.argv[6],accessibilitySetting:current?"bounded_uiautomator_black_box_api37":"compose_semantics_api29",command:current?"pinned Gradle build, bounded UiAutomator black-box checks, manifest, signing, and privacy gate":"pinned Gradle build, Compose semantics instrumentation, manifest, signing, and privacy gate"},null,2)+"\n")' "$TEMP/metadata.json" "${{ matrix.leg }}" "${{ matrix.device }}" "${{ matrix.device_class }}" "${{ matrix.sdk }}" "${{ matrix.environment }}"
           node scripts/android-evidence.mjs generate "${{ matrix.leg }}" contracts/mobile/android/foundation/v1/foundation-policy.json "$TEMP/metadata.json" "$ARTIFACT" "$OUT/evidence-${{ matrix.leg }}.json"
           node scripts/scan-android-evidence.mjs "$OUT"
           rm -rf "$TEMP"

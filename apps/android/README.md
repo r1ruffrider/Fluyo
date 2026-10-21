@@ -21,3 +21,10 @@ The approved build line is JDK 17, Gradle 9.6, AGP 9.4, Kotlin/Compose Compiler 
 Compose BOM 2026.09, minSdk 29, compileSdk 37, and targetSdk 36. Compiling with API 37
 does not establish public API 37 support. The evidence matrix records only the exact
 API 29 and API 37 emulator executions that pass.
+
+The API 29 lane runs the full Compose semantics and accessibility instrumentation suite.
+The API 37 lane uses bounded UiAutomator black-box checks for the honest end state and
+action, 200% text in landscape, reduced motion, and local-only action behavior. Raw
+emulator and instrumentation output is temporary and deleted unconditionally. This
+current-runtime lane does not claim Compose-rule parity, general accessibility
+compliance, device support, capture readiness, or Play readiness.

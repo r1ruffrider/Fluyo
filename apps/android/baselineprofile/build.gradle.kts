@@ -17,18 +17,10 @@ android {
     productFlavors {
         create("development") { dimension = "environment" }
     }
-    testOptions.managedDevices.localDevices {
-        create("profileApi37") {
-            device = "Pixel 9 Pro XL"
-            apiLevel = 37
-            systemImageSource = "google"
-        }
-    }
 }
 
 baselineProfile {
-    managedDevices += "profileApi37"
-    useConnectedDevices = false
+    useConnectedDevices = true
 }
 
 dependencies {

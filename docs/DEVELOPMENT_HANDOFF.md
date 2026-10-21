@@ -37,6 +37,12 @@ roster, and Elana gates pass. Adriana is interim Android implementation, accessi
 owner. Package reservation, release/upload/Play signing, Play Console, production, physical-device claims,
 public capture, spending, and all other external actions remain blocked.
 
+The runtime evidence split is deliberate: API 29 runs the full Compose semantics and accessibility suite, while
+API 37 runs bounded UiAutomator black-box checks for the honest end state/action, 200% text in landscape,
+reduced motion, and local-only behavior. The workflow restores emulator settings and deletes raw emulator and
+instrumentation output unconditionally. API 37 evidence does not claim Compose-rule parity, broad accessibility
+compliance, physical-device support, capture readiness, or Play readiness.
+
 PR #40 merged the readiness prerequisite as 55c6f16f1418d83e7711b632b75c6573c3190ca3; post-main run
 39471055292 passed all eight required jobs. On 2026-10-20, a retained Gradle fixture and cross-platform driver
 regenerated the proposed graph in a fresh temporary project and Gradle user home, matched the LF-normalized

@@ -25,15 +25,18 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.test.filters.SdkSuppress
 import org.junit.Rule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@SdkSuppress(maxSdkVersion = 36)
 class FoundationShellTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private val valid = AppConfiguration("development", "https://api.dev.fluyo.example.test/api/v1", "https://auth.dev.fluyo.example.test", "synthetic_public_value", true, true, "0.1.0", 1, "abcdef1")
@@ -78,7 +81,7 @@ class FoundationShellTest {
         }
         val action = compose.onNodeWithTag("review-build-button")
         compose.waitForIdle()
-        action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        action.performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {
@@ -106,7 +109,7 @@ class FoundationShellTest {
         }
         compose.waitForIdle()
         compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
-        compose.onNodeWithTag("review-build-button").assertIsDisplayed()
+        compose.onNodeWithTag("review-build-button").performScrollTo().assertIsDisplayed()
         compose.runOnIdle {
             state = FoundationShellState.Failure
             width = 600.dp

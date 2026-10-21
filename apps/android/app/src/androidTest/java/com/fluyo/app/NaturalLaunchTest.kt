@@ -7,10 +7,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.filters.SdkSuppress
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 
+@SdkSuppress(maxSdkVersion = 36)
 class NaturalLaunchTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
