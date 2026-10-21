@@ -62,9 +62,10 @@ export const scenarioProofById = {
   },
   android_talkback_order_and_names: {
     leg: "minimum",
-    mode: minimumMode,
-    command: "API 29 Compose semantics tree assertions",
-    observed: "state and action semantics were unique, named, ordered, and actionable",
+    mode: "compose_semantics_api29_plus_static_traversal_inspection",
+    command: "API 29 Compose names-actions assertions plus static traversal-index inspection",
+    observed:
+      "runtime state and action semantics were unique, named, and actionable; static traversal order was explicit",
   },
   android_minimum_touch_targets: {
     leg: "minimum",
@@ -74,9 +75,10 @@ export const scenarioProofById = {
   },
   android_focus_order_and_target: {
     leg: "minimum",
-    mode: minimumMode,
-    command: "API 29 Compose focus-request and state-order assertions",
-    observed: "signed-out and error actions received useful deterministic focus",
+    mode: "compose_focus_api29_plus_static_traversal_inspection",
+    command: "API 29 focus-request assertions plus static traversal-index inspection",
+    observed:
+      "signed-out and error actions received useful deterministic focus; static reading order was explicit",
   },
   android_contrast_and_non_color_status: {
     leg: "minimum",
