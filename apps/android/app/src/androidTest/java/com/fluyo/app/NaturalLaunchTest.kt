@@ -36,7 +36,12 @@ class NaturalLaunchTest {
     @Test fun landscapeRecreationPreservesAReachableAction() {
         compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         val action = if (BuildConfig.FLUYO_ENVIRONMENT == "production") "retry-button" else "review-build-button"
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag(action).fetchSemanticsNodes().size == 1 }
+        compose.waitUntil(5_000) {
+            runCatching {
+                compose.onNodeWithTag(action).assertIsDisplayed()
+                true
+            }.getOrDefault(false)
+        }
         compose.onNodeWithTag(action).assertIsDisplayed()
     }
 

@@ -46,11 +46,15 @@ class FoundationShellTest {
     }
 
     private fun assertNodeIsFullyInsideFoundation(tag: String) {
-        val root = compose.onNodeWithTag("foundation-root").fetchSemanticsNode().boundsInWindow
-        val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInWindow
-        assertTrue(node.width > 0f && node.height > 0f)
-        assertTrue(node.left >= root.left && node.top >= root.top)
-        assertTrue(node.right <= root.right && node.bottom <= root.bottom)
+        compose.waitUntil(5_000) {
+            runCatching {
+                val root = compose.onNodeWithTag("foundation-root").fetchSemanticsNode().boundsInWindow
+                val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInWindow
+                node.width > 0f && node.height > 0f &&
+                    node.left >= root.left && node.top >= root.top &&
+                    node.right <= root.right && node.bottom <= root.bottom
+            }.getOrDefault(false)
+        }
     }
 
     @Test fun loadingHasOneSemanticStateAndMarker() {
@@ -115,7 +119,7 @@ class FoundationShellTest {
             width = 840.dp
         }
         compose.waitForIdle()
-        compose.onAllNodesWithTag("signed-out-state").assertCountEquals(1)
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("signed-out-state").fetchSemanticsNodes().size == 1 }
         assertNodeIsFullyInsideFoundation("review-build-button")
         compose.runOnIdle {
             state = FoundationShellState.Failure

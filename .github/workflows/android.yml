@@ -201,6 +201,8 @@ jobs:
                 >"$INSTRUMENT_LOG" 2>&1; then
                 last_phase="boot_completion"
               else
+                adb shell input keyevent KEYCODE_WAKEUP >"$INSTRUMENT_LOG" 2>&1
+                adb shell wm dismiss-keyguard >>"$INSTRUMENT_LOG" 2>&1
                 adb shell settings put system font_scale 1.0 >"$INSTRUMENT_LOG" 2>&1
                 adb shell settings put global animator_duration_scale 1 >"$INSTRUMENT_LOG" 2>&1
                 adb shell settings put global transition_animation_scale 1 >"$INSTRUMENT_LOG" 2>&1

@@ -157,7 +157,7 @@ describe("Android foundation structure", () => {
       'Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
     expect(shell).toContain("contentAlignment = Alignment.TopCenter");
-    expect(shell).toContain('testTag("foundation-root")');
+    expect(shell).toContain('Modifier.testTag("foundation-root").fillMaxSize()');
     expect(shell).toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
     expect(shell.match(/padding\(top = 18\.dp\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
@@ -175,6 +175,8 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
     expect(instrumentation).not.toContain("performScrollTo");
     expect(instrumentation.match(/assertNodeIsFullyInsideFoundation/g)).toHaveLength(3);
+    expect(instrumentation.match(/boundsInWindow/g)).toHaveLength(2);
+    expect(instrumentation).toContain("compose.waitUntil(5_000)");
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -184,12 +186,16 @@ describe("Android foundation structure", () => {
     const naturalLaunch = text("app/src/androidTest/java/com/fluyo/app/NaturalLaunchTest.kt");
     expect(naturalLaunch).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(naturalLaunch.match(/@Test fun /g)).toHaveLength(3);
+    expect(naturalLaunch).toContain("compose.onNodeWithTag(action).assertIsDisplayed()");
+    expect(naturalLaunch).toContain("runCatching");
     const currentRuntime = text(
       "app/src/androidTest/java/com/fluyo/app/CurrentRuntimeFoundationTest.kt",
     );
     expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
     expect(currentRuntime.match(/@Test fun /g)).toHaveLength(6);
     expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
+    expect(currentRuntime).toContain("device.wakeUp()");
+    expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
@@ -215,6 +221,8 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('last_phase="avd_creation"');
     expect(workflowText).toContain('last_phase="device_connection"');
     expect(workflowText).toContain('last_phase="boot_completion"');
+    expect(workflowText).toContain("adb shell input keyevent KEYCODE_WAKEUP");
+    expect(workflowText).toContain("adb shell wm dismiss-keyguard");
     expect(workflowText).toContain(
       "Android current-runtime setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
     );

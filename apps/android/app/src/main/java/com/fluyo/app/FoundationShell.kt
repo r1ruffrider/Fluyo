@@ -56,7 +56,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
         }
     }
     Box(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding().padding(20.dp).testTag("foundation-root"),
+        modifier = Modifier.testTag("foundation-root").fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding().padding(20.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(

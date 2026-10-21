@@ -39,6 +39,8 @@ class CurrentRuntimeFoundationTest {
     }
 
     private fun launchFoundation() {
+        device.wakeUp()
+        device.executeShellCommand("wm dismiss-keyguard")
         device.executeShellCommand("am force-stop ${context.packageName}")
         context.startActivity(
             Intent(context, MainActivity::class.java).addFlags(
