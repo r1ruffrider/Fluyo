@@ -7,11 +7,12 @@ import android.view.KeyEvent
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -54,23 +55,18 @@ class CurrentRuntimeFoundationTest {
         compose.waitForIdle()
     }
 
-    private fun prepareFoundation() {
-        device.wakeUp()
-        device.executeShellCommand("wm dismiss-keyguard")
-        compose.waitForIdle()
-    }
-
     private fun waitForNode(tag: String, scroll: Boolean = false) {
         compose.waitUntil(10_000) {
             compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
         }
         val node = compose.onNodeWithTag(tag)
-        if (scroll) node.performScrollTo()
+        if (scroll) {
+            compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(tag))
+        }
         node.assertIsDisplayed()
     }
 
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
-        prepareFoundation()
         waitForNode(expectedStateTag())
         compose.onAllNodesWithTag("loading-state").assertCountEquals(0)
         compose.onAllNodesWithTag(unexpectedStateTag()).assertCountEquals(0)
@@ -95,7 +91,8 @@ class CurrentRuntimeFoundationTest {
     @Test fun currentRuntimeActionRemainsLocalAndHonest() {
         recreateFoundation()
         val action = compose.onNodeWithTag(expectedActionTag())
-        action.performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(expectedActionTag()))
+        action.assertIsDisplayed().performClick()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
             waitForNode("scope-detail", scroll = true)
         } else {
@@ -114,7 +111,8 @@ class CurrentRuntimeFoundationTest {
     @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {
         recreateFoundation()
         val action = compose.onNodeWithTag(expectedActionTag())
-        action.performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(expectedActionTag()))
+        action.assertIsDisplayed()
         if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
             action.assertIsFocused()
         } else {

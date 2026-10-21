@@ -173,11 +173,11 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).toContain("performScrollTo");
+    expect(instrumentation).toContain("performScrollToNode");
     expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(3);
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
     expect(instrumentation).toContain(
-      "compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()",
+      'compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(tag))',
     );
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
@@ -200,6 +200,7 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("device.wakeUp()");
     expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
+    expect(currentRuntime).not.toContain("prepareFoundation");
     expect(currentRuntime).toContain("waitForNode(expectedStateTag())");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");

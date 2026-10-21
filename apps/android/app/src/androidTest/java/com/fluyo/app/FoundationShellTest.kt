@@ -21,11 +21,12 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -50,7 +51,8 @@ class FoundationShellTest {
         compose.waitUntil(5_000) {
             compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
         }
-        compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("foundation-scroll").performScrollToNode(hasTestTag(tag))
+        compose.onNodeWithTag(tag).assertIsDisplayed()
     }
 
     @Test fun loadingHasOneSemanticStateAndMarker() {
