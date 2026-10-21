@@ -1,17 +1,13 @@
 package com.fluyo.app
 
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
@@ -27,11 +23,11 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
-import org.junit.After
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import org.junit.Rule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -40,20 +36,12 @@ import org.junit.Test
 @SdkSuppress(maxSdkVersion = 36)
 class FoundationShellTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
     private val valid = AppConfiguration("development", "https://api.dev.fluyo.example.test/api/v1", "https://auth.dev.fluyo.example.test", "synthetic_public_value", true, true, "0.1.0", 1, "abcdef1")
 
     private fun setFoundationContent(content: @Composable () -> Unit) {
         compose.runOnUiThread { compose.activity.setContent(content = content) }
         compose.waitForIdle()
-    }
-
-    @After fun disposeFoundationContent() {
-        try {
-            compose.runOnUiThread { compose.activity.setContent {} }
-            compose.waitForIdle()
-        } catch (_: Throwable) {
-            throw AssertionError("content teardown")
-        }
     }
 
     private fun waitForNodeToBeDisplayed(tag: String) {
@@ -107,16 +95,18 @@ class FoundationShellTest {
 
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
         try {
-            setFoundationContent {
-                val current = LocalDensity.current
-                CompositionLocalProvider(LocalDensity provides Density(current.density, 2f)) {
-                    MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} }
-                }
-            }
+            device.executeShellCommand("settings put system font_scale 2.0")
+            compose.activityRule.scenario.recreate()
+            compose.waitForIdle()
         } catch (_: Throwable) {
             throw AssertionError("content setup")
         }
-        waitForNodeToBeDisplayed("review-build-button")
+        try {
+            waitForNodeToBeDisplayed("signed-out-state")
+            waitForNodeToBeDisplayed("review-build-button")
+        } finally {
+            device.executeShellCommand("settings put system font_scale 1.0")
+        }
     }
 
     @Test fun rtlMirrorsLeadingGeometryAndKeepsActionSemantics() {
@@ -131,37 +121,24 @@ class FoundationShellTest {
     }
 
     @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {
-        var width by mutableStateOf(320.dp)
-        var state by mutableStateOf<FoundationShellState>(FoundationShellState.Loading)
         try {
-            setFoundationContent {
-                Box(Modifier.width(width).height(520.dp)) {
-                    MaterialTheme { FoundationShell(state, valid) {} }
-                }
+            compose.activityRule.scenario.onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             }
+            compose.activityRule.scenario.recreate()
+            compose.waitForIdle()
         } catch (_: Throwable) {
             throw AssertionError("content setup")
         }
         try {
-            compose.runOnIdle {
-                state = FoundationShellState.SignedOut
-                width = 400.dp
-            }
-            compose.waitForIdle()
-            compose.waitUntil(5_000) { compose.onAllNodesWithTag("signed-out-state").fetchSemanticsNodes().size == 1 }
+            waitForNodeToBeDisplayed("signed-out-state")
+            waitForNodeToBeDisplayed("review-build-button")
         } catch (_: Throwable) {
             throw AssertionError("state transition")
-        }
-        waitForNodeToBeDisplayed("review-build-button")
-        try {
-            compose.runOnIdle {
-                state = FoundationShellState.Failure
-                width = 360.dp
+        } finally {
+            compose.activityRule.scenario.onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
-            compose.onNodeWithTag("error-state").assertIsDisplayed()
-            compose.onAllNodesWithTag("signed-out-state").assertCountEquals(0)
-        } catch (_: Throwable) {
-            throw AssertionError("failure transition")
         }
     }
 

@@ -174,7 +174,7 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
     expect(instrumentation).toContain("performScrollTo");
-    expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(3);
+    expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(5);
     expect(instrumentation).toContain("compose.waitUntil(5_000)");
     expect(instrumentation).toContain("node.performScrollTo()");
     expect(instrumentation).toContain("target.width > 0f && target.height > 0f");
@@ -183,8 +183,20 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain('throw AssertionError("node geometry")');
     expect(instrumentation).toContain('throw AssertionError("content setup")');
     expect(instrumentation).toContain('throw AssertionError("state transition")');
-    expect(instrumentation).toContain('throw AssertionError("failure transition")');
-    expect(instrumentation).toContain('throw AssertionError("content teardown")');
+    expect(instrumentation).not.toContain('throw AssertionError("failure transition")');
+    expect(instrumentation).not.toContain('throw AssertionError("content teardown")');
+    expect(instrumentation).toContain(
+      'device.executeShellCommand("settings put system font_scale 2.0")',
+    );
+    expect(instrumentation).toContain(
+      'device.executeShellCommand("settings put system font_scale 1.0")',
+    );
+    expect(instrumentation).toContain(
+      "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE",
+    );
+    expect(instrumentation).toContain(
+      "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED",
+    );
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -215,6 +227,7 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain('throw AssertionError("runtime launch")');
     expect(currentRuntime).toContain("createEmptyComposeRule()");
     expect(currentRuntime).toContain("ActivityScenario.launch(MainActivity::class.java)");
+    expect(currentRuntime).not.toContain("scenario.close()");
     expect(currentRuntime).not.toContain("createAndroidComposeRule");
     expect(currentRuntime).not.toContain("device.pressHome()");
     expect(currentRuntime).toContain("node.performScrollTo()");

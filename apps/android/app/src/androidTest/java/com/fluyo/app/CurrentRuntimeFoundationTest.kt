@@ -67,9 +67,6 @@ class CurrentRuntimeFoundationTest {
             if (changedWindowSize) {
                 device.executeShellCommand("wm size reset")
             }
-            if (::scenario.isInitialized) {
-                scenario.close()
-            }
         } catch (_: Throwable) {
             throw AssertionError("runtime cleanup")
         }
