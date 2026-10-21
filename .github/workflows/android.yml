@@ -118,30 +118,34 @@ jobs:
           RAW_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-raw.log"
           trap 'rm -f "$RAW_LOG"' EXIT
           COMMON=(--no-daemon --warning-mode=fail -Pandroid.sdk.channel=3 "-PfluyoSourceCommitShort=$SHORT_SHA")
-          set +e
+          run_gradle_phase() {
+            local phase="$1"
+            shift
+            set +e
+            ./gradlew "${COMMON[@]}" "$@" >"$RAW_LOG" 2>&1
+            local status=$?
+            set -e
+            if [[ "$status" -ne 0 ]]; then
+              cd "$GITHUB_WORKSPACE"
+              node scripts/summarize-android-test-failures.mjs \
+                apps/android/app/build/outputs/androidTest-results/managedDevice \
+                --phase "$phase"
+              echo "Android matrix leg failed; raw output was discarded"
+              exit "$status"
+            fi
+          }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
-            ./gradlew "${COMMON[@]}" \
-              :app:testDevelopmentDebugUnitTest \
-              :app:assembleDevelopmentDebug \
-              :app:smallApi29DevelopmentDebugAndroidTest >"$RAW_LOG" 2>&1
+            run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
+            run_gradle_phase assemble_internal :app:assembleDevelopmentDebug
+            run_gradle_phase instrumentation_internal :app:smallApi29DevelopmentDebugAndroidTest
           else
-            ./gradlew "${COMMON[@]}" \
-              :app:testStagingDebugUnitTest \
-              :app:assembleStagingDebug \
-              :app:assembleProductionDebug \
-              :app:lintDevelopmentDebug \
-              :app:largeApi37StagingDebugAndroidTest \
-              :app:largeApi37ProductionDebugAndroidTest \
-              :app:generateDevelopmentBaselineProfile >"$RAW_LOG" 2>&1
-          fi
-          STATUS=$?
-          set -e
-          if [[ "$STATUS" -ne 0 ]]; then
-            cd "$GITHUB_WORKSPACE"
-            node scripts/summarize-android-test-failures.mjs \
-              apps/android/app/build/outputs/androidTest-results/managedDevice
-            echo "Android matrix leg failed; raw output was discarded"
-            exit "$STATUS"
+            run_gradle_phase unit_test :app:testStagingDebugUnitTest
+            run_gradle_phase assemble_internal :app:assembleStagingDebug
+            run_gradle_phase assemble_production_inert :app:assembleProductionDebug
+            run_gradle_phase lint :app:lintDevelopmentDebug
+            run_gradle_phase instrumentation_internal :app:largeApi37StagingDebugAndroidTest
+            run_gradle_phase instrumentation_production_inert :app:largeApi37ProductionDebugAndroidTest
+            run_gradle_phase baseline_profile :app:generateDevelopmentBaselineProfile
           fi
           echo "Android matrix leg completed with raw output discarded"
 

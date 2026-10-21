@@ -124,6 +124,33 @@ test("reports an empty bounded summary when failure occurred before instrumentat
   }
 });
 
+test("reports a fixed phase and category when failure occurs before structured reports", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-phase-"));
+  try {
+    const result = spawnSync(process.execPath, [script, root, "--phase", "assemble_internal"], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      structuredReports: 0,
+      failures: [],
+      diagnostic: { phase: "assemble_internal", category: "pre_report_failure" },
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects unapproved phase text without echoing it", () => {
+  const result = spawnSync(
+    process.execPath,
+    [script, os.tmpdir(), "--phase", "learner@example.test/private"],
+    { encoding: "utf8" },
+  );
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /example\.test|private/i);
+});
+
 test("maps orchestration crashes to fixed categories without retaining diagnostics", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-crash-"));
   try {

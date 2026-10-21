@@ -1,7 +1,24 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const roots = process.argv.slice(2);
+const args = process.argv.slice(2);
+const phaseIndex = args.indexOf("--phase");
+const allowedPhases = new Set([
+  "unit_test",
+  "assemble_internal",
+  "assemble_production_inert",
+  "lint",
+  "instrumentation_internal",
+  "instrumentation_production_inert",
+  "baseline_profile",
+]);
+let phase = null;
+if (phaseIndex !== -1) {
+  phase = args[phaseIndex + 1] ?? null;
+  args.splice(phaseIndex, 2);
+  if (!allowedPhases.has(phase)) throw new Error("Unsupported bounded Android failure phase.");
+}
+const roots = args;
 if (roots.length === 0) {
   throw new Error("At least one Android test-results directory is required.");
 }
@@ -83,4 +100,11 @@ for (const file of xmlFiles.sort()) {
   }
 }
 
-process.stdout.write(`${JSON.stringify({ structuredReports: xmlFiles.length, failures })}\n`);
+const summary = { structuredReports: xmlFiles.length, failures };
+if (phase) {
+  summary.diagnostic = {
+    phase,
+    category: xmlFiles.length === 0 ? "pre_report_failure" : "structured_test_failure",
+  };
+}
+process.stdout.write(`${JSON.stringify(summary)}\n`);

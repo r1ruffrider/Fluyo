@@ -88,6 +88,10 @@ describe("Android foundation structure", () => {
     expect(workflow).toContain('>"$RAW_LOG" 2>&1');
     expect(workflow).toContain("Android matrix leg failed; raw output was discarded");
     expect(workflow).toContain("summarize-android-test-failures.mjs");
+    expect(workflow).toContain("run_gradle_phase unit_test");
+    expect(workflow).toContain("run_gradle_phase assemble_internal");
+    expect(workflow).toContain("run_gradle_phase instrumentation_internal");
+    expect(workflow).toContain('--phase "$phase"');
     expect(workflow).not.toContain("--stacktrace");
     expect(workflow).not.toMatch(/(?:cat|tee)\s+[^\n]*RAW_LOG/);
   });
