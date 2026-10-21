@@ -257,6 +257,8 @@ jobs:
                 failure_category="loading_present"
               elif grep -q 'AssertionError: unexpected state' "$INSTRUMENT_LOG"; then
                 failure_category="unexpected_state"
+              elif grep -q 'AssertionError: runtime cleanup' "$INSTRUMENT_LOG"; then
+                failure_category="runtime_cleanup"
               elif [[ "$status" -ne 0 ]]; then
                 failure_category="process_status"
               elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then

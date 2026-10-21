@@ -25,17 +25,35 @@ class CurrentRuntimeFoundationTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val device = UiDevice.getInstance(instrumentation)
+    private var changedLocale = false
+    private var changedOrientation = false
+    private var changedFontScale = false
+    private var changedMotionScale = false
+    private var changedWindowSize = false
 
     @After fun restoreRuntimeSettings() {
-        context.getSystemService(LocaleManager::class.java).applicationLocales =
-            LocaleList.getEmptyLocaleList()
-        compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        device.executeShellCommand("settings put system font_scale 1.0")
-        device.executeShellCommand("settings put global animator_duration_scale 1")
-        device.executeShellCommand("settings put global transition_animation_scale 1")
-        device.executeShellCommand("settings put global window_animation_scale 1")
-        device.executeShellCommand("wm size reset")
-        device.pressHome()
+        try {
+            if (changedLocale) {
+                context.getSystemService(LocaleManager::class.java).applicationLocales =
+                    LocaleList.getEmptyLocaleList()
+            }
+            if (changedOrientation) {
+                compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+            if (changedFontScale) {
+                device.executeShellCommand("settings put system font_scale 1.0")
+            }
+            if (changedMotionScale) {
+                device.executeShellCommand("settings put global animator_duration_scale 1")
+                device.executeShellCommand("settings put global transition_animation_scale 1")
+                device.executeShellCommand("settings put global window_animation_scale 1")
+            }
+            if (changedWindowSize) {
+                device.executeShellCommand("wm size reset")
+            }
+        } catch (_: Throwable) {
+            throw AssertionError("runtime cleanup")
+        }
     }
 
     private fun expectedStateTag() =
@@ -86,6 +104,8 @@ class CurrentRuntimeFoundationTest {
     }
 
     @Test fun currentRuntimeLargeTextAndLandscapeKeepActionReachable() {
+        changedFontScale = true
+        changedOrientation = true
         device.executeShellCommand("settings put system font_scale 2.0")
         compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         recreateFoundation()
@@ -93,6 +113,7 @@ class CurrentRuntimeFoundationTest {
     }
 
     @Test fun currentRuntimeReducedMotionKeepsTheSameEndState() {
+        changedMotionScale = true
         device.executeShellCommand("settings put global animator_duration_scale 0")
         device.executeShellCommand("settings put global transition_animation_scale 0")
         device.executeShellCommand("settings put global window_animation_scale 0")
@@ -114,6 +135,7 @@ class CurrentRuntimeFoundationTest {
     }
 
     @Test fun currentRuntimePseudoLocaleExpansionKeepsActionReachable() {
+        changedLocale = true
         context.getSystemService(LocaleManager::class.java).applicationLocales =
             LocaleList.forLanguageTags("en-XA")
         recreateFoundation()
@@ -141,6 +163,7 @@ class CurrentRuntimeFoundationTest {
     }
 
     @Test fun currentRuntimeAdaptiveWindowsKeepStateAndActionReachable() {
+        changedWindowSize = true
         listOf("1200x2200", "2400x2200", "3000x2200").forEach { size ->
             device.executeShellCommand("wm size $size")
             recreateFoundation()

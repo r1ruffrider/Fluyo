@@ -78,6 +78,9 @@ const boundedStageCategory = (body) => {
     ["node_count", /AssertionError: node count(?:\r?\n|$)/],
     ["scroll_action", /AssertionError: scroll action(?:\r?\n|$)/],
     ["node_geometry", /AssertionError: node geometry(?:\r?\n|$)/],
+    ["content_setup", /AssertionError: content setup(?:\r?\n|$)/],
+    ["state_transition", /AssertionError: state transition(?:\r?\n|$)/],
+    ["failure_transition", /AssertionError: failure transition(?:\r?\n|$)/],
   ];
   for (const [category, pattern] of stages) {
     if (pattern.test(body)) return category;

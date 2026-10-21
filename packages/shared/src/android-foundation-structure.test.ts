@@ -181,6 +181,9 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain('throw AssertionError("node count")');
     expect(instrumentation).toContain('throw AssertionError("scroll action")');
     expect(instrumentation).toContain('throw AssertionError("node geometry")');
+    expect(instrumentation).toContain('throw AssertionError("content setup")');
+    expect(instrumentation).toContain('throw AssertionError("state transition")');
+    expect(instrumentation).toContain('throw AssertionError("failure transition")');
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
@@ -207,6 +210,8 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain('throw AssertionError("state missing")');
     expect(currentRuntime).toContain('throw AssertionError("loading present")');
     expect(currentRuntime).toContain('throw AssertionError("unexpected state")');
+    expect(currentRuntime).toContain('throw AssertionError("runtime cleanup")');
+    expect(currentRuntime).not.toContain("device.pressHome()");
     expect(currentRuntime).toContain("node.performScrollTo()");
     expect(currentRuntime).toContain("target.width > 0f && target.height > 0f");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
@@ -248,6 +253,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain('failure_category="state_missing"');
     expect(workflowText).toContain('failure_category="loading_present"');
     expect(workflowText).toContain('failure_category="unexpected_state"');
+    expect(workflowText).toContain('failure_category="runtime_cleanup"');
     expect(workflowText).toContain('failure_category="test_failure"');
     expect(workflowText).toContain('failure_category="zero_tests"');
     expect(workflowText).toContain('failure_category="summary_mismatch"');

@@ -96,11 +96,15 @@ class FoundationShellTest {
     }
 
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
-        setFoundationContent {
-            val current = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(current.density, 2f)) {
-                MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} }
+        try {
+            setFoundationContent {
+                val current = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(current.density, 2f)) {
+                    MaterialTheme { FoundationShell(FoundationShellState.SignedOut, valid) {} }
+                }
             }
+        } catch (_: Throwable) {
+            throw AssertionError("content setup")
         }
         waitForNodeToBeDisplayed("review-build-button")
     }
@@ -119,24 +123,36 @@ class FoundationShellTest {
     @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {
         var width by mutableStateOf(320.dp)
         var state by mutableStateOf<FoundationShellState>(FoundationShellState.Loading)
-        setFoundationContent {
-            Box(Modifier.width(width).height(520.dp)) {
-                MaterialTheme { FoundationShell(state, valid) {} }
+        try {
+            setFoundationContent {
+                Box(Modifier.width(width).height(520.dp)) {
+                    MaterialTheme { FoundationShell(state, valid) {} }
+                }
             }
+        } catch (_: Throwable) {
+            throw AssertionError("content setup")
         }
-        compose.runOnIdle {
-            state = FoundationShellState.SignedOut
-            width = 400.dp
+        try {
+            compose.runOnIdle {
+                state = FoundationShellState.SignedOut
+                width = 400.dp
+            }
+            compose.waitForIdle()
+            compose.waitUntil(5_000) { compose.onAllNodesWithTag("signed-out-state").fetchSemanticsNodes().size == 1 }
+        } catch (_: Throwable) {
+            throw AssertionError("state transition")
         }
-        compose.waitForIdle()
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag("signed-out-state").fetchSemanticsNodes().size == 1 }
         waitForNodeToBeDisplayed("review-build-button")
-        compose.runOnIdle {
-            state = FoundationShellState.Failure
-            width = 360.dp
+        try {
+            compose.runOnIdle {
+                state = FoundationShellState.Failure
+                width = 360.dp
+            }
+            compose.onNodeWithTag("error-state").assertIsDisplayed()
+            compose.onAllNodesWithTag("signed-out-state").assertCountEquals(0)
+        } catch (_: Throwable) {
+            throw AssertionError("failure transition")
         }
-        compose.onNodeWithTag("error-state").assertIsDisplayed()
-        compose.onAllNodesWithTag("signed-out-state").assertCountEquals(0)
     }
 
 }
