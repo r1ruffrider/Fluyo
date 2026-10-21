@@ -73,6 +73,18 @@ const failureCategory = (body) => {
   return "assertion";
 };
 
+const boundedStageCategory = (body) => {
+  const stages = [
+    ["node_count", /AssertionError: node count(?:\r?\n|$)/],
+    ["scroll_action", /AssertionError: scroll action(?:\r?\n|$)/],
+    ["node_geometry", /AssertionError: node geometry(?:\r?\n|$)/],
+  ];
+  for (const [category, pattern] of stages) {
+    if (pattern.test(body)) return category;
+  }
+  return null;
+};
+
 const runtimeCategories = (body) => {
   const categories = [];
   const mappings = [
@@ -119,7 +131,7 @@ for (const file of xmlFiles.sort()) {
       className: attribute(attributes, "classname"),
       testName: attribute(attributes, "name"),
       kind,
-      category: failureCategory(failureTag[2]),
+      category: boundedStageCategory(body) ?? failureCategory(failureTag[2]),
       frameworkFailureCategory: frameworkFailureCategory(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,

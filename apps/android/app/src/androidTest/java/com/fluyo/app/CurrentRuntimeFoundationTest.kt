@@ -68,9 +68,21 @@ class CurrentRuntimeFoundationTest {
     }
 
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
-        waitForNode(expectedStateTag())
-        compose.onAllNodesWithTag("loading-state").assertCountEquals(0)
-        compose.onAllNodesWithTag(unexpectedStateTag()).assertCountEquals(0)
+        try {
+            waitForNode(expectedStateTag())
+        } catch (_: Throwable) {
+            throw AssertionError("state missing")
+        }
+        try {
+            compose.onAllNodesWithTag("loading-state").assertCountEquals(0)
+        } catch (_: Throwable) {
+            throw AssertionError("loading present")
+        }
+        try {
+            compose.onAllNodesWithTag(unexpectedStateTag()).assertCountEquals(0)
+        } catch (_: Throwable) {
+            throw AssertionError("unexpected state")
+        }
     }
 
     @Test fun currentRuntimeLargeTextAndLandscapeKeepActionReachable() {

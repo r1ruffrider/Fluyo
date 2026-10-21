@@ -62,6 +62,32 @@ test("maps raw assertion details to a closed category without retaining text", (
   }
 });
 
+test("maps only exact bounded reachability sentinels from the failure body", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-stage-"));
+  try {
+    const cases = [
+      ["node count", "node_count"],
+      ["scroll action", "scroll_action"],
+      ["node geometry", "node_geometry"],
+    ];
+    for (const [sentinel, category] of cases) {
+      fs.writeFileSync(
+        path.join(root, "TEST-stage.xml"),
+        `<testsuite><testcase classname="Shell" name="reachability"><failure message="opaque">java.lang.AssertionError: ${sentinel}\nlearner@example.test C:\\private\\path</failure></testcase></testsuite>`,
+      );
+      const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+      assert.equal(result.status, 0);
+      assert.equal(JSON.parse(result.stdout).failures[0].category, category);
+      assert.doesNotMatch(
+        result.stdout,
+        /example\.test|private|node count|scroll action|node geometry/i,
+      );
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("ignores semantics-tree bounds outside the failure message", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-body-"));
   try {

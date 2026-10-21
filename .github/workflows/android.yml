@@ -251,7 +251,13 @@ jobs:
               local status=$?
               set -e
               failure_category=""
-              if [[ "$status" -ne 0 ]]; then
+              if grep -q 'AssertionError: state missing' "$INSTRUMENT_LOG"; then
+                failure_category="state_missing"
+              elif grep -q 'AssertionError: loading present' "$INSTRUMENT_LOG"; then
+                failure_category="loading_present"
+              elif grep -q 'AssertionError: unexpected state' "$INSTRUMENT_LOG"; then
+                failure_category="unexpected_state"
+              elif [[ "$status" -ne 0 ]]; then
                 failure_category="process_status"
               elif grep -q 'FAILURES!!!' "$INSTRUMENT_LOG"; then
                 failure_category="test_failure"

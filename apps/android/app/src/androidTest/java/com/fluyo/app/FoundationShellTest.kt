@@ -63,9 +63,9 @@ class FoundationShellTest {
         compose.waitForIdle()
         try {
             val target = node.fetchSemanticsNode().boundsInRoot
-            assertTrue("node width", target.width > 0f && target.height > 0f)
+            assertTrue("node geometry", target.width > 0f && target.height > 0f)
         } catch (_: Throwable) {
-            throw AssertionError("node width")
+            throw AssertionError("node geometry")
         }
     }
 
