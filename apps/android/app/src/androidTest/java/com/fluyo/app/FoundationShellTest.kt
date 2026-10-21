@@ -13,7 +13,6 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
@@ -55,7 +54,7 @@ class FoundationShellTest {
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         assertTrue(action.fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus))
         action.performClick()
-        compose.onNodeWithTag("scope-detail").assertExists().assertTextContains("local shell")
+        compose.onNodeWithTag("scope-detail").assertTextContains("local shell")
     }
 
     @Test fun safeErrorFocusesRetryAndOmitsInternalDetail() {
