@@ -129,6 +129,10 @@ jobs:
               adb shell settings put global animator_duration_scale 1 >/dev/null 2>&1 || true
               adb shell settings put global transition_animation_scale 1 >/dev/null 2>&1 || true
               adb shell settings put global window_animation_scale 1 >/dev/null 2>&1 || true
+              adb uninstall com.fluyo.app.staging.test >/dev/null 2>&1 || true
+              adb uninstall com.fluyo.app.staging >/dev/null 2>&1 || true
+              adb uninstall com.fluyo.app.test >/dev/null 2>&1 || true
+              adb uninstall com.fluyo.app >/dev/null 2>&1 || true
               adb emu kill >/dev/null 2>&1 || true
             fi
             if [[ -n "$EMULATOR_PID" ]]; then
@@ -203,13 +207,14 @@ jobs:
             local status=$?
             set -e
             if [[ "$status" -ne 0 ]] || grep -q 'FAILURES!!!' "$INSTRUMENT_LOG" || \
-              ! grep -Eq '^OK \([0-9]+ tests?\)$' "$INSTRUMENT_LOG"; then
+              ! grep -Eq '^OK \(6 tests\)$' "$INSTRUMENT_LOG"; then
               echo "Android current-runtime instrumentation failed; raw output was discarded"
               exit 1
             fi
             adb uninstall "$app_package.test" >/dev/null 2>&1 || true
             adb uninstall "$app_package" >/dev/null 2>&1 || true
             rm -f "$INSTRUMENT_LOG"
+            echo "Android current-runtime instrumentation passed exactly 6 tests; raw output was discarded"
           }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
@@ -251,11 +256,13 @@ jobs:
             cp apps/android/app/build/outputs/apk/development/debug/app-development-debug.apk "$TEMP/Fluyo-development-debug.apk"
             ARTIFACT="$OUT/Fluyo-minimum-emulator.zip"
             ACCESSIBILITY_SETTING="compose_semantics_api29"
+            CURRENT_RUNTIME_TEST_COUNT="not_applicable"
           else
             cp apps/android/app/build/outputs/apk/staging/debug/app-staging-debug.apk "$TEMP/Fluyo-staging-debug.apk"
             cp apps/android/app/build/outputs/apk/production/debug/app-production-debug.apk "$TEMP/Fluyo-production-inert-debug.apk"
             ARTIFACT="$OUT/Fluyo-current-emulator.zip"
             ACCESSIBILITY_SETTING="bounded_uiautomator_black_box_api37"
+            CURRENT_RUNTIME_TEST_COUNT="6"
           fi
           for apk in "$TEMP"/*.apk; do
             apksigner verify --print-certs "$apk" >"$TEMP/signing.txt"
@@ -284,6 +291,7 @@ jobs:
           result=passed
           signingClassification=non_production_debug_signed
           accessibilitySetting=$ACCESSIBILITY_SETTING
+          currentRuntimeTestsPerFlavor=$CURRENT_RUNTIME_TEST_COUNT
           EOF
           node -e 'const fs=require("fs"); const current=process.argv[2]==="current"; fs.writeFileSync(process.argv[1], JSON.stringify({sourceCommit:process.env.SOURCE_SHA,buildIdentifier:process.env.GITHUB_RUN_ID+"-"+process.env.GITHUB_RUN_ATTEMPT+"-"+process.argv[2],runnerImage:"ubuntu-24.04",deviceModel:process.argv[3],deviceClass:process.argv[4],deviceApi:Number(process.argv[5]),environment:process.argv[6],accessibilitySetting:current?"bounded_uiautomator_black_box_api37":"compose_semantics_api29",command:current?"pinned Gradle build, bounded UiAutomator black-box checks, manifest, signing, and privacy gate":"pinned Gradle build, Compose semantics instrumentation, manifest, signing, and privacy gate"},null,2)+"\n")' "$TEMP/metadata.json" "${{ matrix.leg }}" "${{ matrix.device }}" "${{ matrix.device_class }}" "${{ matrix.sdk }}" "${{ matrix.environment }}"
           node scripts/android-evidence.mjs generate "${{ matrix.leg }}" contracts/mobile/android/foundation/v1/foundation-policy.json "$TEMP/metadata.json" "$ARTIFACT" "$OUT/evidence-${{ matrix.leg }}.json"

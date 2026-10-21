@@ -165,6 +165,7 @@ describe("Android foundation structure", () => {
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
     expect(shell).toContain("if (actionFocus.requestFocus()) return@LaunchedEffect");
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
+    expect(instrumentation.match(/@Test fun /g)).toHaveLength(6);
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
@@ -177,15 +178,19 @@ describe("Android foundation structure", () => {
     expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
     const naturalLaunch = text("app/src/androidTest/java/com/fluyo/app/NaturalLaunchTest.kt");
     expect(naturalLaunch).toContain("@SdkSuppress(maxSdkVersion = 36)");
+    expect(naturalLaunch.match(/@Test fun /g)).toHaveLength(3);
     const currentRuntime = text(
       "app/src/androidTest/java/com/fluyo/app/CurrentRuntimeFoundationTest.kt",
     );
     expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
+    expect(currentRuntime.match(/@Test fun /g)).toHaveLength(6);
     expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
     expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
+    expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
+    expect(currentRuntime).toContain("currentRuntimeKeyboardProxyReachesAndOperatesTheAction");
     const workflow = resolve(root, ".github/workflows/android.yml");
     const workflowText = readFileSync(workflow, "utf8");
     expect(workflowText).toContain("verify_packaged_pseudo_locales");
@@ -195,6 +200,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("trap cleanup EXIT");
     expect(workflowText).toContain("start_current_emulator");
     expect(workflowText).toContain("run_manual_instrumentation");
+    expect(workflowText).toContain("^OK \\(6 tests\\)$");
     expect(workflowText).toContain("compose_semantics_api29");
     expect(workflowText).toContain("bounded_uiautomator_black_box_api37");
     expect(workflowText).toContain("com.fluyo.app.staging");
@@ -202,6 +208,9 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("settings put system font_scale 1.0");
     expect(workflowText).toContain("settings put system accelerometer_rotation 1");
     expect(workflowText).toContain("settings put global animator_duration_scale 1");
+    expect(workflowText).toContain("adb uninstall com.fluyo.app.staging.test");
+    expect(workflowText).toContain("adb uninstall com.fluyo.app.test");
+    expect(workflowText).toContain('CURRENT_RUNTIME_TEST_COUNT="6"');
     expect(workflowText).toContain(
       'rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"',
     );

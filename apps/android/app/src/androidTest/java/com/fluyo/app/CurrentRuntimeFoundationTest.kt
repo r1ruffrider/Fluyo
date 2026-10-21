@@ -1,6 +1,9 @@
 package com.fluyo.app
 
 import android.content.Intent
+import android.app.LocaleManager
+import android.os.LocaleList
+import android.view.KeyEvent
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -21,6 +24,8 @@ class CurrentRuntimeFoundationTest {
     private val device = UiDevice.getInstance(instrumentation)
 
     @Before fun resetRuntimeSettings() {
+        context.getSystemService(LocaleManager::class.java).applicationLocales =
+            LocaleList.getEmptyLocaleList()
         device.setOrientationNatural()
         device.executeShellCommand("settings put system font_scale 1.0")
         device.executeShellCommand("settings put global animator_duration_scale 1")
@@ -53,6 +58,12 @@ class CurrentRuntimeFoundationTest {
         context.getString(R.string.retry_action)
     } else {
         context.getString(R.string.review_scope_action)
+    }
+
+    private fun expectedBody() = if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
+        context.getString(R.string.error_body)
+    } else {
+        context.getString(R.string.signed_out_body)
     }
 
     private fun waitForText(value: String): UiObject2 {
@@ -106,6 +117,39 @@ class CurrentRuntimeFoundationTest {
         launchFoundation()
         val action = waitForText(expectedAction())
         action.click()
+        if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
+            waitForText(context.getString(R.string.scope_detail))
+        } else {
+            waitForText(context.getString(R.string.error_title))
+        }
+    }
+
+    @Test fun currentRuntimePseudoLocaleExpansionKeepsActionReachable() {
+        context.getSystemService(LocaleManager::class.java).applicationLocales =
+            LocaleList.forLanguageTags("en-XA")
+        launchFoundation()
+        val title = waitForText(expectedTitle())
+        val body = waitForText(expectedBody())
+        val action = waitForText(expectedAction())
+        assertTrue(title.visibleBounds.height() > 0)
+        assertTrue(body.visibleBounds.height() > 0)
+        assertTrue(action.visibleBounds.height() > 0)
+        assertTrue(title.visibleBounds.bottom <= body.visibleBounds.top)
+        assertTrue(body.visibleBounds.bottom <= action.visibleBounds.top)
+    }
+
+    @Test fun currentRuntimeKeyboardProxyReachesAndOperatesTheAction() {
+        launchFoundation()
+        waitForText(expectedAction())
+        var focused = false
+        repeat(8) {
+            if (!focused) {
+                device.pressKeyCode(KeyEvent.KEYCODE_TAB)
+                focused = device.findObject(By.text(expectedAction()))?.isFocused == true
+            }
+        }
+        assertTrue(focused)
+        device.pressKeyCode(KeyEvent.KEYCODE_ENTER)
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
             waitForText(context.getString(R.string.scope_detail))
         } else {

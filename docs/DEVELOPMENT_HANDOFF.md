@@ -38,8 +38,9 @@ owner. Package reservation, release/upload/Play signing, Play Console, productio
 public capture, spending, and all other external actions remain blocked.
 
 The runtime evidence split is deliberate: API 29 runs the full Compose semantics and accessibility suite, while
-API 37 runs bounded UiAutomator black-box checks for the honest end state/action, 200% text in landscape,
-reduced motion, and local-only behavior. The workflow restores emulator settings and deletes raw emulator and
+API 37 runs exactly six bounded UiAutomator black-box checks per flavor for the honest end state/action, 200%
+text in landscape, reduced motion, local-only behavior, en-XA expansion, and keyboard/D-pad action access. The
+workflow restores emulator settings and deletes raw emulator and
 instrumentation output unconditionally. API 37 evidence does not claim Compose-rule parity, broad accessibility
 compliance, physical-device support, capture readiness, or Play readiness.
 

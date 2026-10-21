@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { aggregate, generate, scenarioIdsByLeg } from "./android-evidence.mjs";
+import { aggregate, generate, scenarioIdsByLeg, scenarioProofById } from "./android-evidence.mjs";
 
 const policyPath = path.resolve("contracts/mobile/android/foundation/v1/foundation-policy.json");
 const metadata = (source, leg) => ({
@@ -15,14 +15,66 @@ const metadata = (source, leg) => ({
   deviceClass: leg === "minimum" ? "smallest_supported" : "large_current",
   deviceApi: leg === "minimum" ? 29 : 37,
   environment: leg === "minimum" ? "development" : "staging_and_inert_production",
-  accessibilitySetting: "automated_matrix",
-  command: "bounded Android foundation gate",
+  accessibilitySetting:
+    leg === "minimum" ? "compose_semantics_api29" : "bounded_uiautomator_black_box_api37",
+  command:
+    leg === "minimum"
+      ? "pinned API 29 Compose semantics lane"
+      : "pinned API 37 bounded UiAutomator black-box lane",
 });
 
 test("partitions all 27 applicable scenarios and leaves two physical rows", () => {
-  assert.equal(scenarioIdsByLeg.minimum.length, 13);
-  assert.equal(scenarioIdsByLeg.current.length, 14);
+  assert.equal(scenarioIdsByLeg.minimum.length, 18);
+  assert.equal(scenarioIdsByLeg.current.length, 9);
   assert.equal(new Set([...scenarioIdsByLeg.minimum, ...scenarioIdsByLeg.current]).size, 27);
+  assert.equal(scenarioProofById.android_rtl_geometry_and_semantics.leg, "minimum");
+  assert.equal(scenarioProofById.android_tablet_foldable_probe_no_support_claim.leg, "minimum");
+  assert.equal(scenarioProofById.android_pseudolocale_expansion.leg, "current");
+  assert.equal(scenarioProofById.android_keyboard_and_switch_focus.leg, "current");
+});
+
+test("each scenario carries specific criteria and proof provenance", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-specific-proof-"));
+  try {
+    const source = "c".repeat(40);
+    const metadataFile = path.join(dir, "minimum-metadata.json");
+    const artifactFile = path.join(dir, "minimum.zip");
+    const evidenceFile = path.join(dir, "minimum.json");
+    fs.writeFileSync(metadataFile, JSON.stringify(metadata(source, "minimum")));
+    fs.writeFileSync(artifactFile, "minimum artifact");
+    generate("minimum", policyPath, metadataFile, artifactFile, evidenceFile);
+    const result = JSON.parse(fs.readFileSync(evidenceFile, "utf8"));
+    for (const row of result.executions) {
+      assert.notEqual(row.expected, "all policy criteria for the named scenario");
+      assert.notEqual(row.observed, "automated build, test, inspection, and privacy checks passed");
+      assert.match(row.command, /; /);
+      assert.equal(row.observed, scenarioProofById[row.scenarioId].observed);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("rejects evidence metadata that misstates the lane mode", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-lane-mode-"));
+  try {
+    const metadataFile = path.join(dir, "metadata.json");
+    const artifactFile = path.join(dir, "artifact.zip");
+    fs.writeFileSync(
+      metadataFile,
+      JSON.stringify({
+        ...metadata("d".repeat(40), "current"),
+        accessibilitySetting: "compose_semantics_api29",
+      }),
+    );
+    fs.writeFileSync(artifactFile, "artifact");
+    assert.throws(
+      () => generate("current", policyPath, metadataFile, artifactFile, path.join(dir, "out.json")),
+      /lane mode mismatch/,
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("generates and aggregates source-bound evidence", () => {
