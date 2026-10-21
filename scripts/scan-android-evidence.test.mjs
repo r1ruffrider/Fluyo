@@ -120,7 +120,7 @@ test("CLI diagnostics expose only bounded artifact coordinates and categories", 
     );
     const diagnostics = `${result.stdout}${result.stderr}`;
     assert.equal(result.status, 1);
-    assert.match(diagnostics, /artifact 1 file 1 archive entry 1/);
+    assert.match(diagnostics, /artifact 1 file 1 archive entry 1 type other/);
     assert.match(diagnostics, /provider or generic credential/);
     for (const restricted of [
       directory,

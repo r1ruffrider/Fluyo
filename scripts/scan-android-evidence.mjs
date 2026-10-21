@@ -119,22 +119,35 @@ function archiveEntries(buffer) {
   return entries;
 }
 
+function archiveEntryKind(name) {
+  if (/\.dex$/i.test(name)) return "dex";
+  if (/^META-INF\/.*\.(?:RSA|DSA|EC)$/i.test(name)) return "signing";
+  if (/^META-INF\//i.test(name)) return "metadata";
+  if (name === "AndroidManifest.xml") return "manifest";
+  if (name === "resources.arsc") return "resources";
+  if (/^res\//i.test(name)) return "resource";
+  if (/^assets\//i.test(name)) return "asset";
+  return "other";
+}
+
 function scanBuffer(buffer, label, depth = 0) {
-  const raw = buffer.toString("latin1");
-  const findings = [...scanText(raw, label), ...scanText(raw.replaceAll("\0", ""), label)];
-  if (!looksLikeZip(buffer)) return [...new Set(findings)];
+  if (!looksLikeZip(buffer)) {
+    const raw = buffer.toString("latin1");
+    return [...new Set([...scanText(raw, label), ...scanText(raw.replaceAll("\0", ""), label)])];
+  }
+  const findings = [];
   if (depth >= MAX_ARCHIVE_DEPTH) {
-    return [...new Set([...findings, `${label}: archive nesting limit`])];
+    return [`${label}: archive nesting limit`];
   }
 
   let entries;
   try {
     entries = archiveEntries(buffer);
   } catch {
-    return [...new Set([...findings, `${label}: malformed or unsupported archive`])];
+    return [`${label}: malformed or unsupported archive`];
   }
   entries.forEach((entry, index) => {
-    const entryLabel = `${label} archive entry ${index + 1}`;
+    const entryLabel = `${label} archive entry ${index + 1} type ${archiveEntryKind(entry.name)}`;
     findings.push(...scanText(entry.name, entryLabel));
     findings.push(...scanBuffer(entry.content, entryLabel, depth + 1));
   });

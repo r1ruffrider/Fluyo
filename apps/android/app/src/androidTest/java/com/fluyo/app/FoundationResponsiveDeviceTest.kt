@@ -1,6 +1,5 @@
 package com.fluyo.app
 
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.SdkSuppress
@@ -20,7 +19,6 @@ class FoundationResponsiveDeviceTest {
     private val context = instrumentation.targetContext
     private val device = UiDevice.getInstance(instrumentation)
     private var activeScenario: ActivityScenario<MainActivity>? = null
-    private var activeActivity: MainActivity? = null
     private var changedFontScale = false
     private var changedOrientation = false
 
@@ -30,10 +28,6 @@ class FoundationResponsiveDeviceTest {
                 it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
         }
-        activeActivity?.let { activity ->
-            instrumentation.runOnMainSync { activity.finish() }
-        }
-        activeActivity = null
         activeScenario?.close()
         activeScenario = null
         if (changedFontScale) device.executeShellCommand("settings put system font_scale 1.0")
@@ -70,10 +64,9 @@ class FoundationResponsiveDeviceTest {
         try {
             device.wakeUp()
             device.executeShellCommand("wm dismiss-keyguard")
-            val intent = Intent(context, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            }
-            activeActivity = instrumentation.startActivitySync(intent) as MainActivity
+            val scenario =
+                ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
+            scenario.onActivity { }
             check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))
         } catch (_: Throwable) {
             throw AssertionError("runtime launch")
