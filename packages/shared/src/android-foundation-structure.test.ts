@@ -173,7 +173,11 @@ describe("Android foundation structure", () => {
     expect(shell).toContain(
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
     );
-    expect(shell).toContain("repeat(5)");
+    expect(shell).toContain("repeat(10)");
+    expect(shell).toContain("contentScroll.scrollTo(contentScroll.maxValue)");
+    expect(shell.indexOf("contentScroll.scrollTo(contentScroll.maxValue)")).toBeLessThan(
+      shell.indexOf("actionFocus.requestFocus()"),
+    );
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
     expect(shell).toContain("if (actionFocus.requestFocus()) return@LaunchedEffect");

@@ -49,8 +49,12 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
     var scopeExpanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
         if (state == FoundationShellState.Failure) {
-            repeat(5) {
+            repeat(10) {
                 withFrameNanos { }
+                if (contentScroll.maxValue > 0) {
+                    contentScroll.scrollTo(contentScroll.maxValue)
+                    withFrameNanos { }
+                }
                 if (actionFocus.requestFocus()) return@LaunchedEffect
             }
         }
