@@ -290,6 +290,28 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain("?.scroll(Direction.DOWN, 0.8f)");
     expect(currentRuntime).toContain("bounds.width() > 0 && bounds.height() > 0");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
+    expect(currentRuntime).toContain("private fun waitForSystemFontScale(minimum: Float)");
+    expect(currentRuntime).toContain(
+      'device.executeShellCommand("settings get system font_scale")',
+    );
+    expect(currentRuntime).toContain("private fun waitForLandscapeDisplay()");
+    expect(currentRuntime).toContain("device.displayWidth > device.displayHeight");
+    const currentLargeText = currentRuntime.match(
+      /@Test fun currentRuntimeLargeTextAndLandscapeKeepActionReachable\(\) \{([\s\S]*?)\n    \}\n\n    @Test fun currentRuntimeReducedMotionKeepsTheSameEndState/,
+    )?.[1];
+    expect(currentLargeText).toBeDefined();
+    expect(currentLargeText).toContain("waitForSystemFontScale(1.9f)");
+    expect(currentLargeText).toContain("waitForLandscapeDisplay()");
+    expect(currentLargeText).toContain("scenario.onActivity { }");
+    expect(currentLargeText).toContain("waitForNode(expectedStateTag())");
+    expect(currentLargeText).toContain("waitForNode(expectedActionTag(), scroll = true)");
+    expect(currentLargeText).not.toContain("recreateFoundation()");
+    expect(currentLargeText!.indexOf("waitForSystemFontScale(1.9f)")).toBeLessThan(
+      currentLargeText!.indexOf("SCREEN_ORIENTATION_LANDSCAPE"),
+    );
+    expect(currentLargeText!.indexOf("SCREEN_ORIENTATION_LANDSCAPE")).toBeLessThan(
+      currentLargeText!.indexOf("waitForLandscapeDisplay()"),
+    );
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
     expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");

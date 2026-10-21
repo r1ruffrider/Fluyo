@@ -3,6 +3,7 @@ package com.fluyo.app
 import android.app.LocaleManager
 import android.content.pm.ActivityInfo
 import android.os.LocaleList
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.filters.SdkSuppress
@@ -83,6 +84,24 @@ class CurrentRuntimeFoundationTest {
         scenario.recreate()
     }
 
+    private fun waitForSystemFontScale(minimum: Float) {
+        repeat(20) {
+            val scale =
+                device.executeShellCommand("settings get system font_scale").trim().toFloatOrNull()
+            if (scale != null && scale >= minimum) return
+            SystemClock.sleep(250)
+        }
+        throw AssertionError("font scale")
+    }
+
+    private fun waitForLandscapeDisplay() {
+        repeat(20) {
+            if (device.displayWidth > device.displayHeight) return
+            SystemClock.sleep(250)
+        }
+        throw AssertionError("runtime launch")
+    }
+
     private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {
         repeat(8) {
             device.wait(Until.findObject(By.res(tag)), 1_500)?.let { node ->
@@ -128,13 +147,20 @@ class CurrentRuntimeFoundationTest {
 
     @Test fun currentRuntimeLargeTextAndLandscapeKeepActionReachable() {
         changedFontScale = true
-        changedOrientation = true
         device.executeShellCommand("settings put system font_scale 2.0")
+        waitForSystemFontScale(1.9f)
+        changedOrientation = true
         scenario.onActivity {
             it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
-        recreateFoundation()
-        waitForNode(expectedActionTag(), scroll = true)
+        waitForLandscapeDisplay()
+        try {
+            scenario.onActivity { }
+            waitForNode(expectedStateTag())
+            waitForNode(expectedActionTag(), scroll = true)
+        } catch (_: Throwable) {
+            throw AssertionError("node missing")
+        }
     }
 
     @Test fun currentRuntimeReducedMotionKeepsTheSameEndState() {
