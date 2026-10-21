@@ -52,12 +52,6 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
             }
         }
     }
-    LaunchedEffect(scopeExpanded) {
-        if (scopeExpanded) {
-            withFrameNanos { }
-            contentScroll.scrollTo(contentScroll.maxValue)
-        }
-    }
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding().padding(20.dp),
         contentAlignment = Alignment.Center,
@@ -75,7 +69,6 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
                     FoundationShellState.SignedOut -> FoundationStateCopy(stringResource(R.string.signed_out_title), stringResource(R.string.signed_out_body), "signed-out-state")
                     FoundationShellState.Failure -> FoundationStateCopy(stringResource(R.string.error_title), stringResource(R.string.error_body), "error-state")
                 }
-                if (scopeExpanded) Text(stringResource(R.string.scope_detail), modifier = Modifier.testTag("scope-detail"))
                 if (configuration.isInternal && configuration.environment != "production") {
                     Text(
                         stringResource(R.string.internal_marker, configuration.environment, configuration.semanticVersion, configuration.versionCode, configuration.sourceCommitShort),
@@ -90,6 +83,13 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
                 Spacer(Modifier.padding(bottom = 4.dp))
             }
             Spacer(Modifier.height(18.dp))
+            if (scopeExpanded && state == FoundationShellState.SignedOut) {
+                Text(
+                    stringResource(R.string.scope_detail),
+                    modifier = Modifier.fillMaxWidth().testTag("scope-detail"),
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             when (state) {
                 FoundationShellState.SignedOut -> Button(
                     onClick = { scopeExpanded = !scopeExpanded },

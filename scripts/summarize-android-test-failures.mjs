@@ -39,6 +39,17 @@ const failureCategory = (body) => {
   return "assertion";
 };
 
+const exceptionTypes = (body) =>
+  [
+    ...new Set(
+      [...body.matchAll(/\b([A-Za-z_$][A-Za-z0-9_.$]*(?:Exception|Error))\b/g)].map((match) =>
+        safeIdentifier(match[1]),
+      ),
+    ),
+  ]
+    .sort()
+    .slice(0, 6);
+
 const failures = [];
 for (const file of xmlFiles.sort()) {
   const xml = fs.readFileSync(file, "utf8");
@@ -54,6 +65,7 @@ for (const file of xmlFiles.sort()) {
       testName: attribute(attributes, "name"),
       kind,
       category: failureCategory(failureTag[2]),
+      exceptionTypes: exceptionTypes(body),
       sourceLine,
     });
   }

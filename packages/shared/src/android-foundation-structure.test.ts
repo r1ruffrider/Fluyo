@@ -112,7 +112,7 @@ describe("Android foundation structure", () => {
     const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
     const app = text("app/build.gradle.kts");
     expect(shell).not.toMatch(/Text\(\s*"/);
-    expect(app).toContain('localeFilters += listOf("en", "b+en+XA", "b+ar+XB")');
+    expect(app).not.toContain("localeFilters");
     expect(app).toContain("isPseudoLocalesEnabled = true");
     const strings = text("app/src/main/res/values/strings.xml");
     expect(strings).toContain("does not include sign-in, lessons, billing, or public access");
@@ -133,7 +133,8 @@ describe("Android foundation structure", () => {
     expect(shell).toContain("verticalScroll");
     expect(shell).toContain("fillMaxHeight()");
     expect(shell).toContain("Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll)");
-    expect(shell).toContain("contentScroll.scrollTo(contentScroll.maxValue)");
+    expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
+    expect(shell).toContain('modifier = Modifier.fillMaxWidth().testTag("scope-detail")');
     expect(shell).toContain("repeat(5)");
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");

@@ -24,6 +24,7 @@ test("reports only bounded test identity and failure kind", () => {
           testName: "loadingHasOneState",
           kind: "failure",
           category: "assertion",
+          exceptionTypes: [],
           sourceLine: null,
         },
       ],
@@ -49,6 +50,7 @@ test("maps raw assertion details to a closed category without retaining text", (
         testName: "largeText",
         kind: "failure",
         category: "visibility",
+        exceptionTypes: [],
         sourceLine: null,
       },
     ]);
@@ -73,10 +75,39 @@ test("ignores semantics-tree bounds outside the failure message", () => {
         testName: "marker",
         kind: "failure",
         category: "count",
+        exceptionTypes: [],
         sourceLine: 109,
       },
     ]);
     assert.doesNotMatch(result.stdout, /bounds|width|height|example\.test/i);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reports only bounded exception class names from runtime failures", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-exception-"));
+  try {
+    fs.writeFileSync(
+      path.join(root, "TEST-runtime.xml"),
+      '<testsuite><testcase classname="Shell" name="launch"><error message="runtime error">java.lang.IllegalStateException: learner@example.test\nCaused by: android.app.ForegroundServiceStartNotAllowedException: C:\\private\\path</error></testcase></testsuite>',
+    );
+    const result = spawnSync(process.execPath, [script, root], { encoding: "utf8" });
+    assert.equal(result.status, 0);
+    assert.deepEqual(JSON.parse(result.stdout).failures, [
+      {
+        className: "Shell",
+        testName: "launch",
+        kind: "error",
+        category: "runtime_error",
+        exceptionTypes: [
+          "android.app.ForegroundServiceStartNotAllowedException",
+          "java.lang.IllegalStateException",
+        ],
+        sourceLine: null,
+      },
+    ]);
+    assert.doesNotMatch(result.stdout, /example\.test|private|runtime error/i);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
