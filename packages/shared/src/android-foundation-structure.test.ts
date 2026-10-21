@@ -174,9 +174,9 @@ describe("Android foundation structure", () => {
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
     );
     expect(shell).toContain("repeat(10)");
-    expect(shell).toContain("contentScroll.scrollTo(contentScroll.maxValue)");
-    expect(shell.indexOf("contentScroll.scrollTo(contentScroll.maxValue)")).toBeLessThan(
-      shell.indexOf("actionFocus.requestFocus()"),
+    expect(shell).not.toContain("contentScroll.scrollTo(contentScroll.maxValue)");
+    expect(shell.indexOf("FoundationShellState.Failure -> FoundationActionButton(")).toBeLessThan(
+      shell.indexOf("if (configuration.isInternal"),
     );
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
