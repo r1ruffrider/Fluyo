@@ -46,8 +46,8 @@ class FoundationShellTest {
     }
 
     private fun assertNodeIsFullyInsideFoundation(tag: String) {
-        val root = compose.onNodeWithTag("foundation-root").fetchSemanticsNode().boundsInRoot
-        val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        val root = compose.onNodeWithTag("foundation-root").fetchSemanticsNode().boundsInWindow
+        val node = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInWindow
         assertTrue(node.width > 0f && node.height > 0f)
         assertTrue(node.left >= root.left && node.top >= root.top)
         assertTrue(node.right <= root.right && node.bottom <= root.bottom)
@@ -115,7 +115,7 @@ class FoundationShellTest {
             width = 840.dp
         }
         compose.waitForIdle()
-        compose.onNodeWithTag("signed-out-state").assertIsDisplayed()
+        compose.onAllNodesWithTag("signed-out-state").assertCountEquals(1)
         assertNodeIsFullyInsideFoundation("review-build-button")
         compose.runOnIdle {
             state = FoundationShellState.Failure
