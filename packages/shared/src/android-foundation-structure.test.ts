@@ -174,14 +174,19 @@ describe("Android foundation structure", () => {
       'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
     );
     expect(shell).toContain("repeat(120)");
-    expect(shell).toContain("contentScroll.scrollTo(contentScroll.maxValue)");
-    expect(shell.indexOf("contentScroll.scrollTo(contentScroll.maxValue)")).toBeLessThan(
+    expect(shell).toContain("var settledFrames = 0");
+    expect(shell).toContain("target > 0 && contentScroll.value != target");
+    expect(shell).toContain("contentScroll.scrollTo(target)");
+    expect(shell.indexOf("contentScroll.scrollTo(target)")).toBeLessThan(
       shell.indexOf("actionFocus.requestFocus()"),
     );
     expect(shell).toContain("if (state == FoundationShellState.Failure)");
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
     expect(shell).toContain("actionFocus.requestFocus()");
-    expect(shell).toContain("if (actionIsFocused) return@LaunchedEffect");
+    expect(shell).toContain(
+      "if (actionIsFocused && contentScroll.value == contentScroll.maxValue)",
+    );
+    expect(shell).toContain("if (settledFrames >= 3) return@LaunchedEffect");
     expect(shell).toContain(
       "modifier = modifier.onFocusChanged { focusState -> onFocusChanged(focusState.isFocused) }.semantics { focused = isFocused }",
     );
