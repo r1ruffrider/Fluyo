@@ -157,7 +157,9 @@ describe("Android foundation structure", () => {
       'Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
     );
     expect(shell).toContain("contentAlignment = Alignment.TopCenter");
-    expect(shell).toContain('Modifier.testTag("foundation-root").fillMaxSize()');
+    expect(shell).toContain(
+      'Modifier.testTag("foundation-root").semantics { testTagsAsResourceId = true }.fillMaxSize()',
+    );
     expect(shell).not.toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
     expect(shell.match(/fillMaxWidth\(\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
     expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
@@ -169,36 +171,36 @@ describe("Android foundation structure", () => {
     expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
     expect(shell).toContain("if (actionFocus.requestFocus()) return@LaunchedEffect");
     const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
-    expect(instrumentation.match(/@Test fun /g)).toHaveLength(6);
+    expect(instrumentation.match(/@Test fun /g)).toHaveLength(4);
     expect(instrumentation).toContain("compose.activity.setContent");
     expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
     expect(instrumentation).toContain("performSemanticsAction(SemanticsActions.RequestFocus)");
-    expect(instrumentation).toContain("performScrollTo");
-    expect(instrumentation.match(/waitForNodeToBeDisplayed/g)).toHaveLength(5);
-    expect(instrumentation).toContain("compose.waitUntil(5_000)");
-    expect(instrumentation).toContain("node.performScrollTo()");
-    expect(instrumentation).toContain("target.width > 0f && target.height > 0f");
-    expect(instrumentation).toContain('throw AssertionError("node count")');
-    expect(instrumentation).toContain('throw AssertionError("scroll action")');
-    expect(instrumentation).toContain('throw AssertionError("node geometry")');
-    expect(instrumentation).toContain('throw AssertionError("content setup")');
-    expect(instrumentation).toContain('throw AssertionError("state transition")');
-    expect(instrumentation).not.toContain('throw AssertionError("failure transition")');
-    expect(instrumentation).not.toContain('throw AssertionError("content teardown")');
-    expect(instrumentation).toContain(
+    expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
+    const responsive = text(
+      "app/src/androidTest/java/com/fluyo/app/FoundationResponsiveDeviceTest.kt",
+    );
+    expect(responsive.match(/@Test fun /g)).toHaveLength(2);
+    expect(responsive).toContain("ActivityScenarioRule(MainActivity::class.java)");
+    expect(responsive).toContain("device.findObject(By.res(tag))");
+    expect(responsive).toContain(
+      'device.findObject(By.res("foundation-scroll"))?.scroll(Direction.DOWN, 0.8f)',
+    );
+    expect(responsive).toContain('throw AssertionError("node missing")');
+    expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 2.0")',
     );
-    expect(instrumentation).toContain(
+    expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 1.0")',
     );
-    expect(instrumentation).toContain(
+    expect(responsive).toContain(
       "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE",
     );
-    expect(instrumentation).toContain(
+    expect(responsive).toContain(
       "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED",
     );
     expect(instrumentation).not.toContain("resources.assets.locales");
-    expect(instrumentation).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
+    expect(responsive).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(
       'compose.onNodeWithTag("signed-out-state").assertIsDisplayed()',
     );
@@ -213,7 +215,7 @@ describe("Android foundation structure", () => {
     );
     expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
     expect(currentRuntime.match(/@Test fun /g)).toHaveLength(7);
-    expect(currentRuntime).toContain("createEmptyComposeRule()");
+    expect(currentRuntime).toContain("ActivityScenarioRule(MainActivity::class.java)");
     expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
     expect(currentRuntime).toContain("device.wakeUp()");
     expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
@@ -225,13 +227,16 @@ describe("Android foundation structure", () => {
     expect(currentRuntime).toContain('throw AssertionError("unexpected state")');
     expect(currentRuntime).toContain('throw AssertionError("runtime cleanup")');
     expect(currentRuntime).toContain('throw AssertionError("runtime launch")');
-    expect(currentRuntime).toContain("createEmptyComposeRule()");
-    expect(currentRuntime).toContain("ActivityScenario.launch(MainActivity::class.java)");
+    expect(currentRuntime).not.toContain("createEmptyComposeRule()");
+    expect(currentRuntime).not.toContain("ActivityScenario.launch(MainActivity::class.java)");
     expect(currentRuntime).not.toContain("scenario.close()");
     expect(currentRuntime).not.toContain("createAndroidComposeRule");
     expect(currentRuntime).not.toContain("device.pressHome()");
-    expect(currentRuntime).toContain("node.performScrollTo()");
-    expect(currentRuntime).toContain("target.width > 0f && target.height > 0f");
+    expect(currentRuntime).toContain("device.findObject(By.res(tag))");
+    expect(currentRuntime).toContain(
+      'device.findObject(By.res("foundation-scroll"))?.scroll(Direction.DOWN, 0.8f)',
+    );
+    expect(currentRuntime).toContain("bounds.width() > 0 && bounds.height() > 0");
     expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
     expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
     expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
@@ -269,6 +274,7 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("^OK \\(1 test\\)\\r?$");
     expect(workflowText).toContain('failure_category="process_status"');
     expect(workflowText).toContain('failure_category="state_missing"');
+    expect(workflowText).toContain('failure_category="node_missing"');
     expect(workflowText).toContain('failure_category="runtime_launch"');
     expect(workflowText).toContain('failure_category="loading_present"');
     expect(workflowText).toContain('failure_category="unexpected_state"');

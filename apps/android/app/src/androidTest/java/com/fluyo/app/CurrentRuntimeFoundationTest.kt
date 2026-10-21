@@ -4,17 +4,13 @@ import android.app.LocaleManager
 import android.content.pm.ActivityInfo
 import android.os.LocaleList
 import android.view.KeyEvent
-import androidx.test.core.app.ActivityScenario
-import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiObject2
 import org.junit.After
 import org.junit.Before
 import org.junit.Assert.assertTrue
@@ -23,7 +19,7 @@ import org.junit.Test
 
 @SdkSuppress(minSdkVersion = 37)
 class CurrentRuntimeFoundationTest {
-    @get:Rule val compose = createEmptyComposeRule()
+    @get:Rule val activityRule = ActivityScenarioRule(MainActivity::class.java)
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val device = UiDevice.getInstance(instrumentation)
@@ -32,14 +28,13 @@ class CurrentRuntimeFoundationTest {
     private var changedFontScale = false
     private var changedMotionScale = false
     private var changedWindowSize = false
-    private lateinit var scenario: ActivityScenario<MainActivity>
+    private val scenario get() = activityRule.scenario
 
     @Before fun launchFoundation() {
         try {
             device.wakeUp()
             device.executeShellCommand("wm dismiss-keyguard")
-            scenario = ActivityScenario.launch(MainActivity::class.java)
-            compose.waitForIdle()
+            scenario.onActivity { }
         } catch (_: Throwable) {
             throw AssertionError("runtime launch")
         }
@@ -85,20 +80,20 @@ class CurrentRuntimeFoundationTest {
         device.wakeUp()
         device.executeShellCommand("wm dismiss-keyguard")
         scenario.recreate()
-        compose.waitForIdle()
     }
 
-    private fun waitForNode(tag: String, scroll: Boolean = false) {
-        compose.waitUntil(10_000) {
-            compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
+    private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {
+        repeat(8) {
+            device.findObject(By.res(tag))?.let { node ->
+                val bounds = node.visibleBounds
+                if (bounds.width() > 0 && bounds.height() > 0) return node
+            }
+            if (scroll) {
+                device.findObject(By.res("foundation-scroll"))?.scroll(Direction.DOWN, 0.8f)
+            }
+            device.waitForIdle()
         }
-        val node = compose.onNodeWithTag(tag)
-        if (scroll) {
-            node.performScrollTo()
-            compose.waitForIdle()
-            val target = node.fetchSemanticsNode().boundsInRoot
-            assertTrue(target.width > 0f && target.height > 0f)
-        }
+        throw AssertionError("node missing")
     }
 
     @Test fun currentRuntimeLaunchHasOneHonestEndState() {
@@ -108,12 +103,12 @@ class CurrentRuntimeFoundationTest {
             throw AssertionError("state missing")
         }
         try {
-            compose.onAllNodesWithTag("loading-state").assertCountEquals(0)
+            assertTrue(device.findObject(By.res("loading-state")) == null)
         } catch (_: Throwable) {
             throw AssertionError("loading present")
         }
         try {
-            compose.onAllNodesWithTag(unexpectedStateTag()).assertCountEquals(0)
+            assertTrue(device.findObject(By.res(unexpectedStateTag())) == null)
         } catch (_: Throwable) {
             throw AssertionError("unexpected state")
         }
@@ -142,9 +137,8 @@ class CurrentRuntimeFoundationTest {
 
     @Test fun currentRuntimeActionRemainsLocalAndHonest() {
         recreateFoundation()
-        val action = compose.onNodeWithTag(expectedActionTag())
-        waitForNode(expectedActionTag(), scroll = true)
-        action.performClick()
+        val action = waitForNode(expectedActionTag(), scroll = true)
+        action.click()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {
             waitForNode("scope-detail", scroll = true)
         } else {
@@ -163,14 +157,14 @@ class CurrentRuntimeFoundationTest {
 
     @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder() {
         recreateFoundation()
-        val action = compose.onNodeWithTag(expectedActionTag())
-        waitForNode(expectedActionTag(), scroll = true)
+        var action = waitForNode(expectedActionTag(), scroll = true)
         if (BuildConfig.FLUYO_ENVIRONMENT == "production") {
-            action.assertIsFocused()
+            assertTrue(action.isFocused)
         } else {
             device.pressKeyCode(KeyEvent.KEYCODE_TAB)
-            compose.waitForIdle()
-            action.assertIsFocused()
+            device.waitForIdle()
+            action = waitForNode(expectedActionTag())
+            assertTrue(action.isFocused)
         }
         device.pressDPadCenter()
         if (BuildConfig.FLUYO_ENVIRONMENT != "production") {

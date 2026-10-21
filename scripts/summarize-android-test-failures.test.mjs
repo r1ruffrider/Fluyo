@@ -66,6 +66,7 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "fluyo-android-summary-stage-"));
   try {
     const cases = [
+      ["node missing", "node_missing"],
       ["node count", "node_count"],
       ["scroll action", "scroll_action"],
       ["node geometry", "node_geometry"],
@@ -84,7 +85,7 @@ test("maps only exact bounded reachability sentinels from the failure body", () 
       assert.equal(JSON.parse(result.stdout).failures[0].category, category);
       assert.doesNotMatch(
         result.stdout,
-        /example\.test|private|node count|scroll action|node geometry|content setup|state transition|failure transition|content teardown/i,
+        /example\.test|private|node missing|node count|scroll action|node geometry|content setup|state transition|failure transition|content teardown/i,
       );
     }
   } finally {

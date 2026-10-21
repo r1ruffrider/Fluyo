@@ -75,6 +75,7 @@ const failureCategory = (body) => {
 
 const boundedStageCategory = (body) => {
   const stages = [
+    ["node_missing", /AssertionError: node missing(?:\r?\n|$)/],
     ["node_count", /AssertionError: node count(?:\r?\n|$)/],
     ["scroll_action", /AssertionError: scroll action(?:\r?\n|$)/],
     ["node_geometry", /AssertionError: node geometry(?:\r?\n|$)/],

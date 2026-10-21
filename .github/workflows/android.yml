@@ -253,6 +253,8 @@ jobs:
               failure_category=""
               if grep -q 'AssertionError: state missing' "$INSTRUMENT_LOG"; then
                 failure_category="state_missing"
+              elif grep -q 'AssertionError: node missing' "$INSTRUMENT_LOG"; then
+                failure_category="node_missing"
               elif grep -q 'AssertionError: runtime launch' "$INSTRUMENT_LOG"; then
                 failure_category="runtime_launch"
               elif grep -q 'AssertionError: loading present' "$INSTRUMENT_LOG"; then
