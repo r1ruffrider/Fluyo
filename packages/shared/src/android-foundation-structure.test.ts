@@ -189,9 +189,7 @@ describe("Android foundation structure", () => {
     );
     expect(shell).toContain("if (settledFrames >= 30) return@LaunchedEffect");
     expect(shell).toContain("previousMax = currentMax");
-    expect(shell).toContain(
-      "modifier = modifier.onFocusChanged { focusState ->",
-    );
+    expect(shell).toContain("modifier = modifier.onFocusChanged { focusState ->");
     expect(shell).toContain("isFocused = focusState.isFocused");
     expect(shell).toContain("onFocusChanged(isFocused)");
     expect(shell).toContain("}.semantics { focused = isFocused }");
