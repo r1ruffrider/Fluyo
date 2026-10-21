@@ -57,9 +57,22 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("font scale")
     }
 
+    private fun waitForSystemFontScaleSetting(expected: Float) {
+        repeat(20) {
+            val current = device.executeShellCommand("settings get system font_scale")
+                .trim()
+                .toFloatOrNull()
+            if (current != null && current >= expected) return
+            Thread.sleep(250)
+        }
+        throw AssertionError("font scale")
+    }
+
     @Test fun twoHundredPercentFontKeepsThePrimaryActionReachable() {
         changedFontScale = true
         device.executeShellCommand("settings put system font_scale 2.0")
+        waitForSystemFontScaleSetting(1.9f)
+        activityRule.scenario.recreate()
         waitForFontScale(1.9f)
         waitForNode("signed-out-state")
         waitForNode("review-build-button", scroll = true)

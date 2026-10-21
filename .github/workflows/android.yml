@@ -333,12 +333,16 @@ jobs:
             ACCESSIBILITY_SETTING="compose_semantics_system_input_api37"
             CURRENT_RUNTIME_TEST_COUNT="7"
           fi
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          test -x "$APKSIGNER"
+          test -x "$AAPT"
           for apk in "$TEMP"/*.apk; do
-            apksigner verify --print-certs "$apk" >"$TEMP/signing.txt"
+            "$APKSIGNER" verify --print-certs "$apk" >"$TEMP/signing.txt"
             grep -q "Android Debug" "$TEMP/signing.txt"
-            aapt dump permissions "$apk" >"$TEMP/permissions.txt"
+            "$AAPT" dump permissions "$apk" >"$TEMP/permissions.txt"
             ! grep -q "uses-permission:" "$TEMP/permissions.txt"
-            aapt dump xmltree "$apk" AndroidManifest.xml >"$TEMP/manifest.txt"
+            "$AAPT" dump xmltree "$apk" AndroidManifest.xml >"$TEMP/manifest.txt"
             test "$(grep -c 'E: activity' "$TEMP/manifest.txt")" -eq 1
             grep -q 'com.fluyo.app.MainActivity' "$TEMP/manifest.txt"
             test "$(grep -c 'E: provider' "$TEMP/manifest.txt")" -eq 1

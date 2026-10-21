@@ -194,9 +194,11 @@ describe("Android foundation structure", () => {
       'device.executeShellCommand("settings put system font_scale 2.0")',
     );
     expect(responsive).toContain("waitForFontScale(1.9f)");
+    expect(responsive).toContain("waitForSystemFontScaleSetting(1.9f)");
+    expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
     expect(responsive).toContain("activity.resources.configuration.fontScale >= expected");
-    expect(responsive).not.toContain(
-      'device.executeShellCommand("settings put system font_scale 2.0")\n        activityRule.scenario.recreate()',
+    expect(responsive).toContain(
+      "waitForSystemFontScaleSetting(1.9f)\n        activityRule.scenario.recreate()\n        waitForFontScale(1.9f)",
     );
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 1.0")',
@@ -270,6 +272,15 @@ describe("Android foundation structure", () => {
     expect(workflowText).toContain("start_current_emulator");
     expect(workflowText).toContain('"emulator"');
     expect(workflowText).toContain('test -x "$ANDROID_HOME/emulator/emulator"');
+    expect(workflowText).toContain('APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"');
+    expect(workflowText).toContain('AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"');
+    expect(workflowText).toContain('test -x "$APKSIGNER"');
+    expect(workflowText).toContain('test -x "$AAPT"');
+    expect(workflowText).toContain('"$APKSIGNER" verify --print-certs "$apk"');
+    expect(workflowText).toContain('"$AAPT" dump permissions "$apk"');
+    expect(workflowText).toContain('"$AAPT" dump xmltree "$apk" AndroidManifest.xml');
+    expect(workflowText).not.toMatch(/^\s+apksigner\s/m);
+    expect(workflowText).not.toMatch(/^\s+aapt\s/m);
     expect(workflowText).toContain('"$ANDROID_HOME/emulator/emulator" -avd fluyo-api37');
     expect(workflowText).toContain("-no-metrics -wipe-data -accel on -cores 2 -memory 4096");
     expect(workflowText).toContain("for attempt in 1 2");
