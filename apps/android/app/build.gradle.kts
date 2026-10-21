@@ -73,7 +73,7 @@ android {
         compose = true
         buildConfig = true
     }
-    androidResources { localeFilters += listOf("en", "en-rXA", "ar-rXB") }
+    androidResources { localeFilters += listOf("en", "en-XA", "ar-XB") }
     packaging { resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}") }
     testOptions {
         execution = "ANDROIDX_TEST_ORCHESTRATOR"

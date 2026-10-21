@@ -42,6 +42,7 @@ fun FluyoFoundationApp(model: FoundationShellModel = viewModel()) {
 @Composable
 fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration, onRetry: () -> Unit) {
     val actionFocus = remember { FocusRequester() }
+    val contentScroll = rememberScrollState()
     var scopeExpanded by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state) {
         if (state == FoundationShellState.Failure) {
@@ -49,6 +50,12 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
                 withFrameNanos { }
                 if (actionFocus.requestFocus()) return@LaunchedEffect
             }
+        }
+    }
+    LaunchedEffect(scopeExpanded) {
+        if (scopeExpanded) {
+            withFrameNanos { }
+            contentScroll.scrollTo(contentScroll.maxValue)
         }
     }
     Box(
@@ -59,7 +66,7 @@ fun FoundationShell(state: FoundationShellState, configuration: AppConfiguration
             modifier = Modifier.fillMaxWidth().fillMaxHeight().widthIn(max = 640.dp),
         ) {
             Column(
-                modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(contentScroll),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.testTag("brand-heading").semantics { heading(); traversalIndex = 0f })
