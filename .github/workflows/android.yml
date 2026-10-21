@@ -76,7 +76,7 @@ jobs:
           cmdline-tools-version: 15859902
           packages: platform-tools
 
-      - name: Install pinned SDK packages
+      - name: Install approved SDK packages
         shell: bash
         run: |
           set -euo pipefail
