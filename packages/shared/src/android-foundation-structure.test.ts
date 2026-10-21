@@ -177,13 +177,15 @@ describe("Android foundation structure", () => {
     expect(instrumentation).toContain(
       "fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus)",
     );
-    expect(instrumentation).not.toContain("performScrollTo");
+    expect(instrumentation).toContain(
+      'compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell")',
+    );
     expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
     const responsive = text(
       "app/src/androidTest/java/com/fluyo/app/FoundationResponsiveDeviceTest.kt",
     );
     expect(responsive.match(/@Test fun /g)).toHaveLength(2);
-    expect(responsive).toContain("ActivityScenarioRule(MainActivity::class.java)");
+    expect(responsive).toContain("ActivityScenario.launch(MainActivity::class.java)");
     expect(responsive).toContain("device.wait(Until.findObject(By.res(tag)), 1_500)");
     expect(responsive).toContain(
       'device.wait(Until.findObject(By.res("foundation-scroll")), 1_000)',
@@ -193,13 +195,15 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 2.0")',
     );
-    expect(responsive).toContain("waitForFontScale(1.9f)");
+    expect(responsive).toContain("waitForFontScale(scenario, 1.9f)");
     expect(responsive).toContain("waitForSystemFontScaleSetting(1.9f)");
     expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
     expect(responsive).toContain("activity.resources.configuration.fontScale >= expected");
     expect(responsive).toContain(
-      "waitForSystemFontScaleSetting(1.9f)\n        activityRule.scenario.recreate()\n        waitForFontScale(1.9f)",
+      "waitForSystemFontScaleSetting(1.9f)\n        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }\n        waitForFontScale(scenario, 1.9f)",
     );
+    expect(responsive).not.toContain("ActivityScenarioRule");
+    expect(responsive).toContain("activeScenario?.close()");
     expect(responsive).toContain(
       'device.executeShellCommand("settings put system font_scale 1.0")',
     );

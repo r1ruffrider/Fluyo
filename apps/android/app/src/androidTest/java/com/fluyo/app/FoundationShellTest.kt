@@ -20,6 +20,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
@@ -54,7 +55,7 @@ class FoundationShellTest {
         action.assertIsDisplayed().assertHeightIsAtLeast(48.dp)
         assertTrue(action.fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus))
         action.performClick()
-        compose.onNodeWithTag("scope-detail").assertTextContains("local shell")
+        compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell")
     }
 
     @Test fun safeErrorFocusesRetryAndOmitsInternalDetail() {

@@ -1,7 +1,7 @@
 package com.fluyo.app
 
 import android.content.pm.ActivityInfo
-import androidx.test.ext.junit.rules.ActivityScenarioRule
+import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -11,23 +11,24 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 import org.junit.After
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 
 @SdkSuppress(maxSdkVersion = 36)
 class FoundationResponsiveDeviceTest {
-    @get:Rule val activityRule = ActivityScenarioRule(MainActivity::class.java)
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+    private var activeScenario: ActivityScenario<MainActivity>? = null
     private var changedFontScale = false
     private var changedOrientation = false
 
     @After fun restoreRuntimeSettings() {
-        if (changedFontScale) device.executeShellCommand("settings put system font_scale 1.0")
         if (changedOrientation) {
-            activityRule.scenario.onActivity {
+            activeScenario?.onActivity {
                 it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
         }
+        activeScenario?.close()
+        activeScenario = null
+        if (changedFontScale) device.executeShellCommand("settings put system font_scale 1.0")
     }
 
     private fun waitForNode(tag: String, scroll: Boolean = false): UiObject2 {
@@ -45,10 +46,10 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("node missing")
     }
 
-    private fun waitForFontScale(expected: Float) {
+    private fun waitForFontScale(scenario: ActivityScenario<MainActivity>, expected: Float) {
         repeat(20) {
             var applied = false
-            activityRule.scenario.onActivity { activity ->
+            scenario.onActivity { activity ->
                 applied = activity.resources.configuration.fontScale >= expected
             }
             if (applied) return
@@ -72,18 +73,19 @@ class FoundationResponsiveDeviceTest {
         changedFontScale = true
         device.executeShellCommand("settings put system font_scale 2.0")
         waitForSystemFontScaleSetting(1.9f)
-        activityRule.scenario.recreate()
-        waitForFontScale(1.9f)
+        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
+        waitForFontScale(scenario, 1.9f)
         waitForNode("signed-out-state")
         waitForNode("review-build-button", scroll = true)
     }
 
     @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {
         changedOrientation = true
-        activityRule.scenario.onActivity {
+        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
+        scenario.onActivity {
             it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
-        activityRule.scenario.recreate()
+        scenario.recreate()
         waitForNode("signed-out-state")
         val action = waitForNode("review-build-button", scroll = true)
         assertTrue(action.visibleBounds.width() > 0 && action.visibleBounds.height() > 0)
