@@ -10,6 +10,8 @@ const contractDirectory = resolve(__dirname, "../../../contracts/mobile/android/
 const policy = JSON.parse(
   readFileSync(resolve(contractDirectory, "foundation-policy.json"), "utf8"),
 ) as JsonObject;
+const contractReadme = readFileSync(resolve(contractDirectory, "README.md"), "utf8");
+const normalizedContractReadme = contractReadme.replace(/\s+/g, " ");
 
 const asObject = (value: unknown, label = "value"): JsonObject => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -465,6 +467,13 @@ describe("Android foundation readiness contract v1", () => {
     expect(serialized).not.toMatch(/(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+/);
     expect(serialized).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/);
     expect(serialized).not.toMatch(/-----BEGIN [A-Z ]+PRIVATE KEY-----/);
+    expect(normalizedContractReadme).toContain(
+      "standard non-account Android debug certificate/public-signer metadata",
+    );
+    expect(normalizedContractReadme).toContain(
+      "does not authorize or evidence a private, release, upload, or Play signing identity",
+    );
+    expect(contractReadme).not.toContain("provider/signing identifier");
     expect(readdirSync(contractDirectory).sort()).toEqual([
       "README.md",
       "foundation-policy.json",

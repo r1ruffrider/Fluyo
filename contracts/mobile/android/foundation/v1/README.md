@@ -80,12 +80,15 @@ is not a submitted Google Play Data safety form.
 Shell telemetry remains typed no-op. Product capture remains blocked by
 [TEST_ACCOUNT_GOVERNANCE](../../../../../docs/TEST_ACCOUNT_GOVERNANCE.md). Retained
 evidence must exclude every email-shaped identity, test-account variable reference,
-token, credential, provider/signing identifier, Android/advertising/app-set identifier,
-Install Referrer value, campaign parameter, path, raw log, raw test result, and
-production value. The exact-head scanner opens APK and ZIP entries recursively rather
-than treating their compressed containers as plain text. Android build/test output is
-captured only in temporary storage, reduced to bounded structured failure categories,
-and then deleted.
+token, credential, provider identifier, private/release/upload/Play signing identifier
+or signing material, Android/advertising/app-set identifier, Install Referrer value,
+campaign parameter, path, raw log, raw test result, and production value. The retained
+debug-signed APK may expose only the standard non-account Android debug
+certificate/public-signer metadata needed to classify and bind that artifact. This does
+not authorize or evidence a private, release, upload, or Play signing identity. The
+exact-head scanner opens APK and ZIP entries recursively rather than treating their
+compressed containers as plain text. Android build/test output is captured only in
+temporary storage, reduced to bounded structured failure categories, and then deleted.
 
 The immutable source acceptance matrix contains 29 structured unattempted rows. The
 accepted implementation must produce a separate exact-head execution aggregate rather
