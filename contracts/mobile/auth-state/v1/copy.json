@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0.0",
+  "locale": "en",
+  "status": "repository_only_copy_contract",
+  "identityLabel": "Signed in",
+  "states": {
+    "initializing": {
+      "heading": "Getting Fluyo ready",
+      "body": "Checking your session and app setup.",
+      "primaryAction": null
+    },
+    "signed_out": {
+      "heading": "Sign in to continue",
+      "body": "Use your Fluyo account to continue in this internal build.",
+      "primaryAction": "Sign in"
+    },
+    "callback_pending": {
+      "heading": "Finishing sign-in",
+      "body": "Checking the sign-in response.",
+      "primaryAction": "Cancel"
+    },
+    "authenticated": {
+      "heading": "You’re signed in",
+      "body": "Your account is ready on this device.",
+      "primaryAction": "Continue"
+    },
+    "offline_session_candidate": {
+      "heading": "You’re offline",
+      "body": "Reconnect to verify your account and continue.",
+      "primaryAction": "Try again"
+    },
+    "refresh_pending": {
+      "heading": "Refreshing your session",
+      "body": "Verifying your account before continuing.",
+      "primaryAction": "Cancel"
+    },
+    "expired_or_revoked": {
+      "heading": "Your session ended",
+      "body": "Sign in again to continue safely.",
+      "primaryAction": "Sign in"
+    },
+    "account_switching": {
+      "heading": "Switching accounts",
+      "body": "Clearing the previous account before opening the next one.",
+      "primaryAction": null,
+      "failureAction": "Return to sign in"
+    },
+    "unusable_link": {
+      "heading": "This sign-in link can’t be used",
+      "bodiesByVariant": {
+        "withoutVerifiedSession": "It may be incomplete, expired, or already used. Start sign-in again.",
+        "withVerifiedSession": "Your current session is unchanged. Return to continue safely."
+      },
+      "primaryActionsByVariant": {
+        "withoutVerifiedSession": "Start again",
+        "withVerifiedSession": "Return to safe screen"
+      }
+    },
+    "safe_terminal_error": {
+      "transportOrServer": {
+        "heading": "We couldn’t finish that",
+        "body": "Nothing changed. Check your connection and try again.",
+        "primaryAction": "Try again"
+      },
+      "callbackIssueWithVerifiedSession": {
+        "heading": "We couldn’t finish sign-in",
+        "body": "Your current session is unchanged. Return to continue safely.",
+        "primaryAction": "Return to safe screen"
+      },
+      "forbidden": {
+        "heading": "You can’t open this",
+        "body": "Return to a safe screen to continue.",
+        "primaryAction": "Return to safe screen"
+      }
+    }
+  },
+  "forbiddenCopyClaims": [
+    "native_authentication_is_available",
+    "secure_storage_adapter_is_implemented",
+    "verified_links_are_registered",
+    "recovery_delivery_is_available",
+    "provider_revocation_is_immediate",
+    "account_deletion_is_available",
+    "offline_session_is_verified",
+    "sdk_is_safe_or_approved",
+    "public_or_store_availability"
+  ]
+}

@@ -1,0 +1,954 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "repository_only_provider_neutral_specification",
+  "sourceMainCommit": "7df062b51dd3b915d0064879d969c7d52cbc1c8b",
+  "lastReviewedDate": "2026-10-22",
+  "productionDataUsed": false,
+  "externalActionsPerformed": false,
+  "runtimeEvidenceCount": 0,
+  "mirroredRuntimeScenarios": {
+    "planned": 24,
+    "passed": 0,
+    "failed": 0,
+    "status": "unattempted"
+  },
+  "raci": {
+    "uxStateSemanticsAccountable": "Danila",
+    "repositoryIntegrationResponsible": "Adriana",
+    "materialProductAndExternalChangesConsulted": "Marlon",
+    "authStatePrivacyBoundaryReviewer": "Fernanda",
+    "independentQa": "Elana"
+  },
+  "ports": [
+    "AuthProvider",
+    "SessionVault",
+    "CallbackTransactionStore",
+    "Clock",
+    "OwnerDataStore",
+    "Telemetry"
+  ],
+  "publicStateFields": [
+    "state",
+    "hasSessionCandidate",
+    "hasVerifiedOwnerState",
+    "safeDestinationId",
+    "fixedOutcomeCategory"
+  ],
+  "safeDestinationIds": [
+    "signed_out",
+    "internal_foundation_home",
+    "recovery_start",
+    "previous_safe_screen"
+  ],
+  "safeDestinationRule": "public_state_uses_only_fixed_ids_route_resolution_is_internal_and_never_accepts_uri_path_query_or_fragment",
+  "publicStateForbiddenFields": [
+    "email",
+    "ownerId",
+    "profileId",
+    "userId",
+    "subject",
+    "sessionId",
+    "accessToken",
+    "refreshToken",
+    "authorizationCode",
+    "verifier",
+    "nonce",
+    "stateValue",
+    "password",
+    "cookie",
+    "callbackUrl",
+    "url",
+    "query",
+    "fragment",
+    "header",
+    "body",
+    "path",
+    "provider",
+    "providerError",
+    "signingId",
+    "correlationId",
+    "deviceId",
+    "installId",
+    "campaign"
+  ],
+  "timing": {
+    "delayedAnnouncementMilliseconds": 500,
+    "providerOrApiStepTimeoutMilliseconds": 15000,
+    "totalActionableBoundMilliseconds": 30000,
+    "rule": "all_timers_are_injected_and_canceled_when_auth_generation_changes"
+  },
+  "transitionContract": {
+    "clock": "injected",
+    "currentGenerationRequired": true,
+    "actionAvailabilityMilliseconds": {
+      "cancel_after_bound": 500,
+      "provider_or_api_step_timeout": 15000,
+      "total_actionable_timeout": 30000
+    },
+    "terminalRule": "exactly_one_target_state_after_ordered_effects_complete",
+    "transitions": [
+      {
+        "source": "initializing",
+        "event": "no_session_candidate",
+        "guard": "current_generation_and_vault_read_complete",
+        "effects": ["require_current_auth_generation", "hide_owner_state", "expose_signed_out"],
+        "target": "signed_out"
+      },
+      {
+        "source": "initializing",
+        "event": "verified_owner_confirmed",
+        "guard": "current_generation_and_get_auth_me_200",
+        "effects": [
+          "require_current_auth_generation",
+          "bind_private_owner",
+          "expose_fixed_identity_state"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "initializing",
+        "event": "offline_candidate_detected",
+        "guard": "current_generation_and_network_unavailable",
+        "effects": [
+          "require_current_auth_generation",
+          "preserve_opaque_candidate",
+          "withhold_new_access"
+        ],
+        "target": "offline_session_candidate"
+      },
+      {
+        "source": "initializing",
+        "event": "cold_callback_received",
+        "guard": "current_generation_and_allowed_route_and_atomic_transaction_consume",
+        "effects": [
+          "require_current_auth_generation",
+          "validate_and_consume_pending_callback_transaction",
+          "start_one_callback_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "initializing",
+        "event": "callback_unusable_ingress",
+        "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state"
+        ],
+        "target": "unusable_link"
+      },
+      {
+        "source": "initializing",
+        "event": "provider_or_api_step_timeout",
+        "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_current_step",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "initializing",
+        "event": "total_actionable_timeout",
+        "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_all_auth_work",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "signed_out",
+        "event": "sign_in",
+        "guard": "current_generation_and_user_action",
+        "effects": [
+          "require_current_auth_generation",
+          "create_one_pending_callback_transaction",
+          "open_provider_flow"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "signed_out",
+        "event": "callback_unusable_ingress",
+        "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state"
+        ],
+        "target": "unusable_link"
+      },
+      {
+        "source": "callback_pending",
+        "event": "callback_received",
+        "guard": "current_generation_and_no_exchange_in_flight_and_allowed_route_and_atomic_transaction_consume",
+        "effects": [
+          "require_current_auth_generation",
+          "validate_and_consume_pending_callback_transaction",
+          "start_one_callback_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "callback_pending",
+        "event": "overlapping_callback_received",
+        "guard": "current_generation_and_exchange_in_flight",
+        "effects": [
+          "require_current_auth_generation",
+          "reject_overlapping_callback_without_exchange",
+          "preserve_in_flight_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "callback_pending",
+        "event": "callback_verified",
+        "guard": "current_generation_and_exchange_success_and_get_auth_me_200",
+        "effects": [
+          "require_current_auth_generation",
+          "wipe_callback_transients",
+          "bind_private_owner",
+          "expose_fixed_identity_state"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "callback_pending",
+        "event": "callback_unusable",
+        "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_category",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session_if_present"
+        ],
+        "target": "unusable_link"
+      },
+      {
+        "source": "callback_pending",
+        "event": "cancel_after_bound",
+        "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "callback_pending",
+        "event": "cancel_after_bound",
+        "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "callback_pending",
+        "event": "callback_exchange_failed",
+        "guard": "current_generation_and_fixed_transient_exchange_failure_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
+        "event": "callback_exchange_failed",
+        "guard": "current_generation_and_fixed_transient_exchange_failure_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session",
+          "set_callback_issue_with_verified_session_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
+        "event": "provider_or_api_step_timeout",
+        "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
+        "event": "provider_or_api_step_timeout",
+        "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session",
+          "set_callback_issue_with_verified_session_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
+        "event": "total_actionable_timeout",
+        "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_all_auth_work",
+          "wipe_callback_transients",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
+        "event": "total_actionable_timeout",
+        "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_all_auth_work",
+          "wipe_callback_transients",
+          "preserve_verified_session",
+          "set_callback_issue_with_verified_session_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "authenticated",
+        "event": "continue",
+        "guard": "current_generation_and_verified_owner",
+        "effects": ["require_current_auth_generation", "navigate_to_allowlisted_safe_destination"],
+        "target": "authenticated"
+      },
+      {
+        "source": "authenticated",
+        "event": "warm_callback_received",
+        "guard": "current_generation_and_verified_owner_and_allowed_route_and_atomic_transaction_consume",
+        "effects": [
+          "require_current_auth_generation",
+          "preserve_verified_session",
+          "validate_and_consume_pending_callback_transaction",
+          "start_one_callback_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "authenticated",
+        "event": "callback_unusable_ingress",
+        "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "wipe_callback_transients",
+          "preserve_verified_session"
+        ],
+        "target": "unusable_link"
+      },
+      {
+        "source": "authenticated",
+        "event": "refresh_required",
+        "guard": "current_generation_and_no_refresh_in_flight",
+        "effects": [
+          "require_current_auth_generation",
+          "start_one_refresh",
+          "block_authenticated_writes"
+        ],
+        "target": "refresh_pending"
+      },
+      {
+        "source": "authenticated",
+        "event": "connectivity_lost",
+        "guard": "current_generation_and_network_unavailable",
+        "effects": [
+          "require_current_auth_generation",
+          "preserve_opaque_candidate",
+          "withhold_new_access"
+        ],
+        "target": "offline_session_candidate"
+      },
+      {
+        "source": "authenticated",
+        "event": "route_forbidden",
+        "guard": "current_generation_and_non_auth_route_403",
+        "effects": [
+          "require_current_auth_generation",
+          "preserve_verified_session",
+          "set_forbidden_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "authenticated",
+        "event": "sign_out",
+        "guard": "current_generation_and_user_action",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_all_auth_work",
+          "block_writes_retries_and_navigation",
+          "clear_session_headers_requests_and_owner_cache",
+          "expose_signed_out"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "authenticated",
+        "event": "switch_account",
+        "guard": "current_generation_and_user_action",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_all_auth_work",
+          "block_writes_retries_and_navigation",
+          "clear_session_headers_requests_and_owner_cache",
+          "start_replacement_flow"
+        ],
+        "target": "account_switching"
+      },
+      {
+        "source": "offline_session_candidate",
+        "event": "try_again",
+        "guard": "current_generation_and_user_action_and_network_available",
+        "effects": ["require_current_auth_generation", "start_one_refresh", "withhold_new_access"],
+        "target": "refresh_pending"
+      },
+      {
+        "source": "offline_session_candidate",
+        "event": "sign_out",
+        "guard": "current_generation_and_user_action",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_all_auth_work",
+          "block_writes_retries_and_navigation",
+          "clear_session_headers_requests_and_owner_cache",
+          "expose_signed_out"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "refresh_pending",
+        "event": "refresh_and_owner_verified",
+        "guard": "current_generation_and_refresh_success_and_get_auth_me_200",
+        "effects": [
+          "require_current_auth_generation",
+          "replace_opaque_vault_candidate",
+          "bind_private_owner",
+          "unblock_authenticated_work"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "refresh_pending",
+        "event": "transient_refresh_failure",
+        "guard": "current_generation_and_network_or_server_failure",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_refresh",
+          "preserve_opaque_candidate",
+          "withhold_new_access"
+        ],
+        "target": "offline_session_candidate"
+      },
+      {
+        "source": "refresh_pending",
+        "event": "explicit_invalidation_or_repeated_401",
+        "guard": "current_generation_and_invalid_expired_revoked_or_second_auth_401",
+        "effects": [
+          "require_current_auth_generation",
+          "increment_generation",
+          "cancel_all_auth_work",
+          "block_writes_retries_and_navigation",
+          "clear_session_headers_requests_and_owner_cache"
+        ],
+        "target": "expired_or_revoked"
+      },
+      {
+        "source": "refresh_pending",
+        "event": "cancel_after_bound",
+        "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_refresh",
+          "preserve_opaque_candidate",
+          "withhold_new_access"
+        ],
+        "target": "offline_session_candidate"
+      },
+      {
+        "source": "refresh_pending",
+        "event": "provider_or_api_step_timeout",
+        "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_refresh",
+          "preserve_opaque_candidate",
+          "withhold_new_access"
+        ],
+        "target": "offline_session_candidate"
+      },
+      {
+        "source": "refresh_pending",
+        "event": "total_actionable_timeout",
+        "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_all_auth_work",
+          "preserve_opaque_candidate",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "expired_or_revoked",
+        "event": "sign_in",
+        "guard": "current_generation_and_user_action",
+        "effects": [
+          "require_current_auth_generation",
+          "create_one_pending_callback_transaction",
+          "open_provider_flow"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "account_switching",
+        "event": "different_owner_verified",
+        "guard": "current_generation_and_different_private_uuid_and_get_auth_me_200",
+        "effects": [
+          "require_current_auth_generation",
+          "bind_private_owner",
+          "expose_fixed_identity_state"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "account_switching",
+        "event": "return_to_sign_in",
+        "guard": "current_generation_and_cleanup_complete_and_user_action",
+        "effects": [
+          "require_current_auth_generation",
+          "clear_session_headers_requests_and_owner_cache",
+          "expose_signed_out"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "account_switching",
+        "event": "provider_or_api_step_timeout",
+        "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_replacement_flow",
+          "clear_session_headers_requests_and_owner_cache",
+          "expose_signed_out"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "account_switching",
+        "event": "total_actionable_timeout",
+        "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_all_auth_work",
+          "clear_session_headers_requests_and_owner_cache",
+          "expose_signed_out"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "unusable_link",
+        "event": "start_again",
+        "guard": "current_generation_and_user_action_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "wipe_callback_transients",
+          "preserve_safe_destination",
+          "expose_signed_out"
+        ],
+        "target": "signed_out"
+      },
+      {
+        "source": "unusable_link",
+        "event": "return_to_safe_screen",
+        "guard": "current_generation_and_user_action_and_existing_session_and_get_auth_me_200",
+        "effects": [
+          "require_current_auth_generation",
+          "wipe_callback_transients",
+          "bind_private_owner",
+          "expose_fixed_identity_state"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "safe_terminal_error",
+        "event": "try_again",
+        "guard": "current_generation_and_transport_error_and_retry_context_initialization",
+        "effects": [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "restart_bounded_initialization"
+        ],
+        "target": "initializing"
+      },
+      {
+        "source": "safe_terminal_error",
+        "event": "try_again",
+        "guard": "current_generation_and_transport_error_and_retry_context_refresh",
+        "effects": [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "start_one_refresh",
+          "withhold_new_access"
+        ],
+        "target": "refresh_pending"
+      },
+      {
+        "source": "safe_terminal_error",
+        "event": "try_again",
+        "guard": "current_generation_and_callback_timeout_or_transient_exchange_failure_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "create_one_pending_callback_transaction",
+          "open_provider_flow"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "safe_terminal_error",
+        "event": "return_to_safe_screen",
+        "guard": "current_generation_and_callback_timeout_or_transient_exchange_failure_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "preserve_verified_session",
+          "navigate_to_allowlisted_safe_destination"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "safe_terminal_error",
+        "event": "return_to_safe_screen",
+        "guard": "current_generation_and_forbidden_error_and_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "preserve_verified_session",
+          "navigate_to_allowlisted_safe_destination"
+        ],
+        "target": "authenticated"
+      },
+      {
+        "source": "safe_terminal_error",
+        "event": "return_to_safe_screen",
+        "guard": "current_generation_and_forbidden_error_and_no_verified_session",
+        "effects": ["require_current_auth_generation", "clear_safe_error", "expose_signed_out"],
+        "target": "signed_out"
+      }
+    ]
+  },
+  "generationFence": {
+    "storage": "memory_only_never_logged_or_persisted",
+    "maxCallbackExchanges": 1,
+    "maxRefreshes": 1,
+    "order": [
+      "increment_generation",
+      "cancel_callback_refresh_and_api_work",
+      "block_writes_retries_and_navigation",
+      "purge_prior_owner_and_pending_flow_state",
+      "establish_and_verify_candidate",
+      "expose_fixed_identity_state"
+    ],
+    "fences": ["response_handling", "retries", "navigation", "cache_writes", "storage_writes"]
+  },
+  "states": [
+    {
+      "id": "initializing",
+      "copyId": "initializing",
+      "primaryAction": null,
+      "hasSessionCandidate": "unknown_until_vault_read",
+      "preserve": ["session_vault_untouched", "owner_ui_hidden"],
+      "focus": "do_not_steal_focus",
+      "announcement": "polite_after_delay_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "local_secure_read_then_at_most_one_refresh_then_get_auth_me"
+    },
+    {
+      "id": "signed_out",
+      "copyId": "signed_out",
+      "primaryAction": "sign_in",
+      "hasSessionCandidate": false,
+      "preserve": ["email_input_memory_only", "safe_destination"],
+      "focus": "heading_only_on_session_loss_transition",
+      "announcement": "assertive_once_on_session_loss_otherwise_none",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "no_fluyo_api_before_provider_candidate_then_get_auth_me"
+    },
+    {
+      "id": "callback_pending",
+      "copyId": "callback_pending",
+      "primaryAction": "cancel_after_bound",
+      "hasSessionCandidate": "preserve_only_if_already_verified",
+      "preserve": ["safe_destination", "anonymous_state", "already_verified_session"],
+      "focus": "heading_once",
+      "announcement": "polite_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "local_route_transaction_and_replay_checks_then_provider_exchange_then_get_auth_me"
+    },
+    {
+      "id": "authenticated",
+      "copyId": "authenticated",
+      "primaryAction": "continue",
+      "hasSessionCandidate": true,
+      "preserve": [
+        "refresh_material_in_session_vault_only",
+        "owner_state_after_private_uuid_confirmation"
+      ],
+      "focus": "destination_after_callback_never_on_restore",
+      "announcement": "polite_once_after_callback_only",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "get_auth_me_200_confirms_private_owner_binding_server_owns_authorization"
+    },
+    {
+      "id": "offline_session_candidate",
+      "copyId": "offline_session_candidate",
+      "primaryAction": "try_again",
+      "hasSessionCandidate": true,
+      "preserve": ["opaque_session_vault_candidate", "last_verified_owner_display_state"],
+      "focus": "heading_once",
+      "announcement": "polite_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "reconnect_refresh_if_needed_then_get_auth_me_without_expanding_access"
+    },
+    {
+      "id": "refresh_pending",
+      "copyId": "refresh_pending",
+      "primaryAction": "cancel_after_bound",
+      "hasSessionCandidate": true,
+      "preserve": [
+        "opaque_session_vault_candidate",
+        "owner_cache_hidden_or_last_verified_only",
+        "recoverable_input"
+      ],
+      "focus": "none_before_delay_then_heading_once",
+      "announcement": "polite_after_delay_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "one_refresh_then_get_auth_me_transient_failure_preserves_candidate_explicit_invalidation_clears"
+    },
+    {
+      "id": "expired_or_revoked",
+      "copyId": "expired_or_revoked",
+      "primaryAction": "sign_in",
+      "hasSessionCandidate": false,
+      "preserve": ["anonymous_input", "safe_destination"],
+      "focus": "heading_once",
+      "announcement": "assertive_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "explicit_invalid_expired_or_revoked_refresh_or_second_auth_401_clears_local_state"
+    },
+    {
+      "id": "account_switching",
+      "copyId": "account_switching",
+      "primaryAction": null,
+      "failureAction": "return_to_sign_in",
+      "hasSessionCandidate": false,
+      "preserve": ["safe_destination"],
+      "focus": "heading_once",
+      "announcement": "polite_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "increment_generation_cancel_old_work_clear_prior_state_verify_different_private_uuid_before_exposure"
+    },
+    {
+      "id": "unusable_link",
+      "copyId": "unusable_link",
+      "primaryActionsByVariant": {
+        "withoutVerifiedSession": "start_again",
+        "withVerifiedSession": "return_to_safe_screen"
+      },
+      "hasSessionCandidate": "preserve_only_if_already_verified",
+      "preserve": ["already_verified_session", "safe_destination"],
+      "focus": "heading_once",
+      "announcement": "assertive_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "reject_locally_when_possible_map_provider_failure_to_fixed_category_revalidate_existing_session"
+    },
+    {
+      "id": "safe_terminal_error",
+      "copyId": "safe_terminal_error",
+      "primaryActionsByVariant": {
+        "transport_or_server": "try_again",
+        "callback_issue_with_verified_session": "return_to_safe_screen",
+        "forbidden": "return_to_safe_screen"
+      },
+      "hasSessionCandidate": "preserve_for_transport_500_and_403_clear_only_after_auth_401_rule",
+      "preserve": [
+        "recoverable_input",
+        "verified_session_for_non_auth_failures",
+        "last_verified_owner_state"
+      ],
+      "focus": "heading_once",
+      "announcement": "assertive_once",
+      "telemetry": "zero_retention_no_op",
+      "backendMapping": "transport_or_500_bounded_retry_auth_401_one_refresh_then_session_ended_other_route_403_never_signs_out"
+    }
+  ],
+  "callbackTransaction": {
+    "status": "synthetic_contract_only_no_os_link_registration",
+    "allowedPurposes": ["sign_in", "confirmation", "recovery"],
+    "allowedEnvironments": ["development", "staging"],
+    "scheme": "https",
+    "fixtureHostSuffix": ".test",
+    "requiredBindings": [
+      "purpose",
+      "environment",
+      "exact_host",
+      "exact_path",
+      "pending_transaction",
+      "optional_nonce_when_issued",
+      "one_verifier",
+      "injected_clock_expiry"
+    ],
+    "atomicConsume": true,
+    "wipeOn": [
+      "success",
+      "cancel",
+      "malformed_input",
+      "timeout",
+      "local_sign_out",
+      "account_switch",
+      "relaunch_without_valid_pending_transaction"
+    ],
+    "forbiddenInput": [
+      "non_https",
+      "wrong_environment",
+      "wrong_host",
+      "wrong_path",
+      "missing_or_duplicate_code",
+      "fragment_credentials",
+      "access_token",
+      "refresh_token",
+      "provider_token",
+      "id_token",
+      "missing_or_mismatched_transaction",
+      "expired_transaction",
+      "replay",
+      "duplicate_delivery"
+    ],
+    "retention": "opaque_state_nonce_and_verifier_exist_only_in_memory_inside_callback_transaction_store_until_atomic_consume_expiry_cancel_or_cleanup_then_are_wiped_and_are_never_emitted"
+  },
+  "ownerIsolation": {
+    "confirmationEndpoint": "/api/v1/auth/me",
+    "ownerKey": "private_uuid_from_server_response",
+    "ownerKeyExposure": "never_ui_log_telemetry_fixture_report_filename_or_snapshot",
+    "readRule": "do_not_reveal_or_read_owner_data_before_subject_confirmation",
+    "mismatchRule": "clear_or_quarantine_candidate_and_emit_fixed_category_only",
+    "offlineRule": "may_show_last_verified_display_state_but_cannot_confirm_new_owner_grant_access_or_expand_data"
+  },
+  "refreshSemantics": {
+    "auth401": "one_refresh_then_clear_on_repeated_401",
+    "auth403": "never_refresh_and_never_sign_out",
+    "transientFailure": "preserve_vault_material_and_move_to_offline_or_safe_terminal_state",
+    "explicitInvalidExpiredOrRevoked": "clear_vault_pending_flow_headers_requests_and_owner_cache",
+    "revocationClaim": "refresh_capability_only_access_jwt_may_remain_valid_until_expiry"
+  },
+  "cleanupMatrix": {
+    "local_sign_out": [
+      "session_vault",
+      "pending_callback",
+      "pending_recovery",
+      "headers",
+      "requests",
+      "owner_cache"
+    ],
+    "invalid_expired_or_revoked_refresh": [
+      "session_vault",
+      "pending_callback",
+      "pending_recovery",
+      "headers",
+      "requests",
+      "owner_cache"
+    ],
+    "account_switch": [
+      "session_vault",
+      "pending_callback",
+      "pending_recovery",
+      "headers",
+      "requests",
+      "owner_cache",
+      "old_generation_writes"
+    ],
+    "vault_corruption": [
+      "session_vault",
+      "pending_callback",
+      "pending_recovery",
+      "headers",
+      "requests",
+      "owner_cache"
+    ],
+    "authoritative_deletion_confirmation": [
+      "session_vault",
+      "pending_callback",
+      "pending_recovery",
+      "headers",
+      "requests",
+      "owner_cache"
+    ],
+    "remoteDeletionImplementation": "absent_and_blocked",
+    "rule": "cleanup_completes_before_signed_out_or_new_owner_state_is_exposed"
+  },
+  "telemetry": {
+    "mode": "zero_retention_no_op",
+    "networkRequests": 0,
+    "queuedEvents": 0,
+    "serialization": false,
+    "diskWrites": 0,
+    "correlationIdentifiers": false,
+    "retainedTimestamps": false,
+    "retries": 0
+  },
+  "blockedLiveGates": [
+    "native_auth_sdk_selection_and_checksums",
+    "encrypted_keychain_and_keystore_adapters",
+    "controlled_https_callback_domains",
+    "aasa_and_assetlinks",
+    "supabase_redirect_allowlists",
+    "auth_method_and_sign_out_scope",
+    "non_production_service_and_email_delivery_custody",
+    "recovery_delivery",
+    "provider_revocation_proof",
+    "account_deletion_orchestration",
+    "signing",
+    "physical_devices",
+    "testflight_play_or_store_actions",
+    "production",
+    "capture",
+    "spending"
+  ]
+}

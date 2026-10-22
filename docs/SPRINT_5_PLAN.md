@@ -123,12 +123,24 @@ store work, and spending remain separately gated.
 
 ### 5. Supabase PKCE and secure session lifecycle
 
+The first authorized slice is the
+[provider-neutral auth-state contract](../contracts/mobile/auth-state/v1/README.md) and its in-memory synthetic
+tests. It records ten secret-free states, copy/actions/focus, callback transaction rules, generation fencing,
+owner isolation, cleanup, refresh distinctions, closed diagnostics, and zero-retention telemetry. It performs
+zero native runtime executions; all 24 mirrored native auth/link scenarios remain unattempted. It adds no native
+SDK, platform secure-storage adapter, OS link registration, association file, Supabase redirect allowlist,
+dashboard/account/email-template change, production value, signing, physical-device, capture, store, or spend
+action.
+
 - Implement browser-mediated Supabase PKCE with environment-specific universal links/App Links.
 - Store refresh material only in Keychain or Keystore-backed encrypted storage; never log tokens, authorization codes, full email addresses, or provider errors.
 - Cover sign-up handoff, confirmation, sign-in, recovery, sign-out, token refresh, expiry, revocation, deep-link replay, malformed links, account switching, offline startup, and clock skew.
 - Validate tokens only at the existing API boundary and keep authorization decisions server-side.
 
-Exit gate: both clients authenticate against non-production services, restore and revoke sessions correctly, reject invalid/replayed callbacks, and pass owner-isolation and log-redaction checks.
+Exit gate: both clients authenticate against non-production services, restore sessions, prevent refresh after the
+approved revocation action, reject invalid/replayed callbacks, and pass owner-isolation and log-redaction checks.
+Already-issued access JWTs may remain valid until expiry unless a separately approved server-side active-session
+or deletion-state check proves immediate denial; client wording must not claim otherwise.
 
 ### 6. API client, application shell, and state boundaries
 

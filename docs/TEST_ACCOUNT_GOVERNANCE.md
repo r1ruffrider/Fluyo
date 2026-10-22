@@ -48,6 +48,14 @@ keeps the increment open.
 
 ## Standing execution and merge rule
 
+Marlon directly authorized Adriana on 2026-10-22 to mark ready and merge future Fluyo pull requests without a
+new per-PR prompt only when the current exact head has Elana PASS with zero unresolved material defects, every
+protected and phase-specific specialist/platform gate PASS, and GitHub reports clean/mergeable. Any head change
+invalidates approval evidence and requires fresh gates. This standing merge approval excludes production,
+signing, store, spending, destructive, external-account, credential actions, and material product decisions.
+After merge, Adriana verifies every applicable post-main workflow and starts the next documented increment
+automatically. An external approval system rejection pauses only the rejected merge and must be reported.
+
 Engineering commits and pushes completed work and reconciles the pull request description, audit report, and
 handoff before the final exact-head gate. After Elana reports PASS with every required scenario executed and all
 required repository checks pass on that same head, engineering:
