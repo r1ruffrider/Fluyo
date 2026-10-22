@@ -59,6 +59,11 @@
         "body": "Nothing changed. Check your connection and try again.",
         "primaryAction": "Try again"
       },
+      "callbackTimeoutWithVerifiedSession": {
+        "heading": "We couldn’t finish sign-in",
+        "body": "Your current session is unchanged. Return to continue safely.",
+        "primaryAction": "Return to safe screen"
+      },
       "forbidden": {
         "heading": "You can’t open this",
         "body": "Return to a safe screen to continue.",

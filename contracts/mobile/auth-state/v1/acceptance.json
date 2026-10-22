@@ -26,9 +26,10 @@
         "sprintScenario": 8,
         "criteria": [
           "cancel_in_flight_exchange_and_wipe_callback_transients",
-          "make_no_authenticated_claim",
-          "preserve_safe_anonymous_input_and_destination",
-          "return_to_signed_out_with_one_safe_sign_in_action",
+          "make_no_new_authenticated_claim",
+          "preserve_safe_anonymous_input_destination_and_existing_verified_session",
+          "cold_without_verified_session_returns_signed_out_with_one_safe_sign_in_action",
+          "warm_with_verified_session_restores_authenticated_safe_destination",
           "emit_no_provider_payload"
         ]
       },

@@ -60,6 +60,7 @@ type PendingTransaction = {
   host: string;
   path: string;
   stateValue: string;
+  nonceValue?: string;
   verifier: string;
   expiresAt: number;
 };
@@ -77,6 +78,7 @@ class InMemoryTransactionStore {
     host: string;
     path: string;
     stateValue: string;
+    nonceValue?: string;
     now: number;
   }):
     | { kind: "consumed"; transaction: PendingTransaction }
@@ -85,18 +87,23 @@ class InMemoryTransactionStore {
     const pending = this.#pending;
     this.#pending = undefined;
     if (!pending) return { kind: "unmatched" };
-    if (input.now > pending.expiresAt) return { kind: "expired" };
+    if (input.now >= pending.expiresAt) return { kind: "expired" };
     return pending.purpose === input.purpose &&
       pending.environment === input.environment &&
       pending.host === input.host &&
       pending.path === input.path &&
-      pending.stateValue === input.stateValue
+      pending.stateValue === input.stateValue &&
+      pending.nonceValue === input.nonceValue
       ? { kind: "consumed", transaction: pending }
       : { kind: "unmatched" };
   }
 
   get hasPendingTransaction(): boolean {
     return this.#pending !== undefined;
+  }
+
+  get hasExpectedNonce(): boolean {
+    return this.#pending?.nonceValue !== undefined;
   }
 
   clear(): void {
@@ -124,6 +131,12 @@ class InMemoryAuthProvider {
   }
 
   completeDeferredExchange(): boolean {
+    if (!this.#exchangeInFlight) return false;
+    this.#exchangeInFlight = false;
+    return true;
+  }
+
+  cancelDeferredExchange(): boolean {
     if (!this.#exchangeInFlight) return false;
     this.#exchangeInFlight = false;
     return true;
@@ -181,7 +194,14 @@ class SyntheticAuthCoordinator {
       hasSessionCandidate: this.#hasCandidate,
       hasVerifiedOwnerState: this.#verifiedOwner !== undefined,
       safeDestinationId:
-        this.#state === "authenticated" ? "internal_foundation_home" : "signed_out",
+        this.#state === "authenticated"
+          ? "internal_foundation_home"
+          : (this.#state === "unusable_link" ||
+                this.#state === "callback_pending" ||
+                this.#state === "safe_terminal_error") &&
+              this.#verifiedOwner
+            ? "previous_safe_screen"
+            : "signed_out",
       fixedOutcomeCategory: this.#outcomeCategory,
     };
   }
@@ -259,9 +279,48 @@ class SyntheticAuthCoordinator {
     category: "malformed" | "expired" | "replayed" | "duplicate" | "unsupported",
     preserveVerified = false,
   ): void {
-    this.#state = preserveVerified && this.#verifiedOwner ? "authenticated" : "unusable_link";
+    if (!preserveVerified) {
+      this.#hasCandidate = false;
+      this.#verifiedOwner = undefined;
+    }
+    this.#state = "unusable_link";
     this.#outcomeCategory = category;
     this.#trace.push(`callback_${category}`);
+  }
+
+  returnFromUnusableLink(): boolean {
+    if (this.#state !== "unusable_link" || this.#verifiedOwner === undefined) return false;
+    this.#state = "authenticated";
+    this.#trace.push("return_to_safe_screen");
+    return true;
+  }
+
+  callbackTimeout(preserveVerified = false): void {
+    if (!preserveVerified) {
+      this.#hasCandidate = false;
+      this.#verifiedOwner = undefined;
+    }
+    this.#state = "safe_terminal_error";
+    this.#outcomeCategory = "timed_out";
+    this.#trace.push(
+      preserveVerified && this.#verifiedOwner
+        ? "warm_callback_timed_out"
+        : "cold_callback_timed_out",
+    );
+  }
+
+  retryCallbackAfterTimeout(): boolean {
+    if (this.#state !== "safe_terminal_error" || this.#verifiedOwner !== undefined) return false;
+    this.#state = "callback_pending";
+    this.#trace.push("callback_retry_started");
+    return true;
+  }
+
+  returnFromCallbackTimeout(): boolean {
+    if (this.#state !== "safe_terminal_error" || this.#verifiedOwner === undefined) return false;
+    this.#state = "authenticated";
+    this.#trace.push("callback_timeout_return_to_safe_screen");
+    return true;
   }
 
   confirmOwner(generation: number, candidate: symbol, response: symbol): boolean {
@@ -406,12 +465,16 @@ const classifySyntheticCallback = (input: {
   now: number;
   store: InMemoryTransactionStore;
   provider: InMemoryAuthProvider;
+  onTransactionConsumed?: () => void;
 }): string => {
   const malformed = () => {
     input.store.clear();
     return "malformed";
   };
   let parsed: URL;
+  if (!/^https:\/\/[^/?#]+/.test(input.url) || input.url.includes("\\")) return malformed();
+  const rawAuthority = input.url.match(/^https:\/\/([^/?#]+)/i)?.[1] ?? "";
+  if (rawAuthority.includes("@") || /:\d+$/.test(rawAuthority)) return malformed();
   try {
     parsed = new URL(input.url);
   } catch {
@@ -428,23 +491,27 @@ const classifySyntheticCallback = (input: {
     return malformed();
   }
   const keys = [...parsed.searchParams.keys()];
+  const allowedKeys = input.store.hasExpectedNonce ? ["code", "state", "nonce"] : ["code", "state"];
   if (
-    keys.length !== 2 ||
-    new Set(keys).size !== 2 ||
-    !keys.includes("code") ||
-    !keys.includes("state") ||
+    keys.length !== allowedKeys.length ||
+    new Set(keys).size !== allowedKeys.length ||
+    allowedKeys.some((key) => !keys.includes(key)) ||
     parsed.searchParams.getAll("code").length !== 1 ||
-    parsed.searchParams.getAll("state").length !== 1
+    parsed.searchParams.getAll("state").length !== 1 ||
+    (input.store.hasExpectedNonce && parsed.searchParams.getAll("nonce").length !== 1)
   ) {
     return malformed();
   }
   const code = parsed.searchParams.get("code") ?? "";
   const stateValue = parsed.searchParams.get("state") ?? "";
+  const nonceValue = parsed.searchParams.get("nonce") ?? undefined;
   if (
     code.trim() === "" ||
     stateValue.trim() === "" ||
     code.length > 512 ||
-    stateValue.length > 512
+    stateValue.length > 512 ||
+    (input.store.hasExpectedNonce &&
+      (nonceValue === undefined || nonceValue.trim() === "" || nonceValue.length > 512))
   ) {
     return malformed();
   }
@@ -454,10 +521,12 @@ const classifySyntheticCallback = (input: {
     host: parsed.hostname,
     path: parsed.pathname,
     stateValue,
+    nonceValue,
     now: input.now,
   });
   if (consumed.kind === "expired") return "expired";
   if (consumed.kind === "unmatched") return "replayed_or_unmatched";
+  input.onTransactionConsumed?.();
   return input.provider.exchange(code, consumed.transaction.verifier)
     ? "success"
     : "provider_failure";
@@ -553,6 +622,19 @@ describe("provider-neutral auth-state contract v1", () => {
         asStrings(scenario.criteria, `${String(scenario.id)} criteria`).length,
       ).toBeGreaterThan(0);
     }
+    expect(
+      asStrings(
+        baseScenarios.find((scenario) => scenario.id === "auth_callback_canceled")?.criteria,
+        "auth_callback_canceled criteria",
+      ),
+    ).toEqual([
+      "cancel_in_flight_exchange_and_wipe_callback_transients",
+      "make_no_new_authenticated_claim",
+      "preserve_safe_anonymous_input_destination_and_existing_verified_session",
+      "cold_without_verified_session_returns_signed_out_with_one_safe_sign_in_action",
+      "warm_with_verified_session_restores_authenticated_safe_destination",
+      "emit_no_provider_payload",
+    ]);
     expect(rows).toHaveLength(24);
     expect(new Set(rows.map((row) => row.id)).size).toBe(24);
     expect(rows.map((row) => row.id)).toEqual(
@@ -590,6 +672,15 @@ describe("provider-neutral auth-state contract v1", () => {
         withVerifiedSession: "Return to safe screen",
       },
     );
+    expect(
+      asObject(
+        asObject(asObject(copy.states).safe_terminal_error).callbackTimeoutWithVerifiedSession,
+      ),
+    ).toEqual({
+      heading: "We couldn’t finish sign-in",
+      body: "Your current session is unchanged. Return to continue safely.",
+      primaryAction: "Return to safe screen",
+    });
     expect(copy.identityLabel).toBe("Signed in");
     expect(asStrings(machine.publicStateFields, "publicStateFields")).toEqual([
       "state",
@@ -667,9 +758,9 @@ describe("provider-neutral auth-state contract v1", () => {
       provider_or_api_step_timeout: 15000,
       total_actionable_timeout: 30000,
     });
-    expect(transitions.length).toBe(41);
+    expect(transitions.length).toBe(48);
     expect(createHash("sha256").update(JSON.stringify(transitions)).digest("hex")).toBe(
-      "f12bf73de8d9c820d0bb9c6b95d292b5a269c98663edbb43b5f84732a7780016",
+      "702e46589cc867929d0f0dd81fec3281754eedf42ac20e43af0b1df0c62af7b3",
     );
     for (const transition of transitions) {
       expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
@@ -691,6 +782,50 @@ describe("provider-neutral auth-state contract v1", () => {
           transition.source === "initializing" && transition.event === "cold_callback_received",
       ),
     ).toMatchObject({ target: "callback_pending" });
+    expect(
+      transitions
+        .filter((transition) => transition.event === "callback_unusable_ingress")
+        .map((transition) => ({
+          source: transition.source,
+          guard: transition.guard,
+          effects: transition.effects,
+          target: transition.target,
+        })),
+    ).toEqual([
+      {
+        source: "initializing",
+        guard:
+          "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state",
+        ],
+        target: "unusable_link",
+      },
+      {
+        source: "signed_out",
+        guard:
+          "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state",
+        ],
+        target: "unusable_link",
+      },
+      {
+        source: "authenticated",
+        guard:
+          "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_existing_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "wipe_callback_transients",
+          "preserve_verified_session",
+        ],
+        target: "unusable_link",
+      },
+    ]);
     expect(
       transitions.find(
         (transition) =>
@@ -807,17 +942,55 @@ describe("provider-neutral auth-state contract v1", () => {
     const stepTimeouts = transitions.filter(
       (transition) => transition.event === "provider_or_api_step_timeout",
     );
-    expect(stepTimeouts).toHaveLength(4);
-    expect(stepTimeouts.every((transition) => String(transition.guard).endsWith("15000"))).toBe(
+    expect(stepTimeouts).toHaveLength(5);
+    expect(stepTimeouts.every((transition) => String(transition.guard).includes("15000"))).toBe(
       true,
     );
     const totalTimeouts = transitions.filter(
       (transition) => transition.event === "total_actionable_timeout",
     );
-    expect(totalTimeouts).toHaveLength(4);
-    expect(totalTimeouts.every((transition) => String(transition.guard).endsWith("30000"))).toBe(
+    expect(totalTimeouts).toHaveLength(5);
+    expect(totalTimeouts.every((transition) => String(transition.guard).includes("30000"))).toBe(
       true,
     );
+    expect(
+      transitions
+        .filter(
+          (transition) =>
+            transition.source === "safe_terminal_error" &&
+            (transition.event === "try_again" || transition.event === "return_to_safe_screen") &&
+            String(transition.guard).includes("callback_timeout"),
+        )
+        .map((transition) => ({
+          event: transition.event,
+          guard: transition.guard,
+          effects: transition.effects,
+          target: transition.target,
+        })),
+    ).toEqual([
+      {
+        event: "try_again",
+        guard: "current_generation_and_callback_timeout_and_no_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "create_one_pending_callback_transaction",
+          "open_provider_flow",
+        ],
+        target: "callback_pending",
+      },
+      {
+        event: "return_to_safe_screen",
+        guard: "current_generation_and_callback_timeout_and_existing_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "clear_safe_error",
+          "preserve_verified_session",
+          "navigate_to_allowlisted_safe_destination",
+        ],
+        target: "authenticated",
+      },
+    ]);
   });
 
   it("atomically consumes one exact synthetic callback and rejects replay", () => {
@@ -847,10 +1020,63 @@ describe("provider-neutral auth-state contract v1", () => {
     expect(provider.exchangeCount).toBe(1);
   });
 
+  it("validates and wipes an optional callback nonce when it is issued", () => {
+    const makeStore = () =>
+      new InMemoryTransactionStore({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        nonceValue: "synthetic-nonce",
+        verifier: "opaque-verifier",
+        expiresAt: 2_000,
+      });
+    const classify = (url: string, now = 1_000) => {
+      const store = makeStore();
+      const provider = new InMemoryAuthProvider();
+      const outcome = classifySyntheticCallback({
+        url,
+        purpose: "sign_in",
+        environment: "development",
+        now,
+        store,
+        provider,
+      });
+      return { outcome, store, provider };
+    };
+    const valid = classify(
+      "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state&nonce=synthetic-nonce",
+    );
+    expect(valid.outcome).toBe("success");
+    expect(valid.store.hasPendingTransaction).toBe(false);
+    expect(valid.provider.exchangeCount).toBe(1);
+
+    for (const url of [
+      "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state",
+      "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state&nonce=wrong",
+      "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state&nonce=",
+    ]) {
+      const result = classify(url);
+      expect(["malformed", "replayed_or_unmatched"]).toContain(result.outcome);
+      expect(result.store.hasPendingTransaction).toBe(false);
+      expect(result.provider.exchangeCount).toBe(0);
+    }
+    const expired = classify(
+      "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state&nonce=synthetic-nonce",
+      2_000,
+    );
+    expect(expired.outcome).toBe("expired");
+    expect(expired.store.hasPendingTransaction).toBe(false);
+    expect(expired.provider.exchangeCount).toBe(0);
+    const canceled = makeStore();
+    canceled.clear();
+    expect(canceled.hasPendingTransaction).toBe(false);
+  });
+
   it("preserves a verified warm session when an unusable callback arrives", () => {
     const model = new SyntheticAuthCoordinator();
     model.seedVerifiedOwner();
-    expect(model.beginCallback("warm")).toBe(true);
     const store = new InMemoryTransactionStore({
       purpose: "sign_in",
       environment: "development",
@@ -873,12 +1099,14 @@ describe("provider-neutral auth-state contract v1", () => {
     ).toBe("malformed");
     model.markCallbackUnusable("malformed", true);
     expect(model.publicSnapshot()).toEqual({
-      state: "authenticated",
+      state: "unusable_link",
       hasSessionCandidate: true,
       hasVerifiedOwnerState: true,
-      safeDestinationId: "internal_foundation_home",
+      safeDestinationId: "previous_safe_screen",
       fixedOutcomeCategory: "malformed",
     });
+    expect(model.returnFromUnusableLink()).toBe(true);
+    expect(model.publicSnapshot().state).toBe("authenticated");
     expect(store.hasPendingTransaction).toBe(false);
     expect(provider.exchangeCount).toBe(0);
   });
@@ -887,6 +1115,13 @@ describe("provider-neutral auth-state contract v1", () => {
     const model = new SyntheticAuthCoordinator();
     model.seedVerifiedOwner();
     expect(model.beginCallback("warm")).toBe(true);
+    expect(model.publicSnapshot()).toEqual({
+      state: "callback_pending",
+      hasSessionCandidate: true,
+      hasVerifiedOwnerState: true,
+      safeDestinationId: "previous_safe_screen",
+      fixedOutcomeCategory: "success",
+    });
     model.cancelCallback(true);
     expect(model.publicSnapshot()).toEqual({
       state: "authenticated",
@@ -895,6 +1130,117 @@ describe("provider-neutral auth-state contract v1", () => {
       safeDestinationId: "internal_foundation_home",
       fixedOutcomeCategory: "canceled",
     });
+  });
+
+  it("cancels callback transactions and deferred exchanges in cold and warm contexts", () => {
+    for (const warm of [false, true]) {
+      const pendingStore = new InMemoryTransactionStore({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        nonceValue: "synthetic-nonce",
+        verifier: "opaque-verifier",
+        expiresAt: 2_000,
+      });
+      const pendingModel = new SyntheticAuthCoordinator();
+      if (warm) pendingModel.seedVerifiedOwner();
+      expect(pendingModel.beginCallback(warm ? "warm" : "cold")).toBe(true);
+      pendingStore.clear();
+      pendingModel.cancelCallback(warm);
+      expect(pendingStore.hasPendingTransaction).toBe(false);
+      expect(pendingModel.publicSnapshot().state).toBe(warm ? "authenticated" : "signed_out");
+
+      const consumedStore = new InMemoryTransactionStore({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        nonceValue: "synthetic-nonce",
+        verifier: "opaque-verifier",
+        expiresAt: 2_000,
+      });
+      const consumed = consumedStore.consume({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        nonceValue: "synthetic-nonce",
+        now: 1_000,
+      });
+      expect(consumed.kind).toBe("consumed");
+      if (consumed.kind !== "consumed") throw new Error("synthetic consume failed");
+      const provider = new InMemoryAuthProvider();
+      expect(provider.beginDeferredExchange("synthetic", consumed.transaction.verifier)).toBe(true);
+      expect(provider.cancelDeferredExchange()).toBe(true);
+      expect(provider.exchangeInFlight).toBe(false);
+      expect(provider.exchangeCount).toBe(1);
+      expect(consumedStore.hasPendingTransaction).toBe(false);
+      const exchangeModel = new SyntheticAuthCoordinator();
+      if (warm) exchangeModel.seedVerifiedOwner();
+      expect(exchangeModel.beginCallback(warm ? "warm" : "cold")).toBe(true);
+      exchangeModel.cancelCallback(warm);
+      expect(exchangeModel.publicSnapshot().state).toBe(warm ? "authenticated" : "signed_out");
+      expect(exchangeModel.telemetry).toEqual(new ObservingTelemetry());
+    }
+  });
+
+  it("maps callback timeouts to context-safe visible actions and deterministic recovery", () => {
+    const makePending = () =>
+      new InMemoryTransactionStore({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        verifier: "opaque-verifier",
+        expiresAt: 2_000,
+      });
+    const cold = new SyntheticAuthCoordinator();
+    expect(cold.beginCallback("cold")).toBe(true);
+    const coldStore = makePending();
+    const coldProvider = new InMemoryAuthProvider();
+    expect(coldProvider.beginDeferredExchange("synthetic", "opaque-verifier")).toBe(true);
+    coldStore.clear();
+    expect(coldProvider.cancelDeferredExchange()).toBe(true);
+    cold.callbackTimeout();
+    expect(cold.publicSnapshot()).toEqual({
+      state: "safe_terminal_error",
+      hasSessionCandidate: false,
+      hasVerifiedOwnerState: false,
+      safeDestinationId: "signed_out",
+      fixedOutcomeCategory: "timed_out",
+    });
+    expect(coldStore.hasPendingTransaction).toBe(false);
+    expect(coldProvider.exchangeInFlight).toBe(false);
+    expect(cold.retryCallbackAfterTimeout()).toBe(true);
+    expect(cold.publicSnapshot().state).toBe("callback_pending");
+
+    const warm = new SyntheticAuthCoordinator();
+    warm.seedVerifiedOwner();
+    expect(warm.beginCallback("warm")).toBe(true);
+    const warmStore = makePending();
+    const warmProvider = new InMemoryAuthProvider();
+    expect(warmProvider.beginDeferredExchange("synthetic", "opaque-verifier")).toBe(true);
+    warmStore.clear();
+    expect(warmProvider.cancelDeferredExchange()).toBe(true);
+    warm.callbackTimeout(true);
+    expect(warm.publicSnapshot()).toEqual({
+      state: "safe_terminal_error",
+      hasSessionCandidate: true,
+      hasVerifiedOwnerState: true,
+      safeDestinationId: "previous_safe_screen",
+      fixedOutcomeCategory: "timed_out",
+    });
+    expect(warmStore.hasPendingTransaction).toBe(false);
+    expect(warmProvider.exchangeInFlight).toBe(false);
+    expect(warm.returnFromCallbackTimeout()).toBe(true);
+    expect(warm.publicSnapshot().state).toBe("authenticated");
+    expect(cold.telemetry).toEqual(new ObservingTelemetry());
+    expect(warm.telemetry).toEqual(new ObservingTelemetry());
   });
 
   it("locks callback purpose, environment, host, path, expiry, wipe, and no-retention rules", () => {
@@ -911,6 +1257,7 @@ describe("provider-neutral auth-state contract v1", () => {
       "exact_host",
       "exact_path",
       "pending_transaction",
+      "optional_nonce_when_issued",
       "one_verifier",
       "injected_clock_expiry",
     ]);
@@ -960,6 +1307,22 @@ describe("provider-neutral auth-state contract v1", () => {
         store: makeStore(),
       }),
     ).toBe("expired");
+    expect(
+      classifySyntheticCallback({
+        ...base,
+        now: 2_000,
+        url: "https://auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+        store: makeStore(),
+      }),
+    ).toBe("expired");
+    expect(
+      classifySyntheticCallback({
+        ...base,
+        now: 1_999,
+        url: "https://auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+        store: makeStore(),
+      }),
+    ).toBe("success");
     const duplicateStore = makeStore();
     expect(
       classifySyntheticCallback({
@@ -978,7 +1341,12 @@ describe("provider-neutral auth-state contract v1", () => {
     ).toBe("malformed");
     for (const url of [
       "https://user:password@auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://@auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://:@auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://auth.staging.fluyo.test:443/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test:444/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https:/auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https:\\\\auth.staging.fluyo.test\\native\\recovery\\callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test/native/recovery/callback?code=&state=synthetic-state",
       "https://auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=",
     ]) {
@@ -1044,7 +1412,6 @@ describe("provider-neutral auth-state contract v1", () => {
     ): SyntheticAuthCoordinator => {
       const model = new SyntheticAuthCoordinator();
       if (warm) model.seedVerifiedOwner();
-      expect(model.beginCallback(warm ? "warm" : "cold")).toBe(true);
       const store = new InMemoryTransactionStore({
         purpose: "sign_in",
         environment: "development",
@@ -1062,6 +1429,9 @@ describe("provider-neutral auth-state contract v1", () => {
         now,
         store,
         provider,
+        onTransactionConsumed: () => {
+          expect(model.beginCallback(warm ? "warm" : "cold")).toBe(true);
+        },
       };
       const outcome = classifySyntheticCallback(input);
       if (outcome === "success") model.seedVerifiedOwner();
@@ -1072,6 +1442,14 @@ describe("provider-neutral auth-state contract v1", () => {
         expect(classifySyntheticCallback(input)).toBe("replayed_or_unmatched");
         expect(provider.exchangeCount).toBe(1);
         model.markCallbackUnusable(repeatCategory, true);
+        expect(model.publicSnapshot()).toEqual({
+          state: "unusable_link",
+          hasSessionCandidate: true,
+          hasVerifiedOwnerState: true,
+          safeDestinationId: "previous_safe_screen",
+          fixedOutcomeCategory: repeatCategory,
+        });
+        expect(model.returnFromUnusableLink()).toBe(true);
       }
       model.recordCallbackEvidence(provider.exchangeCount, store.hasPendingTransaction);
       return model;
