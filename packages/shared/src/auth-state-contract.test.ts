@@ -519,6 +519,7 @@ const classifySyntheticCallback = (input: {
   if (!/^https:\/\/[^/?#]+/.test(input.url) || input.url.includes("\\")) return malformed();
   const rawAuthority = input.url.match(/^https:\/\/([^/?#]+)/i)?.[1] ?? "";
   if (!/^[A-Za-z0-9.-]+$/.test(rawAuthority)) return malformed();
+  const rawPath = input.url.slice("https://".length + rawAuthority.length).split(/[?#]/, 1)[0];
   try {
     parsed = new URL(input.url);
   } catch {
@@ -530,7 +531,8 @@ const classifySyntheticCallback = (input: {
     parsed.username !== "" ||
     parsed.password !== "" ||
     parsed.port !== "" ||
-    parsed.hash !== ""
+    parsed.hash !== "" ||
+    rawPath !== parsed.pathname
   ) {
     return malformed();
   }
@@ -808,7 +810,7 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(transitions.length).toBe(50);
     expect(createHash("sha256").update(JSON.stringify(transitions)).digest("hex")).toBe(
-      "9410b819ec59c2975d942d9d027801e97e2d4856d752a0c2afe8d4a6a5959275",
+      "fb76986832e220b826c62c41d33e68c8a3241de05d1cccf95d7ea327362725ce",
     );
     for (const transition of transitions) {
       expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
@@ -846,6 +848,7 @@ describe("provider-neutral auth-state contract v1", () => {
           "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
         effects: [
           "require_current_auth_generation",
+          "increment_generation",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state",
         ],
@@ -857,6 +860,7 @@ describe("provider-neutral auth-state contract v1", () => {
           "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
         effects: [
           "require_current_auth_generation",
+          "increment_generation",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state",
         ],
@@ -868,6 +872,7 @@ describe("provider-neutral auth-state contract v1", () => {
           "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_existing_verified_session",
         effects: [
           "require_current_auth_generation",
+          "increment_generation",
           "wipe_callback_transients",
           "preserve_verified_session",
         ],
@@ -976,15 +981,16 @@ describe("provider-neutral auth-state contract v1", () => {
     ]);
     const invalidatingCallbackTerminals = transitions.filter(
       (transition) =>
-        transition.source === "callback_pending" &&
-        (asStrings(transition.effects, "callback terminal effects").includes(
-          "cancel_callback_exchange",
-        ) ||
-          asStrings(transition.effects, "callback terminal effects").includes(
-            "cancel_all_auth_work",
-          )),
+        transition.event === "callback_unusable_ingress" ||
+        (transition.source === "callback_pending" &&
+          (asStrings(transition.effects, "callback terminal effects").includes(
+            "cancel_callback_exchange",
+          ) ||
+            asStrings(transition.effects, "callback terminal effects").includes(
+              "cancel_all_auth_work",
+            ))),
     );
-    expect(invalidatingCallbackTerminals).toHaveLength(9);
+    expect(invalidatingCallbackTerminals).toHaveLength(12);
     for (const transition of invalidatingCallbackTerminals) {
       expect(asStrings(transition.effects, "callback terminal effects").slice(0, 2)).toEqual([
         "require_current_auth_generation",
@@ -1575,6 +1581,8 @@ describe("provider-neutral auth-state contract v1", () => {
       "https://auth.staging.fluyo.test:444/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test:/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https://%61uth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://auth.staging.fluyo.test/native/recovery/x/../callback?code=synthetic&state=synthetic-state",
+      "https://auth.staging.fluyo.test/native/recovery/%2e%2e/recovery/callback?code=synthetic&state=synthetic-state",
       "https:/auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https:\\\\auth.staging.fluyo.test\\native\\recovery\\callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test/native/recovery/callback?code=&state=synthetic-state",

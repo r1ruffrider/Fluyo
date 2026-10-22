@@ -133,6 +133,7 @@
         "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state"
         ],
@@ -177,6 +178,7 @@
         "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state"
         ],
@@ -362,6 +364,7 @@
         "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_ingress_and_existing_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "wipe_callback_transients",
           "preserve_verified_session"
         ],
