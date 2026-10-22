@@ -115,11 +115,18 @@ class InMemoryAuthProvider {
   exchangeCount = 0;
   verifierWasUsed = false;
   #exchangeInFlight = false;
+  #failNextExchange = false;
+
+  failNextExchange(): void {
+    this.#failNextExchange = true;
+  }
 
   exchange(code: string, verifier: string): boolean {
     this.exchangeCount += 1;
     this.verifierWasUsed = code.length > 0 && verifier.length > 0;
-    return this.verifierWasUsed;
+    const shouldFail = this.#failNextExchange;
+    this.#failNextExchange = false;
+    return this.verifierWasUsed && !shouldFail;
   }
 
   beginDeferredExchange(code: string, verifier: string): boolean {
@@ -259,7 +266,12 @@ class SyntheticAuthCoordinator {
     return true;
   }
 
-  cancelCallback(preserveVerified = false): void {
+  cancelCallback(
+    work: { store: InMemoryTransactionStore; provider: InMemoryAuthProvider },
+    preserveVerified = false,
+  ): void {
+    work.store.clear();
+    if (work.provider.exchangeInFlight) work.provider.cancelDeferredExchange();
     this.#state = preserveVerified && this.#verifiedOwner ? "authenticated" : "signed_out";
     if (!preserveVerified) {
       this.#hasCandidate = false;
@@ -295,7 +307,12 @@ class SyntheticAuthCoordinator {
     return true;
   }
 
-  callbackTimeout(preserveVerified = false): void {
+  callbackTimeout(
+    work: { store: InMemoryTransactionStore; provider: InMemoryAuthProvider },
+    preserveVerified = false,
+  ): void {
+    work.store.clear();
+    if (work.provider.exchangeInFlight) work.provider.cancelDeferredExchange();
     if (!preserveVerified) {
       this.#hasCandidate = false;
       this.#verifiedOwner = undefined;
@@ -309,17 +326,36 @@ class SyntheticAuthCoordinator {
     );
   }
 
-  retryCallbackAfterTimeout(): boolean {
+  callbackExchangeFailure(
+    work: { store: InMemoryTransactionStore; provider: InMemoryAuthProvider },
+    preserveVerified = false,
+  ): void {
+    work.store.clear();
+    if (work.provider.exchangeInFlight) work.provider.cancelDeferredExchange();
+    if (!preserveVerified) {
+      this.#hasCandidate = false;
+      this.#verifiedOwner = undefined;
+    }
+    this.#state = "safe_terminal_error";
+    this.#outcomeCategory = "transient_failure";
+    this.#trace.push(
+      preserveVerified && this.#verifiedOwner
+        ? "warm_callback_exchange_failed"
+        : "cold_callback_exchange_failed",
+    );
+  }
+
+  retryAfterCallbackIssue(): boolean {
     if (this.#state !== "safe_terminal_error" || this.#verifiedOwner !== undefined) return false;
     this.#state = "callback_pending";
     this.#trace.push("callback_retry_started");
     return true;
   }
 
-  returnFromCallbackTimeout(): boolean {
+  returnFromCallbackIssue(): boolean {
     if (this.#state !== "safe_terminal_error" || this.#verifiedOwner === undefined) return false;
     this.#state = "authenticated";
-    this.#trace.push("callback_timeout_return_to_safe_screen");
+    this.#trace.push("callback_issue_return_to_safe_screen");
     return true;
   }
 
@@ -529,7 +565,7 @@ const classifySyntheticCallback = (input: {
   input.onTransactionConsumed?.();
   return input.provider.exchange(code, consumed.transaction.verifier)
     ? "success"
-    : "provider_failure";
+    : "transient_failure";
 };
 
 const evidenceIsClosed = (value: JsonObject, expectedSourceCommit: string): boolean => {
@@ -678,7 +714,7 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(
       asObject(
-        asObject(asObject(copy.states).safe_terminal_error).callbackTimeoutWithVerifiedSession,
+        asObject(asObject(copy.states).safe_terminal_error).callbackIssueWithVerifiedSession,
       ),
     ).toEqual({
       heading: "We couldn’t finish sign-in",
@@ -762,9 +798,9 @@ describe("provider-neutral auth-state contract v1", () => {
       provider_or_api_step_timeout: 15000,
       total_actionable_timeout: 30000,
     });
-    expect(transitions.length).toBe(48);
+    expect(transitions.length).toBe(50);
     expect(createHash("sha256").update(JSON.stringify(transitions)).digest("hex")).toBe(
-      "702e46589cc867929d0f0dd81fec3281754eedf42ac20e43af0b1df0c62af7b3",
+      "8a2de000d11b8fb7867caab78198ebdce1d80ec2536c205c7dac0d37461c6628",
     );
     for (const transition of transitions) {
       expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
@@ -895,6 +931,39 @@ describe("provider-neutral auth-state contract v1", () => {
         target: "authenticated",
       },
     ]);
+    expect(
+      transitions
+        .filter((transition) => transition.event === "callback_exchange_failed")
+        .map((transition) => ({
+          guard: transition.guard,
+          effects: transition.effects,
+          target: transition.target,
+        })),
+    ).toEqual([
+      {
+        guard: "current_generation_and_fixed_transient_exchange_failure_and_no_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state",
+          "set_transport_error_variant",
+        ],
+        target: "safe_terminal_error",
+      },
+      {
+        guard:
+          "current_generation_and_fixed_transient_exchange_failure_and_existing_verified_session",
+        effects: [
+          "require_current_auth_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session",
+          "set_callback_issue_with_verified_session_variant",
+        ],
+        target: "safe_terminal_error",
+      },
+    ]);
     const transition = (source: string, event: string) => {
       const found = transitions.find((row) => row.source === source && row.event === event);
       expect(found, `${source}:${event}`).toBeDefined();
@@ -974,7 +1043,8 @@ describe("provider-neutral auth-state contract v1", () => {
     ).toEqual([
       {
         event: "try_again",
-        guard: "current_generation_and_callback_timeout_and_no_verified_session",
+        guard:
+          "current_generation_and_callback_timeout_or_transient_exchange_failure_and_no_verified_session",
         effects: [
           "require_current_auth_generation",
           "clear_safe_error",
@@ -985,7 +1055,8 @@ describe("provider-neutral auth-state contract v1", () => {
       },
       {
         event: "return_to_safe_screen",
-        guard: "current_generation_and_callback_timeout_and_existing_verified_session",
+        guard:
+          "current_generation_and_callback_timeout_or_transient_exchange_failure_and_existing_verified_session",
         effects: [
           "require_current_auth_generation",
           "clear_safe_error",
@@ -1126,7 +1197,17 @@ describe("provider-neutral auth-state contract v1", () => {
       safeDestinationId: "previous_safe_screen",
       fixedOutcomeCategory: "success",
     });
-    model.cancelCallback(true);
+    const store = new InMemoryTransactionStore({
+      purpose: "sign_in",
+      environment: "development",
+      host: "auth.dev.fluyo.test",
+      path: "/native/auth/callback",
+      stateValue: "synthetic-state",
+      verifier: "opaque-verifier",
+      expiresAt: 2_000,
+    });
+    const provider = new InMemoryAuthProvider();
+    model.cancelCallback({ store, provider }, true);
     expect(model.publicSnapshot()).toEqual({
       state: "authenticated",
       hasSessionCandidate: true,
@@ -1151,9 +1232,10 @@ describe("provider-neutral auth-state contract v1", () => {
       const pendingModel = new SyntheticAuthCoordinator();
       if (warm) pendingModel.seedVerifiedOwner();
       expect(pendingModel.beginCallback(warm ? "warm" : "cold")).toBe(true);
-      pendingStore.clear();
-      pendingModel.cancelCallback(warm);
+      const pendingProvider = new InMemoryAuthProvider();
+      pendingModel.cancelCallback({ store: pendingStore, provider: pendingProvider }, warm);
       expect(pendingStore.hasPendingTransaction).toBe(false);
+      expect(pendingProvider.exchangeInFlight).toBe(false);
       expect(pendingModel.publicSnapshot().state).toBe(warm ? "authenticated" : "signed_out");
 
       const consumedStore = new InMemoryTransactionStore({
@@ -1179,14 +1261,14 @@ describe("provider-neutral auth-state contract v1", () => {
       if (consumed.kind !== "consumed") throw new Error("synthetic consume failed");
       const provider = new InMemoryAuthProvider();
       expect(provider.beginDeferredExchange("synthetic", consumed.transaction.verifier)).toBe(true);
-      expect(provider.cancelDeferredExchange()).toBe(true);
-      expect(provider.exchangeInFlight).toBe(false);
+      expect(provider.exchangeInFlight).toBe(true);
       expect(provider.exchangeCount).toBe(1);
       expect(consumedStore.hasPendingTransaction).toBe(false);
       const exchangeModel = new SyntheticAuthCoordinator();
       if (warm) exchangeModel.seedVerifiedOwner();
       expect(exchangeModel.beginCallback(warm ? "warm" : "cold")).toBe(true);
-      exchangeModel.cancelCallback(warm);
+      exchangeModel.cancelCallback({ store: consumedStore, provider }, warm);
+      expect(provider.exchangeInFlight).toBe(false);
       expect(exchangeModel.publicSnapshot().state).toBe(warm ? "authenticated" : "signed_out");
       expect(exchangeModel.telemetry).toEqual(new ObservingTelemetry());
     }
@@ -1208,9 +1290,7 @@ describe("provider-neutral auth-state contract v1", () => {
     const coldStore = makePending();
     const coldProvider = new InMemoryAuthProvider();
     expect(coldProvider.beginDeferredExchange("synthetic", "opaque-verifier")).toBe(true);
-    coldStore.clear();
-    expect(coldProvider.cancelDeferredExchange()).toBe(true);
-    cold.callbackTimeout();
+    cold.callbackTimeout({ store: coldStore, provider: coldProvider });
     expect(cold.publicSnapshot()).toEqual({
       state: "safe_terminal_error",
       hasSessionCandidate: false,
@@ -1220,7 +1300,7 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(coldStore.hasPendingTransaction).toBe(false);
     expect(coldProvider.exchangeInFlight).toBe(false);
-    expect(cold.retryCallbackAfterTimeout()).toBe(true);
+    expect(cold.retryAfterCallbackIssue()).toBe(true);
     expect(cold.publicSnapshot().state).toBe("callback_pending");
 
     const warm = new SyntheticAuthCoordinator();
@@ -1229,9 +1309,7 @@ describe("provider-neutral auth-state contract v1", () => {
     const warmStore = makePending();
     const warmProvider = new InMemoryAuthProvider();
     expect(warmProvider.beginDeferredExchange("synthetic", "opaque-verifier")).toBe(true);
-    warmStore.clear();
-    expect(warmProvider.cancelDeferredExchange()).toBe(true);
-    warm.callbackTimeout(true);
+    warm.callbackTimeout({ store: warmStore, provider: warmProvider }, true);
     expect(warm.publicSnapshot()).toEqual({
       state: "safe_terminal_error",
       hasSessionCandidate: true,
@@ -1241,10 +1319,55 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(warmStore.hasPendingTransaction).toBe(false);
     expect(warmProvider.exchangeInFlight).toBe(false);
-    expect(warm.returnFromCallbackTimeout()).toBe(true);
+    expect(warm.returnFromCallbackIssue()).toBe(true);
     expect(warm.publicSnapshot().state).toBe("authenticated");
     expect(cold.telemetry).toEqual(new ObservingTelemetry());
     expect(warm.telemetry).toEqual(new ObservingTelemetry());
+  });
+
+  it("maps provider exchange failure to one closed transient recovery path", () => {
+    for (const warm of [false, true]) {
+      const model = new SyntheticAuthCoordinator();
+      if (warm) model.seedVerifiedOwner();
+      const store = new InMemoryTransactionStore({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        verifier: "opaque-verifier",
+        expiresAt: 2_000,
+      });
+      const provider = new InMemoryAuthProvider();
+      provider.failNextExchange();
+      expect(
+        classifySyntheticCallback({
+          url: "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state",
+          purpose: "sign_in",
+          environment: "development",
+          now: 1_000,
+          store,
+          provider,
+          onTransactionConsumed: () => {
+            expect(model.beginCallback(warm ? "warm" : "cold")).toBe(true);
+          },
+        }),
+      ).toBe("transient_failure");
+      model.callbackExchangeFailure({ store, provider }, warm);
+      expect(model.publicSnapshot()).toEqual({
+        state: "safe_terminal_error",
+        hasSessionCandidate: warm,
+        hasVerifiedOwnerState: warm,
+        safeDestinationId: warm ? "previous_safe_screen" : "signed_out",
+        fixedOutcomeCategory: "transient_failure",
+      });
+      expect(store.hasPendingTransaction).toBe(false);
+      expect(provider.exchangeCount).toBe(1);
+      expect(provider.exchangeInFlight).toBe(false);
+      expect(model.telemetry).toEqual(new ObservingTelemetry());
+      expect(warm ? model.returnFromCallbackIssue() : model.retryAfterCallbackIssue()).toBe(true);
+      expect(model.publicSnapshot().state).toBe(warm ? "authenticated" : "callback_pending");
+    }
   });
 
   it("locks callback purpose, environment, host, path, expiry, wipe, and no-retention rules", () => {
@@ -1485,8 +1608,8 @@ describe("provider-neutral auth-state contract v1", () => {
           verifier: "opaque-verifier",
           expiresAt: 2_000,
         });
-        store.clear();
-        model.cancelCallback();
+        const provider = new InMemoryAuthProvider();
+        model.cancelCallback({ store, provider });
         model.recordCallbackEvidence(0, store.hasPendingTransaction);
         return model;
       },

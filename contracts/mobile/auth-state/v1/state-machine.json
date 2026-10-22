@@ -254,6 +254,32 @@
       },
       {
         "source": "callback_pending",
+        "event": "callback_exchange_failed",
+        "guard": "current_generation_and_fixed_transient_exchange_failure_and_no_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_safe_anonymous_state",
+          "set_transport_error_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
+        "event": "callback_exchange_failed",
+        "guard": "current_generation_and_fixed_transient_exchange_failure_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session",
+          "set_callback_issue_with_verified_session_variant"
+        ],
+        "target": "safe_terminal_error"
+      },
+      {
+        "source": "callback_pending",
         "event": "provider_or_api_step_timeout",
         "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000_and_no_verified_session",
         "effects": [
@@ -273,7 +299,7 @@
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_verified_session",
-          "set_callback_timeout_with_verified_session_variant"
+          "set_callback_issue_with_verified_session_variant"
         ],
         "target": "safe_terminal_error"
       },
@@ -298,7 +324,7 @@
           "cancel_all_auth_work",
           "wipe_callback_transients",
           "preserve_verified_session",
-          "set_callback_timeout_with_verified_session_variant"
+          "set_callback_issue_with_verified_session_variant"
         ],
         "target": "safe_terminal_error"
       },
@@ -594,7 +620,7 @@
       {
         "source": "safe_terminal_error",
         "event": "try_again",
-        "guard": "current_generation_and_callback_timeout_and_no_verified_session",
+        "guard": "current_generation_and_callback_timeout_or_transient_exchange_failure_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
           "clear_safe_error",
@@ -606,7 +632,7 @@
       {
         "source": "safe_terminal_error",
         "event": "return_to_safe_screen",
-        "guard": "current_generation_and_callback_timeout_and_existing_verified_session",
+        "guard": "current_generation_and_callback_timeout_or_transient_exchange_failure_and_existing_verified_session",
         "effects": [
           "require_current_auth_generation",
           "clear_safe_error",
@@ -766,7 +792,7 @@
       "copyId": "safe_terminal_error",
       "primaryActionsByVariant": {
         "transport_or_server": "try_again",
-        "callback_timeout_with_verified_session": "return_to_safe_screen",
+        "callback_issue_with_verified_session": "return_to_safe_screen",
         "forbidden": "return_to_safe_screen"
       },
       "hasSessionCandidate": "preserve_for_transport_500_and_403_clear_only_after_auth_401_rule",
