@@ -293,6 +293,8 @@ class SyntheticAuthCoordinator {
     category: "malformed" | "expired" | "replayed" | "duplicate" | "unsupported",
     preserveVerified = false,
   ): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
     if (!preserveVerified) {
       this.#hasCandidate = false;
       this.#verifiedOwner = undefined;
@@ -1211,6 +1213,26 @@ describe("provider-neutral auth-state contract v1", () => {
     expect(provider.exchangeCount).toBe(0);
   });
 
+  it("rejects late owner confirmation and writes after cold and warm unusable callbacks", () => {
+    for (const warm of [false, true]) {
+      const model = new SyntheticAuthCoordinator();
+      if (warm) model.seedVerifiedOwner();
+      const callbackGeneration = model.captureGeneration();
+      model.markCallbackUnusable("malformed", warm);
+      const lateOwner = Symbol("late-owner");
+      expect(model.confirmOwner(callbackGeneration, lateOwner, lateOwner)).toBe(false);
+      expect(model.applyOwnerWrite(callbackGeneration)).toBe(false);
+      expect(model.publicSnapshot()).toMatchObject({
+        state: "unusable_link",
+        hasSessionCandidate: warm,
+        hasVerifiedOwnerState: warm,
+        safeDestinationId: warm ? "previous_safe_screen" : "signed_out",
+      });
+      expect(model.ownerWriteCount).toBe(0);
+      expect(model.telemetry).toEqual(new ObservingTelemetry());
+    }
+  });
+
   it("restores a verified warm session after callback cancellation", () => {
     const model = new SyntheticAuthCoordinator();
     model.seedVerifiedOwner();
@@ -1937,7 +1959,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "signed_out",
         0,
         false,
-        1,
+        2,
         0,
         ["callback_malformed"],
       ],
@@ -1949,7 +1971,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "signed_out",
         0,
         false,
-        1,
+        2,
         0,
         ["callback_expired"],
       ],
@@ -1961,7 +1983,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "internal_foundation_home",
         1,
         false,
-        1,
+        2,
         0,
         ["callback_replayed"],
       ],
@@ -1973,7 +1995,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "internal_foundation_home",
         1,
         false,
-        1,
+        2,
         0,
         ["callback_duplicate"],
       ],
@@ -1985,7 +2007,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "signed_out",
         0,
         false,
-        1,
+        2,
         0,
         ["callback_unsupported"],
       ],
@@ -2153,7 +2175,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "signed_out",
         0,
         false,
-        1,
+        2,
         0,
         ["callback_expired"],
       ],
