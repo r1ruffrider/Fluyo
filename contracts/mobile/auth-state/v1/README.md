@@ -37,8 +37,10 @@ and one refresh may be in flight.
 Synthetic callback classification accepts only exact HTTPS `.test` environment/host/path fixtures with one
 purpose-bound pending transaction, one verifier, and injected-clock expiry. Consumption is atomic and single-use.
 Success, cancel, malformed input, timeout, local sign-out, account switch, or a relaunch without a valid pending
-transaction wipes the pending flow. Incoming URL, query, fragment, code, state, nonce, verifier, and their hashes
-are never retained or emitted. No OS link is registered.
+transaction wipes the pending flow. Opaque state, nonce, and verifier values exist only inside the memory-only
+pending store until consume, expiry, cancel, or cleanup. Incoming URL, query, fragment, and code are never
+retained; no callback transient or hash is emitted, written to disk, kept after terminal cleanup, or placed in UI,
+logs, telemetry, or evidence. No OS link is registered.
 
 Transient refresh failure preserves the opaque vault candidate and moves to an offline or safe state. Explicit
 invalid/expired/revoked refresh or a second authentication `401` clears local material. A `403` never refreshes

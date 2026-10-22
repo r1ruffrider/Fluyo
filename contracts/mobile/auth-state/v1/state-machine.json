@@ -118,6 +118,17 @@
       },
       {
         "source": "initializing",
+        "event": "cold_callback_received",
+        "guard": "current_generation_and_allowed_route_and_atomic_transaction_consume",
+        "effects": [
+          "require_current_auth_generation",
+          "validate_and_consume_pending_callback_transaction",
+          "start_one_callback_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "initializing",
         "event": "provider_or_api_step_timeout",
         "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000",
         "effects": [
@@ -215,6 +226,18 @@
         "guard": "current_generation_and_verified_owner",
         "effects": ["require_current_auth_generation", "navigate_to_allowlisted_safe_destination"],
         "target": "authenticated"
+      },
+      {
+        "source": "authenticated",
+        "event": "warm_callback_received",
+        "guard": "current_generation_and_verified_owner_and_allowed_route_and_atomic_transaction_consume",
+        "effects": [
+          "require_current_auth_generation",
+          "preserve_verified_session",
+          "validate_and_consume_pending_callback_transaction",
+          "start_one_callback_exchange"
+        ],
+        "target": "callback_pending"
       },
       {
         "source": "authenticated",
@@ -431,7 +454,7 @@
       {
         "source": "unusable_link",
         "event": "start_again",
-        "guard": "current_generation_and_user_action",
+        "guard": "current_generation_and_user_action_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
           "wipe_callback_transients",
@@ -442,8 +465,8 @@
       },
       {
         "source": "unusable_link",
-        "event": "verified_session_revalidated",
-        "guard": "current_generation_and_existing_session_and_get_auth_me_200",
+        "event": "return_to_safe_screen",
+        "guard": "current_generation_and_user_action_and_existing_session_and_get_auth_me_200",
         "effects": [
           "require_current_auth_generation",
           "wipe_callback_transients",
@@ -610,7 +633,10 @@
     {
       "id": "unusable_link",
       "copyId": "unusable_link",
-      "primaryAction": "start_again",
+      "primaryActionsByVariant": {
+        "withoutVerifiedSession": "start_again",
+        "withVerifiedSession": "return_to_safe_screen"
+      },
       "hasSessionCandidate": "preserve_only_if_already_verified",
       "preserve": ["already_verified_session", "safe_destination"],
       "focus": "heading_once",

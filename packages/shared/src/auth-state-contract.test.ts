@@ -77,18 +77,21 @@ class InMemoryTransactionStore {
     path: string;
     stateValue: string;
     now: number;
-  }): PendingTransaction | undefined {
+  }):
+    | { kind: "consumed"; transaction: PendingTransaction }
+    | { kind: "expired" }
+    | { kind: "unmatched" } {
     const pending = this.#pending;
     this.#pending = undefined;
-    return pending &&
-      pending.purpose === input.purpose &&
+    if (!pending) return { kind: "unmatched" };
+    if (input.now > pending.expiresAt) return { kind: "expired" };
+    return pending.purpose === input.purpose &&
       pending.environment === input.environment &&
       pending.host === input.host &&
       pending.path === input.path &&
-      pending.stateValue === input.stateValue &&
-      input.now <= pending.expiresAt
-      ? pending
-      : undefined;
+      pending.stateValue === input.stateValue
+      ? { kind: "consumed", transaction: pending }
+      : { kind: "unmatched" };
   }
 
   get hasPendingTransaction(): boolean {
@@ -147,6 +150,9 @@ class SyntheticAuthCoordinator {
   #auth401Count = 0;
   #pendingTimerGeneration: number | undefined;
   #outcomeCategory = "success";
+  #trace: string[] = [];
+  #exchangeCount = 0;
+  #hasPendingTransaction = false;
   readonly telemetry = new ObservingTelemetry();
 
   publicSnapshot(): JsonObject {
@@ -164,7 +170,29 @@ class SyntheticAuthCoordinator {
     return this.#generation;
   }
 
+  get testTrace(): readonly string[] {
+    return this.#trace;
+  }
+
+  get generation(): number {
+    return this.#generation;
+  }
+
+  get exchangeCount(): number {
+    return this.#exchangeCount;
+  }
+
+  get hasPendingTransaction(): boolean {
+    return this.#hasPendingTransaction;
+  }
+
+  recordCallbackEvidence(exchangeCount: number, hasPendingTransaction: boolean): void {
+    this.#exchangeCount = exchangeCount;
+    this.#hasPendingTransaction = hasPendingTransaction;
+  }
+
   initialize(hasCandidate: boolean, online: boolean): void {
+    this.#trace.push("initialize");
     this.#hasCandidate = hasCandidate;
     if (!hasCandidate) {
       this.#state = "signed_out";
@@ -176,12 +204,34 @@ class SyntheticAuthCoordinator {
     }
   }
 
-  beginCallback(): void {
+  beginCallback(kind: "cold" | "warm" = "cold"): boolean {
+    if (this.#state === "callback_pending") {
+      this.#outcomeCategory = "overlap_rejected";
+      this.#trace.push("callback_overlap_rejected");
+      return false;
+    }
+    if (kind === "warm" && (this.#state !== "authenticated" || this.#verifiedOwner === undefined))
+      return false;
+    if (kind === "cold" && this.#state !== "initializing" && this.#state !== "signed_out")
+      return false;
     this.#state = "callback_pending";
+    this.#trace.push(kind === "warm" ? "warm_callback_received" : "cold_callback_received");
+    return true;
   }
 
-  markCallbackUnusable(): void {
-    this.#state = "unusable_link";
+  cancelCallback(): void {
+    this.#state = "signed_out";
+    this.#outcomeCategory = "canceled";
+    this.#trace.push("callback_canceled");
+  }
+
+  markCallbackUnusable(
+    category: "malformed" | "expired" | "replayed" | "duplicate" | "unsupported",
+    preserveVerified = false,
+  ): void {
+    this.#state = preserveVerified && this.#verifiedOwner ? "authenticated" : "unusable_link";
+    this.#outcomeCategory = category;
+    this.#trace.push(`callback_${category}`);
   }
 
   confirmOwner(generation: number, candidate: symbol, response: symbol): boolean {
@@ -199,6 +249,8 @@ class SyntheticAuthCoordinator {
     this.#hasCandidate = true;
     this.#verifiedOwner = response;
     this.#state = "authenticated";
+    this.#outcomeCategory = "success";
+    this.#trace.push("owner_confirmed");
     return true;
   }
 
@@ -207,6 +259,8 @@ class SyntheticAuthCoordinator {
     this.#hasCandidate = true;
     this.#verifiedOwner = owner;
     this.#state = "authenticated";
+    this.#outcomeCategory = "success";
+    this.#trace.push("verified_owner_seeded");
   }
 
   applyOwnerWrite(generation: number): boolean {
@@ -229,6 +283,8 @@ class SyntheticAuthCoordinator {
     this.#hasCandidate = false;
     this.#verifiedOwner = undefined;
     this.#ownerWriteCount = 0;
+    this.#outcomeCategory = "success";
+    this.#trace.push("account_switch_started");
   }
 
   signOut(): void {
@@ -238,6 +294,8 @@ class SyntheticAuthCoordinator {
     this.#verifiedOwner = undefined;
     this.#ownerWriteCount = 0;
     this.#state = "signed_out";
+    this.#outcomeCategory = "success";
+    this.#trace.push("signed_out");
   }
 
   refresh(outcome: "success" | "transient" | "invalid" | "forbidden"): void {
@@ -267,10 +325,33 @@ class SyntheticAuthCoordinator {
 
   goOffline(): void {
     this.#state = this.#hasCandidate ? "offline_session_candidate" : "signed_out";
+    this.#outcomeCategory = "success";
+    this.#trace.push("offline");
   }
 
   corruptVault(): void {
     this.signOut();
+    this.#outcomeCategory = "vault_corrupt";
+    this.#trace.push("vault_corrupt");
+  }
+
+  background(): void {
+    this.#trace.push("background");
+  }
+
+  foreground(): void {
+    this.#trace.push("foreground");
+  }
+
+  terminateAndRelaunchWithoutTransaction(): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
+    this.#hasCandidate = false;
+    this.#verifiedOwner = undefined;
+    this.#ownerWriteCount = 0;
+    this.#state = "signed_out";
+    this.#outcomeCategory = "success";
+    this.#trace.push("terminated", "relaunch_without_transaction");
   }
 
   scheduleBoundedWork(): number {
@@ -337,7 +418,7 @@ const classifySyntheticCallback = (input: {
   ) {
     return malformed();
   }
-  const transaction = input.store.consume({
+  const consumed = input.store.consume({
     purpose: input.purpose,
     environment: input.environment,
     host: parsed.hostname,
@@ -345,8 +426,11 @@ const classifySyntheticCallback = (input: {
     stateValue,
     now: input.now,
   });
-  if (!transaction) return "replayed_or_unmatched";
-  return input.provider.exchange(code, transaction.verifier) ? "success" : "provider_failure";
+  if (consumed.kind === "expired") return "expired";
+  if (consumed.kind === "unmatched") return "replayed_or_unmatched";
+  return input.provider.exchange(code, consumed.transaction.verifier)
+    ? "success"
+    : "provider_failure";
 };
 
 const evidenceIsClosed = (value: JsonObject, expectedSourceCommit: string): boolean => {
@@ -357,6 +441,7 @@ const evidenceIsClosed = (value: JsonObject, expectedSourceCommit: string): bool
   const constraints = asObject(acceptance.evidenceConstraints);
   const executionCount = value.executionCount;
   return (
+    /^[0-9a-f]{40}$/.test(expectedSourceCommit) &&
     asStrings(acceptance.syntheticScenarioIds, "syntheticScenarioIds").includes(
       String(value.scenarioId),
     ) &&
@@ -469,6 +554,12 @@ describe("provider-neutral auth-state contract v1", () => {
     ];
     expect(states.map((state) => state.id)).toEqual(expected);
     expect(Object.keys(asObject(copy.states))).toEqual(expected);
+    expect(asObject(asObject(asObject(copy.states).unusable_link).primaryActionsByVariant)).toEqual(
+      {
+        withoutVerifiedSession: "Start again",
+        withVerifiedSession: "Return to safe screen",
+      },
+    );
     expect(copy.identityLabel).toBe("Signed in");
     expect(asStrings(machine.publicStateFields, "publicStateFields")).toEqual([
       "state",
@@ -546,7 +637,7 @@ describe("provider-neutral auth-state contract v1", () => {
       provider_or_api_step_timeout: 15000,
       total_actionable_timeout: 30000,
     });
-    expect(transitions.length).toBe(36);
+    expect(transitions.length).toBe(38);
     for (const transition of transitions) {
       expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
       expect(stateIds.has(transition.source)).toBe(true);
@@ -561,6 +652,39 @@ describe("provider-neutral auth-state contract v1", () => {
         `${String(transition.source)}:${String(transition.event)}:${String(transition.guard)}`,
     );
     expect(new Set(eventKeys).size).toBe(transitions.length);
+    expect(
+      transitions.find(
+        (transition) =>
+          transition.source === "initializing" && transition.event === "cold_callback_received",
+      ),
+    ).toMatchObject({ target: "callback_pending" });
+    expect(
+      transitions.find(
+        (transition) =>
+          transition.source === "authenticated" && transition.event === "warm_callback_received",
+      ),
+    ).toMatchObject({ target: "callback_pending" });
+    expect(
+      transitions.filter(
+        (transition) => transition.source === "unusable_link" && transition.event === "start_again",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        guard: "current_generation_and_user_action_and_no_verified_session",
+        target: "signed_out",
+      }),
+    ]);
+    expect(
+      transitions.filter(
+        (transition) =>
+          transition.source === "unusable_link" && transition.event === "return_to_safe_screen",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        guard: "current_generation_and_user_action_and_existing_session_and_get_auth_me_200",
+        target: "authenticated",
+      }),
+    ]);
     for (const action of [
       "sign_in",
       "cancel_after_bound",
@@ -613,6 +737,42 @@ describe("provider-neutral auth-state contract v1", () => {
     expect(provider.verifierWasUsed).toBe(true);
     expect(classifySyntheticCallback(callback)).toBe("replayed_or_unmatched");
     expect(provider.exchangeCount).toBe(1);
+  });
+
+  it("preserves a verified warm session when an unusable callback arrives", () => {
+    const model = new SyntheticAuthCoordinator();
+    model.seedVerifiedOwner();
+    expect(model.beginCallback("warm")).toBe(true);
+    const store = new InMemoryTransactionStore({
+      purpose: "sign_in",
+      environment: "development",
+      host: "auth.dev.fluyo.test",
+      path: "/native/auth/callback",
+      stateValue: "synthetic-state",
+      verifier: "opaque-verifier",
+      expiresAt: 2_000,
+    });
+    const provider = new InMemoryAuthProvider();
+    expect(
+      classifySyntheticCallback({
+        url: "not-a-url",
+        purpose: "sign_in",
+        environment: "development",
+        now: 1_000,
+        store,
+        provider,
+      }),
+    ).toBe("malformed");
+    model.markCallbackUnusable("malformed", true);
+    expect(model.publicSnapshot()).toEqual({
+      state: "authenticated",
+      hasSessionCandidate: true,
+      hasVerifiedOwnerState: true,
+      safeDestinationId: "internal_foundation_home",
+      fixedOutcomeCategory: "malformed",
+    });
+    expect(store.hasPendingTransaction).toBe(false);
+    expect(provider.exchangeCount).toBe(0);
   });
 
   it("locks callback purpose, environment, host, path, expiry, wipe, and no-retention rules", () => {
@@ -677,7 +837,7 @@ describe("provider-neutral auth-state contract v1", () => {
         url: "https://auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
         store: makeStore(),
       }),
-    ).toBe("replayed_or_unmatched");
+    ).toBe("expired");
     const duplicateStore = makeStore();
     expect(
       classifySyntheticCallback({
@@ -754,9 +914,15 @@ describe("provider-neutral auth-state contract v1", () => {
   });
 
   it("executes every shared synthetic lifecycle path with private generation and zero telemetry", () => {
-    const runCallback = (url: string, now = 1_000, repeat = false): SyntheticAuthCoordinator => {
+    const runCallback = (
+      url: string,
+      now = 1_000,
+      repeatCategory?: "replayed" | "duplicate",
+      warm = false,
+    ): SyntheticAuthCoordinator => {
       const model = new SyntheticAuthCoordinator();
-      model.beginCallback();
+      if (warm) model.seedVerifiedOwner();
+      expect(model.beginCallback(warm ? "warm" : "cold")).toBe(true);
       const store = new InMemoryTransactionStore({
         purpose: "sign_in",
         environment: "development",
@@ -777,11 +943,15 @@ describe("provider-neutral auth-state contract v1", () => {
       };
       const outcome = classifySyntheticCallback(input);
       if (outcome === "success") model.seedVerifiedOwner();
-      else model.markCallbackUnusable();
-      if (repeat) {
+      else if (outcome === "expired") model.markCallbackUnusable("expired", warm);
+      else if (outcome === "malformed") model.markCallbackUnusable("malformed", warm);
+      else model.markCallbackUnusable("unsupported", warm);
+      if (repeatCategory) {
         expect(classifySyntheticCallback(input)).toBe("replayed_or_unmatched");
         expect(provider.exchangeCount).toBe(1);
+        model.markCallbackUnusable(repeatCategory, true);
       }
+      model.recordCallbackEvidence(provider.exchangeCount, store.hasPendingTransaction);
       return model;
     };
     const validCallback =
@@ -797,21 +967,38 @@ describe("provider-neutral auth-state contract v1", () => {
         model.initialize(true, true);
         return model;
       },
-      warm_callback_success: () => runCallback(validCallback),
+      warm_callback_success: () => runCallback(validCallback, 1_000, undefined, true),
       cold_callback_success: () => runCallback(validCallback),
       callback_cancel: () => {
         const model = new SyntheticAuthCoordinator();
-        model.beginCallback();
-        model.signOut();
+        expect(model.beginCallback("cold")).toBe(true);
+        const store = new InMemoryTransactionStore({
+          purpose: "sign_in",
+          environment: "development",
+          host: "auth.dev.fluyo.test",
+          path: "/native/auth/callback",
+          stateValue: "synthetic-state",
+          verifier: "opaque-verifier",
+          expiresAt: 2_000,
+        });
+        store.clear();
+        model.cancelCallback();
+        model.recordCallbackEvidence(0, store.hasPendingTransaction);
         return model;
       },
       callback_malformed: () => runCallback("not-a-url"),
       callback_expired: () => runCallback(validCallback, 2_001),
-      callback_replay: () => runCallback(validCallback, 1_000, true),
-      callback_duplicate_delivery: () => runCallback(validCallback, 1_000, true),
+      callback_replay: () => runCallback(validCallback, 1_000, "replayed"),
+      callback_duplicate_delivery: () => runCallback(validCallback, 1_000, "duplicate"),
       callback_unsupported: () =>
         runCallback("https://outside.test/unsupported?code=synthetic&state=synthetic-state"),
-      callback_overlap_rejected: () => runCallback(validCallback, 1_000, true),
+      callback_overlap_rejected: () => {
+        const model = new SyntheticAuthCoordinator();
+        expect(model.beginCallback("cold")).toBe(true);
+        expect(model.beginCallback("cold")).toBe(false);
+        model.recordCallbackEvidence(0, true);
+        return model;
+      },
       refresh_success: () => {
         const model = new SyntheticAuthCoordinator();
         model.seedVerifiedOwner();
@@ -851,12 +1038,25 @@ describe("provider-neutral auth-state contract v1", () => {
       background_foreground: () => {
         const model = new SyntheticAuthCoordinator();
         model.seedVerifiedOwner();
-        expect(model.publicSnapshot().state).toBe("authenticated");
+        model.background();
+        model.foreground();
         return model;
       },
       termination_relaunch_without_transaction: () => {
         const model = new SyntheticAuthCoordinator();
-        model.initialize(false, true);
+        expect(model.beginCallback("cold")).toBe(true);
+        const store = new InMemoryTransactionStore({
+          purpose: "sign_in",
+          environment: "development",
+          host: "auth.dev.fluyo.test",
+          path: "/native/auth/callback",
+          stateValue: "synthetic-state",
+          verifier: "opaque-verifier",
+          expiresAt: 2_000,
+        });
+        store.clear();
+        model.terminateAndRelaunchWithoutTransaction();
+        model.recordCallbackEvidence(0, store.hasPendingTransaction);
         return model;
       },
       account_switch_cleanup: () => {
@@ -920,12 +1120,377 @@ describe("provider-neutral auth-state contract v1", () => {
         return model;
       },
     };
+    type Expected = readonly [
+      SyntheticState,
+      string,
+      boolean,
+      boolean,
+      string,
+      number,
+      boolean,
+      number,
+      number,
+      readonly string[],
+    ];
+    const expected: Record<string, Expected> = {
+      cold_start_without_candidate: [
+        "signed_out",
+        "success",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["initialize"],
+      ],
+      cold_start_with_candidate: [
+        "authenticated",
+        "success",
+        true,
+        true,
+        "internal_foundation_home",
+        0,
+        false,
+        1,
+        0,
+        ["initialize", "owner_confirmed"],
+      ],
+      warm_callback_success: [
+        "authenticated",
+        "success",
+        true,
+        true,
+        "internal_foundation_home",
+        1,
+        false,
+        1,
+        0,
+        ["verified_owner_seeded", "warm_callback_received"],
+      ],
+      cold_callback_success: [
+        "authenticated",
+        "success",
+        true,
+        true,
+        "internal_foundation_home",
+        1,
+        false,
+        1,
+        0,
+        ["cold_callback_received"],
+      ],
+      callback_cancel: [
+        "signed_out",
+        "canceled",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["cold_callback_received", "callback_canceled"],
+      ],
+      callback_malformed: [
+        "unusable_link",
+        "malformed",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["callback_malformed"],
+      ],
+      callback_expired: [
+        "unusable_link",
+        "expired",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["callback_expired"],
+      ],
+      callback_replay: [
+        "authenticated",
+        "replayed",
+        true,
+        true,
+        "internal_foundation_home",
+        1,
+        false,
+        1,
+        0,
+        ["callback_replayed"],
+      ],
+      callback_duplicate_delivery: [
+        "authenticated",
+        "duplicate",
+        true,
+        true,
+        "internal_foundation_home",
+        1,
+        false,
+        1,
+        0,
+        ["callback_duplicate"],
+      ],
+      callback_unsupported: [
+        "unusable_link",
+        "unsupported",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["callback_unsupported"],
+      ],
+      callback_overlap_rejected: [
+        "callback_pending",
+        "overlap_rejected",
+        false,
+        false,
+        "signed_out",
+        0,
+        true,
+        1,
+        0,
+        ["callback_overlap_rejected"],
+      ],
+      refresh_success: [
+        "authenticated",
+        "success",
+        true,
+        true,
+        "internal_foundation_home",
+        0,
+        false,
+        1,
+        0,
+        ["verified_owner_seeded"],
+      ],
+      refresh_explicit_revocation: [
+        "expired_or_revoked",
+        "reauthentication_required",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["signed_out"],
+      ],
+      refresh_transient_failure_preserves_candidate: [
+        "offline_session_candidate",
+        "transient_failure",
+        true,
+        true,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["verified_owner_seeded"],
+      ],
+      refresh_repeated_401_clears: [
+        "expired_or_revoked",
+        "reauthentication_required",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["signed_out"],
+      ],
+      forbidden_403_preserves_session: [
+        "authenticated",
+        "forbidden",
+        true,
+        true,
+        "internal_foundation_home",
+        0,
+        false,
+        1,
+        0,
+        ["verified_owner_seeded"],
+      ],
+      offline_startup_preserves_verified_display_only: [
+        "offline_session_candidate",
+        "success",
+        true,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["initialize"],
+      ],
+      background_foreground: [
+        "authenticated",
+        "success",
+        true,
+        true,
+        "internal_foundation_home",
+        0,
+        false,
+        1,
+        0,
+        ["background", "foreground"],
+      ],
+      termination_relaunch_without_transaction: [
+        "signed_out",
+        "success",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["terminated", "relaunch_without_transaction"],
+      ],
+      account_switch_cleanup: [
+        "account_switching",
+        "stale_generation_discarded",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["account_switch_started"],
+      ],
+      stale_response_discarded: [
+        "account_switching",
+        "stale_generation_discarded",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["account_switch_started"],
+      ],
+      stale_storage_write_discarded: [
+        "signed_out",
+        "stale_generation_discarded",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["signed_out"],
+      ],
+      vault_corruption_cleanup: [
+        "signed_out",
+        "vault_corrupt",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        2,
+        0,
+        ["vault_corrupt"],
+      ],
+      clock_skew: [
+        "unusable_link",
+        "expired",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["callback_expired"],
+      ],
+      owner_subject_mismatch: [
+        "expired_or_revoked",
+        "owner_mismatch",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        [],
+      ],
+      zero_telemetry_launch: [
+        "signed_out",
+        "success",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["initialize"],
+      ],
+      zero_telemetry_resume: [
+        "offline_session_candidate",
+        "success",
+        true,
+        true,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        ["offline"],
+      ],
+      zero_telemetry_error: [
+        "safe_terminal_error",
+        "timed_out",
+        false,
+        false,
+        "signed_out",
+        0,
+        false,
+        1,
+        0,
+        [],
+      ],
+    };
     expect(Object.keys(executions)).toEqual(
       asStrings(acceptance.syntheticScenarioIds, "syntheticScenarioIds"),
     );
+    expect(Object.keys(expected)).toEqual(Object.keys(executions));
     for (const [scenarioId, execute] of Object.entries(executions)) {
       const model = execute();
       const snapshot = model.publicSnapshot();
+      const wanted = expected[scenarioId];
+      expect(wanted, scenarioId).toBeDefined();
+      const [
+        state,
+        outcome,
+        candidate,
+        owner,
+        destination,
+        exchanges,
+        pending,
+        generation,
+        writes,
+        trace,
+      ] = wanted!;
       expect(Object.keys(snapshot)).toEqual(
         asStrings(machine.publicStateFields, "publicStateFields"),
       );
@@ -933,6 +1498,18 @@ describe("provider-neutral auth-state contract v1", () => {
         restrictedPaths(snapshot, asStrings(machine.publicStateForbiddenFields, "forbidden")),
       ).toEqual([]);
       expect(resolveSafeDestinationId(String(snapshot.safeDestinationId))).toBeDefined();
+      expect(snapshot, scenarioId).toEqual({
+        state,
+        hasSessionCandidate: candidate,
+        hasVerifiedOwnerState: owner,
+        safeDestinationId: destination,
+        fixedOutcomeCategory: outcome,
+      });
+      expect(model.exchangeCount, scenarioId).toBe(exchanges);
+      expect(model.hasPendingTransaction, scenarioId).toBe(pending);
+      expect(model.generation, scenarioId).toBe(generation);
+      expect(model.ownerWriteCount, scenarioId).toBe(writes);
+      for (const marker of trace) expect(model.testTrace, scenarioId).toContain(marker);
       expect(model.telemetry, scenarioId).toEqual({
         calls: 0,
         queuedEvents: 0,
@@ -982,6 +1559,7 @@ describe("provider-neutral auth-state contract v1", () => {
       scanResult: "passed",
     };
     expect(evidenceIsClosed(valid, expectedSourceCommit)).toBe(true);
+    expect(evidenceIsClosed({ ...valid, sourceCommit: "not-a-sha" }, "not-a-sha")).toBe(false);
     for (const extra of [
       "email",
       "ownerId",
@@ -1051,7 +1629,17 @@ describe("provider-neutral auth-state contract v1", () => {
       asStrings(acceptance.adversarialMutationFamilies, "adversarialMutationFamilies"),
     );
     for (const value of Object.values(mutations)) {
-      expect(evidenceIsClosed({ ...valid, scenarioId: value }, expectedSourceCommit)).toBe(false);
+      for (const field of [
+        "scenarioId",
+        "platform",
+        "environment",
+        "outcomeCategory",
+        "artifactSha256",
+        "scanResult",
+      ]) {
+        expect(evidenceIsClosed({ ...valid, [field]: value }, expectedSourceCommit)).toBe(false);
+      }
+      expect(evidenceIsClosed({ ...valid, sourceCommit: value }, value)).toBe(false);
     }
   });
 
