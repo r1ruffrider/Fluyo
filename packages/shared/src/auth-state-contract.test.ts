@@ -666,12 +666,16 @@ describe("provider-neutral auth-state contract v1", () => {
     ];
     expect(states.map((state) => state.id)).toEqual(expected);
     expect(Object.keys(asObject(copy.states))).toEqual(expected);
-    expect(asObject(asObject(asObject(copy.states).unusable_link).primaryActionsByVariant)).toEqual(
-      {
-        withoutVerifiedSession: "Start again",
-        withVerifiedSession: "Return to safe screen",
-      },
-    );
+    const unusableLinkCopy = asObject(asObject(copy.states).unusable_link);
+    expect(asObject(unusableLinkCopy.bodiesByVariant)).toEqual({
+      withoutVerifiedSession:
+        "It may be incomplete, expired, or already used. Start sign-in again.",
+      withVerifiedSession: "Your current session is unchanged. Return to continue safely.",
+    });
+    expect(asObject(unusableLinkCopy.primaryActionsByVariant)).toEqual({
+      withoutVerifiedSession: "Start again",
+      withVerifiedSession: "Return to safe screen",
+    });
     expect(
       asObject(
         asObject(asObject(copy.states).safe_terminal_error).callbackTimeoutWithVerifiedSession,
