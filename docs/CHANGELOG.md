@@ -37,6 +37,7 @@ All notable changes to Fluyo are documented here. Releases follow semantic versi
 
 ### Changed
 
+- Updated Next.js and its ESLint configuration to 16.4.2 to resolve three newly published high/critical advisories, and set the CI build job to the standard production `NODE_ENV` required by the patched release.
 - Updated Next.js and its ESLint configuration to 16.3.8, refreshed both `brace-expansion` major lines to patched versions, and patched Multer, fast-uri, and Vitest for newly reported dependency advisories. The High audit threshold and empty exception list remain unchanged.
 - Updated Next.js and its ESLint configuration to the 16.3.3 security release, resolving two critical remote-code-execution advisories.
 - Resolved the dependency-audit policy's four temporary exceptions with real upgrades and npm `overrides` (`sharp`, `postcss`, `brace-expansion` scoped to its affected chain) instead of renewing their expiry; the exception list is now empty. Also fixed two further high-severity findings (`multer`, `deepmerge-ts`) found independently of the original four.

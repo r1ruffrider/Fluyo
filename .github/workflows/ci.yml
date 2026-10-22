@@ -170,6 +170,8 @@ jobs:
         run: npm run prisma:generate
 
       - name: Build
+        env:
+          NODE_ENV: production
         run: npm run build
 
   format:
