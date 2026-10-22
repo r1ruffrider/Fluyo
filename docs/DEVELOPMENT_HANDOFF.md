@@ -23,18 +23,32 @@ Increment 3 merged through PR #39 as c68faf7b7284d8c111aec93db4f982ee7ea3e5e0. P
 iOS 17 lane, current unsigned-simulator lane, and sanitized aggregate. Physical-iPhone evidence and every Apple
 account, identifier-reservation, signing, production, TestFlight/App Store, and spending action remain gated.
 
-Increment 4 is blocked from Android scaffolding because the Android SDK, device/form-factor/orientation,
-repository identifier, toolchain/CI, and accountable implementation/accessibility/asset owner decisions remain
-proposed or open. The repository-only Android foundation readiness bundle records the proposed minSdk 29,
+Marlon accepted the five Android baseline and ownership groups on 2026-10-21. Increment 4 is authorized to add
+the smallest internal, non-production, debug-signed emulator foundation. The Android foundation readiness bundle
+records the accepted minSdk 29,
 compileSdk 37, targetSdk 36, phone-first scope, accepted locale/motion boundaries, non-production configuration,
-empty repository Data safety inventory, typed no-op telemetry, blocked capture, empty asset ledger, and 29
+exact minimal repository Data safety inventory, typed no-op telemetry, blocked capture, empty asset ledger, and 29
 structured future evidence rows. It correctly describes a future installed APK as non-production debug-signed
 emulator evidence; no release/upload/Play signing is implied.
 
-This prerequisite creates no apps/android project, Gradle wrapper, dependency download, emulator, account,
-package reservation, signing key, Play Console resource, production value, physical-device claim, public
-capture, or external action. projectScaffoldAuthorized and completionClaimAllowed remain false. Marlon must
-accept the material Android baselines and appoint an accountable Android owner before scaffolding begins.
+The prior prerequisite created no Android project or runtime evidence. projectScaffoldAuthorized is true.
+Candidate `04fb0b04b49a94f129b73c8f80f5e5af3d1c15d4` subsequently passed 376/376 repository tests, the 8/8
+protected run `39627266023`, dependency proof `39627266093`, and all three jobs in Android run `39627266112`.
+The sanitized aggregate contains 27 unique applicable PASS rows with zero failures; physical Pixel and Samsung
+remain the only two unattempted rows. Isabella passed 15/15 product checks, Danila passed 466/466 UX and evidence
+executions, Fernanda passed 27/27 privacy/evidence checks, and Elana passed 531/531 independent checks. The
+policy now permits only the internal, non-production, debug-signed emulator-foundation completion claim, subject
+to fresh finalization-head checks. Adriana remains interim Android implementation, accessibility, asset, and
+maintenance owner. Package reservation, release/upload/Play signing, Play Console, production, physical-device
+claims, public capture, spending, and all other external actions remain blocked.
+
+The runtime evidence split is deliberate: API 29 runs exactly nine isolated Compose semantics and accessibility
+methods, applying 200% system font scale before that method's process starts and resetting it afterward, while
+API 37 runs exactly seven Compose-semantics checks per flavor, with system input and window controls for the
+honest end state/action, 200% text in landscape, reduced motion, local-only behavior, en-XA expansion,
+keyboard/D-pad action access, and adaptive-window usability. The workflow restores emulator settings and deletes
+raw emulator and instrumentation output unconditionally. API 37 evidence does not claim broad accessibility
+compliance, physical-device support, capture readiness, or Play readiness.
 
 PR #40 merged the readiness prerequisite as 55c6f16f1418d83e7711b632b75c6573c3190ca3; post-main run
 39471055292 passed all eight required jobs. On 2026-10-20, a retained Gradle fixture and cross-platform driver

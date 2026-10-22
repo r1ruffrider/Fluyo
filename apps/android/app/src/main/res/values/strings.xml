@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fluyo internal foundation</string>
+    <string name="brand_name">Fluyo</string>
+    <string name="loading_title">Preparing your internal foundation</string>
+    <string name="loading_body">Checking this non-production build. This will finish shortly.</string>
+    <string name="signed_out_title">Ready for the next small step</string>
+    <string name="signed_out_body">This internal foundation does not include sign-in, lessons, billing, or public access.</string>
+    <string name="review_scope_action">Review build scope</string>
+    <string name="scope_detail">The build proves local shell, layout, and accessibility behavior only.</string>
+    <string name="error_title">This build is not configured</string>
+    <string name="error_body">Use an approved non-production configuration, then try again.</string>
+    <string name="retry_action">Check again</string>
+    <string name="internal_marker">Internal %1$s build · %2$s (%3$d) · %4$s</string>
+    <string name="spanish_sample_label">Spanish learning-content sample</string>
+    <string name="spanish_sample">¿Dónde está la estación?</string>
+</resources>

@@ -1,0 +1,515 @@
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+const root = resolve(__dirname, "../../..");
+const androidRoot = resolve(root, "apps/android");
+
+const walk = (directory: string): string[] =>
+  readdirSync(directory)
+    .filter((name) => ![".gradle", "build"].includes(name))
+    .flatMap((name) => {
+      const path = join(directory, name);
+      return statSync(path).isDirectory()
+        ? walk(path)
+        : [relative(androidRoot, path).replaceAll("\\", "/")];
+    });
+
+const text = (path: string) => readFileSync(resolve(androidRoot, path), "utf8");
+
+describe("Android foundation structure", () => {
+  it("pins the approved SDK and toolchain without release signing", () => {
+    expect(text("build.gradle.kts")).toContain('id("com.android.application") version "9.4.0"');
+    expect(text("build.gradle.kts")).toContain(
+      'id("org.jetbrains.kotlin.plugin.compose") version "2.4.10"',
+    );
+    const app = text("app/build.gradle.kts");
+    expect(app).toContain("compileSdk = 37");
+    expect(app).toContain("minSdk = 29");
+    expect(app).toContain("targetSdk = 36");
+    expect(app).toContain('platform("androidx.compose:compose-bom:2026.09.00")');
+    expect(app).not.toContain("ui-test-manifest");
+    expect(app).not.toMatch(/signingConfigs|storeFile|storePassword|keyAlias|keyPassword/);
+    expect(text("gradle/wrapper/gradle-wrapper.properties")).toContain("gradle-9.6.0-bin.zip");
+  });
+
+  it("keeps production inert and internal application IDs unreserved", () => {
+    const app = text("app/build.gradle.kts");
+    expect(app).toContain('applicationId = "com.fluyo.app"');
+    expect(app).toContain('applicationIdSuffix = ".dev"');
+    expect(app).toContain('applicationIdSuffix = ".staging"');
+    expect(app).toContain('buildConfigField("boolean", "FLUYO_NETWORK_ENABLED", "false")');
+    expect(app).toContain('buildConfigField("boolean", "FLUYO_INTERNAL_BUILD", "false")');
+    expect(text("app/src/main/java/com/fluyo/app/FoundationShell.kt")).toContain(
+      'configuration.isInternal && configuration.environment != "production"',
+    );
+  });
+
+  it("has no network permission, provider SDK, logger, or live feature surface", () => {
+    const files = walk(androidRoot).filter((path) => /\.(kt|kts|xml|properties|pro)$/.test(path));
+    const source = files.map((path) => text(path)).join("\n");
+    expect(source).not.toMatch(
+      /android\.permission\.(INTERNET|CAMERA|RECORD_AUDIO|POST_NOTIFICATIONS)/,
+    );
+    expect(source).not.toMatch(/\b(Log\.|Timber\.|println\(|print\()/);
+    expect(source).not.toMatch(
+      /retrofit|okhttp|ktor-client|firebase|sentry|segment|revenuecat|stripe-android|installreferrer/i,
+    );
+    expect(source).not.toMatch(/Authorization|accessToken|refreshToken|clientSecret|serviceRole/);
+  });
+
+  it("limits the manifest to one exported launcher activity and disables backup", () => {
+    const manifest = text("app/src/main/AndroidManifest.xml");
+    expect((manifest.match(/<activity\b/g) ?? []).length).toBe(2);
+    expect((manifest.match(/android:exported="true"/g) ?? []).length).toBe(1);
+    expect(manifest).toContain('android:allowBackup="false"');
+    expect(manifest).toContain('android:dataExtractionRules="@xml/data_extraction_rules"');
+    expect(manifest).toContain('android:fullBackupContent="false"');
+    expect(manifest).toContain('android:icon="@android:drawable/sym_def_app_icon"');
+    expect(manifest).toContain('android:name="androidx.compose.ui.tooling.PreviewActivity"');
+    expect(manifest).toContain('android:name="androidx.profileinstaller.ProfileInstallReceiver"');
+    expect((manifest.match(/tools:node="remove"/g) ?? []).length).toBe(4);
+    expect((manifest.match(/<permission\b/g) ?? []).length).toBe(1);
+    expect((manifest.match(/<uses-permission\b/g) ?? []).length).toBe(1);
+    expect(manifest).toContain(
+      'android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"',
+    );
+    const extractionRules = text("app/src/main/res/xml/data_extraction_rules.xml");
+    expect(extractionRules).toContain('<exclude domain="root" path="." />');
+    expect((extractionRules.match(/<exclude /g) ?? []).length).toBe(2);
+    expect(manifest).not.toMatch(/<provider|<service/);
+    expect(text("app/build.gradle.kts")).toContain("isShrinkResources = true");
+    const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
+    expect(workflow).toContain("com.fluyo.app.MainActivity");
+    expect(workflow).toContain("androidx.startup.InitializationProvider");
+    expect(workflow).toContain("test \"$(grep -c 'E: receiver'");
+    expect(workflow).toContain("test \"$(grep -c 'E: service'");
+  });
+
+  it("contains raw Android build output and retains only bounded diagnostics", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
+    expect(workflow).toContain('RAW_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-raw.log"');
+    expect(workflow).toContain('>"$RAW_LOG" 2>&1');
+    expect(workflow).toContain("Android matrix leg failed; raw output was discarded");
+    expect(workflow).toContain("summarize-android-test-failures.mjs");
+    expect(workflow).toContain("run_gradle_phase unit_test");
+    expect(workflow).toContain("run_gradle_phase assemble_internal");
+    expect(workflow).toContain("run_gradle_phase compile_instrumentation");
+    expect(workflow).toContain("run_minimum_instrumentation");
+    expect(workflow).toContain("run_current_instrumentation");
+    expect(workflow).toContain('--phase "$phase"');
+    expect(workflow).not.toContain("--stacktrace");
+    expect(workflow).not.toMatch(/(?:cat|tee)\s+[^\n]*RAW_LOG/);
+  });
+
+  it("ignores local Android configuration, captures, packages, and keystores", () => {
+    const ignores = readFileSync(resolve(root, ".gitignore"), "utf8");
+    for (const entry of [
+      "apps/android/local.properties",
+      "apps/android/**/captures/",
+      "apps/android/**/screenshots/",
+      "*.apk",
+      "*.aab",
+      "*.jks",
+      "*.keystore",
+      "*.p12",
+    ]) {
+      expect(ignores).toContain(entry);
+    }
+  });
+
+  it("keeps all user-visible copy in resources and labels learning content honestly", () => {
+    const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
+    const app = text("app/build.gradle.kts");
+    expect(shell).not.toMatch(/Text\(\s*"/);
+    expect(app).not.toContain("localeFilters");
+    expect(app).toContain("isPseudoLocalesEnabled = true");
+    expect(app).not.toContain("ANDROIDX_TEST_ORCHESTRATOR");
+    expect(app).not.toContain("androidx.test:orchestrator");
+    const strings = text("app/src/main/res/values/strings.xml");
+    const expandedStrings = text("app/src/debug/res/values-en-rXA/strings.xml");
+    expect(strings).toContain("does not include sign-in, lessons, billing, or public access");
+    expect(strings).toContain("Spanish learning-content sample");
+    expect(strings).toContain("¿Dónde está la estación?");
+    expect(strings).not.toContain('translatable="false"');
+    expect(expandedStrings).toContain("[!! Řëåðÿ ƒöř ţĥë ñëχţ šmåļļ šţëþ !!]");
+    const englishBody = strings.match(/<string name="signed_out_body">([^<]+)<\/string>/)?.[1];
+    const expandedBody = expandedStrings.match(
+      /<string name="signed_out_body">([^<]+)<\/string>/,
+    )?.[1];
+    expect(englishBody).toBeTruthy();
+    expect(expandedBody).toBeTruthy();
+    expect(expandedBody!.length).toBeGreaterThan(englishBody!.length);
+    expect(text("app/src/debug/res/values-ar-rXB/strings.xml")).toContain(
+      "الخطوة الداخلية التالية",
+    );
+  });
+
+  it("includes the exact emulator, accessibility, and baseline-profile seams", () => {
+    const app = text("app/build.gradle.kts");
+    expect(app).toContain('create("smallApi29")');
+    expect(app).not.toContain('create("largeApi37")');
+    expect(app).toContain("animationsDisabled = true");
+    expect(text("baselineprofile/build.gradle.kts")).toContain("useConnectedDevices = true");
+    expect(text("baselineprofile/build.gradle.kts")).not.toContain("managedDevices");
+    const shell = text("app/src/main/java/com/fluyo/app/FoundationShell.kt");
+    expect(shell).toContain("heightIn(min = 48.dp)");
+    expect(shell).not.toContain("collectIsFocusedAsState");
+    expect(shell).toContain("BorderStroke(3.dp, MaterialTheme.colorScheme.onPrimary)");
+    expect(shell).toContain("LiveRegionMode.Polite");
+    expect(shell).toContain("verticalScroll");
+    expect(shell).toContain(
+      'Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(contentScroll).testTag("foundation-scroll")',
+    );
+    expect(shell).toContain("contentAlignment = Alignment.TopCenter");
+    expect(shell).toContain(
+      'Modifier.testTag("foundation-root").semantics { testTagsAsResourceId = true }.fillMaxSize()',
+    );
+    expect(shell).not.toContain("Modifier.widthIn(max = 640.dp).fillMaxSize()");
+    expect(shell.match(/fillMaxWidth\(\)\.heightIn\(min = 48\.dp\)/g)).toHaveLength(2);
+    expect(shell).toContain("if (scopeExpanded && state == FoundationShellState.SignedOut)");
+    expect(shell).toContain(
+      'modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp).testTag("scope-detail")',
+    );
+    expect(shell).toContain("repeat(120)");
+    expect(shell).toContain("if (state == FoundationShellState.Failure)");
+    expect(shell).not.toContain("state == FoundationShellState.SignedOut ||");
+    expect(shell).toContain("errorFocus.requestFocus()");
+    expect(shell).toContain("runCatching { errorFocus.requestFocus() }.getOrDefault(false)");
+    expect(shell).toContain("if (focusRequestSucceeded && errorIsFocused) return@LaunchedEffect");
+    expect(shell).toContain("Modifier.focusRequester(errorFocus)");
+    expect(shell).toContain(".onFocusChanged { errorIsFocused = it.isFocused }");
+    expect(shell).toContain(".focusable()");
+    expect(shell).toContain("if (errorIsFocused)");
+    expect(shell).toContain("modifier = modifier.onFocusChanged { focusState ->");
+    expect(shell).toContain("isFocused = focusState.isFocused");
+    expect(shell).toContain("onFocusChanged(isFocused)");
+    expect(shell).not.toContain("focused = isFocused");
+    const instrumentation = text("app/src/androidTest/java/com/fluyo/app/FoundationShellTest.kt");
+    expect(instrumentation.match(/@Test fun /g)).toHaveLength(4);
+    expect(instrumentation).toContain("compose.activity.setContent");
+    expect(instrumentation).toContain("@SdkSuppress(maxSdkVersion = 36)");
+    expect(instrumentation).toContain(
+      "fetchSemanticsNode().config.contains(SemanticsActions.RequestFocus)",
+    );
+    expect(instrumentation).toContain(
+      'compose.onNodeWithTag("scope-detail").performScrollTo().assertIsDisplayed().assertTextContains("local shell", substring = true)',
+    );
+    expect(instrumentation).toContain('boundedStage("error state")');
+    expect(instrumentation).toContain('boundedStage("focus target")');
+    expect(instrumentation).toContain('compose.onNodeWithTag("error-state").assertIsFocused()');
+    expect(instrumentation).toContain('boundedStage("node geometry")');
+    expect(instrumentation).toContain(
+      'compose.onNodeWithTag("retry-button").performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp)',
+    );
+    expect(instrumentation).toContain('boundedStage("marker state")');
+    expect(instrumentation).toContain("compose.waitUntil(timeoutMillis = 5_000)");
+    expect(instrumentation).not.toContain("waitForNodeToBeDisplayed");
+    const responsive = text(
+      "app/src/androidTest/java/com/fluyo/app/FoundationResponsiveDeviceTest.kt",
+    );
+    expect(responsive.match(/@Test fun /g)).toHaveLength(2);
+    expect(responsive).toContain("ActivityScenario.launch(MainActivity::class.java)");
+    expect(responsive).toContain("device.wait(Until.findObject(By.res(tag)), 1_500)");
+    expect(responsive).toContain(
+      'device.wait(Until.findObject(By.res("foundation-scroll")), 1_000)',
+    );
+    expect(responsive).toContain("?.scroll(Direction.DOWN, 0.8f)");
+    expect(responsive).toContain('throw AssertionError("node missing")');
+    expect(responsive).not.toContain("settings put system font_scale");
+    expect(responsive).not.toContain("changedFontScale");
+    expect(responsive).toContain("waitForSystemFontScale(1.9f)");
+    expect(responsive).toContain('throw AssertionError("font scale")');
+    expect(responsive).toContain('throw AssertionError("runtime launch")');
+    expect(responsive).toContain('boundedStage("font scale")');
+    expect(responsive).toContain('boundedStage("runtime launch")');
+    expect(responsive).toContain('boundedStage("node missing")');
+    expect(responsive).toContain('boundedStage("scroll action")');
+    expect(responsive).toContain('device.executeShellCommand("settings get system font_scale")');
+    expect(responsive).not.toContain("am force-stop");
+    expect(responsive).not.toContain("am start");
+    expect(responsive).toContain(
+      "ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }",
+    );
+    expect(responsive).toContain("scenario.onActivity { }");
+    expect(responsive).toContain(
+      "check(device.wait(Until.hasObject(By.pkg(packageName).depth(0)), 5_000))",
+    );
+    expect(responsive.indexOf("waitForSystemFontScale(1.9f)")).toBeLessThan(
+      responsive.indexOf('boundedStage("runtime launch")'),
+    );
+    expect(responsive).not.toContain("ActivityScenarioRule");
+    expect(responsive).toContain("activeScenario?.close()");
+    expect(responsive).toContain(
+      "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE",
+    );
+    expect(responsive).toContain(
+      "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED",
+    );
+    expect(instrumentation).not.toContain("resources.assets.locales");
+    expect(responsive).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
+    expect(instrumentation).toContain(
+      'compose.onNodeWithTag("signed-out-state").assertIsDisplayed()',
+    );
+    expect(instrumentation).not.toMatch(/\bcompose\.setContent\s*\{/);
+    const naturalLaunch = text("app/src/androidTest/java/com/fluyo/app/NaturalLaunchTest.kt");
+    expect(naturalLaunch).toContain("@SdkSuppress(maxSdkVersion = 36)");
+    expect(naturalLaunch.match(/@Test fun /g)).toHaveLength(3);
+    expect(naturalLaunch).toContain("compose.onNodeWithTag(action).assertIsDisplayed()");
+    expect(naturalLaunch).toContain("runCatching");
+    const currentRuntime = text(
+      "app/src/androidTest/java/com/fluyo/app/CurrentRuntimeFoundationTest.kt",
+    );
+    expect(currentRuntime).toContain("@SdkSuppress(minSdkVersion = 37)");
+    expect(currentRuntime.match(/@Test fun /g)).toHaveLength(7);
+    expect(currentRuntime).toContain("ActivityScenarioRule(MainActivity::class.java)");
+    expect(currentRuntime).toContain("UiDevice.getInstance(instrumentation)");
+    expect(currentRuntime).toContain("device.wakeUp()");
+    expect(currentRuntime).toContain('device.executeShellCommand("wm dismiss-keyguard")');
+    expect(currentRuntime).toContain("currentRuntimeLaunchHasOneHonestEndState");
+    expect(currentRuntime).not.toContain("prepareFoundation");
+    expect(currentRuntime).toContain("waitForNode(expectedStateTag())");
+    expect(currentRuntime).toContain('throw AssertionError("state missing")');
+    expect(currentRuntime).toContain('throw AssertionError("loading present")');
+    expect(currentRuntime).toContain('throw AssertionError("unexpected state")');
+    expect(currentRuntime).toContain('throw AssertionError("runtime cleanup")');
+    expect(responsive).toContain('throw AssertionError("runtime cleanup")');
+    expect(currentRuntime).toContain('throw AssertionError("runtime launch")');
+    expect(currentRuntime).not.toContain("createEmptyComposeRule()");
+    expect(currentRuntime).not.toContain("ActivityScenario.launch(MainActivity::class.java)");
+    expect(currentRuntime).not.toContain("scenario.close()");
+    expect(currentRuntime).not.toContain("createAndroidComposeRule");
+    expect(currentRuntime).not.toContain("device.pressHome()");
+    expect(currentRuntime).toContain("device.wait(Until.findObject(By.res(tag)), 1_500)");
+    expect(currentRuntime).toContain(
+      'device.wait(Until.findObject(By.res("foundation-scroll")), 1_000)',
+    );
+    expect(currentRuntime).toContain("?.scroll(Direction.DOWN, 0.8f)");
+    expect(currentRuntime).toContain("bounds.width() > 0 && bounds.height() > 0");
+    expect(currentRuntime).toContain("currentRuntimeLargeTextAndLandscapeKeepActionReachable");
+    expect(currentRuntime).toContain("private fun waitForSystemFontScale(minimum: Float)");
+    expect(currentRuntime).toContain(
+      'device.executeShellCommand("settings get system font_scale")',
+    );
+    expect(currentRuntime).toContain("private fun waitForLandscapeDisplay()");
+    expect(currentRuntime).toContain("device.displayWidth > device.displayHeight");
+    const currentLargeText = currentRuntime.match(
+      /@Test fun currentRuntimeLargeTextAndLandscapeKeepActionReachable\(\) \{([\s\S]*?)\n    \}\n\n    @Test fun currentRuntimeReducedMotionKeepsTheSameEndState/,
+    )?.[1];
+    expect(currentLargeText).toBeDefined();
+    expect(currentLargeText).toContain("waitForSystemFontScale(1.9f)");
+    expect(currentLargeText).toContain("waitForLandscapeDisplay()");
+    expect(currentLargeText).toContain("scenario.onActivity { }");
+    expect(currentLargeText).toContain("waitForNode(expectedStateTag())");
+    expect(currentLargeText).toContain("waitForNode(expectedActionTag(), scroll = true)");
+    expect(currentLargeText).not.toContain("recreateFoundation()");
+    expect(currentLargeText!.indexOf("waitForSystemFontScale(1.9f)")).toBeLessThan(
+      currentLargeText!.indexOf("SCREEN_ORIENTATION_LANDSCAPE"),
+    );
+    expect(currentLargeText!.indexOf("SCREEN_ORIENTATION_LANDSCAPE")).toBeLessThan(
+      currentLargeText!.indexOf("waitForLandscapeDisplay()"),
+    );
+    expect(currentRuntime).toContain("currentRuntimeReducedMotionKeepsTheSameEndState");
+    expect(currentRuntime).toContain("currentRuntimeActionRemainsLocalAndHonest");
+    expect(currentRuntime).toContain("currentRuntimePseudoLocaleExpansionKeepsActionReachable");
+    expect(currentRuntime).toContain("private fun waitForApplicationLocale(languageTag: String)");
+    expect(currentRuntime).toContain("private fun waitForActivityLocale(languageTag: String)");
+    expect(currentRuntime).toContain("activity.resources.configuration.locales");
+    expect(currentRuntime).toContain("applicationLocales");
+    const currentPseudoLocale = currentRuntime.match(
+      /@Test fun currentRuntimePseudoLocaleExpansionKeepsActionReachable\(\) \{([\s\S]*?)\n    \}\n\n    @Test fun currentRuntimeKeyboardAndDpadReachActionInLogicalOrder/,
+    )?.[1];
+    expect(currentPseudoLocale).toBeDefined();
+    expect(currentPseudoLocale).toContain('waitForApplicationLocale("en-XA")');
+    expect(currentPseudoLocale).toContain('waitForActivityLocale("en-XA")');
+    expect(currentPseudoLocale!.indexOf('waitForApplicationLocale("en-XA")')).toBeLessThan(
+      currentPseudoLocale!.indexOf('waitForActivityLocale("en-XA")'),
+    );
+    expect(currentPseudoLocale).toContain("scenario.onActivity { }");
+    expect(currentPseudoLocale).toContain("waitForNode(expectedStateTag())");
+    expect(currentPseudoLocale).toContain("waitForNode(expectedActionTag(), scroll = true)");
+    expect(currentPseudoLocale).not.toContain("recreateFoundation()");
+    expect(currentRuntime).toContain("currentRuntimeKeyboardAndDpadReachActionInLogicalOrder");
+    expect(currentRuntime).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
+    expect(currentRuntime).toContain('listOf("1200x2200", "2400x2200", "3000x2200")');
+    expect(currentRuntime).toContain('device.executeShellCommand("wm size reset")');
+    expect(currentRuntime).toContain("scenario.recreate()");
+    expect(currentRuntime).toContain("device.pressKeyCode(KeyEvent.KEYCODE_TAB)");
+    expect(currentRuntime).toContain("private fun focusActionWithKeyboard(): UiObject2");
+    expect(currentRuntime).toContain("if (action.isFocused) return action");
+    expect(currentRuntime).toContain('throw AssertionError("keyboard focus")');
+    expect(currentRuntime).toContain("device.pressDPadCenter()");
+    const workflow = resolve(root, ".github/workflows/android.yml");
+    const workflowText = readFileSync(workflow, "utf8");
+    expect(workflowText).toContain("verify_packaged_pseudo_locales");
+    expect(workflowText).toContain('aapt2\" dump resources');
+    expect(workflowText).toContain("en[-_]r?XA");
+    expect(workflowText).toContain("ar[-_]r?XB");
+    expect(workflowText).toContain("trap cleanup EXIT");
+    expect(workflowText).toContain('wait "$EMULATOR_PID"');
+    expect(workflowText).toContain("for cleanup_attempt in 1 2 3 4 5");
+    expect(workflowText).toContain(
+      "Android emulator cleanup failed; category=temporary_state; raw output was discarded",
+    );
+    expect(workflowText).toContain("start_emulator");
+    expect(workflowText).toContain("start_minimum_emulator");
+    expect(workflowText).toContain("start_current_emulator");
+    expect(workflowText).toContain('"emulator"');
+    expect(workflowText).toContain('test -x "$ANDROID_HOME/emulator/emulator"');
+    expect(workflowText).toContain('APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"');
+    expect(workflowText).toContain('AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"');
+    expect(workflowText).toContain('test -x "$APKSIGNER"');
+    expect(workflowText).toContain('test -x "$AAPT"');
+    expect(workflowText).toContain('"$APKSIGNER" verify --print-certs "$apk"');
+    expect(workflowText).toContain('"$AAPT" dump permissions "$apk"');
+    expect(workflowText).toContain('"$AAPT" dump xmltree "$apk" AndroidManifest.xml');
+    expect(workflowText).not.toMatch(/^\s+apksigner\s/m);
+    expect(workflowText).not.toMatch(/^\s+aapt\s/m);
+    expect(workflowText).toContain('"$ANDROID_HOME/emulator/emulator" -avd "$avd_name"');
+    expect(workflowText).toContain('-no-metrics -wipe-data -accel on -cores 2 -memory "$memory"');
+    expect(workflowText).toContain("fluyo-api29");
+    expect(workflowText).toContain("fluyo-api37");
+    expect(workflowText).toContain("for attempt in 1 2");
+    expect(workflowText).toContain("timeout 360 bash -c");
+    expect(workflowText).toContain('last_phase="avd_creation"');
+    expect(workflowText).toContain('last_phase="device_connection"');
+    expect(workflowText).toContain('last_phase="boot_completion"');
+    expect(workflowText).toContain("adb shell input keyevent KEYCODE_WAKEUP");
+    expect(workflowText).toContain("adb shell wm dismiss-keyguard");
+    expect(workflowText).toContain(
+      "Android $runtime_label setup failed; phase=$last_phase; category=unavailable; raw output was discarded",
+    );
+    expect(workflowText).toContain("run_minimum_instrumentation");
+    expect(workflowText).toContain("run_current_instrumentation");
+    expect(workflowText).toContain("run_instrumentation_method");
+    expect(workflowText).toContain("^OK \\(1 test\\)\\r?$");
+    expect(workflowText).toContain('failure_category="process_status"');
+    expect(workflowText).toContain('failure_category="state_missing"');
+    expect(workflowText).toContain('failure_category="node_missing"');
+    expect(workflowText).toContain('failure_category="runtime_launch"');
+    expect(workflowText).toContain('failure_category="loading_present"');
+    expect(workflowText).toContain('failure_category="unexpected_state"');
+    expect(workflowText).toContain('failure_category="runtime_cleanup"');
+    expect(workflowText).toContain('failure_category="error_state"');
+    expect(workflowText).toContain('failure_category="focus_target"');
+    expect(workflowText).toContain('failure_category="marker_state"');
+    expect(workflowText).toContain('failure_category="method_timeout"');
+    expect(workflowText).toContain('failure_category="test_failure"');
+    expect(workflowText).toContain('failure_category="zero_tests"');
+    expect(workflowText).toContain('failure_category="summary_mismatch"');
+    expect(workflowText).toContain(
+      "Android $runtime_label instrumentation failed; test=$test_name; category=$failure_category; raw output was discarded",
+    );
+    expect(workflowText).toContain("timeout 120 adb shell am instrument -w -r");
+    expect(workflowText).toContain("for shutdown_attempt in $(seq 1 20)");
+    expect(workflowText).toContain('kill -0 "$EMULATOR_PID"');
+    expect(workflowText).toContain('kill -9 "$EMULATOR_PID"');
+    expect(workflowText).toContain('test "$executed" = "${#tests[@]}"');
+    expect(workflowText).toContain("currentRuntimeAdaptiveWindowsKeepStateAndActionReachable");
+    expect(workflowText).toContain(
+      "FoundationResponsiveDeviceTest#twoHundredPercentFontKeepsThePrimaryActionReachable",
+    );
+    expect(workflowText).toContain(
+      "FoundationResponsiveDeviceTest#resizePreservesTheNewestStateAcrossWindowClasses",
+    );
+    expect(workflowText).toContain("settings put system font_scale 2.0");
+    expect(workflowText).toContain("wait_for_font_scale 1.9 2.1");
+    expect(workflowText).toContain(":app:assembleDevelopmentDebugAndroidTest");
+    expect(workflowText).not.toContain(":app:smallApi29DevelopmentDebugAndroidTest");
+    expect(workflowText).toContain("compose_semantics_api29");
+    expect(workflowText).toContain("compose_semantics_system_input_api37");
+    const androidReadme = readFileSync(resolve(root, "apps/android/README.md"), "utf8");
+    const contractReadme = readFileSync(
+      resolve(root, "contracts/mobile/android/foundation/v1/README.md"),
+      "utf8",
+    );
+    const handoff = readFileSync(resolve(root, "docs/DEVELOPMENT_HANDOFF.md"), "utf8");
+    for (const governedText of [androidReadme, contractReadme, handoff]) {
+      expect(governedText).toMatch(
+        /API 29[^.\n]*runs exactly nine isolated Compose semantics and accessibility/,
+      );
+      expect(governedText).toContain("exactly seven Compose-semantics checks per flavor");
+      expect(governedText).not.toMatch(/six bounded UiAutomator black-box checks/i);
+    }
+    expect(workflowText).toContain("com.fluyo.app.staging");
+    expect(workflowText).toContain('"$app_package.test/androidx.test.runner.AndroidJUnitRunner"');
+    expect(workflowText).toContain("settings put system font_scale 1.0");
+    expect(workflowText).toContain("settings put system accelerometer_rotation 1");
+    expect(workflowText).toContain("settings put global animator_duration_scale 1");
+    expect(workflowText).toContain("adb uninstall com.fluyo.app.staging.test");
+    expect(workflowText).toContain("adb uninstall com.fluyo.app.dev.test");
+    expect(workflowText).toContain("adb uninstall com.fluyo.app.test");
+    expect(workflowText).toContain('CURRENT_RUNTIME_TEST_COUNT="7"');
+    expect(workflowText).toContain(
+      "Android artifact inspection failed; category=$1; raw output was discarded",
+    );
+    for (const inventoryAssertion of [
+      `test "$(grep -c 'E: activity' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail activity_inventory`,
+      `test "$(grep -c 'E: provider' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail provider_inventory`,
+      `test "$(grep -c 'android:exported.*0xffffffff' "$TEMP/manifest.txt" || true)" -eq 1 || artifact_inspection_fail exported_inventory`,
+    ]) {
+      expect(workflowText).toContain(inventoryAssertion);
+    }
+    for (const category of [
+      "tool_unavailable",
+      "signature_verification",
+      "signing_classification",
+      "permission_inventory",
+      "unexpected_permission",
+      "manifest_inventory",
+      "activity_inventory",
+      "activity_identity",
+      "provider_inventory",
+      "provider_identity",
+      "receiver_inventory",
+      "service_inventory",
+      "exported_inventory",
+    ]) {
+      expect(workflowText).toContain(`artifact_inspection_fail ${category}`);
+    }
+    expect(workflowText).toContain(
+      'rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"',
+    );
+    expect(workflowText).toContain('rm -rf "$AVD_HOME"');
+    expect(workflowText).not.toContain("largeApi37StagingDebugAndroidTest");
+    expect(workflowText).not.toContain("largeApi37ProductionDebugAndroidTest");
+    expect(workflowText).not.toMatch(/logcat|uiautomator dump|screenshot|screenrecord/i);
+    expect(workflowText).toContain('rm -f "$RESOURCE_TABLE"');
+    expect(app).not.toContain("FORCE_4KB_PAGES");
+    expect(text("baselineprofile/build.gradle.kts")).not.toContain("FORCE_4KB_PAGES");
+  });
+
+  it("uses light and dark text pairs above the WCAG normal-text threshold", () => {
+    const luminance = (hex: string) => {
+      const channels =
+        hex.match(/[0-9a-f]{2}/gi)?.map((value) => Number.parseInt(value, 16) / 255) ?? [];
+      const linear = channels.map((value) =>
+        value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+      );
+      return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!;
+    };
+    const ratio = (first: string, second: string) => {
+      const values = [luminance(first), luminance(second)].sort((a, b) => b - a);
+      return (values[0]! + 0.05) / (values[1]! + 0.05);
+    };
+    expect(ratio("173C85", "FFFFFF")).toBeGreaterThanOrEqual(4.5);
+    expect(ratio("14213D", "FFF8ED")).toBeGreaterThanOrEqual(4.5);
+    expect(ratio("B8C8FF", "002B72")).toBeGreaterThanOrEqual(4.5);
+    expect(ratio("F7F1E8", "101726")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("locks the application source inventory for review", () => {
+    const reviewed = walk(androidRoot)
+      .filter((path) => !path.endsWith("gradle-wrapper.jar"))
+      .sort();
+    expect(createHash("sha256").update(reviewed.join("\n")).digest("hex")).toMatch(
+      /^[0-9a-f]{64}$/,
+    );
+    expect(reviewed).toContain("app/src/main/java/com/fluyo/app/FoundationShell.kt");
+    expect(reviewed).toContain(
+      "baselineprofile/src/main/java/com/fluyo/baselineprofile/BaselineProfileGenerator.kt",
+    );
+  });
+});

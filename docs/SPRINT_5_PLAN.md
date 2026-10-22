@@ -100,22 +100,24 @@ Exit gate: the project builds and its automated tests pass on a documented suppo
 
 - Add a Kotlin/Jetpack Compose project with unit and instrumentation test targets and development, staging, and production flavors.
 - Pin Gradle, Android, Kotlin, Compose, and JDK versions; use only non-secret endpoints and public client configuration.
-- Establish dependency injection, coroutines/Flow boundaries, connectivity state, localization, design-token ingestion, font scaling through at least 200%, TalkBack semantics, 48-by-48-dp minimum targets, reduced animation, and baseline-profile structure.
-- Add repository-owned vector artwork, app-icon, and static launch assets with recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and only short interruptible native transitions with static reduced-motion equivalents.
+- Establish constructor-injected configuration and coroutines/Flow seams, localization, font scaling through at least 200%, TalkBack semantics, 48-by-48-dp minimum targets, reduced animation, and baseline-profile structure. This increment adds no network client or connectivity claim.
+- Use Compose primitives and system typography with no custom asset in this increment; any later artwork requires recorded provenance, phone-safe crops, no baked-in text, correct decorative/meaningful semantics, and only short interruptible native transitions with static reduced-motion equivalents.
 - Add deterministic sandbox/demo configuration. Production endpoints remain inert until their release gate.
 
 Exit gate: the project builds and its automated tests pass on the documented toolchain; a non-production debug-signed emulator artifact contains no secret and renders loading, signed-out, error, and reduced-motion states accessibly.
 
-The specification-only [Android foundation readiness contract](../contracts/mobile/android/foundation/v1/README.md)
-records the proposed API, phone, locale, configuration, privacy, no-op telemetry, capture, asset, toolchain,
-signing-classification, and evidence boundaries. It does not authorize an Android project. The Android SDK,
-form-factor/orientation, repository identifiers, toolchain/CI, and accountable implementation/accessibility/asset
-owner decisions must be accepted before apps/android is created. A reproducible 2026-10-20 coordinate and
+The [Android foundation readiness contract](../contracts/mobile/android/foundation/v1/README.md)
+records the accepted API, phone, locale, configuration, privacy, no-op telemetry, capture, asset, toolchain,
+signing-classification, and evidence boundaries. Marlon accepted the five baseline and ownership groups on
+2026-10-21 and assigned Adriana as interim implementation, accessibility, asset, and maintenance owner. A reproducible 2026-10-20 coordinate and
 binary-checksum proof retained the exact Gradle fixture and driver, regenerated the graph in a fresh project and
 Gradle user home, matched LF-normalized metadata byte for byte, and passed strict offline replay. It covers 270
 components and 440 artifact hashes, including 22 AARs and exact Compose UI, Profile Installer, and Macrobenchmark
-AAR bytes. Its path-scoped workflow is not an Android application or emulator workflow and does not authorize a
-scaffold or clear any of the 29 runtime evidence rows. Physical
+AAR bytes. Its path-scoped workflow did not itself authorize a scaffold or clear any of the 29 runtime evidence
+rows; the later explicit approval authorized the smallest internal implementation. Candidate
+`04fb0b04b49a94f129b73c8f80f5e5af3d1c15d4` passed all 27 emulator/static-applicable rows with zero failures,
+while the two physical rows stayed explicitly deferred. The narrow internal, non-production, debug-signed
+emulator-foundation completion claim is therefore allowed after its finalization head repeats the required gates. Physical
 Pixel and Samsung evidence, Play accounts, release/upload signing, production endpoints, App Links, Play tracks,
 store work, and spending remain separately gated.
 

@@ -1,13 +1,13 @@
 {
-  "schemaVersion": "1.0.0",
-  "status": "specification_only",
-  "sourceMainCommit": "c68faf7b7284d8c111aec93db4f982ee7ea3e5e0",
-  "lastReviewedDate": "2026-10-20",
+  "schemaVersion": "1.1.0",
+  "status": "implementation_authorized",
+  "sourceMainCommit": "b8a1ca5f84d91575f3e67983291dcb29c5b4e113",
+  "lastReviewedDate": "2026-10-21",
   "productionDataUsed": false,
   "externalActionsPerformed": false,
-  "projectScaffoldAuthorized": false,
-  "completionClaimAllowed": false,
-  "proposedBaselines": {
+  "projectScaffoldAuthorized": true,
+  "completionClaimAllowed": true,
+  "acceptedBaselines": {
     "minimumApi": 29,
     "compileSdk": 37,
     "targetSdk": 36,
@@ -19,17 +19,18 @@
     "learningContentLanguage": "es",
     "pseudoAndRtlTesting": true,
     "identifiers": {
-      "status": "proposed_unreserved_repository_settings_only",
+      "status": "accepted_unreserved_repository_settings_only",
       "development": "com.fluyo.app.dev",
       "staging": "com.fluyo.app.staging",
       "production": "com.fluyo.app"
     },
-    "implementationOwner": null,
-    "accessibilityOwner": null,
-    "assetOwner": null,
+    "implementationOwner": "Adriana",
+    "accessibilityOwner": "Adriana",
+    "assetOwner": "Adriana",
+    "maintenanceOwner": "Adriana",
     "independentQaOwner": "Elana",
     "ci": {
-      "status": "proposed_reproducible_resolution_and_binary_checksum_proof_passed_requires_user_acceptance",
+      "status": "accepted_reproducible_resolution_and_binary_checksum_proof_passed",
       "runner": "ubuntu-24.04",
       "jdk": "17",
       "androidGradlePlugin": "9.4.0",
@@ -46,13 +47,12 @@
       "resolutionProof": "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json"
     }
   },
-  "remainingDecisionGates": [
-    "android_sdk_baseline",
-    "android_form_factor_and_orientation",
-    "android_repository_identifiers",
-    "android_toolchain_and_ci",
-    "android_implementation_accessibility_asset_owner"
-  ],
+  "approval": {
+    "date": "2026-10-21",
+    "approvedBy": "Marlon",
+    "scope": "internal_non_production_debug_signed_emulator_foundation"
+  },
+  "remainingDecisionGates": [],
   "remainingExternalGates": [
     "google_play_account",
     "package_name_reservation",
@@ -168,7 +168,24 @@
     "sharedDataTypes": [],
     "runtimePermissions": [],
     "thirdPartyTelemetrySdks": [],
-    "exportedComponents": [],
+    "components": [
+      {
+        "name": "com.fluyo.app.MainActivity",
+        "kind": "activity",
+        "exported": true,
+        "permission": null,
+        "purpose": "launcher_only"
+      },
+      {
+        "name": "androidx.startup.InitializationProvider",
+        "kind": "provider",
+        "exported": false,
+        "permission": null,
+        "purpose": "profile_installer_initialization"
+      }
+    ],
+    "exportedComponents": ["com.fluyo.app.MainActivity"],
+    "removedDependencyComponents": ["androidx.profileinstaller.ProfileInstallReceiver"],
     "backupOfSensitiveDataAllowed": false,
     "rule": "declare_only_after_exact_manifest_dependency_and_sdk_inventory_and_privacy_approval"
   },

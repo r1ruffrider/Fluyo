@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">أساس فلويو الداخلي</string>
+    <string name="brand_name">فلويو</string>
+    <string name="loading_title">تجهيز الأساس الداخلي</string>
+    <string name="loading_body">يتم فحص هذا الإصدار غير الإنتاجي وسينتهي قريبًا.</string>
+    <string name="signed_out_title">الخطوة الداخلية التالية</string>
+    <string name="signed_out_body">هذا الأساس الداخلي لا يتضمن تسجيل الدخول أو الدروس أو الفوترة أو الوصول العام.</string>
+    <string name="review_scope_action">مراجعة نطاق الإصدار</string>
+    <string name="scope_detail">يثبت هذا الإصدار سلوك الواجهة المحلية والتخطيط وإمكانية الوصول فقط.</string>
+    <string name="error_title">هذا الإصدار غير مهيأ</string>
+    <string name="error_body">استخدم إعدادًا غير إنتاجي معتمدًا ثم حاول مرة أخرى.</string>
+    <string name="retry_action">التحقق مرة أخرى</string>
+    <string name="internal_marker">إصدار داخلي %1$s · %2$s (%3$d) · %4$s</string>
+    <string name="spanish_sample_label">عينة من محتوى تعلم الإسبانية</string>
+    <string name="spanish_sample">¿Dónde está la estación?</string>
+</resources>

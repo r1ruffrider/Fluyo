@@ -1,34 +1,36 @@
 # Android foundation readiness contract v1
 
-This bundle is a **specification-only prerequisite** for Sprint 5 Increment 4. It does
-not authorize an Android project scaffold, claim Android support or availability, or
-prove any emulator, physical-device, signing, Google Play, production, authentication,
-learning, billing, AI, or release behavior.
+This bundle governs the **authorized internal Android foundation implementation** for
+Sprint 5 Increment 4. Marlon accepted the five recorded Android baseline and ownership
+groups on 2026-10-21. The authorization is limited to a non-production,
+debug-signed emulator foundation. It does not claim Android support or availability,
+physical-device coverage, release/upload/Play signing, Google Play, production,
+authentication, learning, billing, AI, or release behavior.
 
-The proposed internal foundation is deliberately narrow: a Kotlin/Jetpack Compose phone
+The approved internal foundation is deliberately narrow: a Kotlin/Jetpack Compose phone
 shell with deterministic loading, signed-out, and safe configuration-error states.
 Development and staging may later use checked public non-production configuration.
 Production remains inert until its separate release gate. Real connectivity belongs with
 the first authorized live client in Increment 6.
 
-## Decisions still required
+## Accepted implementation baseline
 
-Marlon must explicitly accept the Android portions of the decision register before an
-apps/android project is created:
+The repository records these accepted internal implementation inputs:
 
 - Android 10 / API 29 minimum, with compileSdk 37 and targetSdk 36;
 - phone-first scope, portrait-primary layouts, and functional landscape, with no tablet
   or foldable support claim;
 - the accepted English UI / Spanish learning-content / pseudo and RTL probe boundary;
-- proposed, unreserved repository identifiers com.fluyo.app, .staging, and .dev
+- unreserved repository identifiers com.fluyo.app, .staging, and .dev
   for Android project settings only;
-- the pinned free hosted CI/toolchain proposal: JDK 17, AGP 9.4.0, Gradle 9.6.0,
+- the pinned free hosted CI/toolchain: JDK 17, AGP 9.4.0, Gradle 9.6.0,
   Kotlin and Compose Compiler plugin 2.4.10, Compose BOM 2026.09.00, AndroidX Baseline
   Profile plugin 1.5.0, Profile Installer 1.4.1, and their checksums. An
-  isolated coordinate and checksum-resolution proof has passed; user acceptance remains required;
-- one accountable Android implementation, accessibility, asset, and maintenance owner.
+  isolated coordinate and checksum-resolution proof has passed;
+- Adriana as interim Android implementation, accessibility, asset, and maintenance owner,
+  with Elana retaining independent QA and code-review ownership.
 
-The proposed emulator matrix uses a small API 29 phone and a large current API 37
+The accepted emulator matrix uses a small API 29 phone and a large current API 37
 Pixel-class profile. Physical Pixel- and Samsung-class evidence remains a separately
 approved Sprint 5 closeout gate.
 
@@ -53,8 +55,12 @@ the exact pull-request head. It is not an Android application or emulator workfl
 This proves repository availability and exact dependency-byte reproducibility only. It
 did not install Android SDK packages, create apps/android, compile an application,
 start an emulator, or authorize any baseline, owner, signing, production, Play,
-physical-device, or spending decision. projectScaffoldAuthorized and
-completionClaimAllowed remain false.
+physical-device, or spending decision. The later user approval authorized the scaffold.
+The exact-head repository, API 29, API 37, sanitized aggregate, roster, and independent
+QA gates passed for candidate `04fb0b04b49a94f129b73c8f80f5e5af3d1c15d4`, so the
+policy now permits only the narrow internal Increment 4 emulator-foundation completion
+claim. A new head still requires fresh protected, dependency-proof, Android-evidence,
+artifact-scan, and independent-QA checks before merge.
 
 ## Signing terminology
 
@@ -66,32 +72,52 @@ availability.
 
 ## Privacy and evidence boundary
 
-The repository Data safety inventory starts as an unsubmitted draft with no ads,
-tracking, collection, sharing, runtime permissions, third-party telemetry SDKs, or
-sensitive backup. Any change requires an exact manifest/dependency/SDK inventory and
-privacy approval. It is not a submitted Google Play Data safety form.
+The repository Data safety inventory is an unsubmitted draft with no ads, tracking,
+collection, sharing, runtime permissions, third-party telemetry SDKs, or sensitive
+backup. Its exact component inventory contains the exported app launcher and the
+non-exported AndroidX Startup provider used by Profile Installer. The dependency's
+debug command receiver is deliberately removed during manifest merging. Any change
+requires an exact merged-manifest/dependency/SDK inventory and privacy approval. This
+is not a submitted Google Play Data safety form.
 
 Shell telemetry remains typed no-op. Product capture remains blocked by
 [TEST_ACCOUNT_GOVERNANCE](../../../../../docs/TEST_ACCOUNT_GOVERNANCE.md). Retained
 evidence must exclude every email-shaped identity, test-account variable reference,
-token, provider/signing identifier, Android/advertising/app-set identifier, Install
-Referrer value, campaign parameter, path, raw log, raw test result, and production value.
+token, credential, provider identifier, private/release/upload/Play signing identifier
+or signing material, Android/advertising/app-set identifier, Install Referrer value,
+campaign parameter, path, raw log, raw test result, and production value. The retained
+debug-signed APK may expose only the standard non-account Android debug
+certificate/public-signer metadata needed to classify and bind that artifact. This does
+not authorize or evidence a private, release, upload, or Play signing identity. The
+exact-head scanner opens APK and ZIP entries recursively rather than treating their
+compressed containers as plain text. Android build/test output is captured only in
+temporary storage, reduced to bounded structured failure categories, and then deleted.
 
-The source acceptance matrix contains 29 structured unattempted rows. Static review on
-Windows does not convert any row to PASS. After the product, ownership, and toolchain
-decisions are accepted, an exact-head Android workflow must generate separate minimum
-and current emulator evidence, a source-bound artifact hash, a non-production
-debug-signing classification, and a fail-closed sanitized aggregate. Physical Pixel and
-Samsung rows stay unattempted until their separate device/custody gate.
+The immutable source acceptance matrix contains 29 structured unattempted rows. The
+accepted implementation must produce a separate exact-head execution aggregate rather
+than rewriting those source rows. That workflow generates minimum and current emulator
+evidence, source-bound artifact hashes, a non-production debug-signing classification,
+and a fail-closed sanitized aggregate. Physical Pixel and Samsung rows stay unattempted
+until their separate device/custody gate.
+
+The minimum API 29 lane runs exactly nine isolated Compose semantics and accessibility methods. It
+applies the 200% system font scale before that method's instrumentation process starts and resets
+the setting before the next method, avoiding an in-process configuration-change race.
+The current API 37 lane runs exactly seven Compose-semantics checks per flavor, with system input
+and window controls for end-state honesty, action reachability under 200% text and landscape,
+reduced motion, the local-only action, en-XA expansion, keyboard/D-pad action access, and
+adaptive-window usability. It retains no UI hierarchy, screenshot, video, logcat, raw emulator
+output, or raw instrumentation result. These checks do not establish broad accessibility
+compliance, physical-device support, capture readiness, or Play readiness.
 
 ## Claim boundary
 
-Safe before implementation:
+Safe during implementation:
 
-> Fluyo has a proposed Android foundation readiness specification. Android
-> implementation and support decisions remain open.
+> Fluyo is building an internal Android emulator foundation on the approved repository
+> baseline.
 
-Safe only after a future exact-head implementation audit passes:
+Safe after the exact-head implementation audit and required finalization checks pass:
 
 > An internal, non-production, debug-signed Android emulator foundation renders the
 > audited shell states on the recorded emulator matrix.

@@ -10,6 +10,8 @@ const contractDirectory = resolve(__dirname, "../../../contracts/mobile/android/
 const policy = JSON.parse(
   readFileSync(resolve(contractDirectory, "foundation-policy.json"), "utf8"),
 ) as JsonObject;
+const contractReadme = readFileSync(resolve(contractDirectory, "README.md"), "utf8");
+const normalizedContractReadme = contractReadme.replace(/\s+/g, " ");
 
 const asObject = (value: unknown, label = "value"): JsonObject => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -71,7 +73,7 @@ const validatesClosedRecord = (
   );
 };
 
-const proposedBaselines = asObject(policy.proposedBaselines);
+const acceptedBaselines = asObject(policy.acceptedBaselines);
 const configuration = asObject(policy.configuration);
 const telemetry = asObject(policy.telemetry);
 const buildMarker = asObject(policy.buildMarker);
@@ -81,26 +83,25 @@ const assets = asObject(policy.assets);
 const acceptance = asObject(policy.acceptance);
 
 describe("Android foundation readiness contract v1", () => {
-  it("keeps the Android scaffold and completion gates closed", () => {
-    expect(policy.schemaVersion).toBe("1.0.0");
-    expect(policy.status).toBe("specification_only");
-    expect(policy.sourceMainCommit).toBe("c68faf7b7284d8c111aec93db4f982ee7ea3e5e0");
-    expect(policy.lastReviewedDate).toBe("2026-10-20");
+  it("records the accepted scaffold and narrow emulator-foundation completion gates", () => {
+    expect(policy.schemaVersion).toBe("1.1.0");
+    expect(policy.status).toBe("implementation_authorized");
+    expect(policy.sourceMainCommit).toBe("b8a1ca5f84d91575f3e67983291dcb29c5b4e113");
+    expect(policy.lastReviewedDate).toBe("2026-10-21");
     expect(policy.productionDataUsed).toBe(false);
     expect(policy.externalActionsPerformed).toBe(false);
-    expect(policy.projectScaffoldAuthorized).toBe(false);
-    expect(policy.completionClaimAllowed).toBe(false);
-    expect(asStrings(policy.remainingDecisionGates, "remainingDecisionGates")).toEqual([
-      "android_sdk_baseline",
-      "android_form_factor_and_orientation",
-      "android_repository_identifiers",
-      "android_toolchain_and_ci",
-      "android_implementation_accessibility_asset_owner",
-    ]);
+    expect(policy.projectScaffoldAuthorized).toBe(true);
+    expect(policy.completionClaimAllowed).toBe(true);
+    expect(asStrings(policy.remainingDecisionGates, "remainingDecisionGates")).toEqual([]);
+    expect(asObject(policy.approval)).toEqual({
+      date: "2026-10-21",
+      approvedBy: "Marlon",
+      scope: "internal_non_production_debug_signed_emulator_foundation",
+    });
   });
 
-  it("records proposed Android baselines without inferring approval", () => {
-    expect(proposedBaselines).toEqual({
+  it("records the accepted Android baselines without inferring external approval", () => {
+    expect(acceptedBaselines).toEqual({
       minimumApi: 29,
       compileSdk: 37,
       targetSdk: 36,
@@ -112,18 +113,18 @@ describe("Android foundation readiness contract v1", () => {
       learningContentLanguage: "es",
       pseudoAndRtlTesting: true,
       identifiers: {
-        status: "proposed_unreserved_repository_settings_only",
+        status: "accepted_unreserved_repository_settings_only",
         development: "com.fluyo.app.dev",
         staging: "com.fluyo.app.staging",
         production: "com.fluyo.app",
       },
-      implementationOwner: null,
-      accessibilityOwner: null,
-      assetOwner: null,
+      implementationOwner: "Adriana",
+      accessibilityOwner: "Adriana",
+      assetOwner: "Adriana",
+      maintenanceOwner: "Adriana",
       independentQaOwner: "Elana",
       ci: {
-        status:
-          "proposed_reproducible_resolution_and_binary_checksum_proof_passed_requires_user_acceptance",
+        status: "accepted_reproducible_resolution_and_binary_checksum_proof_passed",
         runner: "ubuntu-24.04",
         jdk: "17",
         androidGradlePlugin: "9.4.0",
@@ -280,7 +281,24 @@ describe("Android foundation readiness contract v1", () => {
       sharedDataTypes: [],
       runtimePermissions: [],
       thirdPartyTelemetrySdks: [],
-      exportedComponents: [],
+      components: [
+        {
+          name: "com.fluyo.app.MainActivity",
+          kind: "activity",
+          exported: true,
+          permission: null,
+          purpose: "launcher_only",
+        },
+        {
+          name: "androidx.startup.InitializationProvider",
+          kind: "provider",
+          exported: false,
+          permission: null,
+          purpose: "profile_installer_initialization",
+        },
+      ],
+      exportedComponents: ["com.fluyo.app.MainActivity"],
+      removedDependencyComponents: ["androidx.profileinstaller.ProfileInstallReceiver"],
       backupOfSensitiveDataAllowed: false,
       rule: "declare_only_after_exact_manifest_dependency_and_sdk_inventory_and_privacy_approval",
     });
@@ -442,13 +460,20 @@ describe("Android foundation readiness contract v1", () => {
     ]);
   });
 
-  it("contains no endpoint, account, credential, signing value, or Android project", () => {
+  it("contains no endpoint, account, credential, or signing value and has the approved scaffold", () => {
     const serialized = JSON.stringify(policy);
     expect(serialized).not.toMatch(/https?:\\?\//i);
     expect(serialized).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     expect(serialized).not.toMatch(/(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+/);
     expect(serialized).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/);
     expect(serialized).not.toMatch(/-----BEGIN [A-Z ]+PRIVATE KEY-----/);
+    expect(normalizedContractReadme).toContain(
+      "standard non-account Android debug certificate/public-signer metadata",
+    );
+    expect(normalizedContractReadme).toContain(
+      "does not authorize or evidence a private, release, upload, or Play signing identity",
+    );
+    expect(contractReadme).not.toContain("provider/signing identifier");
     expect(readdirSync(contractDirectory).sort()).toEqual([
       "README.md",
       "foundation-policy.json",
@@ -456,6 +481,20 @@ describe("Android foundation readiness contract v1", () => {
       "toolchain-resolution-proof.json",
       "verification-metadata.xml",
     ]);
-    expect(() => readdirSync(resolve(__dirname, "../../../apps/android"))).toThrow();
+    expect(
+      readdirSync(resolve(__dirname, "../../../apps/android"))
+        .filter((entry) => ![".gradle", "build"].includes(entry))
+        .sort(),
+    ).toEqual([
+      "README.md",
+      "app",
+      "baselineprofile",
+      "build.gradle.kts",
+      "gradle",
+      "gradle.properties",
+      "gradlew",
+      "gradlew.bat",
+      "settings.gradle.kts",
+    ]);
   });
 });
