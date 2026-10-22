@@ -270,6 +270,8 @@ class SyntheticAuthCoordinator {
     work: { store: InMemoryTransactionStore; provider: InMemoryAuthProvider },
     preserveVerified = false,
   ): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
     work.store.clear();
     if (work.provider.exchangeInFlight) work.provider.cancelDeferredExchange();
     this.#state = preserveVerified && this.#verifiedOwner ? "authenticated" : "signed_out";
@@ -311,6 +313,8 @@ class SyntheticAuthCoordinator {
     work: { store: InMemoryTransactionStore; provider: InMemoryAuthProvider },
     preserveVerified = false,
   ): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
     work.store.clear();
     if (work.provider.exchangeInFlight) work.provider.cancelDeferredExchange();
     if (!preserveVerified) {
@@ -330,6 +334,8 @@ class SyntheticAuthCoordinator {
     work: { store: InMemoryTransactionStore; provider: InMemoryAuthProvider },
     preserveVerified = false,
   ): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
     work.store.clear();
     if (work.provider.exchangeInFlight) work.provider.cancelDeferredExchange();
     if (!preserveVerified) {
@@ -800,7 +806,7 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(transitions.length).toBe(50);
     expect(createHash("sha256").update(JSON.stringify(transitions)).digest("hex")).toBe(
-      "8a2de000d11b8fb7867caab78198ebdce1d80ec2536c205c7dac0d37461c6628",
+      "9410b819ec59c2975d942d9d027801e97e2d4856d752a0c2afe8d4a6a5959275",
     );
     for (const transition of transitions) {
       expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
@@ -944,6 +950,7 @@ describe("provider-neutral auth-state contract v1", () => {
         guard: "current_generation_and_fixed_transient_exchange_failure_and_no_verified_session",
         effects: [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state",
@@ -956,6 +963,7 @@ describe("provider-neutral auth-state contract v1", () => {
           "current_generation_and_fixed_transient_exchange_failure_and_existing_verified_session",
         effects: [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_verified_session",
@@ -964,6 +972,23 @@ describe("provider-neutral auth-state contract v1", () => {
         target: "safe_terminal_error",
       },
     ]);
+    const invalidatingCallbackTerminals = transitions.filter(
+      (transition) =>
+        transition.source === "callback_pending" &&
+        (asStrings(transition.effects, "callback terminal effects").includes(
+          "cancel_callback_exchange",
+        ) ||
+          asStrings(transition.effects, "callback terminal effects").includes(
+            "cancel_all_auth_work",
+          )),
+    );
+    expect(invalidatingCallbackTerminals).toHaveLength(9);
+    for (const transition of invalidatingCallbackTerminals) {
+      expect(asStrings(transition.effects, "callback terminal effects").slice(0, 2)).toEqual([
+        "require_current_auth_generation",
+        "increment_generation",
+      ]);
+    }
     const transition = (source: string, event: string) => {
       const found = transitions.find((row) => row.source === source && row.event === event);
       expect(found, `${source}:${event}`).toBeDefined();
@@ -1232,11 +1257,23 @@ describe("provider-neutral auth-state contract v1", () => {
       const pendingModel = new SyntheticAuthCoordinator();
       if (warm) pendingModel.seedVerifiedOwner();
       expect(pendingModel.beginCallback(warm ? "warm" : "cold")).toBe(true);
+      const pendingGeneration = pendingModel.captureGeneration();
       const pendingProvider = new InMemoryAuthProvider();
       pendingModel.cancelCallback({ store: pendingStore, provider: pendingProvider }, warm);
       expect(pendingStore.hasPendingTransaction).toBe(false);
       expect(pendingProvider.exchangeInFlight).toBe(false);
       expect(pendingModel.publicSnapshot().state).toBe(warm ? "authenticated" : "signed_out");
+      const pendingLateOwner = Symbol("late-owner");
+      expect(pendingModel.confirmOwner(pendingGeneration, pendingLateOwner, pendingLateOwner)).toBe(
+        false,
+      );
+      expect(pendingModel.applyOwnerWrite(pendingGeneration)).toBe(false);
+      expect(pendingModel.publicSnapshot()).toMatchObject({
+        state: warm ? "authenticated" : "signed_out",
+        hasSessionCandidate: warm,
+        hasVerifiedOwnerState: warm,
+      });
+      expect(pendingModel.ownerWriteCount).toBe(0);
 
       const consumedStore = new InMemoryTransactionStore({
         purpose: "sign_in",
@@ -1267,9 +1304,22 @@ describe("provider-neutral auth-state contract v1", () => {
       const exchangeModel = new SyntheticAuthCoordinator();
       if (warm) exchangeModel.seedVerifiedOwner();
       expect(exchangeModel.beginCallback(warm ? "warm" : "cold")).toBe(true);
+      const exchangeGeneration = exchangeModel.captureGeneration();
       exchangeModel.cancelCallback({ store: consumedStore, provider }, warm);
       expect(provider.exchangeInFlight).toBe(false);
+      expect(provider.completeDeferredExchange()).toBe(false);
       expect(exchangeModel.publicSnapshot().state).toBe(warm ? "authenticated" : "signed_out");
+      const exchangeLateOwner = Symbol("late-owner");
+      expect(
+        exchangeModel.confirmOwner(exchangeGeneration, exchangeLateOwner, exchangeLateOwner),
+      ).toBe(false);
+      expect(exchangeModel.applyOwnerWrite(exchangeGeneration)).toBe(false);
+      expect(exchangeModel.publicSnapshot()).toMatchObject({
+        state: warm ? "authenticated" : "signed_out",
+        hasSessionCandidate: warm,
+        hasVerifiedOwnerState: warm,
+      });
+      expect(exchangeModel.ownerWriteCount).toBe(0);
       expect(exchangeModel.telemetry).toEqual(new ObservingTelemetry());
     }
   });
@@ -1290,6 +1340,7 @@ describe("provider-neutral auth-state contract v1", () => {
     const coldStore = makePending();
     const coldProvider = new InMemoryAuthProvider();
     expect(coldProvider.beginDeferredExchange("synthetic", "opaque-verifier")).toBe(true);
+    const coldGeneration = cold.captureGeneration();
     cold.callbackTimeout({ store: coldStore, provider: coldProvider });
     expect(cold.publicSnapshot()).toEqual({
       state: "safe_terminal_error",
@@ -1300,6 +1351,14 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(coldStore.hasPendingTransaction).toBe(false);
     expect(coldProvider.exchangeInFlight).toBe(false);
+    expect(coldProvider.completeDeferredExchange()).toBe(false);
+    const coldLateOwner = Symbol("late-owner");
+    expect(cold.confirmOwner(coldGeneration, coldLateOwner, coldLateOwner)).toBe(false);
+    expect(cold.applyOwnerWrite(coldGeneration)).toBe(false);
+    expect(cold.publicSnapshot()).toMatchObject({
+      state: "safe_terminal_error",
+      hasVerifiedOwnerState: false,
+    });
     expect(cold.retryAfterCallbackIssue()).toBe(true);
     expect(cold.publicSnapshot().state).toBe("callback_pending");
 
@@ -1309,6 +1368,7 @@ describe("provider-neutral auth-state contract v1", () => {
     const warmStore = makePending();
     const warmProvider = new InMemoryAuthProvider();
     expect(warmProvider.beginDeferredExchange("synthetic", "opaque-verifier")).toBe(true);
+    const warmGeneration = warm.captureGeneration();
     warm.callbackTimeout({ store: warmStore, provider: warmProvider }, true);
     expect(warm.publicSnapshot()).toEqual({
       state: "safe_terminal_error",
@@ -1319,6 +1379,15 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(warmStore.hasPendingTransaction).toBe(false);
     expect(warmProvider.exchangeInFlight).toBe(false);
+    expect(warmProvider.completeDeferredExchange()).toBe(false);
+    const warmLateOwner = Symbol("late-owner");
+    expect(warm.confirmOwner(warmGeneration, warmLateOwner, warmLateOwner)).toBe(false);
+    expect(warm.applyOwnerWrite(warmGeneration)).toBe(false);
+    expect(warm.publicSnapshot()).toMatchObject({
+      state: "safe_terminal_error",
+      hasSessionCandidate: true,
+      hasVerifiedOwnerState: true,
+    });
     expect(warm.returnFromCallbackIssue()).toBe(true);
     expect(warm.publicSnapshot().state).toBe("authenticated");
     expect(cold.telemetry).toEqual(new ObservingTelemetry());
@@ -1340,6 +1409,7 @@ describe("provider-neutral auth-state contract v1", () => {
       });
       const provider = new InMemoryAuthProvider();
       provider.failNextExchange();
+      const exchangeGeneration = model.captureGeneration();
       expect(
         classifySyntheticCallback({
           url: "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state",
@@ -1364,6 +1434,15 @@ describe("provider-neutral auth-state contract v1", () => {
       expect(store.hasPendingTransaction).toBe(false);
       expect(provider.exchangeCount).toBe(1);
       expect(provider.exchangeInFlight).toBe(false);
+      const lateOwner = Symbol("late-owner");
+      expect(model.confirmOwner(exchangeGeneration, lateOwner, lateOwner)).toBe(false);
+      expect(model.applyOwnerWrite(exchangeGeneration)).toBe(false);
+      expect(model.publicSnapshot()).toMatchObject({
+        state: "safe_terminal_error",
+        hasSessionCandidate: warm,
+        hasVerifiedOwnerState: warm,
+      });
+      expect(model.ownerWriteCount).toBe(0);
       expect(model.telemetry).toEqual(new ObservingTelemetry());
       expect(warm ? model.returnFromCallbackIssue() : model.retryAfterCallbackIssue()).toBe(true);
       expect(model.publicSnapshot().state).toBe(warm ? "authenticated" : "callback_pending");
@@ -1844,7 +1923,7 @@ describe("provider-neutral auth-state contract v1", () => {
         "signed_out",
         0,
         false,
-        1,
+        2,
         0,
         ["cold_callback_received", "callback_canceled"],
       ],

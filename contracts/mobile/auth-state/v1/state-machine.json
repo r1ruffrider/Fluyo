@@ -222,6 +222,7 @@
         "guard": "current_generation_and_fixed_invalid_expired_replayed_or_unsupported_category",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_verified_session_if_present"
@@ -234,6 +235,7 @@
         "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state"
@@ -246,6 +248,7 @@
         "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_existing_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_verified_session"
@@ -258,6 +261,7 @@
         "guard": "current_generation_and_fixed_transient_exchange_failure_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_safe_anonymous_state",
@@ -271,6 +275,7 @@
         "guard": "current_generation_and_fixed_transient_exchange_failure_and_existing_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_verified_session",
@@ -284,6 +289,7 @@
         "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "set_transport_error_variant"
@@ -296,6 +302,7 @@
         "guard": "current_generation_and_elapsed_ms_greater_than_or_equal_15000_and_existing_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_callback_exchange",
           "wipe_callback_transients",
           "preserve_verified_session",
@@ -309,6 +316,7 @@
         "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_all_auth_work",
           "wipe_callback_transients",
           "set_transport_error_variant"
@@ -321,6 +329,7 @@
         "guard": "current_generation_and_total_elapsed_ms_greater_than_or_equal_30000_and_existing_verified_session",
         "effects": [
           "require_current_auth_generation",
+          "increment_generation",
           "cancel_all_auth_work",
           "wipe_callback_transients",
           "preserve_verified_session",
