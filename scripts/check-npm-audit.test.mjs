@@ -142,6 +142,16 @@ test("rejects stale dependency-path evidence", () => {
   assert.match(result.errors.join("\n"), /dependencyPath version is not installed/);
 });
 
+test("rejects a dependency path with a missing parent-child edge", () => {
+  const input = fixture();
+  input.lock.packages["node_modules/parent-package"].dependencies = {};
+
+  const result = evaluateAuditPolicy(input);
+
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join("\n"), /dependencyPath edge is not present/);
+});
+
 test("rejects severity escalation", () => {
   const input = fixture();
   input.audit.vulnerabilities["example-package"].via[0].severity = "critical";
