@@ -6,7 +6,7 @@
   "states": {
     "initializing": {
       "heading": "Getting Fluyo ready",
-      "body": "Checking your secure session and app setup.",
+      "body": "Checking your session and app setup.",
       "primaryAction": null
     },
     "signed_out": {
@@ -16,7 +16,7 @@
     },
     "callback_pending": {
       "heading": "Finishing sign-in",
-      "body": "Verifying the secure sign-in response.",
+      "body": "Checking the sign-in response.",
       "primaryAction": "Cancel"
     },
     "authenticated": {
@@ -26,7 +26,7 @@
     },
     "offline_session_candidate": {
       "heading": "You’re offline",
-      "body": "A session candidate is available on this device. Reconnect to verify your account and continue.",
+      "body": "Reconnect to verify your account and continue.",
       "primaryAction": "Try again"
     },
     "refresh_pending": {

@@ -10,6 +10,9 @@ Keystore adapter, operating-system link registration, association file, redirect
 email delivery, account action, network client, signing resource, production value, physical-device action,
 capture, store action, or spend is included.
 
+Fernanda reviews this contract's auth-state privacy boundary. That scoped review does not assign the still-open
+repository-wide privacy, legal, support, external-account, signing, or release owner.
+
 ## State and privacy boundary
 
 The ten public states expose no token, code, verifier, nonce, callback URL, email, UUID, owner/profile/session ID,
@@ -17,10 +20,12 @@ provider detail, device identifier, correlation ID, campaign field, or raw diagn
 `offline_session_candidate`: it can preserve an already verified display state but cannot confirm a new owner,
 grant access, expand data, or prove secure persistence. The identity label is always `Signed in`.
 
-Secrets exist only as opaque values behind the future provider and vault ports. Synthetic fakes remain memory
-only and never write them to disk. `/api/v1/auth/me` is the existing identity confirmation boundary; its UUID is
-private and may not enter UI, logs, telemetry, fixtures, reports, filenames, or snapshots. No callback or refresh
-HTTP endpoint is invented.
+Session material exists only as opaque values behind the future provider and vault ports. The memory-only
+`CallbackTransactionStore` fake may hold opaque state, nonce, and verifier values only until atomic consumption,
+expiry, cancellation, or cleanup; it then wipes them and never emits them. Synthetic fakes never write those
+values to disk. `/api/v1/auth/me` is the existing identity confirmation boundary; its UUID is private and may not
+enter UI, logs, telemetry, fixtures, reports, filenames, or snapshots. No callback or refresh HTTP endpoint is
+invented.
 
 One in-memory `authGeneration` fences callback exchange, refresh, response handling, retry, navigation, and all
 cache/storage writes. A generation change first cancels work and blocks writes, then clears previous-owner and
@@ -42,8 +47,9 @@ until expiry. Remote deletion is absent and blocked; no deletion endpoint or fix
 
 ## Diagnostics and telemetry
 
-Diagnostics use a closed enum. Retained evidence is limited to scenario ID, platform, `repository_only`
-environment, exact source SHA, fixed outcome, count, artifact hash, and scan result. Mutation tests reject raw
+Diagnostics use a closed enum. Retained evidence is limited to scenario ID, `shared_contract` platform,
+`repository_only` environment, the exact source SHA supplied by the runner, fixed outcome, count, artifact hash,
+and scan result. Mutation tests reject raw
 exceptions, stack traces, stdout/stderr, commands, arguments, paths, URLs, headers/bodies, contact or owner data,
 credentials, provider/signing/account data, device identifiers, and campaign data.
 

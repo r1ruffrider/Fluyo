@@ -36,6 +36,9 @@ const asStrings = (value: unknown, label: string): string[] => {
 
 const normalize = (value: string) => value.replace(/[^a-z0-9]/gi, "").toLowerCase();
 
+const resolveSafeDestinationId = (value: string): string | undefined =>
+  asStrings(machine.safeDestinationIds, "safeDestinationIds").includes(value) ? value : undefined;
+
 const restrictedPaths = (value: unknown, concepts: string[], path = "value"): string[] => {
   if (Array.isArray(value)) {
     return value.flatMap((entry, index) => restrictedPaths(entry, concepts, `${path}[${index}]`));
@@ -74,18 +77,18 @@ class InMemoryTransactionStore {
     path: string;
     stateValue: string;
     now: number;
-  }): boolean {
+  }): PendingTransaction | undefined {
     const pending = this.#pending;
     this.#pending = undefined;
-    return Boolean(
-      pending &&
+    return pending &&
       pending.purpose === input.purpose &&
       pending.environment === input.environment &&
       pending.host === input.host &&
       pending.path === input.path &&
       pending.stateValue === input.stateValue &&
-      input.now <= pending.expiresAt,
-    );
+      input.now <= pending.expiresAt
+      ? pending
+      : undefined;
   }
 
   get hasPendingTransaction(): boolean {
@@ -97,12 +100,201 @@ class InMemoryTransactionStore {
   }
 }
 
+class InMemoryAuthProvider {
+  exchangeCount = 0;
+  verifierWasUsed = false;
+
+  exchange(code: string, verifier: string): boolean {
+    this.exchangeCount += 1;
+    this.verifierWasUsed = code.length > 0 && verifier.length > 0;
+    return this.verifierWasUsed;
+  }
+}
+
+type SyntheticState =
+  | "initializing"
+  | "signed_out"
+  | "callback_pending"
+  | "authenticated"
+  | "offline_session_candidate"
+  | "refresh_pending"
+  | "expired_or_revoked"
+  | "account_switching"
+  | "unusable_link"
+  | "safe_terminal_error";
+
+class ObservingTelemetry {
+  calls = 0;
+  queuedEvents = 0;
+  serializations = 0;
+  diskWrites = 0;
+  networkRequests = 0;
+  retainedTimestamps = 0;
+  correlationIdentifiers = 0;
+  retries = 0;
+
+  emit(): void {
+    this.calls += 1;
+  }
+}
+
+class SyntheticAuthCoordinator {
+  #generation = 1;
+  #state: SyntheticState = "initializing";
+  #hasCandidate = false;
+  #verifiedOwner: symbol | undefined;
+  #ownerWriteCount = 0;
+  #auth401Count = 0;
+  #pendingTimerGeneration: number | undefined;
+  #outcomeCategory = "success";
+  readonly telemetry = new ObservingTelemetry();
+
+  publicSnapshot(): JsonObject {
+    return {
+      state: this.#state,
+      hasSessionCandidate: this.#hasCandidate,
+      hasVerifiedOwnerState: this.#verifiedOwner !== undefined,
+      safeDestinationId:
+        this.#state === "authenticated" ? "internal_foundation_home" : "signed_out",
+      fixedOutcomeCategory: this.#outcomeCategory,
+    };
+  }
+
+  captureGeneration(): number {
+    return this.#generation;
+  }
+
+  initialize(hasCandidate: boolean, online: boolean): void {
+    this.#hasCandidate = hasCandidate;
+    if (!hasCandidate) {
+      this.#state = "signed_out";
+    } else if (!online) {
+      this.#state = "offline_session_candidate";
+    } else {
+      const owner = Symbol.for("verified");
+      this.confirmOwner(this.#generation, owner, owner);
+    }
+  }
+
+  beginCallback(): void {
+    this.#state = "callback_pending";
+  }
+
+  markCallbackUnusable(): void {
+    this.#state = "unusable_link";
+  }
+
+  confirmOwner(generation: number, candidate: symbol, response: symbol): boolean {
+    if (generation !== this.#generation) {
+      this.#outcomeCategory = "stale_generation_discarded";
+      return false;
+    }
+    if (candidate !== response) {
+      this.#hasCandidate = false;
+      this.#verifiedOwner = undefined;
+      this.#state = "expired_or_revoked";
+      this.#outcomeCategory = "owner_mismatch";
+      return false;
+    }
+    this.#hasCandidate = true;
+    this.#verifiedOwner = response;
+    this.#state = "authenticated";
+    return true;
+  }
+
+  seedVerifiedOwner(): void {
+    const owner = Symbol.for("verified");
+    this.#hasCandidate = true;
+    this.#verifiedOwner = owner;
+    this.#state = "authenticated";
+  }
+
+  applyOwnerWrite(generation: number): boolean {
+    if (generation !== this.#generation || this.#verifiedOwner === undefined) {
+      this.#outcomeCategory = "stale_generation_discarded";
+      return false;
+    }
+    this.#ownerWriteCount += 1;
+    return true;
+  }
+
+  get ownerWriteCount(): number {
+    return this.#ownerWriteCount;
+  }
+
+  switchAccount(): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
+    this.#state = "account_switching";
+    this.#hasCandidate = false;
+    this.#verifiedOwner = undefined;
+    this.#ownerWriteCount = 0;
+  }
+
+  signOut(): void {
+    this.#generation += 1;
+    this.#pendingTimerGeneration = undefined;
+    this.#hasCandidate = false;
+    this.#verifiedOwner = undefined;
+    this.#ownerWriteCount = 0;
+    this.#state = "signed_out";
+  }
+
+  refresh(outcome: "success" | "transient" | "invalid" | "forbidden"): void {
+    if (outcome === "success") {
+      this.seedVerifiedOwner();
+    } else if (outcome === "transient") {
+      this.#state = "offline_session_candidate";
+      this.#outcomeCategory = "transient_failure";
+    } else if (outcome === "forbidden") {
+      this.#state = this.#verifiedOwner ? "authenticated" : "signed_out";
+      this.#outcomeCategory = "forbidden";
+    } else {
+      this.signOut();
+      this.#state = "expired_or_revoked";
+      this.#outcomeCategory = "reauthentication_required";
+    }
+  }
+
+  auth401(): void {
+    this.#auth401Count += 1;
+    if (this.#auth401Count === 1) {
+      this.#state = "refresh_pending";
+    } else {
+      this.refresh("invalid");
+    }
+  }
+
+  goOffline(): void {
+    this.#state = this.#hasCandidate ? "offline_session_candidate" : "signed_out";
+  }
+
+  corruptVault(): void {
+    this.signOut();
+  }
+
+  scheduleBoundedWork(): number {
+    this.#pendingTimerGeneration = this.#generation;
+    return this.#generation;
+  }
+
+  settleTimer(generation: number): boolean {
+    if (generation !== this.#generation || this.#pendingTimerGeneration !== generation)
+      return false;
+    this.#pendingTimerGeneration = undefined;
+    this.#state = "safe_terminal_error";
+    this.#outcomeCategory = "timed_out";
+    return true;
+  }
+}
+
 const classifySyntheticCallback = (input: {
   url: string;
   purpose: PendingTransaction["purpose"];
   environment: PendingTransaction["environment"];
   now: number;
   store: InMemoryTransactionStore;
+  provider: InMemoryAuthProvider;
 }): string => {
   const malformed = () => {
     input.store.clear();
@@ -114,7 +306,14 @@ const classifySyntheticCallback = (input: {
   } catch {
     return malformed();
   }
-  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".test") || parsed.hash !== "") {
+  if (
+    parsed.protocol !== "https:" ||
+    !parsed.hostname.endsWith(".test") ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.port !== "" ||
+    parsed.hash !== ""
+  ) {
     return malformed();
   }
   const keys = [...parsed.searchParams.keys()];
@@ -128,19 +327,29 @@ const classifySyntheticCallback = (input: {
   ) {
     return malformed();
   }
-  return input.store.consume({
+  const code = parsed.searchParams.get("code") ?? "";
+  const stateValue = parsed.searchParams.get("state") ?? "";
+  if (
+    code.trim() === "" ||
+    stateValue.trim() === "" ||
+    code.length > 512 ||
+    stateValue.length > 512
+  ) {
+    return malformed();
+  }
+  const transaction = input.store.consume({
     purpose: input.purpose,
     environment: input.environment,
     host: parsed.hostname,
     path: parsed.pathname,
-    stateValue: parsed.searchParams.get("state") ?? "",
+    stateValue,
     now: input.now,
-  })
-    ? "success"
-    : "replayed_or_unmatched";
+  });
+  if (!transaction) return "replayed_or_unmatched";
+  return input.provider.exchange(code, transaction.verifier) ? "success" : "provider_failure";
 };
 
-const evidenceIsClosed = (value: JsonObject): boolean => {
+const evidenceIsClosed = (value: JsonObject, expectedSourceCommit: string): boolean => {
   const allowed = asStrings(acceptance.evidenceAllowedFields, "evidenceAllowedFields");
   const keys = Object.keys(value);
   if (keys.length !== allowed.length || !keys.every((key) => allowed.includes(key))) return false;
@@ -153,7 +362,8 @@ const evidenceIsClosed = (value: JsonObject): boolean => {
     ) &&
     asStrings(constraints.platform, "platform").includes(String(value.platform)) &&
     asStrings(constraints.environment, "environment").includes(String(value.environment)) &&
-    new RegExp(String(constraints.sourceCommitPattern)).test(String(value.sourceCommit)) &&
+    constraints.sourceCommit === "exact_head_supplied_by_runner" &&
+    value.sourceCommit === expectedSourceCommit &&
     new RegExp(String(constraints.artifactSha256Pattern)).test(String(value.artifactSha256)) &&
     asStrings(constraints.scanResult, "scanResult").includes(String(value.scanResult)) &&
     asStrings(acceptance.fixedDiagnosticCategories, "fixedDiagnosticCategories").includes(
@@ -196,7 +406,7 @@ describe("provider-neutral auth-state contract v1", () => {
       uxStateSemanticsAccountable: "Danila",
       repositoryIntegrationResponsible: "Adriana",
       materialProductAndExternalChangesConsulted: "Marlon",
-      privacySecurityReviewer: "Fernanda",
+      authStatePrivacyBoundaryReviewer: "Fernanda",
       independentQa: "Elana",
     });
   });
@@ -260,10 +470,44 @@ describe("provider-neutral auth-state contract v1", () => {
     expect(states.map((state) => state.id)).toEqual(expected);
     expect(Object.keys(asObject(copy.states))).toEqual(expected);
     expect(copy.identityLabel).toBe("Signed in");
+    expect(asStrings(machine.publicStateFields, "publicStateFields")).toEqual([
+      "state",
+      "hasSessionCandidate",
+      "hasVerifiedOwnerState",
+      "safeDestinationId",
+      "fixedOutcomeCategory",
+    ]);
+    expect(asStrings(machine.publicStateFields, "publicStateFields")).not.toContain(
+      "authGeneration",
+    );
     expect(
       restrictedPaths(states, asStrings(machine.publicStateForbiddenFields, "forbidden")),
     ).toEqual([]);
     expect(JSON.stringify(copy)).not.toMatch(/@|https?:\/\/|[0-9a-f]{8}-[0-9a-f-]{27,}/i);
+  });
+
+  it("accepts only fixed safe-destination identifiers and rejects route material", () => {
+    expect(asStrings(machine.safeDestinationIds, "safeDestinationIds")).toEqual([
+      "signed_out",
+      "internal_foundation_home",
+      "recovery_start",
+      "previous_safe_screen",
+    ]);
+    for (const id of asStrings(machine.safeDestinationIds, "safeDestinationIds")) {
+      expect(resolveSafeDestinationId(id)).toBe(id);
+    }
+    for (const unsafe of [
+      "https://outside.example.test/path?next=/private#token",
+      "/private/path",
+      "%2Fprivate%3Ftoken%3Dsynthetic",
+      "unknown_destination",
+      "internal_foundation_home?next=outside",
+    ]) {
+      expect(resolveSafeDestinationId(unsafe)).toBeUndefined();
+    }
+    expect(machine.safeDestinationRule).toBe(
+      "public_state_uses_only_fixed_ids_route_resolution_is_internal_and_never_accepts_uri_path_query_or_fragment",
+    );
   });
 
   it("pins the generation fence and all write/navigation cancellation order", () => {
@@ -288,7 +532,64 @@ describe("provider-neutral auth-state contract v1", () => {
     ]);
   });
 
+  it("defines a closed current-generation transition graph with bounded cancel and timeout targets", () => {
+    const contract = asObject(machine.transitionContract);
+    const transitions = asObjects(contract.transitions, "transitions");
+    const stateIds = new Set(asObjects(machine.states, "states").map((state) => state.id));
+    expect(contract).toMatchObject({
+      clock: "injected",
+      currentGenerationRequired: true,
+      terminalRule: "exactly_one_target_state_after_ordered_effects_complete",
+    });
+    expect(asObject(contract.actionAvailabilityMilliseconds)).toEqual({
+      cancel_after_bound: 500,
+      provider_or_api_step_timeout: 15000,
+      total_actionable_timeout: 30000,
+    });
+    expect(transitions.length).toBe(36);
+    for (const transition of transitions) {
+      expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
+      expect(stateIds.has(transition.source)).toBe(true);
+      expect(stateIds.has(transition.target)).toBe(true);
+      expect(String(transition.guard)).toContain("current_generation");
+      expect(asStrings(transition.effects, "transition effects")[0]).toBe(
+        "require_current_auth_generation",
+      );
+    }
+    const eventKeys = transitions.map(
+      (transition) =>
+        `${String(transition.source)}:${String(transition.event)}:${String(transition.guard)}`,
+    );
+    expect(new Set(eventKeys).size).toBe(transitions.length);
+    for (const action of [
+      "sign_in",
+      "cancel_after_bound",
+      "continue",
+      "try_again",
+      "return_to_sign_in",
+      "start_again",
+      "return_to_safe_screen",
+    ]) {
+      expect(transitions.some((transition) => transition.event === action)).toBe(true);
+    }
+    const stepTimeouts = transitions.filter(
+      (transition) => transition.event === "provider_or_api_step_timeout",
+    );
+    expect(stepTimeouts).toHaveLength(4);
+    expect(stepTimeouts.every((transition) => String(transition.guard).endsWith("15000"))).toBe(
+      true,
+    );
+    const totalTimeouts = transitions.filter(
+      (transition) => transition.event === "total_actionable_timeout",
+    );
+    expect(totalTimeouts).toHaveLength(4);
+    expect(totalTimeouts.every((transition) => String(transition.guard).endsWith("30000"))).toBe(
+      true,
+    );
+  });
+
   it("atomically consumes one exact synthetic callback and rejects replay", () => {
+    const provider = new InMemoryAuthProvider();
     const store = new InMemoryTransactionStore({
       purpose: "sign_in",
       environment: "development",
@@ -304,10 +605,14 @@ describe("provider-neutral auth-state contract v1", () => {
       environment: "development" as const,
       now: 1_000,
       store,
+      provider,
     };
     expect(classifySyntheticCallback(callback)).toBe("success");
     expect(store.hasPendingTransaction).toBe(false);
+    expect(provider.exchangeCount).toBe(1);
+    expect(provider.verifierWasUsed).toBe(true);
     expect(classifySyntheticCallback(callback)).toBe("replayed_or_unmatched");
+    expect(provider.exchangeCount).toBe(1);
   });
 
   it("locks callback purpose, environment, host, path, expiry, wipe, and no-retention rules", () => {
@@ -337,7 +642,7 @@ describe("provider-neutral auth-state contract v1", () => {
       "relaunch_without_valid_pending_transaction",
     ]);
     expect(callback.retention).toBe(
-      "never_retain_or_emit_url_query_fragment_code_verifier_state_nonce_or_hash",
+      "opaque_state_nonce_and_verifier_exist_only_in_memory_inside_callback_transaction_store_until_atomic_consume_expiry_cancel_or_cleanup_then_are_wiped_and_are_never_emitted",
     );
   });
 
@@ -356,6 +661,7 @@ describe("provider-neutral auth-state contract v1", () => {
       purpose: "recovery" as const,
       environment: "staging" as const,
       now: 1_000,
+      provider: new InMemoryAuthProvider(),
     };
     expect(
       classifySyntheticCallback({
@@ -388,6 +694,18 @@ describe("provider-neutral auth-state contract v1", () => {
         store: makeStore(),
       }),
     ).toBe("malformed");
+    for (const url of [
+      "https://user:password@auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://auth.staging.fluyo.test:444/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://auth.staging.fluyo.test/native/recovery/callback?code=&state=synthetic-state",
+      "https://auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=",
+    ]) {
+      const store = makeStore();
+      const provider = new InMemoryAuthProvider();
+      expect(classifySyntheticCallback({ ...base, url, store, provider })).toBe("malformed");
+      expect(store.hasPendingTransaction).toBe(false);
+      expect(provider.exchangeCount).toBe(0);
+    }
   });
 
   it("distinguishes transient refresh, explicit invalidation, repeated 401, and 403", () => {
@@ -435,6 +753,199 @@ describe("provider-neutral auth-state contract v1", () => {
     });
   });
 
+  it("executes every shared synthetic lifecycle path with private generation and zero telemetry", () => {
+    const runCallback = (url: string, now = 1_000, repeat = false): SyntheticAuthCoordinator => {
+      const model = new SyntheticAuthCoordinator();
+      model.beginCallback();
+      const store = new InMemoryTransactionStore({
+        purpose: "sign_in",
+        environment: "development",
+        host: "auth.dev.fluyo.test",
+        path: "/native/auth/callback",
+        stateValue: "synthetic-state",
+        verifier: "opaque-verifier",
+        expiresAt: 2_000,
+      });
+      const provider = new InMemoryAuthProvider();
+      const input = {
+        url,
+        purpose: "sign_in" as const,
+        environment: "development" as const,
+        now,
+        store,
+        provider,
+      };
+      const outcome = classifySyntheticCallback(input);
+      if (outcome === "success") model.seedVerifiedOwner();
+      else model.markCallbackUnusable();
+      if (repeat) {
+        expect(classifySyntheticCallback(input)).toBe("replayed_or_unmatched");
+        expect(provider.exchangeCount).toBe(1);
+      }
+      return model;
+    };
+    const validCallback =
+      "https://auth.dev.fluyo.test/native/auth/callback?code=synthetic&state=synthetic-state";
+    const executions: Record<string, () => SyntheticAuthCoordinator> = {
+      cold_start_without_candidate: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.initialize(false, true);
+        return model;
+      },
+      cold_start_with_candidate: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.initialize(true, true);
+        return model;
+      },
+      warm_callback_success: () => runCallback(validCallback),
+      cold_callback_success: () => runCallback(validCallback),
+      callback_cancel: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.beginCallback();
+        model.signOut();
+        return model;
+      },
+      callback_malformed: () => runCallback("not-a-url"),
+      callback_expired: () => runCallback(validCallback, 2_001),
+      callback_replay: () => runCallback(validCallback, 1_000, true),
+      callback_duplicate_delivery: () => runCallback(validCallback, 1_000, true),
+      callback_unsupported: () =>
+        runCallback("https://outside.test/unsupported?code=synthetic&state=synthetic-state"),
+      callback_overlap_rejected: () => runCallback(validCallback, 1_000, true),
+      refresh_success: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.refresh("success");
+        return model;
+      },
+      refresh_explicit_revocation: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.refresh("invalid");
+        return model;
+      },
+      refresh_transient_failure_preserves_candidate: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.refresh("transient");
+        return model;
+      },
+      refresh_repeated_401_clears: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.auth401();
+        model.auth401();
+        return model;
+      },
+      forbidden_403_preserves_session: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.refresh("forbidden");
+        return model;
+      },
+      offline_startup_preserves_verified_display_only: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.initialize(true, false);
+        return model;
+      },
+      background_foreground: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        expect(model.publicSnapshot().state).toBe("authenticated");
+        return model;
+      },
+      termination_relaunch_without_transaction: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.initialize(false, true);
+        return model;
+      },
+      account_switch_cleanup: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        const oldGeneration = model.captureGeneration();
+        const oldTimerGeneration = model.scheduleBoundedWork();
+        expect(model.applyOwnerWrite(oldGeneration)).toBe(true);
+        model.switchAccount();
+        expect(model.settleTimer(oldTimerGeneration)).toBe(false);
+        expect(model.applyOwnerWrite(oldGeneration)).toBe(false);
+        expect(model.ownerWriteCount).toBe(0);
+        return model;
+      },
+      stale_response_discarded: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        const staleGeneration = model.captureGeneration();
+        model.switchAccount();
+        expect(model.confirmOwner(staleGeneration, Symbol.for("old"), Symbol.for("old"))).toBe(
+          false,
+        );
+        return model;
+      },
+      stale_storage_write_discarded: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        const staleGeneration = model.captureGeneration();
+        model.signOut();
+        expect(model.applyOwnerWrite(staleGeneration)).toBe(false);
+        return model;
+      },
+      vault_corruption_cleanup: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.corruptVault();
+        return model;
+      },
+      clock_skew: () => runCallback(validCallback, Number.MAX_SAFE_INTEGER),
+      owner_subject_mismatch: () => {
+        const model = new SyntheticAuthCoordinator();
+        const generation = model.captureGeneration();
+        expect(model.confirmOwner(generation, Symbol("candidate"), Symbol("response"))).toBe(false);
+        return model;
+      },
+      zero_telemetry_launch: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.initialize(false, true);
+        return model;
+      },
+      zero_telemetry_resume: () => {
+        const model = new SyntheticAuthCoordinator();
+        model.seedVerifiedOwner();
+        model.goOffline();
+        return model;
+      },
+      zero_telemetry_error: () => {
+        const model = new SyntheticAuthCoordinator();
+        const timerGeneration = model.scheduleBoundedWork();
+        expect(model.settleTimer(timerGeneration)).toBe(true);
+        return model;
+      },
+    };
+    expect(Object.keys(executions)).toEqual(
+      asStrings(acceptance.syntheticScenarioIds, "syntheticScenarioIds"),
+    );
+    for (const [scenarioId, execute] of Object.entries(executions)) {
+      const model = execute();
+      const snapshot = model.publicSnapshot();
+      expect(Object.keys(snapshot)).toEqual(
+        asStrings(machine.publicStateFields, "publicStateFields"),
+      );
+      expect(
+        restrictedPaths(snapshot, asStrings(machine.publicStateForbiddenFields, "forbidden")),
+      ).toEqual([]);
+      expect(resolveSafeDestinationId(String(snapshot.safeDestinationId))).toBeDefined();
+      expect(model.telemetry, scenarioId).toEqual({
+        calls: 0,
+        queuedEvents: 0,
+        serializations: 0,
+        diskWrites: 0,
+        networkRequests: 0,
+        retainedTimestamps: 0,
+        correlationIdentifiers: 0,
+        retries: 0,
+      });
+    }
+  });
+
   it("makes telemetry structurally zero-retention", () => {
     expect(asObject(machine.telemetry)).toEqual({
       mode: "zero_retention_no_op",
@@ -459,17 +970,18 @@ describe("provider-neutral auth-state contract v1", () => {
   });
 
   it("accepts only the closed fixed-category evidence record", () => {
+    const expectedSourceCommit = "b".repeat(40);
     const valid = {
       scenarioId: "callback_replay",
       platform: "shared_contract",
       environment: "repository_only",
-      sourceCommit: "7df062b51dd3b915d0064879d969c7d52cbc1c8b",
+      sourceCommit: expectedSourceCommit,
       outcomeCategory: "replayed",
       executionCount: 1,
       artifactSha256: "a".repeat(64),
       scanResult: "passed",
     };
-    expect(evidenceIsClosed(valid)).toBe(true);
+    expect(evidenceIsClosed(valid, expectedSourceCommit)).toBe(true);
     for (const extra of [
       "email",
       "ownerId",
@@ -482,14 +994,65 @@ describe("provider-neutral auth-state contract v1", () => {
       "campaignSource",
       "correlationId",
     ]) {
-      expect(evidenceIsClosed({ ...valid, [extra]: "synthetic-forbidden" })).toBe(false);
+      expect(
+        evidenceIsClosed({ ...valid, [extra]: "synthetic-forbidden" }, expectedSourceCommit),
+      ).toBe(false);
     }
-    expect(evidenceIsClosed({ ...valid, outcomeCategory: "raw failure text" })).toBe(false);
-    expect(evidenceIsClosed({ ...valid, scenarioId: "learner@example.test" })).toBe(false);
-    expect(evidenceIsClosed({ ...valid, scenarioId: "unlisted_benign_scenario" })).toBe(false);
-    expect(evidenceIsClosed({ ...valid, executionCount: 1.5 })).toBe(false);
-    expect(evidenceIsClosed({ ...valid, executionCount: 1001 })).toBe(false);
-    expect(evidenceIsClosed({ ...valid, sourceCommit: "short" })).toBe(false);
+    expect(
+      evidenceIsClosed({ ...valid, outcomeCategory: "raw failure text" }, expectedSourceCommit),
+    ).toBe(false);
+    expect(
+      evidenceIsClosed({ ...valid, scenarioId: "learner@example.test" }, expectedSourceCommit),
+    ).toBe(false);
+    expect(
+      evidenceIsClosed({ ...valid, scenarioId: "unlisted_benign_scenario" }, expectedSourceCommit),
+    ).toBe(false);
+    expect(evidenceIsClosed({ ...valid, executionCount: 1.5 }, expectedSourceCommit)).toBe(false);
+    expect(evidenceIsClosed({ ...valid, executionCount: 1001 }, expectedSourceCommit)).toBe(false);
+    expect(evidenceIsClosed({ ...valid, sourceCommit: "a".repeat(40) }, expectedSourceCommit)).toBe(
+      false,
+    );
+    expect(evidenceIsClosed({ ...valid, platform: "ios_future" }, expectedSourceCommit)).toBe(
+      false,
+    );
+    expect(evidenceIsClosed({ ...valid, platform: "android_future" }, expectedSourceCommit)).toBe(
+      false,
+    );
+  });
+
+  it("rejects every adversarial family through the closed evidence boundary", () => {
+    const expectedSourceCommit = "c".repeat(40);
+    const valid = {
+      scenarioId: "callback_replay",
+      platform: "shared_contract",
+      environment: "repository_only",
+      sourceCommit: expectedSourceCommit,
+      outcomeCategory: "replayed",
+      executionCount: 1,
+      artifactSha256: "d".repeat(64),
+      scanResult: "passed",
+    };
+    const mutations: Record<string, string> = {
+      token_shaped_string: "header.payload.signature",
+      full_email: "learner@example.test",
+      uuid: "11111111-2222-4333-8444-555555555555",
+      windows_path: "C:\\Users\\private\\result.txt",
+      unix_path: "/home/private/result.txt",
+      callback_url: "https://auth.example.test/callback",
+      query_fragment: "?code=secret#token=secret",
+      provider_exception: "ProviderException: private detail",
+      private_exception_name: "PrivateAuthCoordinatorException",
+      header_body: "Authorization: Bearer secret body=private",
+      stdout_stderr: "stdout private stderr private",
+      prior_owner_marker: "previous-owner-private",
+      test_account_variable_reference: "FLUYO_TEST_ADRIANA_EMAIL",
+    };
+    expect(Object.keys(mutations)).toEqual(
+      asStrings(acceptance.adversarialMutationFamilies, "adversarialMutationFamilies"),
+    );
+    for (const value of Object.values(mutations)) {
+      expect(evidenceIsClosed({ ...valid, scenarioId: value }, expectedSourceCommit)).toBe(false);
+    }
   });
 
   it("locks adversarial scan families, live blockers, claims, and bundle inventory", () => {

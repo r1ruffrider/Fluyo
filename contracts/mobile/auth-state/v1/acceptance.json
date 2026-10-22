@@ -363,9 +363,9 @@
   ],
   "evidenceConstraints": {
     "scenarioIdsSource": "syntheticScenarioIds",
-    "platform": ["shared_contract", "ios_future", "android_future"],
+    "platform": ["shared_contract"],
     "environment": ["repository_only"],
-    "sourceCommitPattern": "^[0-9a-f]{40}$",
+    "sourceCommit": "exact_head_supplied_by_runner",
     "artifactSha256Pattern": "^[0-9a-f]{64}$",
     "executionCount": {
       "integer": true,

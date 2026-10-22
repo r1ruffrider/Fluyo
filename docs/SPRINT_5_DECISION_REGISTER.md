@@ -98,10 +98,11 @@ work, and spending remain separate external gates.
 
 The [provider-neutral auth-state contract](../contracts/mobile/auth-state/v1/README.md) records the
 repository-only RACI and state semantics. Danila owns UX semantics; Adriana owns interim repository integration;
-Marlon remains consulted for material wording and external decisions; Fernanda reviews privacy/security; Elana
-independently audits. The contract has zero native runtime evidence and does not clear `UX-DEEP-LINKS`, `S5-D07`,
-SDK selection, encrypted platform storage, recovery delivery, provider revocation, account deletion, signing,
-physical devices, production, store work, capture, or spending.
+Marlon remains consulted for material wording and external decisions; Fernanda reviews the auth-state privacy
+boundary; Elana independently audits. Fernanda's scoped review does not assign the repository-wide privacy owner.
+The contract has zero native runtime evidence and does not clear `UX-DEEP-LINKS`, `S5-D07`, SDK selection,
+encrypted platform storage, recovery delivery, provider revocation, account deletion, signing, physical devices,
+production, store work, capture, or spending.
 
 ### Planned Sprint 5 acceptance crosswalk
 

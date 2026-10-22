@@ -33,11 +33,12 @@ baseline and contains repository-only state, copy, privacy, lifecycle, and in-me
 Runtime executions are zero and all 24 mirrored native auth/link scenarios remain unattempted.
 
 The contract names Danila accountable for UX state semantics, Adriana responsible for interim repository
-integration, Marlon consulted for material product or external changes, Fernanda as privacy/security reviewer,
-and Elana as independent QA. It defines a secret-free ten-state model, one in-memory generation fence, a single
-callback exchange and refresh, purpose/environment/host/path/expiry-bound atomic callback consumption, private
-owner confirmation through the existing `/api/v1/auth/me` boundary, explicit cleanup and refresh semantics,
-fixed diagnostics, and structurally zero-retention telemetry.
+integration, Marlon consulted for material product or external changes, Fernanda as the auth-state privacy-
+boundary reviewer, and Elana as independent QA. This scoped assignment does not fill the repository-wide privacy
+owner. The contract defines a secret-free ten-state model, one in-memory generation fence, a single callback
+exchange and refresh, purpose/environment/host/path/expiry-bound atomic callback consumption, private owner
+confirmation through the existing `/api/v1/auth/me` boundary, explicit cleanup and refresh semantics, fixed
+diagnostics, and structurally zero-retention telemetry.
 
 Live native authentication remains blocked. This slice adds no native SDK, secure-storage adapter, callback
 domain, AASA/assetlinks file, Supabase redirect allowlist, dashboard/account/email-template change, signing,
