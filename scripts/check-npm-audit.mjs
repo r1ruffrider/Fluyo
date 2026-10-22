@@ -26,6 +26,78 @@ function advisoryIdFromUrl(url) {
   return match?.[1]?.toUpperCase();
 }
 
+function dependencyCoordinate(value) {
+  const separator = value.lastIndexOf("@");
+  if (separator <= 0 || separator === value.length - 1) {
+    return undefined;
+  }
+
+  return {
+    name: value.slice(0, separator),
+    version: value.slice(separator + 1),
+  };
+}
+
+function lockEntriesForPackage(lock, name) {
+  const suffix = `node_modules/${name}`;
+  return Object.entries(lock.packages ?? {}).filter(
+    ([path]) => path === suffix || path.endsWith(`/${suffix}`),
+  );
+}
+
+function validateDependencyPath(exception, lock, errors) {
+  if (typeof exception.dependencyPath !== "string" || exception.dependencyPath.trim() === "") {
+    return;
+  }
+
+  const coordinates = exception.dependencyPath
+    .split(/\s*->\s*/)
+    .map((value) => dependencyCoordinate(value));
+
+  if (coordinates.some((coordinate) => coordinate === undefined)) {
+    errors.push(
+      `${exception.advisoryId ?? "Unknown exception"} dependencyPath must use exact package@version coordinates.`,
+    );
+    return;
+  }
+
+  for (let index = 0; index < coordinates.length; index += 1) {
+    const coordinate = coordinates[index];
+    const entries = lockEntriesForPackage(lock, coordinate.name).filter(
+      ([, metadata]) => metadata.version === coordinate.version,
+    );
+
+    if (entries.length === 0) {
+      errors.push(
+        `${exception.advisoryId} dependencyPath version is not installed: ${coordinate.name}@${coordinate.version}.`,
+      );
+      continue;
+    }
+
+    const child = coordinates[index + 1];
+    if (
+      child &&
+      !entries.some(([, metadata]) =>
+        [metadata.dependencies, metadata.optionalDependencies, metadata.peerDependencies].some(
+          (dependencies) => Object.hasOwn(dependencies ?? {}, child.name),
+        ),
+      )
+    ) {
+      errors.push(
+        `${exception.advisoryId} dependencyPath edge is not present: ${coordinate.name} -> ${child.name}.`,
+      );
+    }
+  }
+
+  const leaf = coordinates.at(-1);
+  if (
+    leaf &&
+    (leaf.name !== exception.package || !exception.installedVersions?.includes(leaf.version))
+  ) {
+    errors.push(`${exception.advisoryId} dependencyPath leaf does not match the accepted package.`);
+  }
+}
+
 function validateException(exception, errors, now) {
   const requiredStrings = [
     "advisoryId",
@@ -95,6 +167,7 @@ export function evaluateAuditPolicy({ audit, lock, policy, now = new Date() }) {
   const exceptions = new Map();
   for (const exception of policy.exceptions) {
     validateException(exception, errors, now);
+    validateDependencyPath(exception, lock, errors);
     const advisoryId = exception.advisoryId?.toUpperCase();
     if (exceptions.has(advisoryId)) {
       errors.push(`Duplicate exception for ${exception.advisoryId}.`);

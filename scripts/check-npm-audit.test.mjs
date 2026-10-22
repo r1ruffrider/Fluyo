@@ -41,6 +41,12 @@ function fixture() {
     },
     lock: {
       packages: {
+        "node_modules/parent-package": {
+          version: "4.5.6",
+          dependencies: {
+            "example-package": "^1.0.0",
+          },
+        },
         "node_modules/example-package": {
           version: "1.2.3",
         },
@@ -58,7 +64,7 @@ function fixture() {
           nodes: ["node_modules/example-package"],
           installedVersions: ["1.2.3"],
           classification: "development-only",
-          dependencyPath: "parent-package -> example-package",
+          dependencyPath: "parent-package@4.5.6 -> example-package@1.2.3",
           attemptedRemediation: "No supported parent release is available.",
           trackingIssue: "https://github.com/r1ruffrider/Fluyo/issues/123",
           expiresOn: "2026-08-31",
@@ -124,6 +130,16 @@ test("rejects dependency-node or installed-version drift", () => {
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /dependency nodes changed/);
   assert.match(result.errors.join("\n"), /installed version changed/);
+});
+
+test("rejects stale dependency-path evidence", () => {
+  const input = fixture();
+  input.policy.exceptions[0].dependencyPath = "parent-package@4.5.5 -> example-package@1.2.3";
+
+  const result = evaluateAuditPolicy(input);
+
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join("\n"), /dependencyPath version is not installed/);
 });
 
 test("rejects severity escalation", () => {
