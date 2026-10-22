@@ -516,7 +516,7 @@ const classifySyntheticCallback = (input: {
   let parsed: URL;
   if (!/^https:\/\/[^/?#]+/.test(input.url) || input.url.includes("\\")) return malformed();
   const rawAuthority = input.url.match(/^https:\/\/([^/?#]+)/i)?.[1] ?? "";
-  if (rawAuthority.includes("@") || /:\d+$/.test(rawAuthority)) return malformed();
+  if (!/^[A-Za-z0-9.-]+$/.test(rawAuthority)) return malformed();
   try {
     parsed = new URL(input.url);
   } catch {
@@ -1551,6 +1551,8 @@ describe("provider-neutral auth-state contract v1", () => {
       "https://:@auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test:443/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test:444/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://auth.staging.fluyo.test:/native/recovery/callback?code=synthetic&state=synthetic-state",
+      "https://%61uth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https:/auth.staging.fluyo.test/native/recovery/callback?code=synthetic&state=synthetic-state",
       "https:\\\\auth.staging.fluyo.test\\native\\recovery\\callback?code=synthetic&state=synthetic-state",
       "https://auth.staging.fluyo.test/native/recovery/callback?code=&state=synthetic-state",
