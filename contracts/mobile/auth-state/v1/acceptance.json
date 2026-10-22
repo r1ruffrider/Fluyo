@@ -1,0 +1,451 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "repository_only_synthetic_contract_tests",
+  "sourceMainCommit": "7df062b51dd3b915d0064879d969c7d52cbc1c8b",
+  "runtimeExecutions": 0,
+  "mirroredNativeRuntimeScenarios": {
+    "planned": 24,
+    "status": "unattempted"
+  },
+  "mirroredNativeRuntimeMatrix": {
+    "baseScenarios": [
+      {
+        "id": "auth_callback_success",
+        "sprintScenario": 7,
+        "criteria": [
+          "accept_exactly_one_environment_allowed_callback",
+          "validate_state_nonce_when_issued_and_pkce_exchange",
+          "atomically_consume_and_wipe_callback_transients",
+          "confirm_private_owner_with_get_auth_me_before_authenticated",
+          "follow_only_allowlisted_safe_destination",
+          "no_signed_out_flash_duplicate_navigation_or_telemetry"
+        ]
+      },
+      {
+        "id": "auth_callback_canceled",
+        "sprintScenario": 8,
+        "criteria": [
+          "cancel_in_flight_exchange_and_wipe_callback_transients",
+          "make_no_authenticated_claim",
+          "preserve_safe_anonymous_input_and_destination",
+          "return_to_signed_out_with_one_safe_sign_in_action",
+          "emit_no_provider_payload"
+        ]
+      },
+      {
+        "id": "auth_callback_malformed",
+        "sprintScenario": 9,
+        "criteria": [
+          "reject_invalid_route_parts_before_exchange_when_possible",
+          "never_retain_or_echo_callback_material",
+          "preserve_already_verified_session_or_remain_signed_out",
+          "focus_and_announce_safe_link_error_once",
+          "offer_start_again"
+        ]
+      },
+      {
+        "id": "auth_callback_expired",
+        "sprintScenario": 10,
+        "criteria": [
+          "map_expiry_to_safe_unusable_link_copy",
+          "discard_callback_transients_without_provider_detail",
+          "preserve_already_verified_session_or_remain_signed_out",
+          "offer_start_again_without_blind_exchange_retry"
+        ]
+      },
+      {
+        "id": "auth_callback_replayed",
+        "sprintScenario": 11,
+        "criteria": [
+          "consumed_callback_cannot_exchange_navigate_or_mutate_session",
+          "no_duplicate_telemetry",
+          "preserve_current_verified_session",
+          "show_safe_unusable_link_only_when_action_is_required"
+        ]
+      },
+      {
+        "id": "auth_returning_valid_session",
+        "sprintScenario": 12,
+        "criteria": [
+          "read_future_encrypted_session_material_without_signed_out_flash",
+          "perform_at_most_one_required_refresh",
+          "confirm_owner_with_get_auth_me_before_owner_cache_exposure",
+          "do_not_steal_focus_or_repeat_success_announcement_on_resume"
+        ]
+      },
+      {
+        "id": "auth_refresh_success",
+        "sprintScenario": 13,
+        "criteria": [
+          "coalesce_refresh_demand_into_one_in_flight_refresh",
+          "preserve_owner_state_while_pending",
+          "apply_result_only_to_current_auth_generation",
+          "verify_get_auth_me_before_ready",
+          "no_duplicate_request_navigation_telemetry_or_secret_log"
+        ]
+      },
+      {
+        "id": "auth_refresh_failure_requires_sign_in",
+        "sprintScenario": 14,
+        "criteria": [
+          "one_bounded_refresh_then_clear_after_explicit_invalidation_or_repeated_401",
+          "cancel_owner_work_and_clear_local_auth_headers_and_owner_cache",
+          "focus_and_announce_session_ended_once",
+          "offer_sign_in_without_provider_detail"
+        ]
+      },
+      {
+        "id": "auth_sign_out_cleanup",
+        "sprintScenario": 15,
+        "criteria": [
+          "clear_local_session_and_pending_flow_material",
+          "cancel_requests_and_increment_auth_generation",
+          "clear_owner_cache_and_sensitive_ui_before_signed_out",
+          "reject_late_responses",
+          "leave_no_identity_or_token_residue"
+        ]
+      },
+      {
+        "id": "auth_deep_link_cold_start",
+        "sprintScenario": 16,
+        "criteria": [
+          "route_one_allowed_link_once_from_terminated_state",
+          "validate_before_exchange_or_navigation",
+          "preserve_only_allowlisted_safe_destination",
+          "reach_one_terminal_state_without_overlap_or_duplicate_restore_handling"
+        ]
+      },
+      {
+        "id": "auth_deep_link_warm_start",
+        "sprintScenario": 17,
+        "criteria": [
+          "handle_one_allowed_link_once_while_active_or_backgrounded",
+          "do_not_duplicate_navigation_or_corrupt_verified_session",
+          "do_not_replay_on_resume",
+          "fence_stale_responses_by_auth_generation"
+        ]
+      },
+      {
+        "id": "auth_deep_link_unsupported",
+        "sprintScenario": 18,
+        "criteria": [
+          "reject_unknown_scheme_host_path_or_flow_without_provider_or_api_call",
+          "prevent_external_open_redirect_and_state_mutation",
+          "preserve_verified_session_or_remain_signed_out",
+          "focus_and_announce_safe_link_error_once",
+          "offer_return_or_start_again_for_entry_context"
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "id": "ios_auth_callback_success",
+        "platform": "ios",
+        "baseScenarioId": "auth_callback_success",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_callback_success",
+        "platform": "android",
+        "baseScenarioId": "auth_callback_success",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_callback_canceled",
+        "platform": "ios",
+        "baseScenarioId": "auth_callback_canceled",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_callback_canceled",
+        "platform": "android",
+        "baseScenarioId": "auth_callback_canceled",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_callback_malformed",
+        "platform": "ios",
+        "baseScenarioId": "auth_callback_malformed",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_callback_malformed",
+        "platform": "android",
+        "baseScenarioId": "auth_callback_malformed",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_callback_expired",
+        "platform": "ios",
+        "baseScenarioId": "auth_callback_expired",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_callback_expired",
+        "platform": "android",
+        "baseScenarioId": "auth_callback_expired",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_callback_replayed",
+        "platform": "ios",
+        "baseScenarioId": "auth_callback_replayed",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_callback_replayed",
+        "platform": "android",
+        "baseScenarioId": "auth_callback_replayed",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_returning_valid_session",
+        "platform": "ios",
+        "baseScenarioId": "auth_returning_valid_session",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_returning_valid_session",
+        "platform": "android",
+        "baseScenarioId": "auth_returning_valid_session",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_refresh_success",
+        "platform": "ios",
+        "baseScenarioId": "auth_refresh_success",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_refresh_success",
+        "platform": "android",
+        "baseScenarioId": "auth_refresh_success",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_refresh_failure_requires_sign_in",
+        "platform": "ios",
+        "baseScenarioId": "auth_refresh_failure_requires_sign_in",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_refresh_failure_requires_sign_in",
+        "platform": "android",
+        "baseScenarioId": "auth_refresh_failure_requires_sign_in",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_sign_out_cleanup",
+        "platform": "ios",
+        "baseScenarioId": "auth_sign_out_cleanup",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_sign_out_cleanup",
+        "platform": "android",
+        "baseScenarioId": "auth_sign_out_cleanup",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_deep_link_cold_start",
+        "platform": "ios",
+        "baseScenarioId": "auth_deep_link_cold_start",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_deep_link_cold_start",
+        "platform": "android",
+        "baseScenarioId": "auth_deep_link_cold_start",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_deep_link_warm_start",
+        "platform": "ios",
+        "baseScenarioId": "auth_deep_link_warm_start",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_deep_link_warm_start",
+        "platform": "android",
+        "baseScenarioId": "auth_deep_link_warm_start",
+        "status": "unattempted"
+      },
+      {
+        "id": "ios_auth_deep_link_unsupported",
+        "platform": "ios",
+        "baseScenarioId": "auth_deep_link_unsupported",
+        "status": "unattempted"
+      },
+      {
+        "id": "android_auth_deep_link_unsupported",
+        "platform": "android",
+        "baseScenarioId": "auth_deep_link_unsupported",
+        "status": "unattempted"
+      }
+    ],
+    "crossCuttingCriteria": [
+      "exact_source_build_platform_environment_and_device_evidence",
+      "bounded_timeout_and_cancellation",
+      "no_indefinite_spinner",
+      "localized_copy_and_one_safe_terminal_action",
+      "logical_focus_and_one_time_announcement",
+      "two_hundred_percent_text_and_minimum_target_reachability",
+      "reduced_motion_static_equivalence_when_visible",
+      "private_owner_isolation",
+      "no_secret_identity_callback_provider_or_correlation_leakage",
+      "no_live_auth_public_device_or_store_claim_beyond_recorded_environment"
+    ]
+  },
+  "fixturePolicy": {
+    "dataClass": "synthetic",
+    "productionDataUsed": false,
+    "diskWrites": false,
+    "hostSuffix": ".test",
+    "identityLabel": "Signed in",
+    "secretValuesStayInsideFakeBoundaries": true
+  },
+  "syntheticScenarioIds": [
+    "cold_start_without_candidate",
+    "cold_start_with_candidate",
+    "warm_callback_success",
+    "cold_callback_success",
+    "callback_cancel",
+    "callback_malformed",
+    "callback_expired",
+    "callback_replay",
+    "callback_duplicate_delivery",
+    "callback_unsupported",
+    "callback_overlap_rejected",
+    "refresh_success",
+    "refresh_explicit_revocation",
+    "refresh_transient_failure_preserves_candidate",
+    "refresh_repeated_401_clears",
+    "forbidden_403_preserves_session",
+    "offline_startup_preserves_verified_display_only",
+    "background_foreground",
+    "termination_relaunch_without_transaction",
+    "account_switch_cleanup",
+    "stale_response_discarded",
+    "stale_storage_write_discarded",
+    "vault_corruption_cleanup",
+    "clock_skew",
+    "owner_subject_mismatch",
+    "zero_telemetry_launch",
+    "zero_telemetry_resume",
+    "zero_telemetry_error"
+  ],
+  "fixedDiagnosticCategories": [
+    "success",
+    "canceled",
+    "malformed",
+    "expired",
+    "replayed",
+    "duplicate",
+    "unsupported",
+    "overlap_rejected",
+    "transient_failure",
+    "reauthentication_required",
+    "forbidden",
+    "owner_mismatch",
+    "stale_generation_discarded",
+    "vault_corrupt",
+    "timed_out"
+  ],
+  "evidenceAllowedFields": [
+    "scenarioId",
+    "platform",
+    "environment",
+    "sourceCommit",
+    "outcomeCategory",
+    "executionCount",
+    "artifactSha256",
+    "scanResult"
+  ],
+  "evidenceConstraints": {
+    "scenarioIdsSource": "syntheticScenarioIds",
+    "platform": ["shared_contract", "ios_future", "android_future"],
+    "environment": ["repository_only"],
+    "sourceCommitPattern": "^[0-9a-f]{40}$",
+    "artifactSha256Pattern": "^[0-9a-f]{64}$",
+    "executionCount": {
+      "integer": true,
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "scanResult": ["passed"]
+  },
+  "evidenceForbiddenConcepts": [
+    "exception",
+    "stack",
+    "stdout",
+    "stderr",
+    "command",
+    "argument",
+    "path",
+    "url",
+    "query",
+    "fragment",
+    "header",
+    "body",
+    "email",
+    "uuid",
+    "owner",
+    "profile",
+    "session",
+    "token",
+    "code",
+    "verifier",
+    "nonce",
+    "provider",
+    "signing",
+    "account",
+    "campaign",
+    "correlation",
+    "device",
+    "install"
+  ],
+  "adversarialMutationFamilies": [
+    "token_shaped_string",
+    "full_email",
+    "uuid",
+    "windows_path",
+    "unix_path",
+    "callback_url",
+    "query_fragment",
+    "provider_exception",
+    "private_exception_name",
+    "header_body",
+    "stdout_stderr",
+    "prior_owner_marker",
+    "test_account_variable_reference"
+  ],
+  "requiredAssertions": [
+    "public_state_is_secret_free",
+    "callback_transaction_is_purpose_environment_host_path_and_expiry_bound",
+    "callback_transaction_consumes_once_and_wipes",
+    "valid_verified_session_survives_bad_link",
+    "generation_change_cancels_work_and_blocks_stale_writes",
+    "owner_data_waits_for_private_subject_confirmation",
+    "transient_refresh_failure_preserves_candidate",
+    "explicit_invalidation_and_repeated_401_clear",
+    "403_never_refreshes_or_signs_out",
+    "offline_never_confirms_new_owner_or_expands_access",
+    "cleanup_precedes_signed_out_or_new_owner_exposure",
+    "no_op_telemetry_has_zero_retention_and_zero_transport",
+    "evidence_is_closed_and_mutation_safe"
+  ],
+  "completionClaimAllowed": false,
+  "safeClaim": "Repository-only provider-neutral auth-state contract and in-memory synthetic tests; zero native runtime execution.",
+  "forbiddenClaims": [
+    "native_authentication_complete",
+    "secure_storage_implemented",
+    "verified_links_configured",
+    "recovery_delivery_available",
+    "provider_revocation_proven",
+    "account_deletion_available",
+    "runtime_owner_isolation_proven",
+    "offline_persistence_proven",
+    "sdk_approved",
+    "public_availability"
+  ]
+}

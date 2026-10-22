@@ -16,6 +16,36 @@ approval boundary, missing secure access or secrets, an external account or spen
 irreversible work, or a material product decision. When one workstream is blocked, independent authorized
 workstreams continue.
 
+Marlon directly authorized Adriana on 2026-10-22 to mark ready and merge future PRs without a new per-PR prompt
+only when the current exact head has Elana PASS with zero unresolved material defects, every protected and
+phase-specific specialist/platform gate PASS, and GitHub reports clean/mergeable. Any head change invalidates
+approval evidence and requires fresh gates. This standing merge approval excludes production, signing, store,
+spending, destructive, external-account, credential actions, and material product decisions. After merge,
+Adriana verifies post-main workflows and starts the next documented increment automatically. An external
+approval system rejection pauses only the rejected merge and must be reported.
+
+## Sprint 5 Increment 5 provider-neutral auth-state prerequisite — 2026-10-22
+
+PR #43 merged the October 22 Next.js advisory repair as
+`7df062b51dd3b915d0064879d969c7d52cbc1c8b`; post-main run `39841371052` passed all eight protected jobs.
+The [provider-neutral auth-state contract](../contracts/mobile/auth-state/v1/README.md) is bound to that merged
+baseline and contains repository-only state, copy, privacy, lifecycle, and in-memory synthetic-test rules.
+Runtime executions are zero and all 24 mirrored native auth/link scenarios remain unattempted.
+
+The contract names Danila accountable for UX state semantics, Adriana responsible for interim repository
+integration, Marlon consulted for material product or external changes, Fernanda as privacy/security reviewer,
+and Elana as independent QA. It defines a secret-free ten-state model, one in-memory generation fence, a single
+callback exchange and refresh, purpose/environment/host/path/expiry-bound atomic callback consumption, private
+owner confirmation through the existing `/api/v1/auth/me` boundary, explicit cleanup and refresh semantics,
+fixed diagnostics, and structurally zero-retention telemetry.
+
+Live native authentication remains blocked. This slice adds no native SDK, secure-storage adapter, callback
+domain, AASA/assetlinks file, Supabase redirect allowlist, dashboard/account/email-template change, signing,
+production, physical-device, capture, TestFlight/Play/store, public availability, or spend action. Recovery
+delivery, provider revocation proof, and account-deletion orchestration also remain absent. Safe wording is:
+“Repository-only provider-neutral auth-state contract and in-memory synthetic tests; zero native runtime
+execution.”
+
 ## Sprint 5 Increment 4 readiness checkpoint — 2026-10-19
 
 Increment 3 merged through PR #39 as c68faf7b7284d8c111aec93db4f982ee7ea3e5e0. Post-main protected run
