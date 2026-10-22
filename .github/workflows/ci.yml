@@ -151,6 +151,8 @@ jobs:
 
   build:
     name: Build
+    env:
+      NODE_ENV: production
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
