@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
@@ -106,11 +107,30 @@ class InMemoryTransactionStore {
 class InMemoryAuthProvider {
   exchangeCount = 0;
   verifierWasUsed = false;
+  #exchangeInFlight = false;
 
   exchange(code: string, verifier: string): boolean {
     this.exchangeCount += 1;
     this.verifierWasUsed = code.length > 0 && verifier.length > 0;
     return this.verifierWasUsed;
+  }
+
+  beginDeferredExchange(code: string, verifier: string): boolean {
+    if (this.#exchangeInFlight) return false;
+    this.exchangeCount += 1;
+    this.verifierWasUsed = code.length > 0 && verifier.length > 0;
+    this.#exchangeInFlight = this.verifierWasUsed;
+    return this.#exchangeInFlight;
+  }
+
+  completeDeferredExchange(): boolean {
+    if (!this.#exchangeInFlight) return false;
+    this.#exchangeInFlight = false;
+    return true;
+  }
+
+  get exchangeInFlight(): boolean {
+    return this.#exchangeInFlight;
   }
 }
 
@@ -219,10 +239,20 @@ class SyntheticAuthCoordinator {
     return true;
   }
 
-  cancelCallback(): void {
-    this.#state = "signed_out";
+  cancelCallback(preserveVerified = false): void {
+    this.#state = preserveVerified && this.#verifiedOwner ? "authenticated" : "signed_out";
+    if (!preserveVerified) {
+      this.#hasCandidate = false;
+      this.#verifiedOwner = undefined;
+    }
     this.#outcomeCategory = "canceled";
     this.#trace.push("callback_canceled");
+  }
+
+  completeCallbackAfterOverlap(): void {
+    this.seedVerifiedOwner();
+    this.#outcomeCategory = "overlap_rejected";
+    this.#trace.push("overlap_first_exchange_completed");
   }
 
   markCallbackUnusable(
@@ -637,7 +667,10 @@ describe("provider-neutral auth-state contract v1", () => {
       provider_or_api_step_timeout: 15000,
       total_actionable_timeout: 30000,
     });
-    expect(transitions.length).toBe(38);
+    expect(transitions.length).toBe(41);
+    expect(createHash("sha256").update(JSON.stringify(transitions)).digest("hex")).toBe(
+      "f12bf73de8d9c820d0bb9c6b95d292b5a269c98663edbb43b5f84732a7780016",
+    );
     for (const transition of transitions) {
       expect(Object.keys(transition)).toEqual(["source", "event", "guard", "effects", "target"]);
       expect(stateIds.has(transition.source)).toBe(true);
@@ -661,6 +694,36 @@ describe("provider-neutral auth-state contract v1", () => {
     expect(
       transitions.find(
         (transition) =>
+          transition.source === "callback_pending" && transition.event === "callback_received",
+      ),
+    ).toMatchObject({
+      guard:
+        "current_generation_and_no_exchange_in_flight_and_allowed_route_and_atomic_transaction_consume",
+      effects: [
+        "require_current_auth_generation",
+        "validate_and_consume_pending_callback_transaction",
+        "start_one_callback_exchange",
+      ],
+      target: "callback_pending",
+    });
+    expect(
+      transitions.find(
+        (transition) =>
+          transition.source === "callback_pending" && transition.event === "callback_verified",
+      ),
+    ).toMatchObject({
+      guard: "current_generation_and_exchange_success_and_get_auth_me_200",
+      effects: [
+        "require_current_auth_generation",
+        "wipe_callback_transients",
+        "bind_private_owner",
+        "expose_fixed_identity_state",
+      ],
+      target: "authenticated",
+    });
+    expect(
+      transitions.find(
+        (transition) =>
           transition.source === "authenticated" && transition.event === "warm_callback_received",
       ),
     ).toMatchObject({ target: "callback_pending" });
@@ -674,6 +737,51 @@ describe("provider-neutral auth-state contract v1", () => {
         target: "signed_out",
       }),
     ]);
+    expect(
+      transitions
+        .filter(
+          (transition) =>
+            transition.source === "callback_pending" && transition.event === "cancel_after_bound",
+        )
+        .map((transition) => ({ guard: transition.guard, target: transition.target })),
+    ).toEqual([
+      {
+        guard:
+          "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_no_verified_session",
+        target: "signed_out",
+      },
+      {
+        guard:
+          "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_existing_verified_session",
+        target: "authenticated",
+      },
+    ]);
+    const transition = (source: string, event: string) => {
+      const found = transitions.find((row) => row.source === source && row.event === event);
+      expect(found, `${source}:${event}`).toBeDefined();
+      return found!;
+    };
+    for (const path of [
+      [
+        transition("signed_out", "sign_in"),
+        transition("callback_pending", "callback_received"),
+        transition("callback_pending", "callback_verified"),
+      ],
+      [
+        transition("initializing", "cold_callback_received"),
+        transition("callback_pending", "callback_verified"),
+      ],
+      [
+        transition("authenticated", "warm_callback_received"),
+        transition("callback_pending", "callback_verified"),
+      ],
+    ]) {
+      const effects = path.flatMap((row) => asStrings(row.effects, "path effects"));
+      expect(
+        effects.filter((effect) => effect === "validate_and_consume_pending_callback_transaction"),
+      ).toHaveLength(1);
+      expect(effects.filter((effect) => effect === "start_one_callback_exchange")).toHaveLength(1);
+    }
     expect(
       transitions.filter(
         (transition) =>
@@ -773,6 +881,20 @@ describe("provider-neutral auth-state contract v1", () => {
     });
     expect(store.hasPendingTransaction).toBe(false);
     expect(provider.exchangeCount).toBe(0);
+  });
+
+  it("restores a verified warm session after callback cancellation", () => {
+    const model = new SyntheticAuthCoordinator();
+    model.seedVerifiedOwner();
+    expect(model.beginCallback("warm")).toBe(true);
+    model.cancelCallback(true);
+    expect(model.publicSnapshot()).toEqual({
+      state: "authenticated",
+      hasSessionCandidate: true,
+      hasVerifiedOwnerState: true,
+      safeDestinationId: "internal_foundation_home",
+      fixedOutcomeCategory: "canceled",
+    });
   });
 
   it("locks callback purpose, environment, host, path, expiry, wipe, and no-retention rules", () => {
@@ -994,9 +1116,37 @@ describe("provider-neutral auth-state contract v1", () => {
         runCallback("https://outside.test/unsupported?code=synthetic&state=synthetic-state"),
       callback_overlap_rejected: () => {
         const model = new SyntheticAuthCoordinator();
+        const store = new InMemoryTransactionStore({
+          purpose: "sign_in",
+          environment: "development",
+          host: "auth.dev.fluyo.test",
+          path: "/native/auth/callback",
+          stateValue: "synthetic-state",
+          verifier: "opaque-verifier",
+          expiresAt: 2_000,
+        });
+        const provider = new InMemoryAuthProvider();
         expect(model.beginCallback("cold")).toBe(true);
+        const consumed = store.consume({
+          purpose: "sign_in",
+          environment: "development",
+          host: "auth.dev.fluyo.test",
+          path: "/native/auth/callback",
+          stateValue: "synthetic-state",
+          now: 1_000,
+        });
+        expect(consumed.kind).toBe("consumed");
+        if (consumed.kind !== "consumed") throw new Error("synthetic consume failed");
+        expect(provider.beginDeferredExchange("synthetic", consumed.transaction.verifier)).toBe(
+          true,
+        );
+        expect(provider.exchangeInFlight).toBe(true);
         expect(model.beginCallback("cold")).toBe(false);
-        model.recordCallbackEvidence(0, true);
+        expect(provider.beginDeferredExchange("second", "second-verifier")).toBe(false);
+        expect(provider.exchangeCount).toBe(1);
+        expect(provider.completeDeferredExchange()).toBe(true);
+        model.completeCallbackAfterOverlap();
+        model.recordCallbackEvidence(provider.exchangeCount, store.hasPendingTransaction);
         return model;
       },
       refresh_success: () => {
@@ -1254,16 +1404,16 @@ describe("provider-neutral auth-state contract v1", () => {
         ["callback_unsupported"],
       ],
       callback_overlap_rejected: [
-        "callback_pending",
+        "authenticated",
         "overlap_rejected",
-        false,
-        false,
-        "signed_out",
-        0,
         true,
+        true,
+        "internal_foundation_home",
+        1,
+        false,
         1,
         0,
-        ["callback_overlap_rejected"],
+        ["callback_overlap_rejected", "overlap_first_exchange_completed"],
       ],
       refresh_success: [
         "authenticated",

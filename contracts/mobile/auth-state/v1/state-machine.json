@@ -162,8 +162,30 @@
       },
       {
         "source": "callback_pending",
+        "event": "callback_received",
+        "guard": "current_generation_and_no_exchange_in_flight_and_allowed_route_and_atomic_transaction_consume",
+        "effects": [
+          "require_current_auth_generation",
+          "validate_and_consume_pending_callback_transaction",
+          "start_one_callback_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "callback_pending",
+        "event": "overlapping_callback_received",
+        "guard": "current_generation_and_exchange_in_flight",
+        "effects": [
+          "require_current_auth_generation",
+          "reject_overlapping_callback_without_exchange",
+          "preserve_in_flight_exchange"
+        ],
+        "target": "callback_pending"
+      },
+      {
+        "source": "callback_pending",
         "event": "callback_verified",
-        "guard": "current_generation_and_atomic_consume_and_get_auth_me_200",
+        "guard": "current_generation_and_exchange_success_and_get_auth_me_200",
         "effects": [
           "require_current_auth_generation",
           "wipe_callback_transients",
@@ -187,7 +209,7 @@
       {
         "source": "callback_pending",
         "event": "cancel_after_bound",
-        "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500",
+        "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_no_verified_session",
         "effects": [
           "require_current_auth_generation",
           "cancel_callback_exchange",
@@ -195,6 +217,18 @@
           "preserve_safe_anonymous_state"
         ],
         "target": "signed_out"
+      },
+      {
+        "source": "callback_pending",
+        "event": "cancel_after_bound",
+        "guard": "current_generation_and_user_action_and_elapsed_ms_greater_than_or_equal_500_and_existing_verified_session",
+        "effects": [
+          "require_current_auth_generation",
+          "cancel_callback_exchange",
+          "wipe_callback_transients",
+          "preserve_verified_session"
+        ],
+        "target": "authenticated"
       },
       {
         "source": "callback_pending",
