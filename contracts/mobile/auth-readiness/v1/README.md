@@ -20,10 +20,12 @@ For this evidence slice, the reconciled division is: Adriana is orchestrator and
 
 Marlon selected `APPEND_ONLY_CONTENT_ADDRESSED_SQUASH_COMPATIBLE`. The earlier `P → A → V` proposal remains immutable historical packet content and is retired for future approvals. The operative [approval-history index](approval-history/index.json) binds a fixed policy and these canonical genesis records:
 
-- [governance selection](approval-history/records/72c010af2f5a1efef3138cc348d5dc230c52a446a8798afa46a33617f656878c.json): `72c010af2f5a1efef3138cc348d5dc230c52a446a8798afa46a33617f656878c`
-- [delegation grant](approval-history/records/a5cf2b5d6e7eb94fffb19d0d683296eadb22ff782b5bf3c68d3ce928f5d42389.json): `a5cf2b5d6e7eb94fffb19d0d683296eadb22ff782b5bf3c68d3ce928f5d42389`
-- [tooling authorization](approval-history/records/e3a28172f0e0979059629a8de6b50cacf5fc3e6b847e009f83e9e9f1149b3767.json): `e3a28172f0e0979059629a8de6b50cacf5fc3e6b847e009f83e9e9f1149b3767`
-- [migration snapshot](approval-history/records/3f1b8d0043aefb589893bce461d7063dafc1de10047e632764ec4f4ee3ce9569.json): `3f1b8d0043aefb589893bce461d7063dafc1de10047e632764ec4f4ee3ce9569`
+The policy separates `historicalSnapshotCommit` (`8ce28a7…`), used only to resolve immutable historical subject blobs, from `installationBaseCommit` (`a886b75…`), the only ledger-absent base allowed to install this ledger. After installation, the exact schema bytes, policy bytes, fixed index header, and full indexed record prefix are append-only. Every record subject resolves at its own provenance commit, so an authorized later checkout can move from the exact Vitest base bundle to its exact target bundle without invalidating the historical authorization.
+
+- [governance selection](approval-history/records/484955bab2c34feb77c1e2d277a7a75dd259b27404f2f75cc75aa93f6c37acf6.json): `484955bab2c34feb77c1e2d277a7a75dd259b27404f2f75cc75aa93f6c37acf6`
+- [delegation grant](approval-history/records/290b5310d65e92a4d7784a68a5ca748de98b8d39dae8de1469d20f048c6a5fb9.json): `290b5310d65e92a4d7784a68a5ca748de98b8d39dae8de1469d20f048c6a5fb9`
+- [tooling authorization](approval-history/records/6802aa47e8a2aad4da7ae4c8391b40098e008862c62acc2edb77a488c478faed.json): `6802aa47e8a2aad4da7ae4c8391b40098e008862c62acc2edb77a488c478faed`
+- [migration snapshot](approval-history/records/ed9ad08433fd2f7ad225f97e4bb691ad161c1023ab9974745f934d137cf8f033.json): `ed9ad08433fd2f7ad225f97e4bb691ad161c1023ab9974745f934d137cf8f033`
 
 Records use UTF-8 without a BOM, NFC strings, safe integers, two-space `JSON.stringify` formatting, and one final LF. Subject bundles sort paths by UTF-8 bytes and concatenate UTF-8 path, byte `0x00`, lowercase ASCII SHA-256, and byte `0x0A`. The tooling known answers are `7c19687d547d1bf56c9989d22a77b3534faf054460f0ae18c9283312e1f26119` for the current all-base bundle and `a39114aac53673c51d57eb6341e4a17da9575d64a5dc17b1d092bc250a5c2ab5` for its exact all-target bundle.
 

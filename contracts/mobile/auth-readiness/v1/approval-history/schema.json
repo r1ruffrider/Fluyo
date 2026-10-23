@@ -56,7 +56,8 @@
       ]
     },
     "actor": {
-      "enum": ["Marlon", "Adriana"]
+      "type": "string",
+      "minLength": 1
     },
     "authority": {
       "type": "object",
@@ -67,7 +68,9 @@
           "enum": [
             "direct_material_owner_authority",
             "delegated_credential_free_repository_authority",
-            "administrative_migration_recording"
+            "administrative_migration_recording",
+            "delegated_specialist_review_authority",
+            "protected_ci_attestation"
           ]
         },
         "grantedBy": {
@@ -86,35 +89,7 @@
       "$ref": "#/$defs/subject"
     },
     "payload": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/governancePayload"
-        },
-        {
-          "$ref": "#/$defs/delegationGrantPayload"
-        },
-        {
-          "$ref": "#/$defs/delegationRevocationPayload"
-        },
-        {
-          "$ref": "#/$defs/migrationPayload"
-        },
-        {
-          "$ref": "#/$defs/reviewPayload"
-        },
-        {
-          "$ref": "#/$defs/decisionApprovalPayload"
-        },
-        {
-          "$ref": "#/$defs/decisionSupersessionPayload"
-        },
-        {
-          "$ref": "#/$defs/phaseApprovalPayload"
-        },
-        {
-          "$ref": "#/$defs/toolingPayload"
-        }
-      ]
+      "type": "object"
     },
     "provenance": {
       "type": "object",
@@ -186,7 +161,10 @@
         "selection",
         "effectiveFor",
         "retiredMechanism",
-        "bootstrapCommit",
+        "historicalSnapshotCommit",
+        "installationBaseCommit",
+        "schemaSha256",
+        "policySha256",
         "decisionPolicySha256",
         "evidenceIndexSha256"
       ],
@@ -202,14 +180,24 @@
           "type": "string",
           "minLength": 1
         },
-        "bootstrapCommit": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
         "decisionPolicySha256": {
           "$ref": "#/$defs/digest"
         },
         "evidenceIndexSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "historicalSnapshotCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "installationBaseCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "schemaSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "policySha256": {
           "$ref": "#/$defs/digest"
         }
       }
@@ -395,11 +383,45 @@
     "reviewPayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["gate", "outcome", "subjectBundleSha256", "reviewedHead"],
+      "required": [
+        "phaseId",
+        "gate",
+        "reviewer",
+        "domain",
+        "outcome",
+        "subjectBundleSha256",
+        "reviewedHead",
+        "supersedesReviewRecordDigest"
+      ],
       "properties": {
-        "gate": {
+        "phaseId": {
           "type": "string",
           "minLength": 1
+        },
+        "gate": {
+          "enum": [
+            "ARCHITECTURE",
+            "SECURITY",
+            "ENVIRONMENT_AND_CI",
+            "DOMAIN_SPECIALIST",
+            "PROTECTED_CI",
+            "INDEPENDENT_EXACT_HEAD_QA"
+          ]
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
         },
         "outcome": {
           "enum": ["PASS", "FAIL"]
@@ -410,6 +432,16 @@
         "reviewedHead": {
           "type": "string",
           "pattern": "^[0-9a-f]{40}$"
+        },
+        "supersedesReviewRecordDigest": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/digest"
+            }
+          ]
         }
       }
     },
@@ -468,7 +500,16 @@
     "phaseApprovalPayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phaseId", "scope", "gateRecordDigests", "subjectBundleSha256"],
+      "required": [
+        "phaseId",
+        "scope",
+        "delegationGrantRecordDigest",
+        "gateRecordDigests",
+        "requiredDomainGates",
+        "subjectBundleSha256",
+        "reviewedHead",
+        "deniedActionFlags"
+      ],
       "properties": {
         "phaseId": {
           "type": "string",
@@ -476,6 +517,9 @@
         },
         "scope": {
           "const": "credential_free_repository_only_nonproduction_phase_after_required_gates"
+        },
+        "delegationGrantRecordDigest": {
+          "$ref": "#/$defs/digest"
         },
         "gateRecordDigests": {
           "type": "array",
@@ -485,8 +529,23 @@
             "$ref": "#/$defs/digest"
           }
         },
+        "requiredDomainGates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/domainGate"
+          }
+        },
         "subjectBundleSha256": {
           "$ref": "#/$defs/digest"
+        },
+        "reviewedHead": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "deniedActionFlags": {
+          "$ref": "#/$defs/deniedActionFlags"
         }
       }
     },
@@ -595,6 +654,316 @@
           }
         }
       }
+    },
+    "domainGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "reviewer"],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "deniedActionFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "production",
+        "credentialsOrSecrets",
+        "externalAccountsOrDashboards",
+        "domains",
+        "signing",
+        "storeOrRelease",
+        "physicalDevices",
+        "spend",
+        "publication",
+        "destructiveOrData",
+        "materialNativeAuthDecisions"
+      ],
+      "properties": {
+        "production": {
+          "const": false
+        },
+        "credentialsOrSecrets": {
+          "const": false
+        },
+        "externalAccountsOrDashboards": {
+          "const": false
+        },
+        "domains": {
+          "const": false
+        },
+        "signing": {
+          "const": false
+        },
+        "storeOrRelease": {
+          "const": false
+        },
+        "physicalDevices": {
+          "const": false
+        },
+        "spend": {
+          "const": false
+        },
+        "publication": {
+          "const": false
+        },
+        "destructiveOrData": {
+          "const": false
+        },
+        "materialNativeAuthDecisions": {
+          "const": false
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "GOVERNANCE_SELECTION"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/governancePayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "DELEGATION_GRANT"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/delegationGrantPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "DELEGATION_REVOCATION"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/delegationRevocationPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "MIGRATION_SNAPSHOT"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Adriana"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "administrative_migration_recording"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/migrationPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "REVIEW_ATTESTATION"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/reviewPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "DECISION_APPROVAL"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/decisionApprovalPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "DECISION_SUPERSESSION"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/decisionSupersessionPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "PHASE_APPROVAL"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Adriana"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "delegated_credential_free_repository_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/phaseApprovalPayload"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "TOOLING_CHANGE_AUTHORIZATION"
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            },
+            "required": ["kind"]
+          },
+          "payload": {
+            "$ref": "#/$defs/toolingPayload"
+          }
+        }
+      }
+    }
+  ]
 }
