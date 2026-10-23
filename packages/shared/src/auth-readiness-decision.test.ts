@@ -118,10 +118,11 @@ const checkoutHead = git("rev-parse", "HEAD");
 const runnerValidationHead = process.env.FLUYO_PACKET_VALIDATION_HEAD ?? checkoutHead;
 const approvalRecordHead = currentRepository.directParentOf(runnerValidationHead);
 const authoritativeReviewedPacketHead = currentRepository.directParentOf(approvalRecordHead);
-const approvalRecordPolicyText = currentRepository.fileAtCommit(
-  approvalRecordHead,
-  policyRelativePath,
-);
+const approvalRecordPolicyText = currentRepository.objectExists(
+  `${approvalRecordHead}:${policyRelativePath}`,
+)
+  ? currentRepository.fileAtCommit(approvalRecordHead, policyRelativePath)
+  : null;
 
 const repositoryEvidenceExists = (
   reference: unknown,
@@ -302,7 +303,10 @@ const approvalIsCompleteForTrustedState = (
     reviewedPacketHead = trustedRepository.directParentOf(approvalHead);
     if (
       !trustedRepository.commitExists(approvalHead) ||
-      !trustedRepository.commitExists(reviewedPacketHead)
+      !trustedRepository.commitExists(reviewedPacketHead) ||
+      !trustedRepository.objectExists(`${validationHead}:${policyRelativePath}`) ||
+      !trustedRepository.objectExists(`${approvalHead}:${policyRelativePath}`) ||
+      !trustedRepository.objectExists(`${reviewedPacketHead}:${policyRelativePath}`)
     ) {
       return false;
     }
@@ -487,7 +491,7 @@ describe("native live-auth readiness decision packet v1", () => {
       const firstRequired = required[0];
       if (!firstRequired) throw new Error("required evidence must not be empty");
       const approvedValue = "bounded_exact_value";
-      const reviewedPacketHead = authoritativeReviewedPacketHead;
+      const reviewedPacketHead = checkoutHead;
       const evidenceReference = `git:${reviewedPacketHead}:contracts/mobile/auth-readiness/v1/README.md`;
       const completeApproval = {
         approvedAtUtc: "2026-10-23T08:55:00Z",
