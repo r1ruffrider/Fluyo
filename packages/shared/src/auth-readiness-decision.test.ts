@@ -45,14 +45,17 @@ const approvalIsComplete = (decisionValue: JsonObject): boolean => {
   const requiredEvidence = asStrings(decisionValue.requiredEvidence, "requiredEvidence");
   const evidenceByRequirement = asObject(approval.evidenceByRequirement, "evidenceByRequirement");
   const timestamp = approval.approvedAtUtc;
-  const evidencePattern = new RegExp(
-    String(asObject(policy.approvalPolicy).evidenceReferencePattern),
-  );
+  const acceptancePolicy = asObject(policy.approvalPolicy);
+  const approvalNotBefore = String(acceptancePolicy.approvalNotBeforeUtc);
+  const validationClock = String(acceptancePolicy.validationClockUtc);
+  const evidencePattern = new RegExp(String(acceptancePolicy.evidenceReferencePattern));
   const timestampIsReal =
     typeof timestamp === "string" &&
-    new RegExp(String(asObject(policy.approvalPolicy).approvedAtUtcPattern)).test(timestamp) &&
+    new RegExp(String(acceptancePolicy.approvedAtUtcPattern)).test(timestamp) &&
     !Number.isNaN(Date.parse(timestamp)) &&
-    new Date(timestamp).toISOString().replace(".000Z", "Z") === timestamp;
+    new Date(timestamp).toISOString().replace(".000Z", "Z") === timestamp &&
+    Date.parse(timestamp) >= Date.parse(approvalNotBefore) &&
+    Date.parse(timestamp) <= Date.parse(validationClock);
   const evidenceKeys = Object.keys(evidenceByRequirement).sort();
   return (
     timestampIsReal &&
@@ -151,6 +154,8 @@ describe("native live-auth readiness decision packet v1", () => {
     expect(acceptancePolicy.approvedAtUtcPattern).toBe(
       "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
     );
+    expect(acceptancePolicy.approvalNotBeforeUtc).toBe("2026-10-23T00:00:00Z");
+    expect(acceptancePolicy.validationClockUtc).toBe("2026-10-23T23:59:59Z");
     expect(acceptancePolicy.rule).toBe("ci_or_merge_never_substitutes_for_dated_material_approval");
 
     for (const decision of decisions) {
@@ -187,6 +192,18 @@ describe("native live-auth readiness decision packet v1", () => {
         approvalIsComplete({
           ...accepted,
           approval: { ...completeApproval, approvedAtUtc: "2026-13-40T25:61:61Z" },
+        }),
+      ).toBe(false);
+      expect(
+        approvalIsComplete({
+          ...accepted,
+          approval: { ...completeApproval, approvedAtUtc: "2000-01-01T00:00:00Z" },
+        }),
+      ).toBe(false);
+      expect(
+        approvalIsComplete({
+          ...accepted,
+          approval: { ...completeApproval, approvedAtUtc: "2099-01-01T00:00:00Z" },
         }),
       ).toBe(false);
       expect(
