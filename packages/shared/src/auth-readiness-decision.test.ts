@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -41,72 +41,93 @@ const asStrings = (value: unknown, label: string): string[] => {
 
 const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
 
-const git = (...args: string[]): string =>
-  execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8" }).trim();
+type GitRepository = {
+  root: string;
+  git: (...args: string[]) => string;
+  fileAtCommit: (sha: string, path: string) => string;
+  directParentOf: (sha: string) => string;
+  commitExists: (sha: string) => boolean;
+  objectExists: (object: string) => boolean;
+};
 
+const makeGitRepository = (root: string): GitRepository => {
+  const directParents = new Map<string, string>();
+  const commits = new Map<string, boolean>();
+  const objects = new Map<string, boolean>();
+  const files = new Map<string, string>();
+  const run = (...args: string[]): string =>
+    execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  return {
+    root,
+    git: run,
+    fileAtCommit: (sha, path) => {
+      const object = `${sha}:${path}`;
+      const cached = files.get(object);
+      if (cached !== undefined) return cached;
+      const value = execFileSync("git", ["show", object], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      files.set(object, value);
+      return value;
+    },
+    directParentOf: (sha) => {
+      const cached = directParents.get(sha);
+      if (cached) return cached;
+      const parent = run("rev-parse", `${sha}^`);
+      directParents.set(sha, parent);
+      return parent;
+    },
+    commitExists: (sha) => {
+      const cached = commits.get(sha);
+      if (cached !== undefined) return cached;
+      try {
+        execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], {
+          cwd: root,
+          stdio: "ignore",
+        });
+        commits.set(sha, true);
+        return true;
+      } catch {
+        commits.set(sha, false);
+        return false;
+      }
+    },
+    objectExists: (object) => {
+      const cached = objects.get(object);
+      if (cached !== undefined) return cached;
+      try {
+        execFileSync("git", ["cat-file", "-e", object], {
+          cwd: root,
+          stdio: "ignore",
+        });
+        objects.set(object, true);
+        return true;
+      } catch {
+        objects.set(object, false);
+        return false;
+      }
+    },
+  };
+};
+
+const currentRepository = makeGitRepository(repositoryRoot);
+const git = currentRepository.git;
+const commitExists = currentRepository.commitExists;
 const checkoutHead = git("rev-parse", "HEAD");
 const runnerValidationHead = process.env.FLUYO_PACKET_VALIDATION_HEAD ?? checkoutHead;
-const authoritativeReviewedPacketHead = git("rev-parse", `${runnerValidationHead}^`);
-const priorPacketHead = git("rev-parse", `${authoritativeReviewedPacketHead}^`);
-const directParentByCommit = new Map<string, string>([
-  [runnerValidationHead, authoritativeReviewedPacketHead],
-  [authoritativeReviewedPacketHead, priorPacketHead],
-]);
-const commitExistence = new Map<string, boolean>();
-const gitObjectExistence = new Map<string, boolean>();
-
-const gitFileAtCommit = (sha: string, path: string): string =>
-  execFileSync("git", ["show", `${sha}:${path}`], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  });
-
-const reviewedPolicyText = gitFileAtCommit(authoritativeReviewedPacketHead, policyRelativePath);
-
-const directParentOf = (sha: string): string => {
-  const cached = directParentByCommit.get(sha);
-  if (cached) return cached;
-  const parent = git("rev-parse", `${sha}^`);
-  directParentByCommit.set(sha, parent);
-  return parent;
-};
-
-const commitExists = (sha: string): boolean => {
-  const cached = commitExistence.get(sha);
-  if (cached !== undefined) return cached;
-  try {
-    execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], {
-      cwd: repositoryRoot,
-      stdio: "ignore",
-    });
-    commitExistence.set(sha, true);
-    return true;
-  } catch {
-    commitExistence.set(sha, false);
-    return false;
-  }
-};
-
-const gitObjectExists = (object: string): boolean => {
-  const cached = gitObjectExistence.get(object);
-  if (cached !== undefined) return cached;
-  try {
-    execFileSync("git", ["cat-file", "-e", object], {
-      cwd: repositoryRoot,
-      stdio: "ignore",
-    });
-    gitObjectExistence.set(object, true);
-    return true;
-  } catch {
-    gitObjectExistence.set(object, false);
-    return false;
-  }
-};
+const approvalRecordHead = currentRepository.directParentOf(runnerValidationHead);
+const authoritativeReviewedPacketHead = currentRepository.directParentOf(approvalRecordHead);
+const approvalRecordPolicyText = currentRepository.fileAtCommit(
+  approvalRecordHead,
+  policyRelativePath,
+);
 
 const repositoryEvidenceExists = (
   reference: unknown,
   evidenceCommit: unknown,
   referencePattern: RegExp,
+  trustedRepository: GitRepository,
 ): boolean => {
   if (typeof reference !== "string" || typeof evidenceCommit !== "string") return false;
   const match = referencePattern.exec(reference);
@@ -116,13 +137,14 @@ const repositoryEvidenceExists = (
   if (sha !== evidenceCommit || path.startsWith("/") || path.split("/").includes("..")) {
     return false;
   }
-  return gitObjectExists(`${sha}:${path}`);
+  return trustedRepository.objectExists(`${sha}:${path}`);
 };
 
 const approvalFieldsAreComplete = (
   decisionValue: JsonObject,
   runnerSuppliedReviewedPacketHead: string,
   packetPolicy: JsonObject,
+  trustedRepository: GitRepository,
 ): boolean => {
   if (decisionValue.status !== "ACCEPTED") return false;
   const approval = asObject(decisionValue.approval, "approval");
@@ -150,7 +172,7 @@ const approvalFieldsAreComplete = (
   );
   return (
     /^[0-9a-f]{40}$/.test(runnerSuppliedReviewedPacketHead) &&
-    commitExists(runnerSuppliedReviewedPacketHead) &&
+    trustedRepository.commitExists(runnerSuppliedReviewedPacketHead) &&
     packetPolicy.reviewedPacketHead === runnerSuppliedReviewedPacketHead &&
     runnerSuppliedReviewedPacketHead !== packetPolicy.sourceMainCommit &&
     packetDecision !== undefined &&
@@ -174,8 +196,29 @@ const approvalFieldsAreComplete = (
         evidenceByRequirement[key],
         approval.evidenceCommit,
         evidenceArtifactPattern,
+        trustedRepository,
       ),
     )
+  );
+};
+
+const immutableDecisionFields = (decision: JsonObject): JsonObject => {
+  const immutable = { ...decision };
+  delete immutable.status;
+  delete immutable.approval;
+  return immutable;
+};
+
+const approvalRecordIsEmpty = (decision: JsonObject): boolean => {
+  const approval = asObject(decision.approval, "reviewed decision approval");
+  return Object.entries(approval).every(
+    ([key, value]) =>
+      value === null ||
+      (key === "evidenceByRequirement" &&
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.keys(value).length === 0),
   );
 };
 
@@ -183,27 +226,73 @@ const approvalIsCompleteForTrustedState = (
   decisionValue: JsonObject,
   packetPolicy: JsonObject,
   currentPacketText: string,
-  reviewedPacketText: string,
   validationHead: string,
   checkedOutHead: string,
-  reviewedPacketHead: string,
-): boolean =>
-  validationHead === checkedOutHead &&
-  commitExists(validationHead) &&
-  commitExists(reviewedPacketHead) &&
-  directParentOf(validationHead) === reviewedPacketHead &&
-  currentPacketText === reviewedPacketText &&
-  approvalFieldsAreComplete(decisionValue, reviewedPacketHead, packetPolicy);
+  trustedRepository: GitRepository,
+): boolean => {
+  if (validationHead !== checkedOutHead || !trustedRepository.commitExists(validationHead)) {
+    return false;
+  }
+  let approvalHead: string;
+  let reviewedPacketHead: string;
+  let validationPacketText: string;
+  let approvalRecordPacketText: string;
+  let reviewedPacketText: string;
+  try {
+    approvalHead = trustedRepository.directParentOf(validationHead);
+    reviewedPacketHead = trustedRepository.directParentOf(approvalHead);
+    if (
+      !trustedRepository.commitExists(approvalHead) ||
+      !trustedRepository.commitExists(reviewedPacketHead)
+    ) {
+      return false;
+    }
+    validationPacketText = trustedRepository.fileAtCommit(validationHead, policyRelativePath);
+    approvalRecordPacketText = trustedRepository.fileAtCommit(approvalHead, policyRelativePath);
+    reviewedPacketText = trustedRepository.fileAtCommit(reviewedPacketHead, policyRelativePath);
+  } catch {
+    return false;
+  }
+  if (
+    currentPacketText !== validationPacketText ||
+    validationPacketText !== approvalRecordPacketText ||
+    JSON.stringify(packetPolicy) !== JSON.stringify(JSON.parse(currentPacketText))
+  ) {
+    return false;
+  }
+  const approvalRecordPolicy = asObject(
+    JSON.parse(approvalRecordPacketText),
+    "approval record policy",
+  );
+  const reviewedPacketPolicy = asObject(JSON.parse(reviewedPacketText), "reviewed packet policy");
+  const approvalRecordDecision = asObjects(
+    approvalRecordPolicy.decisions,
+    "approval record decisions",
+  ).find((entry) => entry.id === decisionValue.id);
+  const reviewedDecision = asObjects(
+    reviewedPacketPolicy.decisions,
+    "reviewed packet decisions",
+  ).find((entry) => entry.id === decisionValue.id);
+  return (
+    approvalRecordDecision !== undefined &&
+    reviewedDecision !== undefined &&
+    JSON.stringify(approvalRecordDecision) === JSON.stringify(decisionValue) &&
+    reviewedDecision.status !== "ACCEPTED" &&
+    approvalRecordIsEmpty(reviewedDecision) &&
+    JSON.stringify(immutableDecisionFields(approvalRecordDecision)) ===
+      JSON.stringify(immutableDecisionFields(reviewedDecision)) &&
+    approvalFieldsAreComplete(decisionValue, reviewedPacketHead, packetPolicy, trustedRepository)
+  );
+};
 
 const approvalIsComplete = (decisionValue: JsonObject): boolean =>
   approvalIsCompleteForTrustedState(
     decisionValue,
     policy,
     policyText,
-    reviewedPolicyText,
     runnerValidationHead,
     checkoutHead,
-    authoritativeReviewedPacketHead,
+    currentRepository,
   );
 
 const decisions = asObjects(policy.decisions, "decisions");
@@ -289,10 +378,10 @@ describe("native live-auth readiness decision packet v1", () => {
     expect(acceptancePolicy.validationClockUtc).toBe("2026-10-23T08:59:12Z");
     expect(acceptancePolicy.rule).toBe("ci_or_merge_never_substitutes_for_dated_material_approval");
     expect(acceptancePolicy.reviewedPacketHeadSource).toBe(
-      "direct_parent_of_runner_validation_head_with_git_commit_verification",
+      "direct_parent_of_approval_record_commit_with_git_commit_verification",
     );
     expect(acceptancePolicy.reviewedPolicyRule).toBe(
-      "accepted_policy_bytes_must_equal_the_git_blob_at_the_reviewed_direct_parent",
+      "validation_policy_must_equal_approval_record_policy_and_immutable_decision_fields_must_equal_the_reviewed_packet",
     );
     expect(acceptancePolicy.evidenceArtifactRule).toBe(
       "every_required_evidence_reference_must_name_an_existing_repository_path_at_the_evidence_commit",
@@ -302,10 +391,11 @@ describe("native live-auth readiness decision packet v1", () => {
     );
     expect(runnerValidationHead).toBe(checkoutHead);
     expect(commitExists(runnerValidationHead)).toBe(true);
+    expect(commitExists(approvalRecordHead)).toBe(true);
     expect(commitExists(authoritativeReviewedPacketHead)).toBe(true);
-    expect(commitExists(priorPacketHead)).toBe(true);
-    expect(git("rev-parse", `${runnerValidationHead}^`)).toBe(authoritativeReviewedPacketHead);
-    expect(authoritativeReviewedPacketHead).not.toBe(priorPacketHead);
+    expect(git("rev-parse", `${runnerValidationHead}^`)).toBe(approvalRecordHead);
+    expect(git("rev-parse", `${approvalRecordHead}^`)).toBe(authoritativeReviewedPacketHead);
+    expect(approvalRecordHead).not.toBe(authoritativeReviewedPacketHead);
     expect(ciWorkflow).toContain(
       "FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
@@ -315,7 +405,7 @@ describe("native live-auth readiness decision packet v1", () => {
 
     const actualAcceptedRows = decisions.filter((decision) => decision.status === "ACCEPTED");
     if (actualAcceptedRows.length > 0) {
-      expect(policyText).toBe(reviewedPolicyText);
+      expect(policyText).toBe(approvalRecordPolicyText);
     }
     for (const decision of decisions) {
       expect(approvalIsComplete(decision)).toBe(false);
@@ -344,10 +434,15 @@ describe("native live-auth readiness decision packet v1", () => {
         decisions: decisions.map((entry) => (entry.id === decision.id ? accepted : entry)),
       };
       const validateFields = (value: JsonObject): boolean =>
-        approvalFieldsAreComplete(value, reviewedPacketHead, {
-          ...acceptedPolicy,
-          decisions: decisions.map((entry) => (entry.id === decision.id ? value : entry)),
-        });
+        approvalFieldsAreComplete(
+          value,
+          reviewedPacketHead,
+          {
+            ...acceptedPolicy,
+            decisions: decisions.map((entry) => (entry.id === decision.id ? value : entry)),
+          },
+          currentRepository,
+        );
       const acceptedPolicyText = JSON.stringify(acceptedPolicy);
 
       expect(validateFields(accepted)).toBe(true);
@@ -357,32 +452,19 @@ describe("native live-auth readiness decision packet v1", () => {
           accepted,
           acceptedPolicy,
           acceptedPolicyText,
-          reviewedPolicyText,
           runnerValidationHead,
           checkoutHead,
-          reviewedPacketHead,
+          currentRepository,
         ),
       ).toBe(false);
       expect(
         approvalIsCompleteForTrustedState(
           accepted,
           acceptedPolicy,
-          acceptedPolicyText,
-          acceptedPolicyText,
-          runnerValidationHead,
-          checkoutHead,
-          reviewedPacketHead,
-        ),
-      ).toBe(true);
-      expect(
-        approvalIsCompleteForTrustedState(
-          accepted,
-          acceptedPolicy,
-          acceptedPolicyText,
           acceptedPolicyText,
           "a".repeat(40),
           "a".repeat(40),
-          reviewedPacketHead,
+          currentRepository,
         ),
       ).toBe(false);
       expect(
@@ -390,10 +472,9 @@ describe("native live-auth readiness decision packet v1", () => {
           accepted,
           acceptedPolicy,
           acceptedPolicyText,
-          acceptedPolicyText,
-          runnerValidationHead,
-          checkoutHead,
-          priorPacketHead,
+          approvalRecordHead,
+          approvalRecordHead,
+          currentRepository,
         ),
       ).toBe(false);
       expect(
@@ -401,10 +482,9 @@ describe("native live-auth readiness decision packet v1", () => {
           accepted,
           acceptedPolicy,
           acceptedPolicyText,
-          acceptedPolicyText,
           runnerValidationHead,
-          checkoutHead,
-          runnerValidationHead,
+          approvalRecordHead,
+          currentRepository,
         ),
       ).toBe(false);
       expect(validateFields(decision)).toBe(false);
@@ -549,11 +629,172 @@ describe("native live-auth readiness decision packet v1", () => {
             ...completeApproval,
             evidenceByRequirement: {
               ...completeApproval.evidenceByRequirement,
-              [firstRequired]: `git:${priorPacketHead}:contracts/mobile/auth-readiness/v1/README.md`,
+              [firstRequired]: `git:${approvalRecordHead}:contracts/mobile/auth-readiness/v1/README.md`,
             },
           },
         }),
       ).toBe(false);
+    }
+  });
+
+  it("proves the approval path against a real three-commit Git history", () => {
+    const temporaryRepositoryRoot = mkdtempSync(
+      resolve(repositoryRoot, ".tmp-auth-readiness-approval-"),
+    );
+    try {
+      const temporaryRepository = makeGitRepository(temporaryRepositoryRoot);
+      temporaryRepository.git("init", "--quiet");
+      temporaryRepository.git("config", "user.name", "Fluyo approval test");
+      temporaryRepository.git("config", "user.email", "approval-test@invalid.local");
+      temporaryRepository.git("config", "core.autocrlf", "false");
+      mkdirSync(resolve(temporaryRepositoryRoot, "contracts/mobile/auth-readiness/v1"), {
+        recursive: true,
+      });
+      const temporaryPolicyPath = resolve(
+        temporaryRepositoryRoot,
+        "contracts/mobile/auth-readiness/v1/decision-policy.json",
+      );
+      const temporaryReadmePath = resolve(
+        temporaryRepositoryRoot,
+        "contracts/mobile/auth-readiness/v1/README.md",
+      );
+      const writePolicy = (value: JsonObject): string => {
+        const text = JSON.stringify(value, null, 2) + "\n";
+        writeFileSync(temporaryPolicyPath, text, "utf8");
+        return text;
+      };
+      const commitAll = (message: string): string => {
+        temporaryRepository.git("add", ".");
+        temporaryRepository.git("commit", "--quiet", "-m", message);
+        return temporaryRepository.git("rev-parse", "HEAD");
+      };
+
+      writeFileSync(temporaryReadmePath, "# Reviewed evidence\n", "utf8");
+      writeFileSync(resolve(temporaryRepositoryRoot, "base.txt"), "base\n", "utf8");
+      const basePolicy = JSON.parse(JSON.stringify(policy)) as JsonObject;
+      writePolicy(basePolicy);
+      commitAll("base");
+
+      writeFileSync(resolve(temporaryRepositoryRoot, "packet.txt"), "reviewed\n", "utf8");
+      const reviewedPacketTextForGraph = writePolicy(basePolicy);
+      const reviewedHead = commitAll("reviewed packet P");
+
+      const reviewedDecision = asObjects(basePolicy.decisions, "temporary decisions")[0];
+      if (!reviewedDecision) throw new Error("temporary decision is required");
+      const requiredEvidence = asStrings(
+        reviewedDecision.requiredEvidence,
+        "temporary required evidence",
+      );
+      const approvedValue = "bounded_exact_value";
+      const evidenceReference = `git:${reviewedHead}:contracts/mobile/auth-readiness/v1/README.md`;
+      const acceptedDecision: JsonObject = {
+        ...reviewedDecision,
+        status: "ACCEPTED",
+        approval: {
+          approvedAtUtc: "2026-10-23T08:55:00Z",
+          approvedBy: "Marlon",
+          approvalReference: "ticket:direct_user_approval_2026-10-23",
+          approvedValue,
+          evidenceCommit: reviewedHead,
+          decisionValueDigest: sha256(approvedValue),
+          evidenceByRequirement: Object.fromEntries(
+            requiredEvidence.map((item) => [item, evidenceReference]),
+          ),
+        },
+      };
+      const approvalPolicy = {
+        ...basePolicy,
+        reviewedPacketHead: reviewedHead,
+        decisions: asObjects(basePolicy.decisions, "temporary decisions").map((entry) =>
+          entry.id === acceptedDecision.id ? acceptedDecision : entry,
+        ),
+      };
+      const approvalRecordText = writePolicy(approvalPolicy);
+      const approvalHead = commitAll("approval record A");
+
+      writeFileSync(resolve(temporaryRepositoryRoot, "validation.txt"), "validate\n", "utf8");
+      const validationHead = commitAll("validation V");
+      const validationPolicyText = temporaryRepository.fileAtCommit(
+        validationHead,
+        policyRelativePath,
+      );
+      const approvalRecordPolicyFromGit = temporaryRepository.fileAtCommit(
+        approvalHead,
+        policyRelativePath,
+      );
+      const reviewedPolicyFromGit = temporaryRepository.fileAtCommit(
+        reviewedHead,
+        policyRelativePath,
+      );
+      expect(temporaryRepository.directParentOf(validationHead)).toBe(approvalHead);
+      expect(temporaryRepository.directParentOf(approvalHead)).toBe(reviewedHead);
+      expect(validationPolicyText).toBe(approvalRecordPolicyFromGit);
+      expect(immutableDecisionFields(acceptedDecision)).toEqual(
+        immutableDecisionFields(reviewedDecision),
+      );
+      expect(
+        approvalFieldsAreComplete(
+          acceptedDecision,
+          reviewedHead,
+          approvalPolicy,
+          temporaryRepository,
+        ),
+      ).toBe(true);
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          approvalPolicy,
+          validationPolicyText,
+          validationHead,
+          validationHead,
+          temporaryRepository,
+        ),
+      ).toBe(true);
+      expect(reviewedPacketTextForGraph).toBe(reviewedPolicyFromGit);
+      expect(approvalRecordText).toBe(
+        temporaryRepository.fileAtCommit(approvalHead, policyRelativePath),
+      );
+
+      writeFileSync(resolve(temporaryRepositoryRoot, "later.txt"), "later\n", "utf8");
+      const laterHead = commitAll("later head");
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          approvalPolicy,
+          temporaryRepository.fileAtCommit(laterHead, policyRelativePath),
+          laterHead,
+          laterHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+
+      temporaryRepository.git("checkout", "--quiet", validationHead);
+      const changedPolicy = { ...approvalPolicy, recordedDate: "2026-10-24" };
+      writePolicy(changedPolicy);
+      const changedHead = commitAll("changed policy");
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          changedPolicy,
+          temporaryRepository.fileAtCommit(changedHead, policyRelativePath),
+          changedHead,
+          changedHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          approvalPolicy,
+          temporaryRepository.fileAtCommit(approvalHead, policyRelativePath),
+          approvalHead,
+          approvalHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+    } finally {
+      rmSync(temporaryRepositoryRoot, { recursive: true, force: true });
     }
   });
 
