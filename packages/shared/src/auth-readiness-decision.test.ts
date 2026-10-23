@@ -11,10 +11,10 @@ const contractDirectory = resolve(__dirname, "../../../contracts/mobile/auth-rea
 const authStateDirectory = resolve(__dirname, "../../../contracts/mobile/auth-state/v1");
 const docsDirectory = resolve(__dirname, "../../../docs");
 const repositoryRoot = resolve(__dirname, "../../..");
+const policyRelativePath = "contracts/mobile/auth-readiness/v1/decision-policy.json";
 const ciWorkflow = readFileSync(resolve(repositoryRoot, ".github/workflows/ci.yml"), "utf8");
-const policy = JSON.parse(
-  readFileSync(resolve(contractDirectory, "decision-policy.json"), "utf8"),
-) as JsonObject;
+const policyText = readFileSync(resolve(contractDirectory, "decision-policy.json"), "utf8");
+const policy = JSON.parse(policyText) as JsonObject;
 const readme = readFileSync(resolve(contractDirectory, "README.md"), "utf8");
 const authAcceptance = JSON.parse(
   readFileSync(resolve(authStateDirectory, "acceptance.json"), "utf8"),
@@ -48,7 +48,28 @@ const checkoutHead = git("rev-parse", "HEAD");
 const runnerValidationHead = process.env.FLUYO_PACKET_VALIDATION_HEAD ?? checkoutHead;
 const authoritativeReviewedPacketHead = git("rev-parse", `${runnerValidationHead}^`);
 const priorPacketHead = git("rev-parse", `${authoritativeReviewedPacketHead}^`);
+const directParentByCommit = new Map<string, string>([
+  [runnerValidationHead, authoritativeReviewedPacketHead],
+  [authoritativeReviewedPacketHead, priorPacketHead],
+]);
 const commitExistence = new Map<string, boolean>();
+const gitObjectExistence = new Map<string, boolean>();
+
+const gitFileAtCommit = (sha: string, path: string): string =>
+  execFileSync("git", ["show", `${sha}:${path}`], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  });
+
+const reviewedPolicyText = gitFileAtCommit(authoritativeReviewedPacketHead, policyRelativePath);
+
+const directParentOf = (sha: string): string => {
+  const cached = directParentByCommit.get(sha);
+  if (cached) return cached;
+  const parent = git("rev-parse", `${sha}^`);
+  directParentByCommit.set(sha, parent);
+  return parent;
+};
 
 const commitExists = (sha: string): boolean => {
   const cached = commitExistence.get(sha);
@@ -66,10 +87,42 @@ const commitExists = (sha: string): boolean => {
   }
 };
 
-const approvalIsComplete = (
+const gitObjectExists = (object: string): boolean => {
+  const cached = gitObjectExistence.get(object);
+  if (cached !== undefined) return cached;
+  try {
+    execFileSync("git", ["cat-file", "-e", object], {
+      cwd: repositoryRoot,
+      stdio: "ignore",
+    });
+    gitObjectExistence.set(object, true);
+    return true;
+  } catch {
+    gitObjectExistence.set(object, false);
+    return false;
+  }
+};
+
+const repositoryEvidenceExists = (
+  reference: unknown,
+  evidenceCommit: unknown,
+  referencePattern: RegExp,
+): boolean => {
+  if (typeof reference !== "string" || typeof evidenceCommit !== "string") return false;
+  const match = referencePattern.exec(reference);
+  if (!match) return false;
+  const [, sha, path] = match;
+  if (!sha || !path) return false;
+  if (sha !== evidenceCommit || path.startsWith("/") || path.split("/").includes("..")) {
+    return false;
+  }
+  return gitObjectExists(`${sha}:${path}`);
+};
+
+const approvalFieldsAreComplete = (
   decisionValue: JsonObject,
-  runnerSuppliedReviewedPacketHead?: string,
-  packetPolicy: JsonObject = policy,
+  runnerSuppliedReviewedPacketHead: string,
+  packetPolicy: JsonObject,
 ): boolean => {
   if (decisionValue.status !== "ACCEPTED") return false;
   const approval = asObject(decisionValue.approval, "approval");
@@ -81,6 +134,9 @@ const approvalIsComplete = (
   const approvalNotBefore = String(acceptancePolicy.approvalNotBeforeUtc);
   const validationClock = String(acceptancePolicy.validationClockUtc);
   const evidencePattern = new RegExp(String(acceptancePolicy.evidenceReferencePattern));
+  const evidenceArtifactPattern = new RegExp(
+    String(acceptancePolicy.evidenceArtifactReferencePattern),
+  );
   const timestampIsReal =
     typeof timestamp === "string" &&
     new RegExp(String(acceptancePolicy.approvedAtUtcPattern)).test(timestamp) &&
@@ -89,35 +145,66 @@ const approvalIsComplete = (
     Date.parse(timestamp) >= Date.parse(approvalNotBefore) &&
     Date.parse(timestamp) <= Date.parse(validationClock);
   const evidenceKeys = Object.keys(evidenceByRequirement).sort();
+  const packetDecision = asObjects(packetPolicy.decisions, "packet decisions").find(
+    (entry) => entry.id === decisionValue.id,
+  );
   return (
-    typeof runnerSuppliedReviewedPacketHead === "string" &&
     /^[0-9a-f]{40}$/.test(runnerSuppliedReviewedPacketHead) &&
-    runnerValidationHead === checkoutHead &&
-    commitExists(runnerValidationHead) &&
-    runnerSuppliedReviewedPacketHead === authoritativeReviewedPacketHead &&
     commitExists(runnerSuppliedReviewedPacketHead) &&
     packetPolicy.reviewedPacketHead === runnerSuppliedReviewedPacketHead &&
     runnerSuppliedReviewedPacketHead !== packetPolicy.sourceMainCommit &&
+    packetDecision !== undefined &&
+    JSON.stringify(packetDecision) === JSON.stringify(decisionValue) &&
     timestampIsReal &&
     typeof approval.approvedBy === "string" &&
     approvers.includes(approval.approvedBy) &&
     typeof approval.approvalReference === "string" &&
     evidencePattern.test(approval.approvalReference) &&
     typeof approval.approvedValue === "string" &&
-    approval.approvedValue.length > 0 &&
+    approval.approvedValue.trim().length > 0 &&
+    approval.approvedValue === approval.approvedValue.trim() &&
     typeof approval.evidenceCommit === "string" &&
     approval.evidenceCommit === packetPolicy.reviewedPacketHead &&
     /^[0-9a-f]{40}$/.test(approval.evidenceCommit) &&
     typeof approval.decisionValueDigest === "string" &&
     approval.decisionValueDigest === sha256(approval.approvedValue) &&
     JSON.stringify(evidenceKeys) === JSON.stringify([...requiredEvidence].sort()) &&
-    evidenceKeys.every(
-      (key) =>
-        typeof evidenceByRequirement[key] === "string" &&
-        evidencePattern.test(String(evidenceByRequirement[key])),
+    evidenceKeys.every((key) =>
+      repositoryEvidenceExists(
+        evidenceByRequirement[key],
+        approval.evidenceCommit,
+        evidenceArtifactPattern,
+      ),
     )
   );
 };
+
+const approvalIsCompleteForTrustedState = (
+  decisionValue: JsonObject,
+  packetPolicy: JsonObject,
+  currentPacketText: string,
+  reviewedPacketText: string,
+  validationHead: string,
+  checkedOutHead: string,
+  reviewedPacketHead: string,
+): boolean =>
+  validationHead === checkedOutHead &&
+  commitExists(validationHead) &&
+  commitExists(reviewedPacketHead) &&
+  directParentOf(validationHead) === reviewedPacketHead &&
+  currentPacketText === reviewedPacketText &&
+  approvalFieldsAreComplete(decisionValue, reviewedPacketHead, packetPolicy);
+
+const approvalIsComplete = (decisionValue: JsonObject): boolean =>
+  approvalIsCompleteForTrustedState(
+    decisionValue,
+    policy,
+    policyText,
+    reviewedPolicyText,
+    runnerValidationHead,
+    checkoutHead,
+    authoritativeReviewedPacketHead,
+  );
 
 const decisions = asObjects(policy.decisions, "decisions");
 
@@ -204,10 +291,21 @@ describe("native live-auth readiness decision packet v1", () => {
     expect(acceptancePolicy.reviewedPacketHeadSource).toBe(
       "direct_parent_of_runner_validation_head_with_git_commit_verification",
     );
+    expect(acceptancePolicy.reviewedPolicyRule).toBe(
+      "accepted_policy_bytes_must_equal_the_git_blob_at_the_reviewed_direct_parent",
+    );
+    expect(acceptancePolicy.evidenceArtifactRule).toBe(
+      "every_required_evidence_reference_must_name_an_existing_repository_path_at_the_evidence_commit",
+    );
+    expect(acceptancePolicy.evidenceArtifactReferencePattern).toBe(
+      "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
+    );
     expect(runnerValidationHead).toBe(checkoutHead);
     expect(commitExists(runnerValidationHead)).toBe(true);
     expect(commitExists(authoritativeReviewedPacketHead)).toBe(true);
+    expect(commitExists(priorPacketHead)).toBe(true);
     expect(git("rev-parse", `${runnerValidationHead}^`)).toBe(authoritativeReviewedPacketHead);
+    expect(authoritativeReviewedPacketHead).not.toBe(priorPacketHead);
     expect(ciWorkflow).toContain(
       "FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
@@ -215,12 +313,19 @@ describe("native live-auth readiness decision packet v1", () => {
       "ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          fetch-depth: 3",
     );
 
+    const actualAcceptedRows = decisions.filter((decision) => decision.status === "ACCEPTED");
+    if (actualAcceptedRows.length > 0) {
+      expect(policyText).toBe(reviewedPolicyText);
+    }
     for (const decision of decisions) {
+      expect(approvalIsComplete(decision)).toBe(false);
+
       const required = asStrings(decision.requiredEvidence, "requiredEvidence");
       const firstRequired = required[0];
       if (!firstRequired) throw new Error("required evidence must not be empty");
       const approvedValue = "bounded_exact_value";
       const reviewedPacketHead = authoritativeReviewedPacketHead;
+      const evidenceReference = `git:${reviewedPacketHead}:contracts/mobile/auth-readiness/v1/README.md`;
       const completeApproval = {
         approvedAtUtc: "2026-10-23T08:55:00Z",
         approvedBy: "Marlon",
@@ -228,130 +333,181 @@ describe("native live-auth readiness decision packet v1", () => {
         approvedValue,
         evidenceCommit: reviewedPacketHead,
         decisionValueDigest: sha256(approvedValue),
-        evidenceByRequirement: Object.fromEntries(required.map((item) => [item, "report:" + item])),
+        evidenceByRequirement: Object.fromEntries(
+          required.map((item) => [item, evidenceReference]),
+        ),
       };
       const accepted = { ...decision, status: "ACCEPTED", approval: completeApproval };
-      const acceptedPolicy = { ...policy, reviewedPacketHead };
-      const validate = (
-        value: JsonObject,
-        suppliedReviewedHead = reviewedPacketHead,
-        packetPolicy = acceptedPolicy,
-      ): boolean => approvalIsComplete(value, suppliedReviewedHead, packetPolicy);
+      const acceptedPolicy = {
+        ...policy,
+        reviewedPacketHead,
+        decisions: decisions.map((entry) => (entry.id === decision.id ? accepted : entry)),
+      };
+      const validateFields = (value: JsonObject): boolean =>
+        approvalFieldsAreComplete(value, reviewedPacketHead, {
+          ...acceptedPolicy,
+          decisions: decisions.map((entry) => (entry.id === decision.id ? value : entry)),
+        });
+      const acceptedPolicyText = JSON.stringify(acceptedPolicy);
 
-      expect(validate(decision)).toBe(false);
-      expect(validate({ ...decision, status: "ACCEPTED" })).toBe(false);
+      expect(validateFields(accepted)).toBe(true);
       expect(approvalIsComplete(accepted)).toBe(false);
-      expect(validate(accepted, String(policy.sourceMainCommit))).toBe(false);
-
-      const nonexistentHead = "a".repeat(40);
-      const nonexistentApproval = {
-        ...accepted,
-        approval: { ...completeApproval, evidenceCommit: nonexistentHead },
-      };
       expect(
-        approvalIsComplete(nonexistentApproval, nonexistentHead, {
-          ...policy,
-          reviewedPacketHead: nonexistentHead,
-        }),
-      ).toBe(false);
-
-      const priorApproval = {
-        ...accepted,
-        approval: { ...completeApproval, evidenceCommit: priorPacketHead },
-      };
-      expect(
-        approvalIsComplete(priorApproval, priorPacketHead, {
-          ...policy,
-          reviewedPacketHead: priorPacketHead,
-        }),
-      ).toBe(false);
-
-      const changedHeadApproval = {
-        ...accepted,
-        approval: { ...completeApproval, evidenceCommit: runnerValidationHead },
-      };
-      expect(
-        approvalIsComplete(changedHeadApproval, runnerValidationHead, {
-          ...policy,
-          reviewedPacketHead: runnerValidationHead,
-        }),
+        approvalIsCompleteForTrustedState(
+          accepted,
+          acceptedPolicy,
+          acceptedPolicyText,
+          reviewedPolicyText,
+          runnerValidationHead,
+          checkoutHead,
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        validate({
+        approvalIsCompleteForTrustedState(
+          accepted,
+          acceptedPolicy,
+          acceptedPolicyText,
+          acceptedPolicyText,
+          runnerValidationHead,
+          checkoutHead,
+          reviewedPacketHead,
+        ),
+      ).toBe(true);
+      expect(
+        approvalIsCompleteForTrustedState(
+          accepted,
+          acceptedPolicy,
+          acceptedPolicyText,
+          acceptedPolicyText,
+          "a".repeat(40),
+          "a".repeat(40),
+          reviewedPacketHead,
+        ),
+      ).toBe(false);
+      expect(
+        approvalIsCompleteForTrustedState(
+          accepted,
+          acceptedPolicy,
+          acceptedPolicyText,
+          acceptedPolicyText,
+          runnerValidationHead,
+          checkoutHead,
+          priorPacketHead,
+        ),
+      ).toBe(false);
+      expect(
+        approvalIsCompleteForTrustedState(
+          accepted,
+          acceptedPolicy,
+          acceptedPolicyText,
+          acceptedPolicyText,
+          runnerValidationHead,
+          checkoutHead,
+          runnerValidationHead,
+        ),
+      ).toBe(false);
+      expect(validateFields(decision)).toBe(false);
+      expect(validateFields({ ...decision, status: "ACCEPTED" })).toBe(false);
+      expect(
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, approvedBy: "Unauthorized Reviewer" },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, approvalReference: "informal approval" },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
+          ...accepted,
+          approval: { ...completeApproval, approvedValue: "", decisionValueDigest: sha256("") },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: { ...completeApproval, approvedValue: " ", decisionValueDigest: sha256(" ") },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            approvedValue: " bounded_exact_value ",
+            decisionValueDigest: sha256(" bounded_exact_value "),
+          },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, approvedAtUtc: "2026-13-40T25:61:61Z" },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:29Z" },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:13Z" },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
+          ...accepted,
+          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:30Z" },
+        }),
+      ).toBe(true);
+      expect(
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:31Z" },
         }),
       ).toBe(true);
       expect(
-        validate({
+        validateFields({
           ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:11Z" },
+          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:12Z" },
         }),
       ).toBe(true);
       expect(
-        validate({
-          ...accepted,
-          approval: { ...completeApproval, evidenceCommit: String(policy.sourceMainCommit) },
-        }),
-      ).toBe(false);
-      expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, decisionValueDigest: "0".repeat(64) },
         }),
       ).toBe(false);
+
       const missingEvidence = { ...completeApproval.evidenceByRequirement };
       delete missingEvidence[firstRequired];
       expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: { ...completeApproval, evidenceByRequirement: missingEvidence },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: {
             ...completeApproval,
             evidenceByRequirement: {
               ...completeApproval.evidenceByRequirement,
-              extra: "report:extra",
+              extra: evidenceReference,
             },
           },
         }),
       ).toBe(false);
       expect(
-        validate({
+        validateFields({
           ...accepted,
           approval: {
             ...completeApproval,
@@ -362,7 +518,42 @@ describe("native live-auth readiness decision packet v1", () => {
           },
         }),
       ).toBe(false);
-      expect(validate(accepted)).toBe(true);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            evidenceByRequirement: {
+              ...completeApproval.evidenceByRequirement,
+              [firstRequired]: `report:${firstRequired}`,
+            },
+          },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            evidenceByRequirement: {
+              ...completeApproval.evidenceByRequirement,
+              [firstRequired]: `git:${reviewedPacketHead}:contracts/mobile/auth-readiness/v1/missing.md`,
+            },
+          },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            evidenceByRequirement: {
+              ...completeApproval.evidenceByRequirement,
+              [firstRequired]: `git:${priorPacketHead}:contracts/mobile/auth-readiness/v1/README.md`,
+            },
+          },
+        }),
+      ).toBe(false);
     }
   });
 
