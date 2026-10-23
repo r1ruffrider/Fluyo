@@ -212,7 +212,7 @@ describe("native live-auth readiness decision packet v1", () => {
       "FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
     expect(ciWorkflow).toContain(
-      "ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          fetch-depth: 2",
+      "ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          fetch-depth: 3",
     );
 
     for (const decision of decisions) {
