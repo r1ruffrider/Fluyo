@@ -3,6 +3,7 @@
   "status": "repository_decision_packet",
   "sourceMainCommit": "c6db1e3ded889eac5851eda7cc6d0891bf6d456a",
   "recordedDate": "2026-10-23",
+  "reviewedPacketHead": null,
   "scope": {
     "credentialFree": true,
     "repositoryOnly": true,
@@ -35,6 +36,7 @@
     ],
     "rule": "ci_or_merge_never_substitutes_for_dated_material_approval",
     "headChangeRule": "approval_evidence_must_be_rechecked_when_the_reviewed_head_or_decision_value_changes",
+    "reviewedPacketHeadSource": "runner_supplied_exact_sha_distinct_from_source_main_commit",
     "approvedAtUtcPattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
     "approvalNotBeforeUtc": "2026-10-23T08:51:30Z",
     "approvalNotBeforeSourceCommit": "36875cfd33bee2b81e29b434de791198d854e885",

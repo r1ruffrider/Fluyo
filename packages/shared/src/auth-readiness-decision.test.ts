@@ -38,7 +38,10 @@ const asStrings = (value: unknown, label: string): string[] => {
 
 const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
 
-const approvalIsComplete = (decisionValue: JsonObject): boolean => {
+const approvalIsComplete = (
+  decisionValue: JsonObject,
+  runnerSuppliedReviewedPacketHead?: string,
+): boolean => {
   if (decisionValue.status !== "ACCEPTED") return false;
   const approval = asObject(decisionValue.approval, "approval");
   const approvers = asStrings(decisionValue.approvers, "approvers");
@@ -58,6 +61,9 @@ const approvalIsComplete = (decisionValue: JsonObject): boolean => {
     Date.parse(timestamp) <= Date.parse(validationClock);
   const evidenceKeys = Object.keys(evidenceByRequirement).sort();
   return (
+    typeof runnerSuppliedReviewedPacketHead === "string" &&
+    /^[0-9a-f]{40}$/.test(runnerSuppliedReviewedPacketHead) &&
+    runnerSuppliedReviewedPacketHead !== policy.sourceMainCommit &&
     timestampIsReal &&
     typeof approval.approvedBy === "string" &&
     approvers.includes(approval.approvedBy) &&
@@ -66,7 +72,7 @@ const approvalIsComplete = (decisionValue: JsonObject): boolean => {
     typeof approval.approvedValue === "string" &&
     approval.approvedValue.length > 0 &&
     typeof approval.evidenceCommit === "string" &&
-    approval.evidenceCommit === policy.sourceMainCommit &&
+    approval.evidenceCommit === runnerSuppliedReviewedPacketHead &&
     /^[0-9a-f]{40}$/.test(approval.evidenceCommit) &&
     typeof approval.decisionValueDigest === "string" &&
     approval.decisionValueDigest === sha256(approval.approvedValue) &&
@@ -88,6 +94,7 @@ describe("native live-auth readiness decision packet v1", () => {
       status: "repository_decision_packet",
       sourceMainCommit: "c6db1e3ded889eac5851eda7cc6d0891bf6d456a",
       recordedDate: "2026-10-23",
+      reviewedPacketHead: null,
     });
     expect(asObject(policy.scope)).toEqual({
       credentialFree: true,
@@ -160,112 +167,158 @@ describe("native live-auth readiness decision packet v1", () => {
     );
     expect(acceptancePolicy.validationClockUtc).toBe("2026-10-23T08:59:12Z");
     expect(acceptancePolicy.rule).toBe("ci_or_merge_never_substitutes_for_dated_material_approval");
+    expect(acceptancePolicy.reviewedPacketHeadSource).toBe(
+      "runner_supplied_exact_sha_distinct_from_source_main_commit",
+    );
 
     for (const decision of decisions) {
       const required = asStrings(decision.requiredEvidence, "requiredEvidence");
       const firstRequired = required[0];
       if (!firstRequired) throw new Error("required evidence must not be empty");
       const approvedValue = "bounded_exact_value";
+      const reviewedPacketHead = "a".repeat(40);
       const completeApproval = {
         approvedAtUtc: "2026-10-23T08:55:00Z",
         approvedBy: "Marlon",
         approvalReference: "ticket:direct_user_approval_2026-10-23",
         approvedValue,
-        evidenceCommit: policy.sourceMainCommit,
+        evidenceCommit: reviewedPacketHead,
         decisionValueDigest: sha256(approvedValue),
         evidenceByRequirement: Object.fromEntries(required.map((item) => [item, "report:" + item])),
       };
       const accepted = { ...decision, status: "ACCEPTED", approval: completeApproval };
 
-      expect(approvalIsComplete(decision)).toBe(false);
-      expect(approvalIsComplete({ ...decision, status: "ACCEPTED" })).toBe(false);
+      expect(approvalIsComplete(decision, reviewedPacketHead)).toBe(false);
+      expect(approvalIsComplete({ ...decision, status: "ACCEPTED" }, reviewedPacketHead)).toBe(
+        false,
+      );
+      expect(approvalIsComplete(accepted)).toBe(false);
+      expect(approvalIsComplete(accepted, String(policy.sourceMainCommit))).toBe(false);
+      expect(approvalIsComplete(accepted, "b".repeat(40))).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvedBy: "Unauthorized Reviewer" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvedBy: "Unauthorized Reviewer" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvalReference: "informal approval" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvalReference: "informal approval" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2026-13-40T25:61:61Z" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvedAtUtc: "2026-13-40T25:61:61Z" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:29Z" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:29Z" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:13Z" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:13Z" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:31Z" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:31Z" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(true);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:11Z" },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:11Z" },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(true);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, evidenceCommit: "0".repeat(40) },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, evidenceCommit: String(policy.sourceMainCommit) },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, decisionValueDigest: "0".repeat(64) },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, decisionValueDigest: "0".repeat(64) },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       const missingEvidence = { ...completeApproval.evidenceByRequirement };
       delete missingEvidence[firstRequired];
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: { ...completeApproval, evidenceByRequirement: missingEvidence },
-        }),
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: { ...completeApproval, evidenceByRequirement: missingEvidence },
+          },
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: {
-            ...completeApproval,
-            evidenceByRequirement: {
-              ...completeApproval.evidenceByRequirement,
-              extra: "report:extra",
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: {
+              ...completeApproval,
+              evidenceByRequirement: {
+                ...completeApproval.evidenceByRequirement,
+                extra: "report:extra",
+              },
             },
           },
-        }),
+          reviewedPacketHead,
+        ),
       ).toBe(false);
       expect(
-        approvalIsComplete({
-          ...accepted,
-          approval: {
-            ...completeApproval,
-            evidenceByRequirement: {
-              ...completeApproval.evidenceByRequirement,
-              [firstRequired]: "",
+        approvalIsComplete(
+          {
+            ...accepted,
+            approval: {
+              ...completeApproval,
+              evidenceByRequirement: {
+                ...completeApproval.evidenceByRequirement,
+                [firstRequired]: "",
+              },
             },
           },
-        }),
+          reviewedPacketHead,
+        ),
       ).toBe(false);
-      expect(approvalIsComplete(accepted)).toBe(true);
+      expect(approvalIsComplete(accepted, reviewedPacketHead)).toBe(true);
+      expect(approvalIsComplete(accepted, "c".repeat(40))).toBe(false);
     }
   });
 
