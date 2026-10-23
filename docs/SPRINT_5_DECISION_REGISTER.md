@@ -197,3 +197,11 @@ production, or release decision in this register.
 - README and active marketing copy distinguish the verified web learning build from later native, AI, audio, translation, commerce, and public-release work.
 - Isabella, Fernanda, and Danila review the exact decision/claim/UX scope; Elana independently audits the final exact head.
 - All eight protected repository checks pass. Any failed, unresolved, or unattempted material check keeps the increment open.
+
+## Increment 5 live-auth readiness decision packet
+
+The credential-free [native live-auth readiness packet](../contracts/mobile/auth-readiness/v1/README.md) is bound to merged main `c6db1e3ded889eac5851eda7cc6d0891bf6d456a`. It records fourteen stable decision rows covering native SDK provenance and Android logging, auth methods, sign-out scope, callback hosts, AASA, assetlinks, Supabase allowlists, Keychain and Keystore policies, service and recovery custody, revocation, and account deletion.
+
+Every row is `PROPOSED` or `BLOCKED`. Marlon is accountable for accepting material decisions; Adriana may implement only after approval; Isabella, Danila, Fernanda, and Elana retain their product, UX, privacy, and independent-QA roles. Missing domain, external-account, signing, delivery, backend/privacy/support, and device custodians remain unassigned.
+
+A row cannot become accepted without an exact approved value, an approver named by that row, a real ISO UTC approval time, a durable approval reference, the exact reviewed commit, a digest of the approved value, and one durable keyed reference for every required evidence item. Its recheck conditions remain binding after acceptance. CI or merge never substitutes for approval. Runtime evidence remains 0, and all 24 mirrored native rows remain unattempted.

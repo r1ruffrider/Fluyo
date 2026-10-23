@@ -547,3 +547,21 @@ The user updated the ignored root `.env` to a valid `sk_test_` key for the accou
 the monthly and annual Prices. The user signed in through the local browser. The CLI listener
 forwarded to the local API, and its `whsec_` matched the server configuration without
 printing either value. Root `.env.local` is not the source for `npm run dev`.
+
+## Increment 5 live-auth readiness checkpoint — 2026-10-23
+
+PR #44 merged the provider-neutral auth-state contract as `c6db1e3ded889eac5851eda7cc6d0891bf6d456a`; post-main run `39857882291` passed all eight protected jobs. The next independent slice is the credential-free [live-auth readiness packet](../contracts/mobile/auth-readiness/v1/README.md).
+
+The packet records prerequisites only. All decisions remain proposed or blocked; native runtime remains 0; all 24 native rows remain unattempted. No SDK, callback domain, AASA, assetlinks file, Supabase allowlist, Keychain or Keystore adapter, service account, recovery delivery, revocation, deletion, signing, production, device, capture, store, public claim, credential, or spend action is authorized by this checkpoint.
+
+## Immediate escalation and no-idle rule — 2026-10-23
+
+Whenever work reaches a boundary requiring Marlon's explicit approval, secure access or a secret, an external-account or spending action, a destructive or irreversible action, or a material product decision, Adriana notifies Marlon immediately through the Codex app. The notice states the exact requested action, the reason, the affected pull request or phase, and the safe work already completed. It contains no credential or secret.
+
+All independent authorized workstreams continue while approval or access is pending. After a pull request satisfies the standing exact-head gate, Adriana marks it ready, merges it, verifies every applicable post-main workflow, and advances automatically under the existing authorization.
+
+At the start of every current and future phase, Adriana reconciles the complete current agent roster, including newly added agents, and assigns every relevant specialist a bounded responsibility, evidence requirement, and handoff. A newly available specialist is not omitted because an earlier plan predates that role. Adriana remains the orchestration and merge owner, and Elana remains the sole independent exact-head QA and code-review gate. When names or roles are not yet exposed, the phase records that gap and reconciles it as soon as the authoritative roster becomes available; it does not invent an assignment.
+
+Elana PASS on the current exact head is the execution trigger. Adriana immediately reconciles every remaining protected, specialist, and platform gate plus GitHub mergeability. If all standing exact-head conditions pass, Adriana marks the pull request ready, merges under the standing authorization, verifies every post-main workflow, updates the handoff and status, and starts the next authorized phase, pull request, or build-plan step without waiting for another user instruction. If another gate fails, engineering repairs it and obtains a fresh Elana exact-head PASS. If the next step crosses an undelegated approval boundary, Adriana notifies Marlon immediately and continues every independent safe workstream.
+
+Adriana and the roster reconcile every authorized completed-PR handoff and next-phase start immediately and resume or dispatch safe work without avoidable delay. A 12-hour idle period is a hard process breach, not a permitted wait, polling interval, or grace period. App or email notification is escalation only and never substitutes for required approval. Elana remains the sole independent exact-head QA and code-review gate.

@@ -190,3 +190,9 @@ The six shared checks prove traceable signed iOS and Android internal artifacts;
 ## Phase completion
 
 Sprint 5 closes only when all eight increments meet their exit gates, Elana's independent exact-head audit reports PASS with zero unresolved material defects, all repository and platform checks are green, and the handoff records installable non-production artifacts for both platforms. External account, store, privacy, signing, or infrastructure dependencies remain visible as blockers and cannot be replaced by simulated evidence.
+
+#### Credential-free live-auth readiness packet
+
+Before the live work in Increment 5, the [readiness packet](../contracts/mobile/auth-readiness/v1/README.md) records the still-open SDK, method, sign-out, domain/link, Supabase allowlist, secure-storage, service-custody, recovery, revocation, and deletion decisions. Every row remains proposed or blocked and requires a dated approval reference plus exact evidence before implementation.
+
+This packet performs no native runtime work or external action. The provider-neutral contract remains the only implemented slice; runtime executions remain 0 and all 24 native rows remain unattempted.
