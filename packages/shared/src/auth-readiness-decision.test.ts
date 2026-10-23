@@ -154,8 +154,11 @@ describe("native live-auth readiness decision packet v1", () => {
     expect(acceptancePolicy.approvedAtUtcPattern).toBe(
       "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
     );
-    expect(acceptancePolicy.approvalNotBeforeUtc).toBe("2026-10-23T00:00:00Z");
-    expect(acceptancePolicy.validationClockUtc).toBe("2026-10-23T23:59:59Z");
+    expect(acceptancePolicy.approvalNotBeforeUtc).toBe("2026-10-23T08:51:30Z");
+    expect(acceptancePolicy.approvalNotBeforeSourceCommit).toBe(
+      "36875cfd33bee2b81e29b434de791198d854e885",
+    );
+    expect(acceptancePolicy.validationClockUtc).toBe("2026-10-23T08:59:12Z");
     expect(acceptancePolicy.rule).toBe("ci_or_merge_never_substitutes_for_dated_material_approval");
 
     for (const decision of decisions) {
@@ -164,7 +167,7 @@ describe("native live-auth readiness decision packet v1", () => {
       if (!firstRequired) throw new Error("required evidence must not be empty");
       const approvedValue = "bounded_exact_value";
       const completeApproval = {
-        approvedAtUtc: "2026-10-23T12:00:00Z",
+        approvedAtUtc: "2026-10-23T08:55:00Z",
         approvedBy: "Marlon",
         approvalReference: "ticket:direct_user_approval_2026-10-23",
         approvedValue,
@@ -197,15 +200,27 @@ describe("native live-auth readiness decision packet v1", () => {
       expect(
         approvalIsComplete({
           ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2000-01-01T00:00:00Z" },
+          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:29Z" },
         }),
       ).toBe(false);
       expect(
         approvalIsComplete({
           ...accepted,
-          approval: { ...completeApproval, approvedAtUtc: "2099-01-01T00:00:00Z" },
+          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:13Z" },
         }),
       ).toBe(false);
+      expect(
+        approvalIsComplete({
+          ...accepted,
+          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:51:31Z" },
+        }),
+      ).toBe(true);
+      expect(
+        approvalIsComplete({
+          ...accepted,
+          approval: { ...completeApproval, approvedAtUtc: "2026-10-23T08:59:11Z" },
+        }),
+      ).toBe(true);
       expect(
         approvalIsComplete({
           ...accepted,

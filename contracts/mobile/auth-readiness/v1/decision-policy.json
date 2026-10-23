@@ -36,8 +36,9 @@
     "rule": "ci_or_merge_never_substitutes_for_dated_material_approval",
     "headChangeRule": "approval_evidence_must_be_rechecked_when_the_reviewed_head_or_decision_value_changes",
     "approvedAtUtcPattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-    "approvalNotBeforeUtc": "2026-10-23T00:00:00Z",
-    "validationClockUtc": "2026-10-23T23:59:59Z",
+    "approvalNotBeforeUtc": "2026-10-23T08:51:30Z",
+    "approvalNotBeforeSourceCommit": "36875cfd33bee2b81e29b434de791198d854e885",
+    "validationClockUtc": "2026-10-23T08:59:12Z",
     "evidenceReferencePattern": "^(commit|artifact|report|ticket):[A-Za-z0-9._/-]+$"
   },
   "safeClaims": [
