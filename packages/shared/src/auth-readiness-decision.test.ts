@@ -477,7 +477,7 @@ describe("native live-auth readiness decision packet v1", () => {
       "FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
     expect(ciWorkflow).toContain(
-      "ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          fetch-depth: 3",
+      "ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          fetch-depth: 0",
     );
 
     const actualAcceptedRows = decisions.filter((decision) => decision.status === "ACCEPTED");
@@ -1152,9 +1152,10 @@ describe("native live-auth readiness decision packet v1", () => {
     }
   });
 
-  it("keeps the contract bundle limited to the decision policy and README", () => {
+  it("keeps the contract bundle limited to the historical packet and approval history", () => {
     expect(readdirSync(contractDirectory).sort()).toEqual([
       "README.md",
+      "approval-history",
       "decision-policy.json",
       "evidence",
     ]);

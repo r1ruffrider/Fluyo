@@ -189,3 +189,9 @@ Before production launch, configure ingress rate limiting, alerting for repeated
 ## Reporting
 
 Do not open a public issue containing a vulnerability, exploit, credential, or customer data. Contact the repository owner privately and include reproduction steps that avoid real secrets or production data.
+
+## Native-auth approval-history security boundary
+
+The append-only approval ledger stores only canonical repository paths, SHA-256 digests, public governance declarations, gate names, and bounded authority. It stores no credentials, secrets, tokens, private account identifiers, customer data, or PII. Paths are sorted, unique repository-relative regular blobs; traversal, symlinks, absolute paths, unindexed records, stale prefixes, and unknown authority fields fail closed. Natalia reviews the exact subject bundle before any delegated phase approval. Production, credentials, signing, store/release, spend, destructive/data, external account/dashboard/domain, physical-device, and publication actions remain outside the delegation. The records prove repository integrity and declared authority after recording, not cryptographic human nonrepudiation.
+
+The direct-Marlon `DEPENDENCY_LOCK_REMEDIATION_OPTION_A` authorization is limited to the exact atomic Vitest 4.1.11 → 4.1.12 development-tool bundle. It satisfies no native evidence and authorizes no runtime, product, or external action.
