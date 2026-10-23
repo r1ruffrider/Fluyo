@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0.0",
+  "ledgerId": "fluyo-native-auth-approval-history-v1",
+  "canonicalRecordEncoding": "utf8_nfc_safe_integer_recursive_utf8_key_order_two_space_lf_no_bom",
+  "recordDigest": "lowercase_sha256_of_exact_canonical_record_bytes",
+  "subjectBundleEncoding": "paths_sorted_by_utf8_bytes_then_utf8_path_0x00_ascii_lowercase_sha256_0x0a",
+  "eventTypes": [
+    "GOVERNANCE_SELECTION",
+    "DELEGATION_GRANT",
+    "DELEGATION_REVOCATION",
+    "MIGRATION_SNAPSHOT",
+    "REVIEW_ATTESTATION",
+    "DECISION_APPROVAL",
+    "DECISION_SUPERSESSION",
+    "PHASE_APPROVAL",
+    "TOOLING_CHANGE_AUTHORIZATION"
+  ],
+  "roster": {
+    "materialAndGovernanceGrantor": "Marlon",
+    "orchestratorAndMergeOwner": "Adriana",
+    "delegatedPhaseApprover": "Adriana",
+    "soleFinalIndependentExactHeadQa": "Elana"
+  },
+  "delegation": {
+    "scope": "credential_free_repository_only_nonproduction_phase_after_required_gates",
+    "requiredPhaseGates": [
+      "Catalina architecture PASS",
+      "Natalia security PASS",
+      "Renata environment and CI PASS",
+      "all relevant domain specialists PASS",
+      "protected CI PASS",
+      "Elana exact-head PASS last"
+    ],
+    "sameSubjectBundleRequired": true,
+    "deniedActions": [
+      "accept_any_of_fourteen_material_native_auth_decisions",
+      "production_action",
+      "credential_or_secret_action",
+      "external_account_action",
+      "dashboard_action",
+      "domain_action",
+      "signing_action",
+      "store_action",
+      "physical_device_action",
+      "spend_action",
+      "publication_or_release_action",
+      "destructive_or_data_action"
+    ]
+  },
+  "foldRules": {
+    "appendOnly": true,
+    "revocationAndSupersessionRequireNewRecord": true,
+    "referencesMustNameEarlierRecordDigests": true,
+    "concurrentWritersMustRebaseOntoLatestChain": true,
+    "phaseApprovalRequiresAdrianaActiveDelegationEarlierMatchingPassGatesAndBoundedNonproductionScope": true,
+    "effectiveStateComesOnlyFromValidatedFold": true,
+    "materialDecisionApprovalAndSupersessionRequireMarlon": true,
+    "reviewSupersessionMakesEarlierAttestationStale": true
+  },
+  "materialDecisionIds": [
+    "AUTH-SDK-IOS",
+    "AUTH-SDK-ANDROID",
+    "AUTH-METHODS",
+    "AUTH-SIGNOUT-SCOPE",
+    "AUTH-CALLBACK-DOMAINS",
+    "AUTH-AASA",
+    "AUTH-ASSETLINKS",
+    "AUTH-SUPABASE-ALLOWLIST",
+    "AUTH-STORAGE-IOS",
+    "AUTH-STORAGE-ANDROID",
+    "AUTH-NONPROD-CUSTODY",
+    "AUTH-RECOVERY-DELIVERY",
+    "AUTH-REVOCATION",
+    "AUTH-ACCOUNT-DELETION"
+  ],
+  "bootstrap": {
+    "historicalSnapshotCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce",
+    "installationBaseCommit": "a886b75af125b5a69e2ee3f42471ceb2700eeec1",
+    "schemaSha256": "d456f233d914802b29967889191414fbc591427ff568051381bba8dc06b14c03",
+    "decisionPolicySha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696",
+    "evidenceIndexSha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de",
+    "genesisRecordCount": 4
+  },
+  "honestLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+  "gateInventory": {
+    "requiredCategories": [
+      "ARCHITECTURE",
+      "SECURITY",
+      "ENVIRONMENT_AND_CI",
+      "DOMAIN_SPECIALIST",
+      "PROTECTED_CI",
+      "INDEPENDENT_EXACT_HEAD_QA"
+    ],
+    "fixedReviewers": {
+      "ARCHITECTURE": "Catalina",
+      "SECURITY": "Natalia",
+      "ENVIRONMENT_AND_CI": "Renata",
+      "PROTECTED_CI": "GitHub Actions",
+      "INDEPENDENT_EXACT_HEAD_QA": "Elana"
+    },
+    "domainGatesDeclaredPerPhase": true,
+    "samePhaseHeadAndSubjectBundleRequired": true,
+    "finalIndependentGateMustHaveGreatestSequence": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0.0",
+  "ledgerId": "fluyo-native-auth-approval-history-v1",
+  "schemaSha256": "d456f233d914802b29967889191414fbc591427ff568051381bba8dc06b14c03",
+  "policySha256": "26d20521f83f075794ae20ee062b51e4607c0fd67b3f9b86f32ba3e813400dbb",
+  "records": [
+    {
+      "sequence": 1,
+      "digest": "484955bab2c34feb77c1e2d277a7a75dd259b27404f2f75cc75aa93f6c37acf6",
+      "path": "contracts/mobile/auth-readiness/v1/approval-history/records/484955bab2c34feb77c1e2d277a7a75dd259b27404f2f75cc75aa93f6c37acf6.json"
+    },
+    {
+      "sequence": 2,
+      "digest": "290b5310d65e92a4d7784a68a5ca748de98b8d39dae8de1469d20f048c6a5fb9",
+      "path": "contracts/mobile/auth-readiness/v1/approval-history/records/290b5310d65e92a4d7784a68a5ca748de98b8d39dae8de1469d20f048c6a5fb9.json"
+    },
+    {
+      "sequence": 3,
+      "digest": "6802aa47e8a2aad4da7ae4c8391b40098e008862c62acc2edb77a488c478faed",
+      "path": "contracts/mobile/auth-readiness/v1/approval-history/records/6802aa47e8a2aad4da7ae4c8391b40098e008862c62acc2edb77a488c478faed.json"
+    },
+    {
+      "sequence": 4,
+      "digest": "ed9ad08433fd2f7ad225f97e4bb691ad161c1023ab9974745f934d137cf8f033",
+      "path": "contracts/mobile/auth-readiness/v1/approval-history/records/ed9ad08433fd2f7ad225f97e4bb691ad161c1023ab9974745f934d137cf8f033.json"
+    }
+  ]
+}

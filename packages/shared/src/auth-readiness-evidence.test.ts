@@ -15,6 +15,7 @@ type EvidenceRepository = {
 const repositoryRoot = resolve(__dirname, "../../..");
 const contractDirectory = resolve(repositoryRoot, "contracts/mobile/auth-readiness/v1");
 const evidenceDirectory = resolve(contractDirectory, "evidence");
+const approvalHistoryDirectory = resolve(contractDirectory, "approval-history");
 const docsDirectory = resolve(repositoryRoot, "docs");
 const baseCommit = "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee";
 const policyRelativePath = "contracts/mobile/auth-readiness/v1/decision-policy.json";
@@ -26,6 +27,9 @@ const index = JSON.parse(
 const readme = readFileSync(resolve(contractDirectory, "README.md"), "utf8");
 const register = readFileSync(resolve(docsDirectory, "SPRINT_5_DECISION_REGISTER.md"), "utf8");
 const handoff = readFileSync(resolve(docsDirectory, "DEVELOPMENT_HANDOFF.md"), "utf8");
+const approvalHistoryIndex = JSON.parse(
+  readFileSync(resolve(approvalHistoryDirectory, "index.json"), "utf8"),
+) as JsonObject;
 
 const asObject = (value: unknown, label = "value"): JsonObject => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -1397,7 +1401,47 @@ describe("native auth pre-approval decision evidence", () => {
     const basePolicy = gitBuffer("show", `${baseCommit}:${policyRelativePath}`);
     expect(policyBytes.equals(basePolicy)).toBe(true);
     expect(sha256(policyBytes)).toBe(asObject(index.decisionPolicy).sha256);
-    expect(gitText("diff", "--name-only", baseCommit, "--", "apps", policyRelativePath)).toBe("");
+    expect(gitText("diff", "--name-only", baseCommit, "--", policyRelativePath)).toBe("");
+    const historyRecords = asObjects(approvalHistoryIndex.records, "approval history records").map(
+      (entry) => {
+        const recordPath = String(entry.path);
+        const bytes = readFileSync(resolve(repositoryRoot, recordPath));
+        expect(sha256(bytes)).toBe(entry.digest);
+        return JSON.parse(bytes.toString("utf8")) as JsonObject;
+      },
+    );
+    const toolingAuthorizations = historyRecords.filter(
+      (record) => record.eventType === "TOOLING_CHANGE_AUTHORIZATION",
+    );
+    expect(toolingAuthorizations).toHaveLength(1);
+    const toolingAuthorization = toolingAuthorizations[0]!;
+    expect(toolingAuthorization.actor).toBe("Marlon");
+    expect(asObject(toolingAuthorization.authority).kind).toBe("direct_material_owner_authority");
+    const toolingPayload = asObject(toolingAuthorization.payload);
+    expect(toolingPayload).toMatchObject({
+      decision: "DEPENDENCY_LOCK_REMEDIATION_OPTION_A",
+      classification: "credential_free_dev_tool_only",
+      runtimeOrProductAuthorization: false,
+      nativeEvidenceSatisfaction: false,
+      externalActionAuthorization: false,
+    });
+    const toolingFiles = asObjects(toolingPayload.baseFiles, "base tooling files").map((file) =>
+      String(file.path),
+    );
+    const toolingDigests = toolingFiles.map((path) =>
+      sha256(readFileSync(resolve(repositoryRoot, path))),
+    );
+    const baseDigests = asObjects(toolingPayload.baseFiles, "base tooling files").map((file) =>
+      String(file.sha256),
+    );
+    const targetDigests = asObjects(toolingPayload.targetFiles, "target tooling files").map(
+      (file) => String(file.sha256),
+    );
+    expect([baseDigests, targetDigests]).toContainEqual(toolingDigests);
+    const appDiff = gitText("diff", "--name-only", baseCommit, "--", "apps")
+      .split(/\r?\n/)
+      .filter(Boolean);
+    expect(appDiff.every((path) => path === "apps/api/package.json")).toBe(true);
     expect(gitText("status", "--porcelain=v1", "--untracked-files=all", "--", "apps")).toBe("");
   });
 
@@ -2450,7 +2494,7 @@ AA0000000000000000000098 /* Alamofire.xcframework in Frameworks */ = {isa = PBXB
     expect(register).not.toContain(
       "Isabella, Danila, Fernanda, and Elana retain their product, UX, privacy, and independent-QA roles",
     );
-    expect(register).toContain("approval-governance alternative A or B");
+    expect(register).toContain("append-only, content-addressed, squash-compatible approval model");
     expect(handoff).toContain(
       "PR #45 then merged the credential-free [live-auth readiness packet](../contracts/mobile/auth-readiness/v1/README.md) as `7ac566231a2e26fc1043aab40d33a24964127355`.",
     );
@@ -2459,6 +2503,9 @@ AA0000000000000000000098 /* Alamofire.xcframework in Frameworks */ = {isa = PBXB
     );
     expect(handoff).toContain(
       "The current branch slice is the candidate-only [pre-approval evidence packet](../contracts/mobile/auth-readiness/v1/evidence/index.json) bound to `c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee`.",
+    );
+    expect(handoff).toContain(
+      "Marlon selected the append-only, content-addressed, squash-compatible model",
     );
     expect(handoff).not.toContain(
       "The next independent slice is the credential-free [live-auth readiness packet]",

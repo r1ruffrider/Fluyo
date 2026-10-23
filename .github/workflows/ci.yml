@@ -132,12 +132,22 @@ jobs:
     timeout-minutes: 15
     env:
       FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      FLUYO_APPROVAL_HISTORY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      FLUYO_APPROVAL_HISTORY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 3
+          fetch-depth: 0
+
+      - name: Validate approval-history Git endpoints
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "${FLUYO_APPROVAL_HISTORY_HEAD}"
+          git cat-file -e "${FLUYO_APPROVAL_HISTORY_BASE}^{commit}"
+          git cat-file -e "${FLUYO_APPROVAL_HISTORY_HEAD}^{commit}"
+          git merge-base --is-ancestor "${FLUYO_APPROVAL_HISTORY_BASE}" "${FLUYO_APPROVAL_HISTORY_HEAD}"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
