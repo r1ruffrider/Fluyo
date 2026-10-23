@@ -1,0 +1,2305 @@
+{
+  "schemaVersion": "1.0.0",
+  "packetKind": "pre_approval_decision_evidence",
+  "sourceMainCommit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+  "decisionPolicy": {
+    "path": "contracts/mobile/auth-readiness/v1/decision-policy.json",
+    "sha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696",
+    "allowedStatuses": ["PROPOSED", "BLOCKED"],
+    "acceptedCount": 0
+  },
+  "scope": {
+    "credentialFree": true,
+    "repositoryOnly": true,
+    "candidateOnly": true,
+    "liveAuthImplementationAuthorized": false,
+    "externalActionsPerformed": false,
+    "satisfiesApprovalRequirement": false,
+    "runtimeEvidence": {
+      "conducted": 0,
+      "passed": 0,
+      "failed": 0,
+      "unattempted": 24
+    },
+    "preservedAuthStateContract": {
+      "states": 10,
+      "transitions": 50,
+      "syntheticScenarios": 28
+    }
+  },
+  "phaseRoster": [
+    {
+      "name": "Adriana Solano",
+      "role": "orchestrator_merge_owner",
+      "evidenceOwnership": ["phase_orchestration", "merge_custody"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Bianca Morales",
+      "role": "administration_records",
+      "evidenceOwnership": ["administrative_records"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Camila Reyes",
+      "role": "ux_accessibility",
+      "evidenceOwnership": ["product_flow_accessibility_closeout"],
+      "reviewerForDecisionIds": [
+        "AUTH-METHODS",
+        "AUTH-SIGNOUT-SCOPE",
+        "AUTH-RECOVERY-DELIVERY",
+        "AUTH-REVOCATION",
+        "AUTH-ACCOUNT-DELETION"
+      ]
+    },
+    {
+      "name": "Daniela Vargas",
+      "role": "visual_mobile_motion",
+      "evidenceOwnership": ["product_flow_visual_mobile_motion_closeout"],
+      "reviewerForDecisionIds": [
+        "AUTH-METHODS",
+        "AUTH-SIGNOUT-SCOPE",
+        "AUTH-RECOVERY-DELIVERY",
+        "AUTH-REVOCATION",
+        "AUTH-ACCOUNT-DELETION"
+      ]
+    },
+    {
+      "name": "Elana Castillo",
+      "role": "sole_independent_exact_head_qa",
+      "evidenceOwnership": ["independent_exact_head_qa"],
+      "reviewerForDecisionIds": [
+        "AUTH-SDK-IOS",
+        "AUTH-SDK-ANDROID",
+        "AUTH-METHODS",
+        "AUTH-SIGNOUT-SCOPE",
+        "AUTH-CALLBACK-DOMAINS",
+        "AUTH-AASA",
+        "AUTH-ASSETLINKS",
+        "AUTH-SUPABASE-ALLOWLIST",
+        "AUTH-STORAGE-IOS",
+        "AUTH-STORAGE-ANDROID",
+        "AUTH-NONPROD-CUSTODY",
+        "AUTH-RECOVERY-DELIVERY",
+        "AUTH-REVOCATION",
+        "AUTH-ACCOUNT-DELETION"
+      ]
+    },
+    {
+      "name": "Fernanda Ortiz",
+      "role": "social_scoped_auth_privacy_boundary_only",
+      "evidenceOwnership": ["social", "scoped_auth_privacy_boundary_only"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Gabriela Mendoza",
+      "role": "research",
+      "evidenceOwnership": ["research"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Isabella Navarro",
+      "role": "marketing_claims",
+      "evidenceOwnership": ["marketing_claim_boundaries"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Julieta Herrera",
+      "role": "numbers_financial_claims",
+      "evidenceOwnership": ["numeric_and_financial_claim_boundaries"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Catalina Moreno",
+      "role": "architecture_contracts",
+      "evidenceOwnership": ["architecture", "contracts"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Valentina Cruz",
+      "role": "primary_implementation_backend_frontend_database",
+      "evidenceOwnership": ["backend_frontend_database_implementation"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Renata Vega",
+      "role": "environment_ci",
+      "evidenceOwnership": ["environment", "continuous_integration"],
+      "reviewerForDecisionIds": []
+    },
+    {
+      "name": "Natalia Ortega",
+      "role": "security",
+      "evidenceOwnership": ["security"],
+      "reviewerForDecisionIds": [
+        "AUTH-SDK-IOS",
+        "AUTH-SDK-ANDROID",
+        "AUTH-METHODS",
+        "AUTH-SIGNOUT-SCOPE",
+        "AUTH-CALLBACK-DOMAINS",
+        "AUTH-AASA",
+        "AUTH-ASSETLINKS",
+        "AUTH-SUPABASE-ALLOWLIST",
+        "AUTH-STORAGE-IOS",
+        "AUTH-STORAGE-ANDROID",
+        "AUTH-NONPROD-CUSTODY",
+        "AUTH-RECOVERY-DELIVERY",
+        "AUTH-REVOCATION",
+        "AUTH-ACCOUNT-DELETION"
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "path": "contracts/mobile/auth-readiness/v1/evidence/link-and-custody.md",
+      "sha256": "fb177501fbb19fc7d48253a9a4f5c912f76041fa57c1a31d55fe57f982dc6192"
+    },
+    {
+      "path": "contracts/mobile/auth-readiness/v1/evidence/product-session-policy.md",
+      "sha256": "6645cd554f21746edfd017ba7a13a7995a663d21f4f9a3572d5391148d8a58a1"
+    },
+    {
+      "path": "contracts/mobile/auth-readiness/v1/evidence/sdk-provenance.md",
+      "sha256": "1dc4257ee9266ac2d72f13ebd1690579c081e5857598e5b2718a0d8f6f6a8909"
+    },
+    {
+      "path": "contracts/mobile/auth-readiness/v1/evidence/storage-and-lifecycle.md",
+      "sha256": "255400a4814a238149602c360ae041dc1f017f169a06a68590f869da68dfb49f"
+    }
+  ],
+  "dependencyOrder": [
+    "AUTH-METHODS",
+    "AUTH-NONPROD-CUSTODY",
+    "AUTH-SDK-IOS",
+    "AUTH-SDK-ANDROID",
+    "AUTH-CALLBACK-DOMAINS",
+    "AUTH-SIGNOUT-SCOPE",
+    "AUTH-STORAGE-IOS",
+    "AUTH-STORAGE-ANDROID",
+    "AUTH-AASA",
+    "AUTH-ASSETLINKS",
+    "AUTH-RECOVERY-DELIVERY",
+    "AUTH-SUPABASE-ALLOWLIST",
+    "AUTH-REVOCATION",
+    "AUTH-ACCOUNT-DELETION"
+  ],
+  "approvalGovernanceDecision": {
+    "state": "BLOCKED_MARLON_SELECTION_REQUIRED",
+    "alternatives": [
+      "A_PRESERVE_SPECIAL_MERGE_COMMIT_P_TO_A_TO_V",
+      "B_APPEND_ONLY_CONTENT_ADDRESSED_SQUASH_COMPATIBLE_RECORD"
+    ],
+    "currentValidationCutoffUtc": "2026-10-23T08:59:12Z",
+    "currentCutoffClosed": true,
+    "futureReviewedPacketRequiresFreshNonBackdatedChronology": true,
+    "selectedAlternative": null,
+    "satisfiesApprovalRequirement": false
+  },
+  "decisions": [
+    {
+      "id": "AUTH-SDK-IOS",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/sdk-provenance.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS"],
+      "requiredCustodian": "Marlon for selection; Natalia for security and provenance review",
+      "candidateEvidenceByRequirement": {
+        "exact_package_version_source_and_sha256": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-IOS/exact_package_version_source_and_sha256",
+          "summary": "Candidate review criteria are documented for exact_package_version_source_and_sha256; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/ios/Fluyo.xcodeproj/project.pbxproj",
+              "sha256": "c7c5f5b49ef68f8a7c81d2ed6fd73d8ff74bb0670f38b315c203c1f394d4dfdb"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "license_and_advisory_review": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-IOS/license_and_advisory_review",
+          "summary": "Candidate review criteria are documented for license_and_advisory_review; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/ios/Fluyo.xcodeproj/project.pbxproj",
+              "sha256": "c7c5f5b49ef68f8a7c81d2ed6fd73d8ff74bb0670f38b315c203c1f394d4dfdb"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "supported_ios_floor_and_dependency_graph": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-SDK-IOS/supported_ios_floor_and_dependency_graph",
+          "summary": "The required supported_ios_floor_and_dependency_graph custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/ios/Fluyo.xcodeproj/project.pbxproj",
+              "sha256": "c7c5f5b49ef68f8a7c81d2ed6fd73d8ff74bb0670f38b315c203c1f394d4dfdb"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "credential_and_diagnostic_logging_review": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-IOS/credential_and_diagnostic_logging_review",
+          "summary": "Candidate review criteria are documented for credential_and_diagnostic_logging_review; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/ios/Fluyo.xcodeproj/project.pbxproj",
+              "sha256": "c7c5f5b49ef68f8a7c81d2ed6fd73d8ff74bb0670f38b315c203c1f394d4dfdb"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "package_version_checksum_license_platform_floor_or_advisory_change",
+      "claimBoundary": "no_ios_auth_sdk_selected_approved_installed_or_exercised",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-SDK-ANDROID",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/sdk-provenance.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS"],
+      "requiredCustodian": "Marlon for selection; Natalia for security and provenance review",
+      "candidateEvidenceByRequirement": {
+        "exact_coordinate_version_repository_and_sha256": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-ANDROID/exact_coordinate_version_repository_and_sha256",
+          "summary": "Candidate review criteria are documented for exact_coordinate_version_repository_and_sha256; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json",
+              "sha256": "7385ba0caf83c6b6913ed0c8f3759fd0b179da193842cbd2fae2b48527514af6"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/android/app/build.gradle.kts",
+              "sha256": "9d46e9d9db320e180ab39f17ac56bedd7326c5efce5f28eb7ea35867b56b0608"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "license_and_advisory_review": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-ANDROID/license_and_advisory_review",
+          "summary": "Candidate review criteria are documented for license_and_advisory_review; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json",
+              "sha256": "7385ba0caf83c6b6913ed0c8f3759fd0b179da193842cbd2fae2b48527514af6"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/android/app/build.gradle.kts",
+              "sha256": "9d46e9d9db320e180ab39f17ac56bedd7326c5efce5f28eb7ea35867b56b0608"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "supported_android_floor_and_dependency_graph": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-SDK-ANDROID/supported_android_floor_and_dependency_graph",
+          "summary": "The required supported_android_floor_and_dependency_graph custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json",
+              "sha256": "7385ba0caf83c6b6913ed0c8f3759fd0b179da193842cbd2fae2b48527514af6"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/android/app/build.gradle.kts",
+              "sha256": "9d46e9d9db320e180ab39f17ac56bedd7326c5efce5f28eb7ea35867b56b0608"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "reviewed_release_contains_credential_logging_fix": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-ANDROID/reviewed_release_contains_credential_logging_fix",
+          "summary": "Candidate review criteria are documented for reviewed_release_contains_credential_logging_fix; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json",
+              "sha256": "7385ba0caf83c6b6913ed0c8f3759fd0b179da193842cbd2fae2b48527514af6"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/android/app/build.gradle.kts",
+              "sha256": "9d46e9d9db320e180ab39f17ac56bedd7326c5efce5f28eb7ea35867b56b0608"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "fluyo_logger_retains_no_sdk_message_or_throwable": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SDK-ANDROID/fluyo_logger_retains_no_sdk_message_or_throwable",
+          "summary": "Candidate review criteria are documented for fluyo_logger_retains_no_sdk_message_or_throwable; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/toolchain-resolution-proof.json",
+              "sha256": "7385ba0caf83c6b6913ed0c8f3759fd0b179da193842cbd2fae2b48527514af6"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/android/app/build.gradle.kts",
+              "sha256": "9d46e9d9db320e180ab39f17ac56bedd7326c5efce5f28eb7ea35867b56b0608"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "coordinate_version_checksum_license_platform_floor_logging_or_advisory_change",
+      "claimBoundary": "no_android_auth_sdk_selected_approved_installed_or_exercised",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-METHODS",
+      "policyStatus": "PROPOSED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/product-session-policy.md",
+      "proposalState": "PROPOSED_MATERIAL_CHOICE",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": [],
+      "requiredCustodian": "Marlon for product choice; Camila for accessibility; Daniela for mobile interaction",
+      "candidateEvidenceByRequirement": {
+        "exact_enabled_method_list": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-METHODS/exact_enabled_method_list",
+          "summary": "Bound repository files provide candidate context for exact_enabled_method_list, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "unsupported_flow_list": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-METHODS/unsupported_flow_list",
+          "summary": "The required unsupported_flow_list custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "copy_and_recovery_review": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-METHODS/copy_and_recovery_review",
+          "summary": "Bound repository files provide candidate context for copy_and_recovery_review, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "context_specific_copy_primary_and_cancel_actions": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-METHODS/context_specific_copy_primary_and_cancel_actions",
+          "summary": "Candidate review criteria are documented for context_specific_copy_primary_and_cancel_actions; exact flow copy and actions remain unset.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "bounded_loading_error_and_recovery_states": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-METHODS/bounded_loading_error_and_recovery_states",
+          "summary": "The required bounded_loading_error_and_recovery_states runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "focus_one_time_announcement_screen_reader_order": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-METHODS/focus_one_time_announcement_screen_reader_order",
+          "summary": "The required focus_one_time_announcement_screen_reader_order runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "two_hundred_percent_text_target_reachability_and_reduced_motion": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-METHODS/two_hundred_percent_text_target_reachability_and_reduced_motion",
+          "summary": "The required two_hundred_percent_text_target_reachability_and_reduced_motion runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "enabled_method_provider_recovery_or_product_copy_change",
+      "claimBoundary": "no_native_sign_in_confirmation_or_recovery_method_is_approved",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-SIGNOUT-SCOPE",
+      "policyStatus": "PROPOSED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/product-session-policy.md",
+      "proposalState": "PROPOSED_MATERIAL_CHOICE",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS", "AUTH-NONPROD-CUSTODY"],
+      "requiredCustodian": "Marlon for product choice; Catalina for session contract; Natalia for security",
+      "candidateEvidenceByRequirement": {
+        "exact_local_or_global_scope": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/exact_local_or_global_scope",
+          "summary": "Candidate review criteria are documented for exact_local_or_global_scope; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "cleanup_order_and_failure_behavior": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/cleanup_order_and_failure_behavior",
+          "summary": "The required cleanup_order_and_failure_behavior runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "issued_jwt_expiry_limitation": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/issued_jwt_expiry_limitation",
+          "summary": "Bound repository files provide candidate context for issued_jwt_expiry_limitation, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "context_specific_signout_copy_primary_and_cancel_actions": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/context_specific_signout_copy_primary_and_cancel_actions",
+          "summary": "Candidate review criteria are documented for context_specific_signout_copy_primary_and_cancel_actions; exact flow copy and actions remain unset.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "bounded_cleanup_error_and_recovery_states": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/bounded_cleanup_error_and_recovery_states",
+          "summary": "The required bounded_cleanup_error_and_recovery_states runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "focus_one_time_announcement_screen_reader_order": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/focus_one_time_announcement_screen_reader_order",
+          "summary": "The required focus_one_time_announcement_screen_reader_order runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "two_hundred_percent_text_target_reachability_and_reduced_motion": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-SIGNOUT-SCOPE/two_hundred_percent_text_target_reachability_and_reduced_motion",
+          "summary": "The required two_hundred_percent_text_target_reachability_and_reduced_motion runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "signout_scope_provider_capability_or_server_session_policy_change",
+      "claimBoundary": "no_global_signout_or_immediate_access_jwt_invalidation_claim",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-CALLBACK-DOMAINS",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/link-and-custody.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS", "AUTH-NONPROD-CUSTODY"],
+      "requiredCustodian": "Named domain and TLS custodian; Marlon for exact host selection",
+      "candidateEvidenceByRequirement": {
+        "named_domain_custodian": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-CALLBACK-DOMAINS/named_domain_custodian",
+          "summary": "The required named_domain_custodian custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "host_control_and_tls": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-CALLBACK-DOMAINS/host_control_and_tls",
+          "summary": "The external host_control_and_tls evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "exact_environment_route_inventory": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-CALLBACK-DOMAINS/exact_environment_route_inventory",
+          "summary": "Candidate review criteria are documented for exact_environment_route_inventory; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "custodian_host_route_tls_or_environment_change",
+      "claimBoundary": "no_native_callback_domain_or_route_is_configured",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-AASA",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/link-and-custody.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-CALLBACK-DOMAINS", "AUTH-SDK-IOS"],
+      "requiredCustodian": "Named domain and Apple binding custodian; Natalia for security review",
+      "candidateEvidenceByRequirement": {
+        "exact_aasa_bytes_and_sha256": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-AASA/exact_aasa_bytes_and_sha256",
+          "summary": "Candidate review criteria are documented for exact_aasa_bytes_and_sha256; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "app_binding": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-AASA/app_binding",
+          "summary": "The external app_binding evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "hosting_owner": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-AASA/hosting_owner",
+          "summary": "The required hosting_owner custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "negative_and_retrieval_checks": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-AASA/negative_and_retrieval_checks",
+          "summary": "The required negative_and_retrieval_checks runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/ios/foundation/v1/foundation-policy.json",
+              "sha256": "a52f0895c7940d6cee1f4479f7b0efb9444d35136330027f752d79e243b5530f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "app_identifier_domain_route_file_or_signing_identity_change",
+      "claimBoundary": "no_aasa_or_universal_link_is_configured",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-ASSETLINKS",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/link-and-custody.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-CALLBACK-DOMAINS", "AUTH-SDK-ANDROID"],
+      "requiredCustodian": "Named domain and Android signing custodian; Natalia for security review",
+      "candidateEvidenceByRequirement": {
+        "exact_assetlinks_bytes_and_sha256": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-ASSETLINKS/exact_assetlinks_bytes_and_sha256",
+          "summary": "Candidate review criteria are documented for exact_assetlinks_bytes_and_sha256; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "package_and_certificate_binding": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-ASSETLINKS/package_and_certificate_binding",
+          "summary": "The external package_and_certificate_binding evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "hosting_owner": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-ASSETLINKS/hosting_owner",
+          "summary": "The required hosting_owner custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "negative_and_retrieval_checks": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-ASSETLINKS/negative_and_retrieval_checks",
+          "summary": "The required negative_and_retrieval_checks runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/android/foundation/v1/foundation-policy.json",
+              "sha256": "1a96399ceb0fd79889a42fb3ca4182118ccc7af3dd18e837f2207bc3f278d2c9"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "package_domain_route_file_or_certificate_change",
+      "claimBoundary": "no_assetlinks_or_android_app_link_is_configured",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-SUPABASE-ALLOWLIST",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/link-and-custody.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": [
+        "AUTH-CALLBACK-DOMAINS",
+        "AUTH-AASA",
+        "AUTH-ASSETLINKS",
+        "AUTH-NONPROD-CUSTODY"
+      ],
+      "requiredCustodian": "Named non-production Supabase custodian; Marlon for external action",
+      "candidateEvidenceByRequirement": {
+        "approved_callback_decisions": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-SUPABASE-ALLOWLIST/approved_callback_decisions",
+          "summary": "Candidate review criteria are documented for approved_callback_decisions; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "exact_redirect_entry_list": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-SUPABASE-ALLOWLIST/exact_redirect_entry_list",
+          "summary": "The external exact_redirect_entry_list evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "separately_authorized_dashboard_change_evidence": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-SUPABASE-ALLOWLIST/separately_authorized_dashboard_change_evidence",
+          "summary": "The external separately_authorized_dashboard_change_evidence evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/app/auth/callback/route.ts",
+              "sha256": "416b4bb3228ba78aa922b4b7058e7e19ceecc7ab9f2232e68b2d93e5f4ec480f"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "project_owner_environment_host_route_or_provider_policy_change",
+      "claimBoundary": "no_supabase_redirect_allowlist_or_dashboard_change_is_authorized",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-STORAGE-IOS",
+      "policyStatus": "PROPOSED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/storage-and-lifecycle.md",
+      "proposalState": "PROPOSED_MATERIAL_CHOICE",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS", "AUTH-SDK-IOS"],
+      "requiredCustodian": "Marlon for material choice; Natalia for security; Catalina for lifecycle contract",
+      "candidateEvidenceByRequirement": {
+        "keychain_accessibility_choice": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-STORAGE-IOS/keychain_accessibility_choice",
+          "summary": "Candidate review criteria are documented for keychain_accessibility_choice; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "backup_and_migration_rules": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-STORAGE-IOS/backup_and_migration_rules",
+          "summary": "Bound repository files provide candidate context for backup_and_migration_rules, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "wipe_corruption_and_account_switch_tests": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-STORAGE-IOS/wipe_corruption_and_account_switch_tests",
+          "summary": "The required wipe_corruption_and_account_switch_tests runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "os_floor_accessibility_migration_backup_wipe_or_account_switch_change",
+      "claimBoundary": "no_keychain_adapter_or_secure_persistence_is_implemented_or_verified",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-STORAGE-ANDROID",
+      "policyStatus": "PROPOSED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/storage-and-lifecycle.md",
+      "proposalState": "PROPOSED_MATERIAL_CHOICE",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS", "AUTH-SDK-ANDROID"],
+      "requiredCustodian": "Marlon for material choice; Natalia for security; Catalina for lifecycle contract",
+      "candidateEvidenceByRequirement": {
+        "keystore_and_encryption_choice": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-STORAGE-ANDROID/keystore_and_encryption_choice",
+          "summary": "Candidate review criteria are documented for keystore_and_encryption_choice; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "hardware_and_backup_expectations": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-STORAGE-ANDROID/hardware_and_backup_expectations",
+          "summary": "Bound repository files provide candidate context for hardware_and_backup_expectations, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "migration_wipe_corruption_and_account_switch_tests": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-STORAGE-ANDROID/migration_wipe_corruption_and_account_switch_tests",
+          "summary": "The required migration_wipe_corruption_and_account_switch_tests runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "api_floor_storage_library_hardware_backup_migration_wipe_or_account_switch_change",
+      "claimBoundary": "no_keystore_adapter_or_secure_persistence_is_implemented_or_verified",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-NONPROD-CUSTODY",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/link-and-custody.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": [],
+      "requiredCustodian": "Named project, service, recovery, and incident custodians",
+      "candidateEvidenceByRequirement": {
+        "named_project_and_service_custodians": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-NONPROD-CUSTODY/named_project_and_service_custodians",
+          "summary": "The required named_project_and_service_custodians custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "least_privilege_access_and_recovery": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-NONPROD-CUSTODY/least_privilege_access_and_recovery",
+          "summary": "Candidate review criteria are documented for least_privilege_access_and_recovery; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "incident_and_rotation_handoff": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-NONPROD-CUSTODY/incident_and_rotation_handoff",
+          "summary": "Candidate review criteria are documented for incident_and_rotation_handoff; no value is selected.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/web/lib/supabase/config.ts",
+              "sha256": "748febb26f030b70408254cdbcb30e9ad256daa1933bf5979131d041b32f5dfa"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "custodian_project_access_recovery_or_incident_process_change",
+      "claimBoundary": "no_nonproduction_service_or_account_custody_is_approved",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-RECOVERY-DELIVERY",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/product-session-policy.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-METHODS", "AUTH-CALLBACK-DOMAINS", "AUTH-NONPROD-CUSTODY"],
+      "requiredCustodian": "Named delivery and support custodians; Marlon for product choice",
+      "candidateEvidenceByRequirement": {
+        "named_delivery_custodian": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/named_delivery_custodian",
+          "summary": "The required named_delivery_custodian custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "sender_and_template_review": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/sender_and_template_review",
+          "summary": "The external sender_and_template_review evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "expiry_throttling_support_and_failure_contract": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/expiry_throttling_support_and_failure_contract",
+          "summary": "The required expiry_throttling_support_and_failure_contract runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "context_specific_recovery_copy_primary_and_cancel_actions": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/context_specific_recovery_copy_primary_and_cancel_actions",
+          "summary": "Candidate review criteria are documented for context_specific_recovery_copy_primary_and_cancel_actions; exact flow copy and actions remain unset.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "bounded_delivery_error_and_recovery_states": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/bounded_delivery_error_and_recovery_states",
+          "summary": "The required bounded_delivery_error_and_recovery_states runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "focus_one_time_announcement_screen_reader_order": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/focus_one_time_announcement_screen_reader_order",
+          "summary": "The required focus_one_time_announcement_screen_reader_order runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "two_hundred_percent_text_target_reachability_and_reduced_motion": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-RECOVERY-DELIVERY/two_hundred_percent_text_target_reachability_and_reduced_motion",
+          "summary": "The required two_hundred_percent_text_target_reachability_and_reduced_motion runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/copy.json",
+              "sha256": "7c0282e4aa97ddcccb6ddd500d6b3a0857e4c8ca2add76d8650a18f8dc35f6af"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "sender_template_expiry_throttling_support_provider_or_custodian_change",
+      "claimBoundary": "no_recovery_delivery_is_available_or_claimed",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-REVOCATION",
+      "policyStatus": "PROPOSED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/product-session-policy.md",
+      "proposalState": "PROPOSED_MATERIAL_CHOICE",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": ["AUTH-SIGNOUT-SCOPE", "AUTH-NONPROD-CUSTODY"],
+      "requiredCustodian": "Named provider and backend custodians; Marlon for product choice",
+      "candidateEvidenceByRequirement": {
+        "exact_provider_capability": {
+          "state": "BLOCKED_EXTERNAL_ACTION",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-REVOCATION/exact_provider_capability",
+          "summary": "The external exact_provider_capability evidence is unavailable because no external action is authorized.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "failure_and_retry_contract": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-REVOCATION/failure_and_retry_contract",
+          "summary": "The required failure_and_retry_contract runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "runtime_proof": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-REVOCATION/runtime_proof",
+          "summary": "The required runtime_proof runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "issued_jwt_expiry_limitation": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-REVOCATION/issued_jwt_expiry_limitation",
+          "summary": "Bound repository files provide candidate context for issued_jwt_expiry_limitation, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "context_specific_session_ended_copy_primary_and_cancel_actions": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-REVOCATION/context_specific_session_ended_copy_primary_and_cancel_actions",
+          "summary": "Candidate review criteria are documented for context_specific_session_ended_copy_primary_and_cancel_actions; exact flow copy and actions remain unset.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "bounded_revocation_error_and_recovery_states": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-REVOCATION/bounded_revocation_error_and_recovery_states",
+          "summary": "The required bounded_revocation_error_and_recovery_states runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "focus_one_time_announcement_screen_reader_order": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-REVOCATION/focus_one_time_announcement_screen_reader_order",
+          "summary": "The required focus_one_time_announcement_screen_reader_order runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "two_hundred_percent_text_target_reachability_and_reduced_motion": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-REVOCATION/two_hundred_percent_text_target_reachability_and_reduced_motion",
+          "summary": "The required two_hundred_percent_text_target_reachability_and_reduced_motion runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "provider_revocation_server_session_or_jwt_policy_change",
+      "claimBoundary": "no_remote_revocation_or_immediate_issued_jwt_invalidation_is_proven",
+      "satisfiesApprovalRequirement": false
+    },
+    {
+      "id": "AUTH-ACCOUNT-DELETION",
+      "policyStatus": "BLOCKED",
+      "evidenceDocument": "contracts/mobile/auth-readiness/v1/evidence/storage-and-lifecycle.md",
+      "proposalState": "BLOCKED_EXTERNAL_CUSTODIAN",
+      "proposedValue": null,
+      "proposedValueSha256": null,
+      "dependsOnDecisionIds": [
+        "AUTH-METHODS",
+        "AUTH-NONPROD-CUSTODY",
+        "AUTH-STORAGE-IOS",
+        "AUTH-STORAGE-ANDROID",
+        "AUTH-REVOCATION"
+      ],
+      "requiredCustodian": "Named backend, privacy, retention, and support custodians; Marlon for destructive action",
+      "candidateEvidenceByRequirement": {
+        "approved_deletion_api_and_owner": {
+          "state": "BLOCKED_EXTERNAL_CUSTODIAN",
+          "evidenceClass": "external_fact",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/approved_deletion_api_and_owner",
+          "summary": "The required approved_deletion_api_and_owner custodian evidence is not recorded.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING"],
+          "satisfiesApprovalRequirement": false
+        },
+        "orchestration_and_idempotency": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/orchestration_and_idempotency",
+          "summary": "Bound repository files provide candidate context for orchestration_and_idempotency, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "partial_failure_recovery_and_audit_contract": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/partial_failure_recovery_and_audit_contract",
+          "summary": "The required partial_failure_recovery_and_audit_contract runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "recent_reauthentication_before_destructive_confirmation": {
+          "state": "REPOSITORY_SUPPORTED_CANDIDATE",
+          "evidenceClass": "repository_observation",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/recent_reauthentication_before_destructive_confirmation",
+          "summary": "Bound repository files provide candidate context for recent_reauthentication_before_destructive_confirmation, without satisfying the decision requirement.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "clear_irreversible_consequence_copy_primary_delete_action_and_non_destructive_cancel": {
+          "state": "PROPOSED_MATERIAL_CHOICE",
+          "evidenceClass": "proposal",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/clear_irreversible_consequence_copy_primary_delete_action_and_non_destructive_cancel",
+          "summary": "Candidate review criteria are documented for clear_irreversible_consequence_copy_primary_delete_action_and_non_destructive_cancel; exact flow copy and actions remain unset.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": [
+            "MARLON_MATERIAL_DECISION_PENDING",
+            "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+          ],
+          "satisfiesApprovalRequirement": false
+        },
+        "idempotent_progress_partial_failure_and_recovery_states": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/idempotent_progress_partial_failure_and_recovery_states",
+          "summary": "The required idempotent_progress_partial_failure_and_recovery_states runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "focus_one_time_announcement_screen_reader_order": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/focus_one_time_announcement_screen_reader_order",
+          "summary": "The required focus_one_time_announcement_screen_reader_order runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        },
+        "two_hundred_percent_text_target_reachability_and_reduced_motion": {
+          "state": "UNATTEMPTED_RUNTIME",
+          "evidenceClass": "runtime_result",
+          "evidenceRecord": "AUTH-ACCOUNT-DELETION/two_hundred_percent_text_target_reachability_and_reduced_motion",
+          "summary": "The required two_hundred_percent_text_target_reachability_and_reduced_motion runtime evidence has not been conducted.",
+          "sourceReferences": [
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/state-machine.json",
+              "sha256": "54b448f2c30cd3aa8651167cb1e38b189e8ba6b62d748d84e027539143453751"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "contracts/mobile/auth-state/v1/acceptance.json",
+              "sha256": "8b438a4ec598de4027b054c3a62a7742f334b66a569252dd444a0132ff233712"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "docs/adr/0001-supabase-identity-boundary.md",
+              "sha256": "641d28c45f212f5ed41b17d9177cd81f968872ddb0abe3226af4a0eb7f64765a"
+            },
+            {
+              "commit": "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee",
+              "path": "apps/api/src/auth/supabase-jwt.service.ts",
+              "sha256": "397d6c93fe2eac709bdd9f44f3d42de9d57e13a38bb78c16461763473c589cac"
+            }
+          ],
+          "blockerIds": ["NATIVE_RUNTIME_UNATTEMPTED"],
+          "satisfiesApprovalRequirement": false
+        }
+      },
+      "unresolvedBlockers": [
+        "MARLON_MATERIAL_DECISION_PENDING",
+        "EXTERNAL_CUSTODIAN_OR_ACTION_EVIDENCE_MISSING",
+        "NATIVE_RUNTIME_UNATTEMPTED",
+        "APPROVAL_GOVERNANCE_SELECTION_PENDING"
+      ],
+      "nextApprovalAction": "Marlon selects approval-governance alternative A or B, then reviews a fresh non-backdated packet.",
+      "recheckTrigger": "api_orchestration_retention_support_privacy_or_owner_change",
+      "claimBoundary": "no_account_deletion_orchestration_is_implemented_or_proven",
+      "satisfiesApprovalRequirement": false
+    }
+  ],
+  "forbiddenContent": [
+    "secrets_or_credentials",
+    "personal_data_or_private_identifiers",
+    "production_values",
+    "signing_material",
+    "external_account_or_dashboard_mutation_evidence_without_separate_authorization"
+  ],
+  "packetClaimBoundary": "candidate_only_no_selection_approval_installation_configuration_runtime_verification_or_completion_claim",
+  "satisfiesApprovalRequirement": false
+}

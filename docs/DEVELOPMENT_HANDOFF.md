@@ -118,7 +118,7 @@ gate, and Elana's 423/423 independent candidate audit cleared the narrow interna
 The final documentation/policy head still requires the same exact-head protected, platform, specialist, and
 Elana gates before merge.
 
-A 2026-10-19 local audit response briefly omitted the tracked braces advisory and correctly caused the stale-exception guard to fail. GitHub Actions and Elana immediately returned GHSA-vfj7-8cjw-p6xm for the same lockfile, so the single local response was not reproducible. PR #39 retains the already-approved exact `braces@3.0.3` exception and October 30 expiry unchanged; issue #21 remains open.
+A 2026-10-19 local audit response briefly omitted the tracked braces advisory and correctly caused the stale-exception guard to fail. GitHub Actions and Elana then returned GHSA-vfj7-8cjw-p6xm for the same lockfile, so PR #39 retained the exact `braces@3.0.3` exception at that checkpoint. On 2026-10-23, a fresh audit no longer reported that advisory; the policy therefore removed its stale exception as required. The dependency and lock files remain unchanged. The High-threshold audit policy passes with zero exceptions and zero unapproved High or Critical findings, and the production-only `npm audit --omit=dev` reports zero vulnerabilities across all severities. The full `npm audit` currently reports two Moderate development-only findings in `@vitest/mocker` (GHSA-qxg6-89mg-rqv8 and GHSA-xp26-3454-mjgp), propagated to the direct `vitest@4.1.11` development dependency. The non-major `vitest@4.1.12` fix is available and must be tracked as a separate dependency slice; this documentation-only packet does not change any package manifest or lockfile.
 Apple accounts, identifier reservation, signing, production endpoints, physical-device claims, TestFlight or
 App Store actions, and spending remain separately gated. The proposed identifiers are repository settings only.
 
@@ -550,9 +550,19 @@ printing either value. Root `.env.local` is not the source for `npm run dev`.
 
 ## Increment 5 live-auth readiness checkpoint — 2026-10-23
 
-PR #44 merged the provider-neutral auth-state contract as `c6db1e3ded889eac5851eda7cc6d0891bf6d456a`; post-main run `39857882291` passed all eight protected jobs. The next independent slice is the credential-free [live-auth readiness packet](../contracts/mobile/auth-readiness/v1/README.md).
+PR #44 merged the provider-neutral auth-state contract as `c6db1e3ded889eac5851eda7cc6d0891bf6d456a`; post-main run `39857882291` passed all eight protected jobs. PR #45 then merged the credential-free [live-auth readiness packet](../contracts/mobile/auth-readiness/v1/README.md) as `7ac566231a2e26fc1043aab40d33a24964127355`. PR #46 merged the squash-ancestry repair as `c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee`, and post-main protected run `39941301847` passed 8/8 jobs. The current branch slice is the candidate-only [pre-approval evidence packet](../contracts/mobile/auth-readiness/v1/evidence/index.json) bound to `c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee`.
 
 The packet records prerequisites only. All decisions remain proposed or blocked; native runtime remains 0; all 24 native rows remain unattempted. No SDK, callback domain, AASA, assetlinks file, Supabase allowlist, Keychain or Keystore adapter, service account, recovery delivery, revocation, deletion, signing, production, device, capture, store, public claim, credential, or spend action is authorized by this checkpoint.
+
+### Candidate-only evidence handoff
+
+The credential-free [pre-approval evidence index](../contracts/mobile/auth-readiness/v1/evidence/index.json) is bound to main `c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee` and the unchanged decision-policy raw SHA-256 `3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696`. Four digest-bound documents separate observed repository fact, proposed material choice, external blocker, and unattempted runtime. Every packet, row, and requirement satisfaction flag is false, so this candidate-only packet satisfies no approval requirement. Runtime remains 0 conducted, 0 passed, 0 failed, and 24 unattempted; the provider-neutral contract remains 10 states, 50 transitions, and 28 synthetic scenarios.
+
+The open governance decision has two still-blocked alternatives: preserve a special merge-commit `P → A → V` flow, or design an append-only/content-addressed squash-compatible approval record. The current `2026-10-23T08:59:12Z` cutoff is closed. A future reviewed `P` needs fresh non-backdated chronology. Marlon must select approval-governance alternative A or B before any acceptance work; neither is selected here.
+
+The reconciled division is: Adriana is orchestrator and merge owner; Bianca owns administration and records; Camila owns UX and accessibility; Daniela owns visual, mobile, and motion; Elana is the sole independent exact-head QA gate; Fernanda owns social plus the scoped auth privacy boundary only; Gabriela owns research; Isabella owns marketing and claims; Julieta owns numbers and financial claims; Catalina owns architecture and contracts; Valentina is the primary implementation owner for backend, frontend, and database work; Renata owns environment and CI; Natalia owns security. Adriana implements directly only for a small urgent repair when delegation is riskier and must record why.
+
+No SDK is selected, approved, installed, or verified. No link, host, association file, dashboard value, storage adapter, external account, credential, signing asset, production value, device evidence, recovery delivery, revocation, deletion, store action, spending action, or public availability claim is created by this slice.
 
 ## Immediate escalation and no-idle rule — 2026-10-23
 

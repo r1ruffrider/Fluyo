@@ -168,16 +168,21 @@ Fresh audit results differ from the earlier clean October checkpoint. The develo
 [GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-j6r4-53mv). The existing override is
 updated to compatible 1.12.0; the lockfile changes only that package. Next.js remains 16.3.8.
 
-The full audit still reports five high-severity findings in the `braces` dependency chain used by
-Next.js lint tooling ([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)).
-The advisory lists no patched release, and npm currently publishes 3.0.3 as latest. The suggested
-Next.js ESLint downgrade is a major-version change and was not applied. The unchanged audit policy
-keeps its High threshold. An exact-match, development-only exception tracks the public advisory in
-[issue #21](https://github.com/r1ruffrider/Fluyo/issues/21) and expires on October 30, 2026. It is not
-automatically extended: CI fails if the advisory, severity, vulnerable range, installed version, or
-dependency node changes, if the advisory disappears, or when the exception expires. Production-only
-audit reports zero vulnerabilities. This patch removes the critical finding and temporarily accepts
-only the unpatched lint-tooling finding.
+At the 2026-10-16 checkpoint, the full audit reported five high-severity findings in the `braces`
+dependency chain used by Next.js lint tooling
+([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)). The exact-match,
+development-only exception was tracked in [issue #21](https://github.com/r1ruffrider/Fluyo/issues/21)
+and remained subject to the policy's stale-exception and expiry checks. On 2026-10-23, a fresh audit
+no longer reported the advisory, so the stale exception was removed. No dependency or lockfile change
+was needed. The High threshold remains unchanged, the exception list is empty, and the exact policy
+passes with zero exceptions and zero unapproved High or Critical findings. The production-only
+`npm audit --omit=dev` reports zero vulnerabilities across all severities. The full `npm audit`
+currently reports two Moderate development-only findings in `@vitest/mocker`:
+[GHSA-qxg6-89mg-rqv8](https://github.com/advisories/GHSA-qxg6-89mg-rqv8) and
+[GHSA-xp26-3454-mjgp](https://github.com/advisories/GHSA-xp26-3454-mjgp). Both propagate to the
+direct `vitest@4.1.11` development dependency. The non-major `vitest@4.1.12` fix is available and
+must be tracked as a separate dependency slice; this documentation-only packet does not change any
+package manifest or lockfile.
 
 Before production launch, configure ingress rate limiting, alerting for repeated authentication failures, session and account-deletion retention behavior, profile and billing-data export/deletion handling, Stripe reconciliation, webhook replay operations, and a tested signing-key rotation procedure. Verify live webhook delivery through a real Stripe-signed payload ([#12](https://github.com/r1ruffrider/Fluyo/issues/12)) and complete the broader live Stripe test-mode lifecycle check (Checkout, promotion codes, renewals, payment failures, cancellation, Portal, duplicate events, reconciliation) before accepting production billing traffic. Feature gating, subscription-experience UI, storage, AI, and mobile work still require their own threat-model updates and authorization tests. Add a scheduled re-run of the dependency-audit policy so a future exception's expiry cannot again go unnoticed between CI runs.
 

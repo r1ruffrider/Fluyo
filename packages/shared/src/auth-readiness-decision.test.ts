@@ -1153,6 +1153,10 @@ describe("native live-auth readiness decision packet v1", () => {
   });
 
   it("keeps the contract bundle limited to the decision policy and README", () => {
-    expect(readdirSync(contractDirectory).sort()).toEqual(["README.md", "decision-policy.json"]);
+    expect(readdirSync(contractDirectory).sort()).toEqual([
+      "README.md",
+      "decision-policy.json",
+      "evidence",
+    ]);
   });
 });

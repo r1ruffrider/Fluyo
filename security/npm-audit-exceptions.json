@@ -1,19 +1,5 @@
 {
   "schemaVersion": 1,
   "minimumSeverity": "high",
-  "exceptions": [
-    {
-      "advisoryId": "GHSA-vfj7-8cjw-p6xm",
-      "package": "braces",
-      "severity": "high",
-      "vulnerableRange": "<=3.0.3",
-      "nodes": ["node_modules/braces"],
-      "installedVersions": ["3.0.3"],
-      "classification": "development-only",
-      "dependencyPath": "eslint-config-next@16.4.2 -> @next/eslint-plugin-next@16.4.2 -> fast-glob@3.3.1 -> micromatch@4.0.8 -> braces@3.0.3",
-      "attemptedRemediation": "No patched braces release exists; npm proposes an incompatible eslint-config-next downgrade to 14.2.35.",
-      "trackingIssue": "https://github.com/r1ruffrider/Fluyo/issues/21",
-      "expiresOn": "2026-10-30"
-    }
-  ]
+  "exceptions": []
 }

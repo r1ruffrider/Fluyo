@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { evaluateAuditPolicy } from "./check-npm-audit.mjs";
+import { evaluateAuditPolicy, formatAuditPolicySuccess } from "./check-npm-audit.mjs";
 
 const advisory = {
   source: 1,
@@ -171,4 +171,29 @@ test("rejects stale exceptions after an advisory disappears", () => {
 
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /Remove its stale exception/);
+});
+test("reports an explicit zero-exception audit success", () => {
+  assert.deepEqual(formatAuditPolicySuccess([]), [
+    "Dependency audit policy passed with zero temporary exceptions.",
+    "No unapproved high or critical advisories were found.",
+  ]);
+});
+
+test("reports each accepted temporary exception", () => {
+  assert.deepEqual(
+    formatAuditPolicySuccess([
+      {
+        advisoryId: "GHSA-1111-2222-3333",
+        package: "example-package",
+        versions: ["1.2.3"],
+        nodes: ["node_modules/example-package"],
+        expiresOn: "2026-08-31",
+      },
+    ]),
+    [
+      "Dependency audit policy passed with temporary exact-match exceptions:",
+      "- GHSA-1111-2222-3333: example-package@1.2.3 (node_modules/example-package), expires 2026-08-31",
+      "No unapproved high or critical advisories were found.",
+    ],
+  );
 });

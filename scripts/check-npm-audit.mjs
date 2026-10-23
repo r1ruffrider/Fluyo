@@ -312,6 +312,24 @@ function runAudit() {
   return JSON.parse(result.stdout.replace(/^\uFEFF/, ""));
 }
 
+export function formatAuditPolicySuccess(accepted) {
+  if (accepted.length === 0) {
+    return [
+      "Dependency audit policy passed with zero temporary exceptions.",
+      "No unapproved high or critical advisories were found.",
+    ];
+  }
+
+  return [
+    "Dependency audit policy passed with temporary exact-match exceptions:",
+    ...accepted.map(
+      (exception) =>
+        `- ${exception.advisoryId}: ${exception.package}@${exception.versions.join(", ")} (${exception.nodes.join(", ")}), expires ${exception.expiresOn}`,
+    ),
+    "No unapproved high or critical advisories were found.",
+  ];
+}
+
 function main() {
   const root = process.cwd();
   const audit = runAudit();
@@ -329,13 +347,9 @@ function main() {
     return;
   }
 
-  console.log("Dependency audit policy passed with temporary exact-match exceptions:");
-  for (const exception of result.accepted) {
-    console.log(
-      `- ${exception.advisoryId}: ${exception.package}@${exception.versions.join(", ")} (${exception.nodes.join(", ")}), expires ${exception.expiresOn}`,
-    );
+  for (const line of formatAuditPolicySuccess(result.accepted)) {
+    console.log(line);
   }
-  console.log("No unapproved high or critical advisories were found.");
 }
 
 const executedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : undefined;
