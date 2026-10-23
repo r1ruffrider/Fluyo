@@ -1,0 +1,475 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "repository_decision_packet",
+  "sourceMainCommit": "c6db1e3ded889eac5851eda7cc6d0891bf6d456a",
+  "recordedDate": "2026-10-23",
+  "reviewedPacketHead": null,
+  "scope": {
+    "credentialFree": true,
+    "repositoryOnly": true,
+    "liveAuthImplementationAuthorized": false,
+    "completionClaimAllowed": false,
+    "productionDataUsed": false,
+    "externalActionsPerformed": false,
+    "runtimeEvidence": {
+      "conducted": 0,
+      "passed": 0,
+      "failed": 0,
+      "unattempted": 24
+    },
+    "preservedAuthStateContract": {
+      "states": 10,
+      "transitions": 50,
+      "syntheticScenarios": 28
+    }
+  },
+  "approvalPolicy": {
+    "initialStatuses": ["PROPOSED", "BLOCKED"],
+    "acceptanceRequires": [
+      "approvedAtUtc",
+      "approvedBy",
+      "approvalReference",
+      "approvedValue",
+      "evidenceCommit",
+      "decisionValueDigest",
+      "evidenceByRequirement"
+    ],
+    "rule": "ci_or_merge_never_substitutes_for_dated_material_approval",
+    "headChangeRule": "approval_evidence_must_be_rechecked_when_the_reviewed_packet_approval_record_or_decision_value_changes",
+    "reviewedPacketHeadSource": "direct_parent_of_approval_record_commit_with_git_commit_verification",
+    "approvedAtUtcPattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+    "approvalNotBeforeUtc": "2026-10-23T08:51:30Z",
+    "approvalNotBeforeSourceCommit": "36875cfd33bee2b81e29b434de791198d854e885",
+    "validationClockUtc": "2026-10-23T08:59:12Z",
+    "evidenceReferencePattern": "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
+    "evidenceArtifactReferencePattern": "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
+    "reviewedPolicyRule": "validation_policy_must_equal_approval_record_policy_and_immutable_decision_fields_must_equal_the_reviewed_packet",
+    "evidenceArtifactRule": "every_required_evidence_reference_must_name_an_existing_repository_path_at_the_evidence_commit"
+  },
+  "safeClaims": [
+    "credential_free_repository_decision_packet_all_live_auth_choices_proposed_or_blocked",
+    "repository_only_provider_neutral_auth_state_contract_and_in_memory_synthetic_tests",
+    "zero_native_runtime_execution_and_twenty_four_native_rows_unattempted"
+  ],
+  "forbiddenClaims": [
+    "native_authentication_implemented_complete_supported_or_available",
+    "sdk_selected_approved_installed_safe_or_verified",
+    "pkce_keychain_keystore_links_redirects_recovery_revocation_or_deletion_verified",
+    "signing_production_physical_device_store_public_availability_or_spending_approved",
+    "increment_five_complete"
+  ],
+  "decisions": [
+    {
+      "id": "AUTH-SDK-IOS",
+      "status": "BLOCKED",
+      "question": "Which exact native iOS authentication SDK package, version, and binary graph may be used?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "exact_package_version_source_and_sha256",
+        "license_and_advisory_review",
+        "supported_ios_floor_and_dependency_graph",
+        "credential_and_diagnostic_logging_review"
+      ],
+      "fallback": "retain_provider_neutral_ports_and_zero_native_runtime",
+      "recheckTrigger": "package_version_checksum_license_platform_floor_or_advisory_change",
+      "claimBoundary": "no_ios_auth_sdk_selected_approved_installed_or_exercised"
+    },
+    {
+      "id": "AUTH-SDK-ANDROID",
+      "status": "BLOCKED",
+      "question": "Which exact native Android authentication SDK coordinate, version, and AAR graph may be used?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "exact_coordinate_version_repository_and_sha256",
+        "license_and_advisory_review",
+        "supported_android_floor_and_dependency_graph",
+        "reviewed_release_contains_credential_logging_fix",
+        "fluyo_logger_retains_no_sdk_message_or_throwable"
+      ],
+      "fallback": "retain_provider_neutral_ports_and_zero_native_runtime",
+      "recheckTrigger": "coordinate_version_checksum_license_platform_floor_logging_or_advisory_change",
+      "claimBoundary": "no_android_auth_sdk_selected_approved_installed_or_exercised"
+    },
+    {
+      "id": "AUTH-METHODS",
+      "status": "PROPOSED",
+      "question": "Which sign-in, confirmation, and recovery methods are enabled or explicitly unsupported?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Isabella", "Danila", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "exact_enabled_method_list",
+        "unsupported_flow_list",
+        "copy_and_recovery_review",
+        "context_specific_copy_primary_and_cancel_actions",
+        "bounded_loading_error_and_recovery_states",
+        "focus_one_time_announcement_screen_reader_order",
+        "two_hundred_percent_text_target_reachability_and_reduced_motion"
+      ],
+      "fallback": "keep_all_native_auth_entry_actions_nonfunctional",
+      "recheckTrigger": "enabled_method_provider_recovery_or_product_copy_change",
+      "claimBoundary": "no_native_sign_in_confirmation_or_recovery_method_is_approved"
+    },
+    {
+      "id": "AUTH-SIGNOUT-SCOPE",
+      "status": "PROPOSED",
+      "question": "Does sign-out clear only this device or also invoke an approved provider-wide revocation action?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Isabella", "Danila", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "exact_local_or_global_scope",
+        "cleanup_order_and_failure_behavior",
+        "issued_jwt_expiry_limitation",
+        "context_specific_signout_copy_primary_and_cancel_actions",
+        "bounded_cleanup_error_and_recovery_states",
+        "focus_one_time_announcement_screen_reader_order",
+        "two_hundred_percent_text_target_reachability_and_reduced_motion"
+      ],
+      "fallback": "local_cleanup_only_without_remote_revocation_claim",
+      "recheckTrigger": "signout_scope_provider_capability_or_server_session_policy_change",
+      "claimBoundary": "no_global_signout_or_immediate_access_jwt_invalidation_claim"
+    },
+    {
+      "id": "AUTH-CALLBACK-DOMAINS",
+      "status": "BLOCKED",
+      "question": "Which controlled development and staging HTTPS hosts and exact callback routes are owned?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana", "Danila"],
+      "requiredCustodian": "unassigned_domain_owner",
+      "requiredEvidence": [
+        "named_domain_custodian",
+        "host_control_and_tls",
+        "exact_environment_route_inventory"
+      ],
+      "fallback": "memory_only_synthetic_callback_fixtures",
+      "recheckTrigger": "custodian_host_route_tls_or_environment_change",
+      "claimBoundary": "no_native_callback_domain_or_route_is_configured"
+    },
+    {
+      "id": "AUTH-AASA",
+      "status": "BLOCKED",
+      "question": "Who owns the exact Apple association file, app binding, hosting, and retrieval evidence?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana", "Danila"],
+      "requiredCustodian": "unassigned_domain_and_apple_identity_owner",
+      "requiredEvidence": [
+        "exact_aasa_bytes_and_sha256",
+        "app_binding",
+        "hosting_owner",
+        "negative_and_retrieval_checks"
+      ],
+      "fallback": "no_universal_link_registration",
+      "recheckTrigger": "app_identifier_domain_route_file_or_signing_identity_change",
+      "claimBoundary": "no_aasa_or_universal_link_is_configured"
+    },
+    {
+      "id": "AUTH-ASSETLINKS",
+      "status": "BLOCKED",
+      "question": "Who owns the exact Android assetlinks file, app and certificate binding, hosting, and retrieval evidence?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana", "Danila"],
+      "requiredCustodian": "unassigned_domain_and_android_signing_owner",
+      "requiredEvidence": [
+        "exact_assetlinks_bytes_and_sha256",
+        "package_and_certificate_binding",
+        "hosting_owner",
+        "negative_and_retrieval_checks"
+      ],
+      "fallback": "no_app_link_registration",
+      "recheckTrigger": "package_domain_route_file_or_certificate_change",
+      "claimBoundary": "no_assetlinks_or_android_app_link_is_configured"
+    },
+    {
+      "id": "AUTH-SUPABASE-ALLOWLIST",
+      "status": "BLOCKED",
+      "question": "Which exact native redirect entries may be added to the non-production Supabase allowlist?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana", "Danila"],
+      "requiredCustodian": "unassigned_supabase_account_owner",
+      "requiredEvidence": [
+        "approved_callback_decisions",
+        "exact_redirect_entry_list",
+        "separately_authorized_dashboard_change_evidence"
+      ],
+      "fallback": "leave_dashboard_unchanged_and_use_synthetic_contract_tests",
+      "recheckTrigger": "project_owner_environment_host_route_or_provider_policy_change",
+      "claimBoundary": "no_supabase_redirect_allowlist_or_dashboard_change_is_authorized"
+    },
+    {
+      "id": "AUTH-STORAGE-IOS",
+      "status": "PROPOSED",
+      "question": "Which Keychain accessibility, migration, backup, wipe, corruption, and account-switch policy is accepted?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Danila", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "keychain_accessibility_choice",
+        "backup_and_migration_rules",
+        "wipe_corruption_and_account_switch_tests"
+      ],
+      "fallback": "no_persistent_native_session_adapter",
+      "recheckTrigger": "os_floor_accessibility_migration_backup_wipe_or_account_switch_change",
+      "claimBoundary": "no_keychain_adapter_or_secure_persistence_is_implemented_or_verified"
+    },
+    {
+      "id": "AUTH-STORAGE-ANDROID",
+      "status": "PROPOSED",
+      "question": "Which Keystore-backed storage, hardware, migration, backup, wipe, corruption, and account-switch policy is accepted?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Danila", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "keystore_and_encryption_choice",
+        "hardware_and_backup_expectations",
+        "migration_wipe_corruption_and_account_switch_tests"
+      ],
+      "fallback": "no_persistent_native_session_adapter",
+      "recheckTrigger": "api_floor_storage_library_hardware_backup_migration_wipe_or_account_switch_change",
+      "claimBoundary": "no_keystore_adapter_or_secure_persistence_is_implemented_or_verified"
+    },
+    {
+      "id": "AUTH-NONPROD-CUSTODY",
+      "status": "BLOCKED",
+      "question": "Who owns the non-production provider project, service configuration, recovery delivery, and incident handoff?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Adriana", "Fernanda", "Elana"],
+      "requiredCustodian": "unassigned_nonproduction_service_owner",
+      "requiredEvidence": [
+        "named_project_and_service_custodians",
+        "least_privilege_access_and_recovery",
+        "incident_and_rotation_handoff"
+      ],
+      "fallback": "repository_only_synthetic_fakes",
+      "recheckTrigger": "custodian_project_access_recovery_or_incident_process_change",
+      "claimBoundary": "no_nonproduction_service_or_account_custody_is_approved"
+    },
+    {
+      "id": "AUTH-RECOVERY-DELIVERY",
+      "status": "BLOCKED",
+      "question": "Which non-production recovery sender, expiry, throttling, support, and failure behavior is approved?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Isabella", "Danila", "Fernanda", "Elana"],
+      "requiredCustodian": "unassigned_recovery_delivery_owner",
+      "requiredEvidence": [
+        "named_delivery_custodian",
+        "sender_and_template_review",
+        "expiry_throttling_support_and_failure_contract",
+        "context_specific_recovery_copy_primary_and_cancel_actions",
+        "bounded_delivery_error_and_recovery_states",
+        "focus_one_time_announcement_screen_reader_order",
+        "two_hundred_percent_text_target_reachability_and_reduced_motion"
+      ],
+      "fallback": "recovery_action_remains_unavailable",
+      "recheckTrigger": "sender_template_expiry_throttling_support_provider_or_custodian_change",
+      "claimBoundary": "no_recovery_delivery_is_available_or_claimed"
+    },
+    {
+      "id": "AUTH-REVOCATION",
+      "status": "PROPOSED",
+      "question": "Which provider revocation capability and client wording are accepted, including issued-JWT limits?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Isabella", "Danila", "Fernanda", "Elana"],
+      "requiredEvidence": [
+        "exact_provider_capability",
+        "failure_and_retry_contract",
+        "runtime_proof",
+        "issued_jwt_expiry_limitation",
+        "context_specific_session_ended_copy_primary_and_cancel_actions",
+        "bounded_revocation_error_and_recovery_states",
+        "focus_one_time_announcement_screen_reader_order",
+        "two_hundred_percent_text_target_reachability_and_reduced_motion"
+      ],
+      "fallback": "local_cleanup_and_honest_expiry_bounded_wording",
+      "recheckTrigger": "provider_revocation_server_session_or_jwt_policy_change",
+      "claimBoundary": "no_remote_revocation_or_immediate_issued_jwt_invalidation_is_proven"
+    },
+    {
+      "id": "AUTH-ACCOUNT-DELETION",
+      "status": "BLOCKED",
+      "question": "Which approved API and orchestration perform account deletion and recover safely from partial failure?",
+      "accountableOwner": "Marlon",
+      "responsibleAfterApproval": "Adriana",
+      "approvers": ["Marlon"],
+      "externalActionAuthorized": false,
+      "approval": {
+        "approvedAtUtc": null,
+        "approvedBy": null,
+        "approvalReference": null,
+        "approvedValue": null,
+        "evidenceCommit": null,
+        "decisionValueDigest": null,
+        "evidenceByRequirement": {}
+      },
+      "reviewers": ["Isabella", "Danila", "Fernanda", "Elana"],
+      "requiredCustodian": "unassigned_backend_privacy_support_owner",
+      "requiredEvidence": [
+        "approved_deletion_api_and_owner",
+        "orchestration_and_idempotency",
+        "partial_failure_recovery_and_audit_contract",
+        "recent_reauthentication_before_destructive_confirmation",
+        "clear_irreversible_consequence_copy_primary_delete_action_and_non_destructive_cancel",
+        "idempotent_progress_partial_failure_and_recovery_states",
+        "focus_one_time_announcement_screen_reader_order",
+        "two_hundred_percent_text_target_reachability_and_reduced_motion"
+      ],
+      "fallback": "no_native_account_deletion_action_or_availability_claim",
+      "recheckTrigger": "api_orchestration_retention_support_privacy_or_owner_change",
+      "claimBoundary": "no_account_deletion_orchestration_is_implemented_or_proven"
+    }
+  ]
+}
