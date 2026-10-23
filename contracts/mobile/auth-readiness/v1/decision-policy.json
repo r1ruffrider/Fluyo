@@ -41,7 +41,7 @@
     "approvalNotBeforeUtc": "2026-10-23T08:51:30Z",
     "approvalNotBeforeSourceCommit": "36875cfd33bee2b81e29b434de791198d854e885",
     "validationClockUtc": "2026-10-23T08:59:12Z",
-    "evidenceReferencePattern": "^(commit|artifact|report|ticket):[A-Za-z0-9._/-]+$",
+    "evidenceReferencePattern": "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
     "evidenceArtifactReferencePattern": "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
     "reviewedPolicyRule": "validation_policy_must_equal_approval_record_policy_and_immutable_decision_fields_must_equal_the_reviewed_packet",
     "evidenceArtifactRule": "every_required_evidence_reference_must_name_an_existing_repository_path_at_the_evidence_commit"

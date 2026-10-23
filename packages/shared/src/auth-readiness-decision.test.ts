@@ -155,7 +155,7 @@ const approvalFieldsAreComplete = (
   const acceptancePolicy = asObject(packetPolicy.approvalPolicy);
   const approvalNotBefore = String(acceptancePolicy.approvalNotBeforeUtc);
   const validationClock = String(acceptancePolicy.validationClockUtc);
-  const evidencePattern = new RegExp(String(acceptancePolicy.evidenceReferencePattern));
+  const approvalReferencePattern = new RegExp(String(acceptancePolicy.evidenceReferencePattern));
   const evidenceArtifactPattern = new RegExp(
     String(acceptancePolicy.evidenceArtifactReferencePattern),
   );
@@ -180,8 +180,12 @@ const approvalFieldsAreComplete = (
     timestampIsReal &&
     typeof approval.approvedBy === "string" &&
     approvers.includes(approval.approvedBy) &&
-    typeof approval.approvalReference === "string" &&
-    evidencePattern.test(approval.approvalReference) &&
+    repositoryEvidenceExists(
+      approval.approvalReference,
+      approval.evidenceCommit,
+      approvalReferencePattern,
+      trustedRepository,
+    ) &&
     typeof approval.approvedValue === "string" &&
     approval.approvedValue.trim().length > 0 &&
     approval.approvedValue === approval.approvedValue.trim() &&
@@ -220,6 +224,61 @@ const approvalRecordIsEmpty = (decision: JsonObject): boolean => {
         !Array.isArray(value) &&
         Object.keys(value).length === 0),
   );
+};
+
+const approvalRecordPolicyMatchesReviewedPacket = (
+  approvalRecordPolicy: JsonObject,
+  reviewedPacketPolicy: JsonObject,
+  reviewedPacketHead: string,
+): boolean => {
+  const approvalRoot = { ...approvalRecordPolicy };
+  const reviewedRoot = { ...reviewedPacketPolicy };
+  delete approvalRoot.reviewedPacketHead;
+  delete approvalRoot.decisions;
+  delete reviewedRoot.reviewedPacketHead;
+  delete reviewedRoot.decisions;
+  if (
+    approvalRecordPolicy.reviewedPacketHead !== reviewedPacketHead ||
+    JSON.stringify(approvalRoot) !== JSON.stringify(reviewedRoot)
+  ) {
+    return false;
+  }
+  const approvalDecisions = asObjects(approvalRecordPolicy.decisions, "approval record decisions");
+  const reviewedDecisions = asObjects(reviewedPacketPolicy.decisions, "reviewed packet decisions");
+  if (approvalDecisions.length !== reviewedDecisions.length) return false;
+  return approvalDecisions.every((approvalDecision, index) => {
+    const reviewedDecision = reviewedDecisions[index];
+    if (!reviewedDecision || approvalDecision.id !== reviewedDecision.id) return false;
+    if (JSON.stringify(approvalDecision) === JSON.stringify(reviewedDecision)) return true;
+    return (
+      approvalDecision.status === "ACCEPTED" &&
+      reviewedDecision.status !== "ACCEPTED" &&
+      approvalRecordIsEmpty(reviewedDecision) &&
+      JSON.stringify(immutableDecisionFields(approvalDecision)) ===
+        JSON.stringify(immutableDecisionFields(reviewedDecision))
+    );
+  });
+};
+
+const allNewAcceptancesAreComplete = (
+  approvalRecordPolicy: JsonObject,
+  reviewedPacketPolicy: JsonObject,
+  reviewedPacketHead: string,
+  trustedRepository: GitRepository,
+): boolean => {
+  const approvalDecisions = asObjects(approvalRecordPolicy.decisions, "approval record decisions");
+  const reviewedDecisions = asObjects(reviewedPacketPolicy.decisions, "reviewed packet decisions");
+  return approvalDecisions.every((approvalDecision, index) => {
+    const reviewedDecision = reviewedDecisions[index];
+    if (!reviewedDecision) return false;
+    if (JSON.stringify(approvalDecision) === JSON.stringify(reviewedDecision)) return true;
+    return approvalFieldsAreComplete(
+      approvalDecision,
+      reviewedPacketHead,
+      approvalRecordPolicy,
+      trustedRepository,
+    );
+  });
 };
 
 const approvalIsCompleteForTrustedState = (
@@ -274,6 +333,17 @@ const approvalIsCompleteForTrustedState = (
     "reviewed packet decisions",
   ).find((entry) => entry.id === decisionValue.id);
   return (
+    approvalRecordPolicyMatchesReviewedPacket(
+      approvalRecordPolicy,
+      reviewedPacketPolicy,
+      reviewedPacketHead,
+    ) &&
+    allNewAcceptancesAreComplete(
+      approvalRecordPolicy,
+      reviewedPacketPolicy,
+      reviewedPacketHead,
+      trustedRepository,
+    ) &&
     approvalRecordDecision !== undefined &&
     reviewedDecision !== undefined &&
     JSON.stringify(approvalRecordDecision) === JSON.stringify(decisionValue) &&
@@ -389,6 +459,9 @@ describe("native live-auth readiness decision packet v1", () => {
     expect(acceptancePolicy.evidenceArtifactReferencePattern).toBe(
       "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
     );
+    expect(acceptancePolicy.evidenceReferencePattern).toBe(
+      "^git:([0-9a-f]{40}):([A-Za-z0-9._/-]+)$",
+    );
     expect(runnerValidationHead).toBe(checkoutHead);
     expect(commitExists(runnerValidationHead)).toBe(true);
     expect(commitExists(approvalRecordHead)).toBe(true);
@@ -419,7 +492,7 @@ describe("native live-auth readiness decision packet v1", () => {
       const completeApproval = {
         approvedAtUtc: "2026-10-23T08:55:00Z",
         approvedBy: "Marlon",
-        approvalReference: "ticket:direct_user_approval_2026-10-23",
+        approvalReference: evidenceReference,
         approvedValue,
         evidenceCommit: reviewedPacketHead,
         decisionValueDigest: sha256(approvedValue),
@@ -499,6 +572,24 @@ describe("native live-auth readiness decision packet v1", () => {
         validateFields({
           ...accepted,
           approval: { ...completeApproval, approvalReference: "informal approval" },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            approvalReference: `git:${reviewedPacketHead}:contracts/mobile/auth-readiness/v1/missing-approval.md`,
+          },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            approvalReference: `git:${approvalRecordHead}:contracts/mobile/auth-readiness/v1/README.md`,
+          },
         }),
       ).toBe(false);
       expect(
@@ -693,7 +784,7 @@ describe("native live-auth readiness decision packet v1", () => {
         approval: {
           approvedAtUtc: "2026-10-23T08:55:00Z",
           approvedBy: "Marlon",
-          approvalReference: "ticket:direct_user_approval_2026-10-23",
+          approvalReference: evidenceReference,
           approvedValue,
           evidenceCommit: reviewedHead,
           decisionValueDigest: sha256(approvedValue),
@@ -783,6 +874,86 @@ describe("native live-auth readiness decision packet v1", () => {
         ),
       ).toBe(false);
 
+      temporaryRepository.git("checkout", "--quiet", reviewedHead);
+      const weakenedApprovalPolicy = JSON.parse(JSON.stringify(approvalPolicy)) as JsonObject;
+      asObject(weakenedApprovalPolicy.approvalPolicy).validationClockUtc = "2099-12-31T23:59:59Z";
+      writePolicy(weakenedApprovalPolicy);
+      commitAll("mutated approval policy A");
+      writeFileSync(
+        resolve(temporaryRepositoryRoot, "weakened-validation.txt"),
+        "validate\n",
+        "utf8",
+      );
+      const weakenedValidationHead = commitAll("mutated approval policy V");
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          weakenedApprovalPolicy,
+          temporaryRepository.fileAtCommit(weakenedValidationHead, policyRelativePath),
+          weakenedValidationHead,
+          weakenedValidationHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+
+      temporaryRepository.git("checkout", "--quiet", reviewedHead);
+      const mutatedScopeClaimsPolicy = JSON.parse(JSON.stringify(approvalPolicy)) as JsonObject;
+      asObject(mutatedScopeClaimsPolicy.scope).completionClaimAllowed = true;
+      mutatedScopeClaimsPolicy.safeClaims = [
+        ...asStrings(mutatedScopeClaimsPolicy.safeClaims, "mutated safe claims"),
+        "unreviewed_claim",
+      ];
+      writePolicy(mutatedScopeClaimsPolicy);
+      commitAll("mutated scope and claims A");
+      writeFileSync(
+        resolve(temporaryRepositoryRoot, "scope-claims-validation.txt"),
+        "validate\n",
+        "utf8",
+      );
+      const scopeClaimsValidationHead = commitAll("mutated scope and claims V");
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          mutatedScopeClaimsPolicy,
+          temporaryRepository.fileAtCommit(scopeClaimsValidationHead, policyRelativePath),
+          scopeClaimsValidationHead,
+          scopeClaimsValidationHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+
+      temporaryRepository.git("checkout", "--quiet", reviewedHead);
+      const unrelatedDecisionPolicy = JSON.parse(JSON.stringify(approvalPolicy)) as JsonObject;
+      const unrelatedDecisions = asObjects(
+        unrelatedDecisionPolicy.decisions,
+        "unrelated mutation decisions",
+      );
+      const unrelatedDecision = unrelatedDecisions[1];
+      if (!unrelatedDecision) throw new Error("unrelated decision is required");
+      unrelatedDecisions[1] = {
+        ...unrelatedDecision,
+        fallback: "unreviewed unrelated fallback",
+      };
+      unrelatedDecisionPolicy.decisions = unrelatedDecisions;
+      writePolicy(unrelatedDecisionPolicy);
+      commitAll("mutated unrelated decision A");
+      writeFileSync(
+        resolve(temporaryRepositoryRoot, "unrelated-validation.txt"),
+        "validate\n",
+        "utf8",
+      );
+      const unrelatedValidationHead = commitAll("mutated unrelated decision V");
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          unrelatedDecisionPolicy,
+          temporaryRepository.fileAtCommit(unrelatedValidationHead, policyRelativePath),
+          unrelatedValidationHead,
+          unrelatedValidationHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+
       expect(
         approvalIsCompleteForTrustedState(
           acceptedDecision,
@@ -796,7 +967,7 @@ describe("native live-auth readiness decision packet v1", () => {
     } finally {
       rmSync(temporaryRepositoryRoot, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it("locks deep-link UX reviewers and product-facing accessibility evidence", () => {
     const byId = new Map(decisions.map((decision) => [String(decision.id), decision]));
