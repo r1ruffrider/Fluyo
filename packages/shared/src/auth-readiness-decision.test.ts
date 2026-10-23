@@ -595,6 +595,15 @@ describe("native live-auth readiness decision packet v1", () => {
       expect(
         validateFields({
           ...accepted,
+          approval: {
+            ...completeApproval,
+            approvalReference: `git:${reviewedPacketHead}:contracts/mobile/auth-readiness/v1/../README.md`,
+          },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
           approval: { ...completeApproval, approvedValue: "", decisionValueDigest: sha256("") },
         }),
       ).toBe(false);
@@ -673,6 +682,18 @@ describe("native live-auth readiness decision packet v1", () => {
             evidenceByRequirement: {
               ...completeApproval.evidenceByRequirement,
               extra: evidenceReference,
+            },
+          },
+        }),
+      ).toBe(false);
+      expect(
+        validateFields({
+          ...accepted,
+          approval: {
+            ...completeApproval,
+            evidenceByRequirement: {
+              ...completeApproval.evidenceByRequirement,
+              [firstRequired]: `git:${reviewedPacketHead}:contracts/mobile/auth-readiness/v1/../README.md`,
             },
           },
         }),
@@ -950,6 +971,51 @@ describe("native live-auth readiness decision packet v1", () => {
           temporaryRepository.fileAtCommit(unrelatedValidationHead, policyRelativePath),
           unrelatedValidationHead,
           unrelatedValidationHead,
+          temporaryRepository,
+        ),
+      ).toBe(false);
+
+      temporaryRepository.git("checkout", "--quiet", reviewedHead);
+      const incompleteAdditionalAcceptancePolicy = JSON.parse(
+        JSON.stringify(approvalPolicy),
+      ) as JsonObject;
+      const incompleteAcceptanceDecisions = asObjects(
+        incompleteAdditionalAcceptancePolicy.decisions,
+        "incomplete additional acceptance decisions",
+      );
+      const incompleteAdditionalDecision = incompleteAcceptanceDecisions[1];
+      if (!incompleteAdditionalDecision) {
+        throw new Error("incomplete additional acceptance decision is required");
+      }
+      incompleteAcceptanceDecisions[1] = {
+        ...incompleteAdditionalDecision,
+        status: "ACCEPTED",
+        approval: {
+          approvedAtUtc: "2026-10-23T08:55:00Z",
+          approvedBy: "Marlon",
+          approvalReference: evidenceReference,
+          approvedValue,
+          evidenceCommit: reviewedHead,
+          decisionValueDigest: sha256(approvedValue),
+          evidenceByRequirement: {},
+        },
+      };
+      incompleteAdditionalAcceptancePolicy.decisions = incompleteAcceptanceDecisions;
+      writePolicy(incompleteAdditionalAcceptancePolicy);
+      commitAll("incomplete additional acceptance A");
+      writeFileSync(
+        resolve(temporaryRepositoryRoot, "incomplete-additional-validation.txt"),
+        "validate\n",
+        "utf8",
+      );
+      const incompleteAdditionalValidationHead = commitAll("incomplete additional acceptance V");
+      expect(
+        approvalIsCompleteForTrustedState(
+          acceptedDecision,
+          incompleteAdditionalAcceptancePolicy,
+          temporaryRepository.fileAtCommit(incompleteAdditionalValidationHead, policyRelativePath),
+          incompleteAdditionalValidationHead,
+          incompleteAdditionalValidationHead,
           temporaryRepository,
         ),
       ).toBe(false);
