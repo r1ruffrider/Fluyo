@@ -46,13 +46,13 @@ final class AuthRuntimeKernelTests: XCTestCase {
         var rejected = 0
         for step in vector.steps { rejected += try await execute(step, coordinator, ports) }
         let snapshots = await coordinator.snapshotHistory().map { normalize($0.0, $0.1) }
-        XCTAssertEqual(snapshots, vector.snapshots, "auth_corpus_\(vector.id)_stage_snapshot_\(snapshotMismatch(vector.snapshots, snapshots))")
+        XCTAssertTrue(snapshots == vector.snapshots, "[auth_corpus_\(vector.id)_stage_snapshot_\(snapshotMismatch(vector.snapshots, snapshots))]")
         let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); XCTAssertEqual(fullEffectHistory, vector.effects, vector.id)
         let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
         let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
         let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
         XCTAssertTrue(firstDrain.allSatisfy { $0.generation == generation }, vector.id); XCTAssertTrue(secondDrain.isEmpty, vector.id); XCTAssertTrue(staleDrain.isEmpty, vector.id)
-        XCTAssertEqual(trace, vector.trace, vector.id); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
+        XCTAssertTrue(trace == vector.trace, "[auth_corpus_\(vector.id)_stage_trace_\(traceMismatch(vector.trace, trace))]"); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
         XCTAssertEqual(completions, vector.completions.filter { $0 != "none" }, vector.id)
         if vector.id == "warm_callback_success" { let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") }
         XCTAssertEqual(generation, vector.generation, vector.id); XCTAssertEqual(terminal, vector.terminal, vector.id)
@@ -120,7 +120,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "explicit_invalidation_and_repeated_401_clear": let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.hasSessionCandidate, .absent)
         case "403_never_refreshes_or_signs_out": let calls = await ports.provider.refreshCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertEqual(snapshot.state, .safeTerminalError); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
         case "offline_never_confirms_new_owner_or_expands_access": let calls = await ports.provider.verifyCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-        case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness()
+        case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness(); try await verifyPostFenceCancellationIsIrrevocable()
         case "evidence_is_closed_and_mutation_safe": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal)
         case "no_op_telemetry_has_zero_retention_and_zero_transport": XCTAssertEqual(Mirror(reflecting: TrapTelemetry()).children.count, 0)
         default: break
@@ -286,6 +286,25 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let trace = await coordinator.normalizedTrace(), refreshes = await ports.provider.refreshCallCount(); XCTAssertTrue(trace.contains(.callbackReserved)); XCTAssertEqual(refreshes, 1)
     }
 
+    private func verifyPostFenceCancellationIsIrrevocable() async throws {
+        do {
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
+            await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setSuspendActivation(true)
+            let work = Task { await coordinator.signOut() }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
+            let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), persistence = await ports.persistence(), wipe = await ports.wipeSummary()
+            XCTAssertEqual(snapshot.state, .signedOut); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
+            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(persistence, [false, false, false, false]); XCTAssertEqual(wipe, "callback_headers_vault_owner_confirm")
+        }
+        do {
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
+            await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setResult(.malformed); await ports.callback.setSuspendActivation(true)
+            let work = Task { await coordinator.receiveCallback(ingress()) }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
+            let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), history = await coordinator.presentationEffectHistory()
+            XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
+            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(history.count, 1)
+        }
+    }
+
     private func verifyCallbackStoreFailure() async throws {
         let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true)
         await ports.callback.setResult(.failed); await coordinator.receiveCallback(ingress())
@@ -324,6 +343,19 @@ final class AuthRuntimeKernelTests: XCTestCase {
         }
         return "none"
     }
+    private func traceMismatch(_ expected: [String], _ actual: [String]) -> String {
+        guard expected.count == actual.count else { return "count_expected_\(boundedTraceCount(expected.count))_actual_\(boundedTraceCount(actual.count))" }
+        guard let index = expected.indices.first(where: { expected[$0] != actual[$0] }) else { return "none" }
+        guard index < 64, traceDiagnosticValues.contains(expected[index]), traceDiagnosticValues.contains(actual[index]) else { return "sequence_unavailable" }
+        return "sequence_index_\(index)_expected_\(expected[index])_actual_\(actual[index])"
+    }
+    private func boundedTraceCount(_ count: Int) -> String { count < 64 ? String(count) : "64_plus" }
+    private let traceDiagnosticValues: Set<String> = [
+        "init_read", "callback_reserved", "callback_consumed", "callback_rejected", "callback_duplicate", "callback_overlap",
+        "provider_exchange", "provider_refresh", "owner_verify", "vault_replace", "owner_bind", "timer_500", "timer_15000",
+        "timer_30000", "generation_fence", "callback_purge", "headers_clear", "vault_clear", "owner_purge", "callback_confirm",
+        "vault_confirm", "owner_confirm", "stale_rejected", "snapshot_published", "effect_enqueued", "terminal_latched",
+    ]
     private func normalize(_ effect: AuthPresentationEffect) -> String {
         let payload = "aggregate:\(effect.payload.focus?.rawValue ?? "none"):\(effect.payload.announcement?.rawValue ?? "none"):\(effect.payload.priority?.rawValue ?? "none"):\(effect.payload.navigation?.rawValue ?? "none")"
         return "\(effect.generation):\(effect.sequence):\(effect.originatingState.rawValue):\(payload)"
@@ -423,17 +455,18 @@ private actor ScriptVault: SessionVaultPort {
     func confirmEmpty(generation: UInt64) async -> Bool { await audit.add("vault_confirm"); return confirm && !storedCandidate }
 }
 private actor ScriptCallback: CallbackTransactionStorePort {
-    private let audit: Audit; private let completions: CompletionAudit; private let generations: GenerationCell; private let validationGate = Gate(), validationCancellationObserved = OneShotSignal()
-    private var result = CallbackConsumeResult.malformed, purgeResult = ConditionalMutationResult.applied, confirm = true, calls = 0, atomicWipe = false, pending = false, suspendValidation = false, validationCanceled = false, purgeAfterValidationCancellation = false; private var canceled: Set<UInt64> = []
+    private let audit: Audit; private let completions: CompletionAudit; private let generations: GenerationCell; private let validationGate = Gate(), activationGate = Gate(), validationCancellationObserved = OneShotSignal()
+    private var result = CallbackConsumeResult.malformed, purgeResult = ConditionalMutationResult.applied, confirm = true, calls = 0, atomicWipe = false, pending = false, suspendValidation = false, suspendActivation = false, validationCanceled = false, purgeAfterValidationCancellation = false; private var canceled: Set<UInt64> = []
     init(_ audit: Audit, _ completions: CompletionAudit, _ generations: GenerationCell) { self.audit = audit; self.completions = completions; self.generations = generations }
     func setResult(_ value: CallbackConsumeResult) { result = value }; func setPurgeResult(_ value: ConditionalMutationResult) { purgeResult = value }; func setConfirm(_ value: Bool) { confirm = value }; func callCount() -> Int { calls }
     func setSuspendValidation(_ value: Bool) { suspendValidation = value }; func waitValidationStarted() async { await validationGate.waitUntilStarted() }; func validationCancellationDidComplete() -> Bool { validationCanceled }; func purgeObservedCancellation() -> Bool { purgeAfterValidationCancellation }
+    func setSuspendActivation(_ value: Bool) { suspendActivation = value }; func waitActivationStarted() async { await activationGate.waitUntilStarted() }; func releaseActivation() async { await activationGate.release() }
     func didAtomicWipe() -> Bool { atomicWipe }
     func seed() { pending = true }; func hasPending() -> Bool { pending }
     func validateConsumeAndWipe(_ ingress: OpaqueCallbackIngress, generation: UInt64) async -> CallbackConsumeResult { calls += 1; if suspendValidation { await validationGate.suspendPoint(); if canceled.contains(generation) { validationCanceled = true; await validationCancellationObserved.signal(); return .staleGeneration } }; let scripted: CallbackConsumeResult; switch await completions.take(["callback_consumed", "callback_malformed", "callback_expired", "callback_replayed", "callback_duplicate", "callback_unsupported", "callback_stale", "callback_failed"]) { case "callback_consumed": scripted = .consumed(.init("opaque-pkce")); case "callback_malformed": scripted = .malformed; case "callback_expired": scripted = .expired; case "callback_replayed": scripted = .replayed; case "callback_duplicate": scripted = .duplicate; case "callback_unsupported": scripted = .unsupported; case "callback_stale": scripted = .staleGeneration; case "callback_failed": scripted = .failed; default: scripted = result }; switch scripted { case .consumed, .malformed, .expired, .replayed, .unsupported: atomicWipe = true; default: atomicWipe = false }; if atomicWipe { pending = false }; return scripted }
     func purge(generation: UInt64) async -> ConditionalMutationResult { await audit.add("callback"); purgeAfterValidationCancellation = !suspendValidation || validationCanceled; let scripted: ConditionalMutationResult = await completions.take(["purge_failed"]) == "purge_failed" ? .failed : purgeResult; guard generations.compareAndMutate(generation, { if scripted == .applied { pending = false } }) else { return .staleGeneration }; return scripted }
     func confirmEmpty(generation: UInt64) async -> Bool { await audit.add("callback_confirm"); return confirm && !pending }
-    func activateGeneration(_ generation: UInt64) async { generations.activate(generation) }
+    func activateGeneration(_ generation: UInt64) async { if suspendActivation { await activationGate.suspendPoint() }; generations.activate(generation) }
     func cancelOwnedWork(generation: UInt64) async { canceled.insert(generation); if suspendValidation { await validationGate.release(); await validationCancellationObserved.wait() } }
 }
 private actor ScriptClock: AuthClockPort {

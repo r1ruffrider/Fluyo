@@ -64,7 +64,7 @@ try {
   const summaryFile = join(summaryDir, "TEST-auth.xml");
   writeFileSync(
     summaryFile,
-    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:callback_cancel@${digest}]"><failure type="java.lang.AssertionError" message="auth_corpus_callback_cancel_stage_snapshot_state learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:callback_cancel@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_callback_cancel_stage_snapshot_state] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
   );
   const bounded = summarize(summaryDir);
   const failure = JSON.parse(bounded).failures[0];
@@ -78,7 +78,57 @@ try {
 
   writeFileSync(
     summaryFile,
-    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:callback_cancel_private@${digest}]"><failure message="auth_corpus_callback_cancel_private_stage_snapshot_state">learner@example.test C:\\private\\path</failure></testcase></testsuite>`,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const traceBounded = summarize(summaryDir);
+  const traceFailure = JSON.parse(traceBounded).failures[0];
+  assert.equal(traceFailure.testName, "auth_corpus_cold_start_without_candidate");
+  assert.deepEqual(traceFailure.authDiagnostic, {
+    corpusId: "cold_start_without_candidate",
+    stage: "trace",
+    mismatch: "sequence",
+    index: 1,
+    expected: "snapshot_published",
+    actual: "timer_500",
+  });
+  assert.doesNotMatch(traceBounded, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_count_expected_2_actual_3] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const countBounded = summarize(summaryDir);
+  const countFailure = JSON.parse(countBounded).failures[0];
+  assert.deepEqual(countFailure.authDiagnostic, {
+    corpusId: "cold_start_without_candidate",
+    stage: "trace",
+    mismatch: "count",
+    expectedCount: "2",
+    actualCount: "3",
+  });
+  assert.doesNotMatch(countBounded, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_private_value] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const invalidCombination = summarize(summaryDir);
+  const invalidCombinationFailure = JSON.parse(invalidCombination).failures[0];
+  assert.equal("authDiagnostic" in invalidCombinationFailure, false);
+  assert.doesNotMatch(invalidCombination, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_5000] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const nearMatch = summarize(summaryDir);
+  const nearMatchFailure = JSON.parse(nearMatch).failures[0];
+  assert.equal("authDiagnostic" in nearMatchFailure, false);
+  assert.doesNotMatch(nearMatch, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:callback_cancel_private@${digest}]"><failure message="[auth_corpus_callback_cancel_private_stage_snapshot_state]">learner@example.test C:\\private\\path</failure></testcase></testsuite>`,
   );
   const adversarial = summarize(summaryDir);
   const adversarialFailure = JSON.parse(adversarial).failures[0];

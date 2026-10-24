@@ -44,6 +44,13 @@ const authCorpusIds = new Set([
   "no_op_telemetry_has_zero_retention_and_zero_transport",
   "evidence_is_closed_and_mutation_safe",
 ]);
+const traceValuePattern =
+  "(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)";
+const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
+const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
+const authDiagnosticPattern = new RegExp(
+  `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
+);
 
 const args = process.argv.slice(2);
 const phaseIndex = args.indexOf("--phase");
@@ -200,9 +207,7 @@ for (const file of xmlFiles.sort()) {
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
     const authDiagnosticMatch = authKernel
-      ? `${rawAttribute(failureTag[2], "message")}\n${body}`.match(
-          /\bauth_corpus_([a-z0-9_]+)_stage_(snapshot)_(count|shape|state|candidate|owner|destination|outcome|generation)\b/,
-        )
+      ? `${rawAttribute(failureTag[2], "message")}\n${body}`.match(authDiagnosticPattern)
       : null;
     const authDiagnostic =
       authDiagnosticMatch &&
@@ -229,8 +234,22 @@ for (const file of xmlFiles.sort()) {
         ? {
             authDiagnostic: {
               corpusId: authDiagnostic[1],
-              stage: authDiagnostic[2],
-              mismatch: authDiagnostic[3],
+              ...(authDiagnostic[2]
+                ? { stage: "snapshot", mismatch: authDiagnostic[2] }
+                : authDiagnostic[3]
+                  ? {
+                      stage: "trace",
+                      mismatch: "count",
+                      expectedCount: authDiagnostic[3],
+                      actualCount: authDiagnostic[4],
+                    }
+                  : {
+                      stage: "trace",
+                      mismatch: "sequence",
+                      index: Number(authDiagnostic[5]),
+                      expected: authDiagnostic[6],
+                      actual: authDiagnostic[7],
+                    }),
             },
           }
         : {}),

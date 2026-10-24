@@ -46,7 +46,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             rejectedWrites += execute(step, coordinator, ports)
         }
         val snapshots = coordinator.snapshotHistory().map { normalize(it.first, it.second) }
-        assertEquals("auth_corpus_${vector.id}_stage_snapshot_${snapshotMismatch(vector.snapshots, snapshots)}", vector.snapshots, snapshots)
+        assertTrue("[auth_corpus_${vector.id}_stage_snapshot_${snapshotMismatch(vector.snapshots, snapshots)}]", vector.snapshots == snapshots)
         val generation = coordinator.currentGeneration()
         val fullEffectHistory = coordinator.presentationEffectHistory().map(::normalize)
         assertEquals(vector.effects, fullEffectHistory)
@@ -55,7 +55,8 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         assertTrue(coordinator.drainPresentationEffects(generation).isEmpty())
         val staleGeneration = if (generation == 1uL) 2uL else 1uL
         assertTrue(coordinator.drainPresentationEffects(staleGeneration).isEmpty())
-        assertEquals(vector.trace, coordinator.normalizedTrace().map { it.wire })
+        val trace = coordinator.normalizedTrace().map { it.wire }
+        assertTrue("[auth_corpus_${vector.id}_stage_trace_${traceMismatch(vector.trace, trace)}]", vector.trace == trace)
         assertEquals(vector.completions.filterNot { it == "none" }, ports.completionValues())
         if (vector.id == "warm_callback_success") assertEquals("opaque-pkce", ports.provider.lastExchangeStorage)
         assertEquals(vector.wipe, ports.wipeSummary())
@@ -144,7 +145,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             "explicit_invalidation_and_repeated_401_clear" -> assertEquals(SessionCandidateStatus.ABSENT, coordinator.snapshot().hasSessionCandidate)
             "403_never_refreshes_or_signs_out" -> { assertEquals(0, ports.provider.refreshCalls); assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, coordinator.snapshot().state); assertTrue(coordinator.snapshot().hasVerifiedOwnerState) }
             "offline_never_confirms_new_owner_or_expands_access" -> { assertEquals(0, ports.provider.verifyCalls); assertFalse(coordinator.snapshot().hasVerifiedOwnerState) }
-            "cleanup_precedes_signed_out_or_new_owner_exposure" -> { assertTrue(coordinator.isTerminalFenced()); verifyDelayedEffectCancellation(); verifyCleanupReservationLiveness() }
+            "cleanup_precedes_signed_out_or_new_owner_exposure" -> { assertTrue(coordinator.isTerminalFenced()); verifyDelayedEffectCancellation(); verifyCleanupReservationLiveness(); verifyPostFenceCancellationIsIrrevocable() }
             "no_op_telemetry_has_zero_retention_and_zero_transport" -> assertEquals(0, TrapTelemetry::class.java.declaredFields.count { !it.isSynthetic })
             "evidence_is_closed_and_mutation_safe" -> assertTrue(coordinator.isTerminalFenced())
         }
@@ -335,6 +336,26 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         assertTrue(coordinator.normalizedTrace().contains(AuthTraceEntry.CALLBACK_RESERVED)); assertEquals(1, ports.provider.refreshCalls)
     }
 
+    private suspend fun verifyPostFenceCancellationIsIrrevocable() {
+        coroutineScope {
+            val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
+            ports.vault.readCandidate = true; coordinator.initialize(true); ports.callback.suspendActivation = true
+            val work = launch { coordinator.signOut() }; ports.callback.activationStarted.await(); work.cancel(); ports.callback.activationRelease.complete(Unit); work.join()
+            val snapshot = coordinator.snapshot()
+            assertEquals(AuthRuntimeState.SIGNED_OUT, snapshot.state); assertEquals(SessionCandidateStatus.ABSENT, snapshot.hasSessionCandidate); assertFalse(snapshot.hasVerifiedOwnerState)
+            assertEquals(2uL, coordinator.currentGeneration()); assertFalse(coordinator.isTerminalFenced()); assertEquals(listOf(false, false, false, false), ports.persistence())
+            assertEquals("callback_headers_vault_owner_confirm", ports.wipeSummary())
+        }
+        coroutineScope {
+            val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
+            ports.vault.readCandidate = false; coordinator.initialize(true); ports.callback.result = CallbackConsumeResult.Malformed; ports.callback.suspendActivation = true
+            val work = launch { coordinator.receiveCallback(ingress()) }; ports.callback.activationStarted.await(); work.cancel(); ports.callback.activationRelease.complete(Unit); work.join()
+            val snapshot = coordinator.snapshot()
+            assertEquals(AuthRuntimeState.UNUSABLE_LINK, snapshot.state); assertEquals(SessionCandidateStatus.ABSENT, snapshot.hasSessionCandidate); assertFalse(snapshot.hasVerifiedOwnerState)
+            assertEquals(2uL, coordinator.currentGeneration()); assertFalse(coordinator.isTerminalFenced()); assertEquals(1, coordinator.presentationEffectHistory().size)
+        }
+    }
+
     private suspend fun verifyCallbackStoreFailure() {
         val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
         ports.vault.readCandidate = false; coordinator.initialize(true)
@@ -393,6 +414,17 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             }
             return "none"
         }
+        private fun traceMismatch(expected: List<String>, actual: List<String>): String {
+            if (expected.size != actual.size) return "count_expected_${boundedTraceCount(expected.size)}_actual_${boundedTraceCount(actual.size)}"
+            val index = expected.indices.firstOrNull { expected[it] != actual[it] } ?: return "none"
+            if (index >= 64) return "sequence_unavailable"
+            val expectedEntry = expected[index]
+            val actualEntry = actual[index]
+            if (expectedEntry !in traceDiagnosticValues || actualEntry !in traceDiagnosticValues) return "sequence_unavailable"
+            return "sequence_index_${index}_expected_${expectedEntry}_actual_${actualEntry}"
+        }
+        private fun boundedTraceCount(count: Int): String = if (count < 64) count.toString() else "64_plus"
+        private val traceDiagnosticValues = AuthTraceEntry.values().map { it.wire }.toSet()
         private fun normalize(effect: AuthPresentationEffect): String {
             val p = effect.payload
             val payload = "aggregate:${p.focus?.wire ?: "none"}:${p.announcement?.wire ?: "none"}:${p.priority?.wire ?: "none"}:${p.navigation?.wire ?: "none"}"
@@ -474,12 +506,13 @@ private class ScriptVault(private val cleanup: MutableList<String>, private val 
 }
 private class ScriptCallback(private val cleanup: MutableList<String>, private val completions: CompletionAudit, private val generations: GenerationCell) : CallbackTransactionStorePort {
     var result: CallbackConsumeResult = CallbackConsumeResult.Malformed; var purgeResult = ConditionalMutationResult.APPLIED; var confirm = true; var calls = 0
-    var atomicWipe = false; var pending = false; var suspendValidation = false; var validationCancellationCompleted = false; var purgeObservedValidationCancellation = false
+    var atomicWipe = false; var pending = false; var suspendValidation = false; var suspendActivation = false; var validationCancellationCompleted = false; var purgeObservedValidationCancellation = false
     val validationStarted = CompletableDeferred<Unit>(); private val validationRelease = CompletableDeferred<Unit>(); private val validationCancellationObserved = CompletableDeferred<Unit>(); private val canceled = mutableSetOf<ULong>()
+    val activationStarted = CompletableDeferred<Unit>(); val activationRelease = CompletableDeferred<Unit>()
     override suspend fun validateConsumeAndWipe(ingress: OpaqueCallbackIngress, generation: ULong): CallbackConsumeResult { calls++; if (suspendValidation) { validationStarted.complete(Unit); validationRelease.await(); if (generation in canceled) { validationCancellationCompleted = true; validationCancellationObserved.complete(Unit); return CallbackConsumeResult.StaleGeneration } }; val scripted = when (completions.take("callback_consumed", "callback_malformed", "callback_expired", "callback_replayed", "callback_duplicate", "callback_unsupported", "callback_stale", "callback_failed")) { "callback_consumed" -> CallbackConsumeResult.Consumed(OpaqueSessionCandidate("opaque-pkce")); "callback_malformed" -> CallbackConsumeResult.Malformed; "callback_expired" -> CallbackConsumeResult.Expired; "callback_replayed" -> CallbackConsumeResult.Replayed; "callback_duplicate" -> CallbackConsumeResult.Duplicate; "callback_unsupported" -> CallbackConsumeResult.Unsupported; "callback_stale" -> CallbackConsumeResult.StaleGeneration; "callback_failed" -> CallbackConsumeResult.Failed; else -> result }; atomicWipe = scripted is CallbackConsumeResult.Consumed || scripted is CallbackConsumeResult.Malformed || scripted is CallbackConsumeResult.Expired || scripted is CallbackConsumeResult.Replayed || scripted is CallbackConsumeResult.Unsupported; if (atomicWipe) pending = false; return scripted }
     override suspend fun purge(generation: ULong): ConditionalMutationResult { cleanup += "callback"; purgeObservedValidationCancellation = !suspendValidation || validationCancellationCompleted; val scripted = if (completions.take("purge_failed") == "purge_failed") ConditionalMutationResult.FAILED else purgeResult; if (!generations.compareAndMutate(generation) { if (scripted == ConditionalMutationResult.APPLIED) pending = false }) return ConditionalMutationResult.STALE_GENERATION; return scripted }
     override suspend fun confirmEmpty(generation: ULong): Boolean { cleanup += "callback_confirm"; return confirm && !pending }
-    override suspend fun activateGeneration(generation: ULong) { generations.activate(generation) }
+    override suspend fun activateGeneration(generation: ULong) { if (suspendActivation) { activationStarted.complete(Unit); activationRelease.await() }; generations.activate(generation) }
     override suspend fun cancelOwnedWork(generation: ULong) { canceled += generation; if (suspendValidation) { validationRelease.complete(Unit); validationCancellationObserved.await() } }
 }
 private class ScriptClock(private val times: List<ULong>, private val completions: CompletionAudit) : AuthClockPort {

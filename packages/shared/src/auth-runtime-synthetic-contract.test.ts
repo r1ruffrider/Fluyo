@@ -159,6 +159,14 @@ describe("native auth executable synthetic kernel", () => {
       resolve(root, "apps/android/app/src/test/java/com/fluyo/app/AuthRuntimeKernelTest.kt"),
       "utf8",
     );
+    const swiftRuntime = readFileSync(
+      resolve(root, "apps/ios/Fluyo/AuthRuntimeKernel.swift"),
+      "utf8",
+    );
+    const kotlinRuntime = readFileSync(
+      resolve(root, "apps/android/app/src/main/java/com/fluyo/app/AuthRuntimeKernel.kt"),
+      "utf8",
+    );
     for (const source of [swift, kotlin]) {
       expect(source).not.toMatch(/scenarioResult|expectedResult|answerFactory|hardcodedResult/i);
       expect(source).toContain("AuthRuntimeCoordinator");
@@ -181,11 +189,16 @@ describe("native auth executable synthetic kernel", () => {
       expect(source).toContain("pauseAfterComparison");
     }
     expect(swift).toContain("XCTAssertEqual(fullEffectHistory, vector.effects");
-    expect(swift).toContain("XCTAssertEqual(trace, vector.trace");
+    expect(swift).toContain("XCTAssertTrue(trace == vector.trace");
     expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
     expect(kotlin).toContain("assertEquals(vector.effects, fullEffectHistory)");
-    expect(kotlin).toContain("assertEquals(vector.trace, coordinator.normalizedTrace()");
+    expect(kotlin).toContain('assertTrue("[auth_corpus_${vector.id}_stage_trace_');
     expect(kotlin).toContain("assertEquals(vector.completions.filterNot");
+    expect(kotlinRuntime).toContain("withContext(NonCancellable) { cleanupIrrevocably");
+    expect(kotlinRuntime).toContain(
+      "withContext(NonCancellable) { transitionAfterFenceIrrevocably",
+    );
+    expect(swiftRuntime).not.toContain("guard valid(reservation), !Task.isCancelled");
   });
 
   it("uses the canonical diagnostic and presentation vocabularies", () => {

@@ -43,6 +43,13 @@ const authCorpusIds = new Set([
   "no_op_telemetry_has_zero_retention_and_zero_transport",
   "evidence_is_closed_and_mutation_safe",
 ]);
+const traceValuePattern =
+  "(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)";
+const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
+const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
+const authDiagnosticPattern = new RegExp(
+  `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
+);
 
 const [logPath, phaseFlag, phase] = process.argv.slice(2);
 const phases = new Set([
@@ -74,13 +81,15 @@ const allowedTests = [
   "testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed",
 ];
 const test = allowedTests.find((name) => raw.includes(name)) ?? "unknown";
-const authDiagnosticMatch = raw.match(
-  /\bauth_corpus_([a-z0-9_]+)_stage_(snapshot)_(count|shape|state|candidate|owner|destination|outcome|generation)\b/,
-);
+const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
 const boundedDiagnostic = authDiagnostic
-  ? `; corpus=${authDiagnostic[1]}; stage=${authDiagnostic[2]}; mismatch=${authDiagnostic[3]}`
+  ? authDiagnostic[2]
+    ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
+    : authDiagnostic[3]
+      ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[3]}; actual_count=${authDiagnostic[4]}`
+      : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[5]}; expected=${authDiagnostic[6]}; actual=${authDiagnostic[7]}`
   : "";
 process.stderr.write(
   `iOS phase failed; phase=${phase}; category=${category}; test=${test}${boundedDiagnostic}; raw output discarded\n`,

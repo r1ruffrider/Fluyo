@@ -388,7 +388,10 @@ class AuthRuntimeCoordinator(
         effects.addLast(effect); effectHistory += effect; trace += AuthTraceEntry.EFFECT_ENQUEUED
     }
 
-    private suspend fun transitionAfterFence(expected: ULong, snapshot: AuthRuntimeSnapshot, payloads: List<AuthPresentationPayload>): Boolean {
+    private suspend fun transitionAfterFence(expected: ULong, snapshot: AuthRuntimeSnapshot, payloads: List<AuthPresentationPayload>): Boolean =
+        withContext(NonCancellable) { transitionAfterFenceIrrevocably(expected, snapshot, payloads) }
+
+    private suspend fun transitionAfterFenceIrrevocably(expected: ULong, snapshot: AuthRuntimeSnapshot, payloads: List<AuthPresentationPayload>): Boolean {
         val fencing = installFence(expected, OperationKind.CLEANUP, suppressStaleOutcome = true) ?: return false
         return try {
             provider.cancelOwnedWork(expected); if (!valid(fencing)) return false
@@ -420,7 +423,10 @@ class AuthRuntimeCoordinator(
         transitionAfterFence(reservation.generation, failed, listOf(terminalEntryEffect()))
     }
 
-    private suspend fun callbackStoreFailure(reservation: Reservation) {
+    private suspend fun callbackStoreFailure(reservation: Reservation) =
+        withContext(NonCancellable) { callbackStoreFailureIrrevocably(reservation) }
+
+    private suspend fun callbackStoreFailureIrrevocably(reservation: Reservation) {
         val cleanup = fenceForCleanup(reservation.generation) ?: return
         try {
         if (!valid(cleanup)) return
@@ -436,7 +442,10 @@ class AuthRuntimeCoordinator(
         } finally { withContext(NonCancellable) { finish(cleanup) } }
     }
 
-    private suspend fun cleanup(destination: AuthRuntimeState, reservation: Reservation?, outcome: FixedAuthOutcomeCategory) {
+    private suspend fun cleanup(destination: AuthRuntimeState, reservation: Reservation?, outcome: FixedAuthOutcomeCategory) =
+        withContext(NonCancellable) { cleanupIrrevocably(destination, reservation, outcome) }
+
+    private suspend fun cleanupIrrevocably(destination: AuthRuntimeState, reservation: Reservation?, outcome: FixedAuthOutcomeCategory) {
         val expected = reservation?.generation ?: currentGeneration()
         val cleanup = fenceForCleanup(expected) ?: return
         try {

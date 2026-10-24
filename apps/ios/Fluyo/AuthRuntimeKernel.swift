@@ -380,10 +380,10 @@ actor AuthRuntimeCoordinator {
     private func latchCleanupFailure(_ reservation: Reservation) { if valid(reservation) { latchTerminal(.transientFailure) } }
     private func fenceForCleanup(_ expected: UInt64) async -> Reservation? {
         guard let reservation = installFence(expected, kind: .cleanup, suppressStaleOutcome: false) else { return nil }
-        await provider.cancelOwnedWork(generation: expected); guard valid(reservation), !Task.isCancelled else { finish(reservation); return nil }
-        await callbackStore.cancelOwnedWork(generation: expected); guard valid(reservation), !Task.isCancelled else { finish(reservation); return nil }
-        await clock.cancelOwnedTimers(generation: expected); guard valid(reservation), !Task.isCancelled else { finish(reservation); return nil }
-        await callbackStore.activateGeneration(reservation.generation); guard valid(reservation), !Task.isCancelled else { finish(reservation); return nil }
+        await provider.cancelOwnedWork(generation: expected); guard valid(reservation) else { finish(reservation); return nil }
+        await callbackStore.cancelOwnedWork(generation: expected); guard valid(reservation) else { finish(reservation); return nil }
+        await clock.cancelOwnedTimers(generation: expected); guard valid(reservation) else { finish(reservation); return nil }
+        await callbackStore.activateGeneration(reservation.generation); guard valid(reservation) else { finish(reservation); return nil }
         return reservation
     }
     private func installFence(_ expected: UInt64, kind: OperationKind, suppressStaleOutcome: Bool) -> Reservation? {
