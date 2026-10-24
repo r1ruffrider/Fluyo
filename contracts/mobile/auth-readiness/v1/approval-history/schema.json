@@ -1,208 +1,45 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://fluyo.invalid/contracts/mobile/auth-readiness/v1/approval-history/schema.json",
-  "title": "Fluyo native-auth approval-history record",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "ledgerId",
-    "sequence",
-    "previousRecordDigest",
-    "recordedAtUtc",
-    "eventType",
-    "actor",
-    "authority",
-    "subject",
-    "payload",
-    "provenance"
-  ],
-  "properties": {
-    "schemaVersion": {
-      "const": "1.0.0"
-    },
-    "ledgerId": {
-      "const": "fluyo-native-auth-approval-history-v1"
-    },
-    "sequence": {
-      "type": "integer",
-      "minimum": 1
-    },
-    "previousRecordDigest": {
-      "oneOf": [
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "#/$defs/digest"
-        }
-      ]
-    },
-    "recordedAtUtc": {
-      "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
-    },
-    "eventType": {
-      "enum": [
-        "GOVERNANCE_SELECTION",
-        "DELEGATION_GRANT",
-        "DELEGATION_REVOCATION",
-        "MIGRATION_SNAPSHOT",
-        "REVIEW_ATTESTATION",
-        "PHASE_APPROVAL",
-        "TOOLING_CHANGE_AUTHORIZATION"
-      ]
-    },
-    "actor": {
-      "type": "string",
-      "minLength": 1
-    },
-    "authority": {
-      "type": "object",
+  "$defs": {
+    "delegationGrantPayload": {
       "additionalProperties": false,
-      "required": ["kind", "grantedBy", "referenceRecordDigests"],
       "properties": {
-        "kind": {
-          "enum": [
-            "direct_material_owner_authority",
-            "delegated_credential_free_repository_authority",
-            "administrative_migration_recording",
-            "delegated_specialist_review_authority",
-            "protected_ci_attestation"
-          ]
-        },
-        "grantedBy": {
-          "const": "Marlon"
-        },
-        "referenceRecordDigests": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/$defs/digest"
-          }
-        }
-      }
-    },
-    "subject": {
-      "$ref": "#/$defs/subject"
-    },
-    "payload": {
-      "type": "object"
-    },
-    "provenance": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "sourceCommit",
-        "recordedBy",
-        "recordingMethod",
-        "integrityScope",
-        "nonRepudiationLimitation"
-      ],
-      "properties": {
-        "sourceCommit": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
-        "recordedBy": {
+        "delegate": {
           "const": "Adriana"
         },
-        "recordingMethod": {
-          "const": "repository_governance_record"
-        },
-        "integrityScope": {
-          "const": "canonical_record_bytes_and_declared_subject_bytes"
-        },
-        "nonRepudiationLimitation": {
-          "const": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation"
-        }
-      }
-    }
-  },
-  "$defs": {
-    "digest": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
-    },
-    "subject": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["files", "bundleSha256"],
-      "properties": {
-        "files": {
-          "type": "array",
-          "minItems": 1,
+        "deniedActions": {
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["path", "sha256"],
-            "properties": {
-              "path": {
-                "type": "string",
-                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
-              },
-              "sha256": {
-                "$ref": "#/$defs/digest"
-              }
-            }
-          }
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
         },
-        "bundleSha256": {
-          "$ref": "#/$defs/digest"
+        "materialDecisionIds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requiredPhaseGates": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "sameSubjectBundleRequired": {
+          "const": true
+        },
+        "scope": {
+          "const": "credential_free_repository_only_nonproduction_phase_after_required_gates"
+        },
+        "usableOnlyAfterLedgerMerge": {
+          "const": true
         }
-      }
-    },
-    "governancePayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "selection",
-        "effectiveFor",
-        "retiredMechanism",
-        "historicalSnapshotCommit",
-        "installationBaseCommit",
-        "schemaSha256",
-        "policySha256",
-        "decisionPolicySha256",
-        "evidenceIndexSha256"
-      ],
-      "properties": {
-        "selection": {
-          "const": "APPEND_ONLY_CONTENT_ADDRESSED_SQUASH_COMPATIBLE"
-        },
-        "effectiveFor": {
-          "type": "string",
-          "minLength": 1
-        },
-        "retiredMechanism": {
-          "type": "string",
-          "minLength": 1
-        },
-        "decisionPolicySha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "evidenceIndexSha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "historicalSnapshotCommit": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
-        "installationBaseCommit": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
-        "schemaSha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "policySha256": {
-          "$ref": "#/$defs/digest"
-        }
-      }
-    },
-    "delegationGrantPayload": {
-      "type": "object",
-      "additionalProperties": false,
+      },
       "required": [
         "delegate",
         "scope",
@@ -212,413 +49,59 @@
         "materialDecisionIds",
         "usableOnlyAfterLedgerMerge"
       ],
-      "properties": {
-        "delegate": {
-          "const": "Adriana"
-        },
-        "scope": {
-          "const": "credential_free_repository_only_nonproduction_phase_after_required_gates"
-        },
-        "requiredPhaseGates": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "sameSubjectBundleRequired": {
-          "const": true
-        },
-        "deniedActions": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "materialDecisionIds": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "usableOnlyAfterLedgerMerge": {
-          "const": true
-        }
-      }
+      "type": "object"
     },
     "delegationRevocationPayload": {
-      "type": "object",
       "additionalProperties": false,
-      "required": ["delegationRecordDigest", "reason"],
       "properties": {
         "delegationRecordDigest": {
           "$ref": "#/$defs/digest"
         },
         "reason": {
-          "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "type": "string"
         }
-      }
-    },
-    "migrationPayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "governanceSelectionRecordDigest",
-        "delegationGrantRecordDigest",
-        "toolingAuthorizationRecordDigest",
-        "materialDecisionIds",
-        "decisionCounts",
-        "evidenceRequirements",
-        "runtimeEvidence",
-        "nativeMatrix",
-        "materialDecisionApprover",
-        "responsibleAfterApproval"
-      ],
-      "properties": {
-        "governanceSelectionRecordDigest": {
-          "$ref": "#/$defs/digest"
-        },
-        "delegationGrantRecordDigest": {
-          "$ref": "#/$defs/digest"
-        },
-        "toolingAuthorizationRecordDigest": {
-          "$ref": "#/$defs/digest"
-        },
-        "materialDecisionIds": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "decisionCounts": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["proposed", "blocked", "accepted"],
-          "properties": {
-            "proposed": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "blocked": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "accepted": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        },
-        "evidenceRequirements": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["total", "unsatisfied"],
-          "properties": {
-            "total": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "unsatisfied": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        },
-        "runtimeEvidence": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["conducted", "passed", "failed", "unattempted"],
-          "properties": {
-            "conducted": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "passed": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "failed": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "unattempted": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        },
-        "nativeMatrix": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["total", "unattempted"],
-          "properties": {
-            "total": {
-              "type": "integer",
-              "minimum": 0
-            },
-            "unattempted": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        },
-        "materialDecisionApprover": {
-          "const": "Marlon"
-        },
-        "responsibleAfterApproval": {
-          "const": "Adriana"
-        }
-      }
-    },
-    "reviewPayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "phaseId",
-        "gate",
-        "reviewer",
-        "domain",
-        "outcome",
-        "subjectBundleSha256",
-        "reviewedHead",
-        "supersedesReviewRecordDigest"
-      ],
-      "properties": {
-        "phaseId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "gate": {
-          "enum": [
-            "ARCHITECTURE",
-            "SECURITY",
-            "ENVIRONMENT_AND_CI",
-            "DOMAIN_SPECIALIST",
-            "PROTECTED_CI",
-            "INDEPENDENT_EXACT_HEAD_QA"
-          ]
-        },
-        "reviewer": {
-          "type": "string",
-          "minLength": 1
-        },
-        "domain": {
-          "oneOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "string",
-              "minLength": 1
-            }
-          ]
-        },
-        "outcome": {
-          "enum": ["PASS", "FAIL"]
-        },
-        "subjectBundleSha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "reviewedHead": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
-        "supersedesReviewRecordDigest": {
-          "oneOf": [
-            {
-              "type": "null"
-            },
-            {
-              "$ref": "#/$defs/digest"
-            }
-          ]
-        }
-      }
-    },
-    "phaseApprovalPayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "phaseId",
-        "scope",
-        "delegationGrantRecordDigest",
-        "gateRecordDigests",
-        "requiredDomainGates",
-        "subjectBundleSha256",
-        "reviewedHead",
-        "deniedActionFlags"
-      ],
-      "properties": {
-        "phaseId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "scope": {
-          "const": "credential_free_repository_only_nonproduction_phase_after_required_gates"
-        },
-        "delegationGrantRecordDigest": {
-          "$ref": "#/$defs/digest"
-        },
-        "gateRecordDigests": {
-          "type": "array",
-          "minItems": 6,
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/$defs/digest"
-          }
-        },
-        "requiredDomainGates": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/$defs/domainGate"
-          }
-        },
-        "subjectBundleSha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "reviewedHead": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
-        },
-        "deniedActionFlags": {
-          "$ref": "#/$defs/deniedActionFlags"
-        }
-      }
-    },
-    "toolingPayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "decision",
-        "classification",
-        "runtimeOrProductAuthorization",
-        "nativeEvidenceSatisfaction",
-        "externalActionAuthorization",
-        "baseFiles",
-        "targetFiles",
-        "baseBundleSha256",
-        "targetBundleSha256",
-        "atomicSemantics"
-      ],
-      "properties": {
-        "decision": {
-          "const": "DEPENDENCY_LOCK_REMEDIATION_OPTION_A"
-        },
-        "classification": {
-          "const": "credential_free_dev_tool_only"
-        },
-        "runtimeOrProductAuthorization": {
-          "const": false
-        },
-        "nativeEvidenceSatisfaction": {
-          "const": false
-        },
-        "externalActionAuthorization": {
-          "const": false
-        },
-        "baseFiles": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["path", "sha256"],
-            "properties": {
-              "path": {
-                "type": "string",
-                "minLength": 1
-              },
-              "sha256": {
-                "$ref": "#/$defs/digest"
-              }
-            }
-          }
-        },
-        "targetFiles": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["path", "sha256"],
-            "properties": {
-              "path": {
-                "type": "string",
-                "minLength": 1
-              },
-              "sha256": {
-                "$ref": "#/$defs/digest"
-              }
-            }
-          }
-        },
-        "baseBundleSha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "targetBundleSha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "atomicSemantics": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["manifestChanges", "lockfileChanges", "forbiddenChanges"],
-          "properties": {
-            "manifestChanges": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "lockfileChanges": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "forbiddenChanges": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            }
-          }
-        }
-      }
-    },
-    "domainGate": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["domain", "reviewer"],
-      "properties": {
-        "domain": {
-          "type": "string",
-          "minLength": 1
-        },
-        "reviewer": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
+      },
+      "required": ["delegationRecordDigest", "reason"],
+      "type": "object"
     },
     "deniedActionFlags": {
-      "type": "object",
       "additionalProperties": false,
+      "properties": {
+        "credentialsOrSecrets": {
+          "const": false
+        },
+        "destructiveOrData": {
+          "const": false
+        },
+        "domains": {
+          "const": false
+        },
+        "externalAccountsOrDashboards": {
+          "const": false
+        },
+        "materialNativeAuthDecisions": {
+          "const": false
+        },
+        "physicalDevices": {
+          "const": false
+        },
+        "production": {
+          "const": false
+        },
+        "publication": {
+          "const": false
+        },
+        "signing": {
+          "const": false
+        },
+        "spend": {
+          "const": false
+        },
+        "storeOrRelease": {
+          "const": false
+        }
+      },
       "required": [
         "production",
         "credentialsOrSecrets",
@@ -632,43 +115,443 @@
         "destructiveOrData",
         "materialNativeAuthDecisions"
       ],
+      "type": "object"
+    },
+    "digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "domainGate": {
+      "additionalProperties": false,
       "properties": {
-        "production": {
-          "const": false
+        "domain": {
+          "minLength": 1,
+          "type": "string"
         },
-        "credentialsOrSecrets": {
-          "const": false
-        },
-        "externalAccountsOrDashboards": {
-          "const": false
-        },
-        "domains": {
-          "const": false
-        },
-        "signing": {
-          "const": false
-        },
-        "storeOrRelease": {
-          "const": false
-        },
-        "physicalDevices": {
-          "const": false
-        },
-        "spend": {
-          "const": false
-        },
-        "publication": {
-          "const": false
-        },
-        "destructiveOrData": {
-          "const": false
-        },
-        "materialNativeAuthDecisions": {
-          "const": false
+        "reviewer": {
+          "minLength": 1,
+          "type": "string"
         }
-      }
+      },
+      "required": ["domain", "reviewer"],
+      "type": "object"
+    },
+    "governancePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "decisionPolicySha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "effectiveFor": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "evidenceIndexSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "historicalSnapshotCommit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "installationBaseCommit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "policySha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "retiredMechanism": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "schemaSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "selection": {
+          "const": "APPEND_ONLY_CONTENT_ADDRESSED_SQUASH_COMPATIBLE"
+        }
+      },
+      "required": [
+        "selection",
+        "effectiveFor",
+        "retiredMechanism",
+        "historicalSnapshotCommit",
+        "installationBaseCommit",
+        "schemaSha256",
+        "policySha256",
+        "decisionPolicySha256",
+        "evidenceIndexSha256"
+      ],
+      "type": "object"
+    },
+    "migrationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "decisionCounts": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "blocked": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "proposed": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": ["proposed", "blocked", "accepted"],
+          "type": "object"
+        },
+        "delegationGrantRecordDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "evidenceRequirements": {
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "unsatisfied": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": ["total", "unsatisfied"],
+          "type": "object"
+        },
+        "governanceSelectionRecordDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "materialDecisionApprover": {
+          "const": "Marlon"
+        },
+        "materialDecisionIds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "nativeMatrix": {
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "unattempted": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": ["total", "unattempted"],
+          "type": "object"
+        },
+        "responsibleAfterApproval": {
+          "const": "Adriana"
+        },
+        "runtimeEvidence": {
+          "additionalProperties": false,
+          "properties": {
+            "conducted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "failed": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "passed": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "unattempted": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": ["conducted", "passed", "failed", "unattempted"],
+          "type": "object"
+        },
+        "toolingAuthorizationRecordDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "governanceSelectionRecordDigest",
+        "delegationGrantRecordDigest",
+        "toolingAuthorizationRecordDigest",
+        "materialDecisionIds",
+        "decisionCounts",
+        "evidenceRequirements",
+        "runtimeEvidence",
+        "nativeMatrix",
+        "materialDecisionApprover",
+        "responsibleAfterApproval"
+      ],
+      "type": "object"
+    },
+    "phaseApprovalPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "delegationGrantRecordDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "deniedActionFlags": {
+          "$ref": "#/$defs/deniedActionFlags"
+        },
+        "gateRecordDigests": {
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "minItems": 6,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "phaseId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "requiredDomainGates": {
+          "items": {
+            "$ref": "#/$defs/domainGate"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "reviewedHead": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "scope": {
+          "const": "credential_free_repository_only_nonproduction_phase_after_required_gates"
+        },
+        "subjectBundleSha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "phaseId",
+        "scope",
+        "delegationGrantRecordDigest",
+        "gateRecordDigests",
+        "requiredDomainGates",
+        "subjectBundleSha256",
+        "reviewedHead",
+        "deniedActionFlags"
+      ],
+      "type": "object"
+    },
+    "reviewPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "gate": {
+          "enum": [
+            "ARCHITECTURE",
+            "SECURITY",
+            "ENVIRONMENT_AND_CI",
+            "DOMAIN_SPECIALIST",
+            "PROTECTED_CI",
+            "INDEPENDENT_EXACT_HEAD_QA"
+          ]
+        },
+        "outcome": {
+          "enum": ["PASS", "FAIL"]
+        },
+        "phaseId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reviewedHead": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "reviewer": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "subjectBundleSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "supersedesReviewRecordDigest": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/digest"
+            }
+          ]
+        }
+      },
+      "required": [
+        "phaseId",
+        "gate",
+        "reviewer",
+        "domain",
+        "outcome",
+        "subjectBundleSha256",
+        "reviewedHead",
+        "supersedesReviewRecordDigest"
+      ],
+      "type": "object"
+    },
+    "subject": {
+      "additionalProperties": false,
+      "properties": {
+        "bundleSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "files": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
+                "type": "string"
+              },
+              "sha256": {
+                "$ref": "#/$defs/digest"
+              }
+            },
+            "required": ["path", "sha256"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": ["files", "bundleSha256"],
+      "type": "object"
+    },
+    "toolingPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "atomicSemantics": {
+          "additionalProperties": false,
+          "properties": {
+            "forbiddenChanges": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "lockfileChanges": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "manifestChanges": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": ["manifestChanges", "lockfileChanges", "forbiddenChanges"],
+          "type": "object"
+        },
+        "baseBundleSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "baseFiles": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "sha256": {
+                "$ref": "#/$defs/digest"
+              }
+            },
+            "required": ["path", "sha256"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "classification": {
+          "const": "credential_free_dev_tool_only"
+        },
+        "decision": {
+          "const": "DEPENDENCY_LOCK_REMEDIATION_OPTION_A"
+        },
+        "externalActionAuthorization": {
+          "const": false
+        },
+        "nativeEvidenceSatisfaction": {
+          "const": false
+        },
+        "runtimeOrProductAuthorization": {
+          "const": false
+        },
+        "targetBundleSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "targetFiles": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "sha256": {
+                "$ref": "#/$defs/digest"
+              }
+            },
+            "required": ["path", "sha256"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "decision",
+        "classification",
+        "runtimeOrProductAuthorization",
+        "nativeEvidenceSatisfaction",
+        "externalActionAuthorization",
+        "baseFiles",
+        "targetFiles",
+        "baseBundleSha256",
+        "targetBundleSha256",
+        "atomicSemantics"
+      ],
+      "type": "object"
     }
   },
+  "$id": "https://fluyo.invalid/contracts/mobile/auth-readiness/v1/approval-history/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "allOf": [
     {
       "if": {
@@ -855,5 +738,122 @@
         }
       }
     }
-  ]
+  ],
+  "properties": {
+    "actor": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "grantedBy": {
+          "const": "Marlon"
+        },
+        "kind": {
+          "enum": [
+            "direct_material_owner_authority",
+            "delegated_credential_free_repository_authority",
+            "administrative_migration_recording",
+            "delegated_specialist_review_authority",
+            "protected_ci_attestation"
+          ]
+        },
+        "referenceRecordDigests": {
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": ["kind", "grantedBy", "referenceRecordDigests"],
+      "type": "object"
+    },
+    "eventType": {
+      "enum": [
+        "GOVERNANCE_SELECTION",
+        "DELEGATION_GRANT",
+        "DELEGATION_REVOCATION",
+        "MIGRATION_SNAPSHOT",
+        "REVIEW_ATTESTATION",
+        "PHASE_APPROVAL",
+        "TOOLING_CHANGE_AUTHORIZATION"
+      ]
+    },
+    "ledgerId": {
+      "const": "fluyo-native-auth-approval-history-v1"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "previousRecordDigest": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ]
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "integrityScope": {
+          "const": "canonical_record_bytes_and_declared_subject_bytes"
+        },
+        "nonRepudiationLimitation": {
+          "const": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation"
+        },
+        "recordedBy": {
+          "const": "Adriana"
+        },
+        "recordingMethod": {
+          "const": "repository_governance_record"
+        },
+        "sourceCommit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourceCommit",
+        "recordedBy",
+        "recordingMethod",
+        "integrityScope",
+        "nonRepudiationLimitation"
+      ],
+      "type": "object"
+    },
+    "recordedAtUtc": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "ledgerId",
+    "sequence",
+    "previousRecordDigest",
+    "recordedAtUtc",
+    "eventType",
+    "actor",
+    "authority",
+    "subject",
+    "payload",
+    "provenance"
+  ],
+  "title": "Fluyo native-auth approval-history record",
+  "type": "object"
 }

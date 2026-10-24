@@ -2,8 +2,8 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { lstatSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const LEDGER_RELATIVE = "contracts/mobile/auth-readiness/v1/approval-history";
@@ -138,6 +138,8 @@ const PAYLOAD_KEYS = {
 const DIGEST = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const MAX_CONTROL_BYTES = 1024 * 1024;
+const MAX_RECORD_BYTES = 1024 * 1024;
 
 export const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 export const asObject = (value, label = "value") => {
@@ -178,7 +180,54 @@ const canonicalize = (value) => {
     );
   return value;
 };
-export const canonicalText = (value) => JSON.stringify(canonicalize(value), null, 2) + "\n";
+const renderCanonical = (value, depth = 0, prefixWidth = 0) => {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    if (value.every((item) => item === null || typeof item !== "object")) {
+      const inline = `[${value.map((item) => JSON.stringify(item)).join(", ")}]`;
+      if (depth * 2 + prefixWidth + inline.length <= 80) return inline;
+    }
+    return `[
+${value.map((item) => `${"  ".repeat(depth + 1)}${renderCanonical(item, depth + 1)}`).join(",\n")}
+${"  ".repeat(depth)}]`;
+  }
+  const entries = Object.entries(value).sort(([left], [right]) => compareUtf8(left, right));
+  if (entries.length === 0) return "{}";
+  return `{
+${entries
+  .map(([key, nested]) => {
+    const label = `${JSON.stringify(key)}: `;
+    return `${"  ".repeat(depth + 1)}${label}${renderCanonical(nested, depth + 1, label.length)}`;
+  })
+  .join(",\n")}
+${"  ".repeat(depth)}}`;
+};
+export const canonicalText = (value) => `${renderCanonical(canonicalize(value))}\n`;
+export const parseCanonicalJson = (bytes, label, maximumBytes = MAX_CONTROL_BYTES) => {
+  if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > maximumBytes)
+    throw new Error(`${label} is not bounded canonical JSON`);
+  if (
+    (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) ||
+    bytes.includes(Buffer.from("\r"))
+  )
+    throw new Error(`${label} is not canonical JSON`);
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(`${label} is not valid UTF-8 JSON`);
+  }
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    throw new Error(`${label} is not valid JSON`);
+  }
+  if (!canonicalValue(value) || text !== canonicalText(value))
+    throw new Error(`${label} is not canonical JSON`);
+  return value;
+};
 export const subjectBytes = (files) =>
   Buffer.concat(
     [...files]
@@ -202,8 +251,22 @@ const normalizedPath = (path) => {
     !path.startsWith(`${LEDGER_RELATIVE}/`)
   );
 };
+const gitDirectory = (root) => {
+  const dotGit = resolve(root, ".git");
+  const metadata = lstatSync(dotGit);
+  if (metadata.isDirectory()) return dotGit;
+  if (!metadata.isFile()) throw new Error("repository metadata is invalid");
+  const pointer = readFileSync(dotGit, "utf8").trim();
+  if (!pointer.startsWith("gitdir: ")) throw new Error("repository metadata is invalid");
+  return resolve(root, pointer.slice("gitdir: ".length));
+};
+const gitArguments = (root, args) => [
+  `--git-dir=${gitDirectory(root)}`,
+  `--work-tree=${resolve(root)}`,
+  ...args,
+];
 const git = (root, ...args) =>
-  execFileSync("git", args, {
+  execFileSync("git", gitArguments(root, args), {
     cwd: root,
     encoding: "utf8",
     timeout: 15_000,
@@ -211,7 +274,7 @@ const git = (root, ...args) =>
     windowsHide: true,
   }).trim();
 const gitBytes = (root, ...args) =>
-  execFileSync("git", args, {
+  execFileSync("git", gitArguments(root, args), {
     cwd: root,
     timeout: 15_000,
     maxBuffer: 8 * 1024 * 1024,
@@ -219,7 +282,12 @@ const gitBytes = (root, ...args) =>
   });
 const gitExists = (root, ...args) => {
   try {
-    execFileSync("git", args, { cwd: root, stdio: "ignore", timeout: 15_000, windowsHide: true });
+    execFileSync("git", gitArguments(root, args), {
+      cwd: root,
+      stdio: "ignore",
+      timeout: 15_000,
+      windowsHide: true,
+    });
     return true;
   } catch {
     return false;
@@ -231,6 +299,42 @@ const isAncestor = (root, older, newer) =>
   gitExists(root, "merge-base", "--is-ancestor", older, newer);
 const readAt = (root, commit, path) => gitBytes(root, "show", `${commit}:${path}`);
 const objectExists = (root, object) => gitExists(root, "cat-file", "-e", object);
+
+const containedPath = (root, relativePath) => {
+  const rootPath = resolve(root);
+  const candidate = resolve(rootPath, relativePath);
+  const foldedRoot = process.platform === "win32" ? rootPath.toLowerCase() : rootPath;
+  const foldedCandidate = process.platform === "win32" ? candidate.toLowerCase() : candidate;
+  if (!foldedCandidate.startsWith(`${foldedRoot}${sep}`))
+    throw new Error("candidate file is outside the repository root");
+  return candidate;
+};
+const assertTrackedRegularBlob = (root, commit, relativePath, label) => {
+  const line = git(root, "ls-tree", commit, "--", relativePath);
+  const [metadata, listedPath, extra] = line.split("\t");
+  const [mode, type, object] = (metadata ?? "").split(" ");
+  if (
+    extra !== undefined ||
+    listedPath !== relativePath ||
+    mode !== "100644" ||
+    type !== "blob" ||
+    !/^[0-9a-f]{40,64}$/.test(object ?? "")
+  )
+    throw new Error(`${label} is not a regular tracked blob`);
+};
+const readCandidateFile = (root, commit, relativePath, label, maximumBytes) => {
+  const path = containedPath(root, relativePath);
+  assertTrackedRegularBlob(root, commit, relativePath, label);
+  let metadata;
+  try {
+    metadata = lstatSync(path);
+  } catch {
+    throw new Error(`${label} is unavailable`);
+  }
+  if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > maximumBytes)
+    throw new Error(`${label} is not a bounded regular file`);
+  return readFileSync(path);
+};
 
 const resolveRef = (rootSchema, reference) => {
   if (!reference.startsWith("#/$defs/"))
@@ -348,7 +452,7 @@ const filesFrom = (subject) =>
     path: String(file.path),
     sha256: String(file.sha256),
   }));
-const verifySubject = (root, subject, sourceCommit, ledgerHead) => {
+const verifySubject = (root, subject, sourceCommit, ledgerHead, reviewBase) => {
   if (!commitExists(root, sourceCommit))
     throw new Error(`subject source commit ${sourceCommit} does not exist`);
   if (sourceCommit === ledgerHead)
@@ -357,6 +461,8 @@ const verifySubject = (root, subject, sourceCommit, ledgerHead) => {
     throw new Error(
       `subject source ${sourceCommit} is not an ancestor of ledger head ${ledgerHead}`,
     );
+  if (!commitExists(root, reviewBase) || !isAncestor(root, sourceCommit, reviewBase))
+    throw new Error("subject T must be preserved by and resolvable from the pull-request base");
   const files = filesFrom(asObject(subject));
   const paths = files.map(({ path }) => path);
   if (
@@ -548,6 +654,14 @@ const validateEvent = (record, earlier, state) => {
       references.some((digest) => !requiredReferences.has(digest))
     )
       throw new Error("phase authority references must equal grant plus gates");
+    const slot = `${payload.phaseId}\0${payload.reviewedHead}\0${payload.subjectBundleSha256}`;
+    state.latestPhaseApprovals.set(slot, {
+      digest: state.digest,
+      grant,
+      gateDigests,
+      gateSlots: gates.map(({ slot: gateSlot }) => gateSlot),
+      record,
+    });
   }
 };
 
@@ -581,26 +695,74 @@ export function classifyToolingBundle(filesInput, authorization) {
   return "rejected";
 }
 
-const readLedger = (root) => {
+const readLedger = (root, ledgerHead) => {
   const directory = resolve(root, LEDGER_RELATIVE);
-  const indexBytes = readFileSync(resolve(directory, "index.json"));
-  const policyBytes = readFileSync(resolve(directory, "policy.json"));
-  const schemaBytes = readFileSync(resolve(directory, "schema.json"));
-  const index = JSON.parse(indexBytes.toString("utf8"));
-  const policy = JSON.parse(policyBytes.toString("utf8"));
-  const schema = JSON.parse(schemaBytes.toString("utf8"));
-  const records = asObjects(index.records, "index.records").map((entry) => {
-    const path = String(entry.path);
-    const bytes = readFileSync(resolve(root, path));
-    return { entry, path, bytes, value: JSON.parse(bytes.toString("utf8")) };
+  const indexBytes = readCandidateFile(
+    root,
+    ledgerHead,
+    `${LEDGER_RELATIVE}/index.json`,
+    "approval-history index",
+    MAX_CONTROL_BYTES,
+  );
+  const policyBytes = readCandidateFile(
+    root,
+    ledgerHead,
+    `${LEDGER_RELATIVE}/policy.json`,
+    "approval-history policy",
+    MAX_CONTROL_BYTES,
+  );
+  const schemaBytes = readCandidateFile(
+    root,
+    ledgerHead,
+    `${LEDGER_RELATIVE}/schema.json`,
+    "approval-history schema",
+    MAX_CONTROL_BYTES,
+  );
+  const index = parseCanonicalJson(indexBytes, "approval-history index");
+  const policy = parseCanonicalJson(policyBytes, "approval-history policy");
+  const schema = parseCanonicalJson(schemaBytes, "approval-history schema");
+  const entries = asObjects(index.records, "index.records");
+  for (let offset = 0; offset < entries.length; offset += 1) {
+    const entry = entries[offset];
+    if (
+      !exactKeys(entry, ["sequence", "digest", "path"]) ||
+      entry.sequence !== offset + 1 ||
+      !DIGEST.test(entry.digest) ||
+      entry.path !== `${LEDGER_RELATIVE}/records/${entry.digest}.json`
+    )
+      throw new Error(`record ${offset + 1} index binding mismatch`);
+  }
+  const records = entries.map((entry, offset) => {
+    const path = entry.path;
+    const bytes = readCandidateFile(
+      root,
+      ledgerHead,
+      path,
+      `record ${offset + 1}`,
+      MAX_RECORD_BYTES,
+    );
+    return {
+      entry,
+      path,
+      bytes,
+      value: parseCanonicalJson(bytes, `record ${offset + 1}`, MAX_RECORD_BYTES),
+    };
   });
   return { directory, indexBytes, policyBytes, schemaBytes, index, policy, schema, records };
 };
 const fixedIndexHeader = (index) =>
   Object.fromEntries(Object.entries(index).filter(([key]) => key !== "records"));
 
-export function validateLedger(root, ledgerHead) {
-  const ledger = readLedger(root);
+export function validateLedger(
+  root,
+  ledgerHead,
+  reviewBase,
+  trustedRoot = root,
+  trustedHead = ledgerHead,
+) {
+  if (!commitExists(root, ledgerHead) || !commitExists(root, reviewBase))
+    throw new Error("ledger head and review base must be commits");
+  const ledger = readLedger(root, ledgerHead);
   const { index, policy, schema, records, schemaBytes, policyBytes, directory } = ledger;
   if (!exactKeys(index, ["schemaVersion", "ledgerId", "schemaSha256", "policySha256", "records"]))
     throw new Error("index header keys mismatch");
@@ -613,11 +775,45 @@ export function validateLedger(root, ledgerHead) {
     bootstrap.schemaSha256 !== sha256(schemaBytes)
   )
     throw new Error("policy bootstrap binding mismatch");
-  const scriptBytes = readFileSync(resolve(root, "scripts/check-auth-approval-history.mjs"));
-  const workflowBytes = readFileSync(resolve(root, ".github/workflows/auth-approval-history.yml"));
+  const scriptBytes = readCandidateFile(
+    root,
+    ledgerHead,
+    "scripts/check-auth-approval-history.mjs",
+    "candidate validator",
+    MAX_CONTROL_BYTES,
+  );
+  const workflowBytes = readCandidateFile(
+    root,
+    ledgerHead,
+    ".github/workflows/auth-approval-history.yml",
+    "candidate workflow",
+    MAX_CONTROL_BYTES,
+  );
+  const trustedScriptBytes =
+    trustedRoot === root
+      ? scriptBytes
+      : readCandidateFile(
+          trustedRoot,
+          trustedHead,
+          "scripts/check-auth-approval-history.mjs",
+          "trusted validator",
+          MAX_CONTROL_BYTES,
+        );
+  const trustedWorkflowBytes =
+    trustedRoot === root
+      ? workflowBytes
+      : readCandidateFile(
+          trustedRoot,
+          trustedHead,
+          ".github/workflows/auth-approval-history.yml",
+          "trusted workflow",
+          MAX_CONTROL_BYTES,
+        );
   if (
-    bootstrap.validatorSha256 !== sha256(scriptBytes) ||
-    bootstrap.workflowSha256 !== sha256(workflowBytes)
+    !scriptBytes.equals(trustedScriptBytes) ||
+    !workflowBytes.equals(trustedWorkflowBytes) ||
+    bootstrap.validatorSha256 !== sha256(trustedScriptBytes) ||
+    bootstrap.workflowSha256 !== sha256(trustedWorkflowBytes)
   )
     throw new Error("trusted validator or workflow digest mismatch");
   if (JSON.stringify(policy.eventTypes) !== JSON.stringify(EVENT_TYPES))
@@ -650,6 +846,7 @@ export function validateLedger(root, ledgerHead) {
     revokedDelegations: new Set(),
     reviews: new Map(),
     latestReviews: new Map(),
+    latestPhaseApprovals: new Map(),
     digest: null,
   };
   records.forEach(({ entry, path, bytes, value }, offset) => {
@@ -661,13 +858,6 @@ export function validateLedger(root, ledgerHead) {
       path !== entry.path
     )
       throw new Error(`record ${offset + 1} index binding mismatch`);
-    if (
-      bytes[0] === 0xef ||
-      bytes.includes(Buffer.from("\r\n")) ||
-      bytes.toString("utf8") !== canonicalText(value) ||
-      !canonicalValue(value)
-    )
-      throw new Error(`record ${offset + 1} is not canonical JSON`);
     const schemaErrors = validateSchemaSubset(schema, value);
     if (schemaErrors.length)
       throw new Error(`record ${offset + 1} schema failed: ${schemaErrors.join("; ")}`);
@@ -698,13 +888,33 @@ export function validateLedger(root, ledgerHead) {
       ])
     )
       throw new Error("provenance keys mismatch");
-    verifySubject(root, value.subject, provenance.sourceCommit, ledgerHead);
+    verifySubject(root, value.subject, provenance.sourceCommit, ledgerHead, reviewBase);
     state.digest = entry.digest;
     validateEvent(value, earlier, state);
     earlier.add(entry.digest);
     previous = entry.digest;
   });
-  return { ...ledger, recordCount: records.length, tipDigest: previous };
+  const effectivePhaseApprovals = [...state.latestPhaseApprovals.values()]
+    .filter(
+      ({ grant, gateDigests, gateSlots }) =>
+        state.activeDelegations.has(grant) &&
+        !state.revokedDelegations.has(grant) &&
+        gateDigests.every(
+          (digest, index) => state.latestReviews.get(gateSlots[index])?.digest === digest,
+        ),
+    )
+    .map(({ digest, record }) => ({
+      digest,
+      phaseId: record.payload.phaseId,
+      reviewedHead: record.payload.reviewedHead,
+      subjectBundleSha256: record.payload.subjectBundleSha256,
+    }));
+  return {
+    ...ledger,
+    recordCount: records.length,
+    tipDigest: previous,
+    effectivePhaseApprovals,
+  };
 }
 
 export function validateAppendOnly(root, base, head, ledger) {
@@ -712,8 +922,8 @@ export function validateAppendOnly(root, base, head, ledger) {
     throw new Error("base/head commits must exist with base ancestor of head");
   const baseIndexObject = `${base}:${LEDGER_RELATIVE}/index.json`;
   if (!objectExists(root, baseIndexObject)) {
-    if (base !== INSTALLATION_BASE)
-      throw new Error(`ledger bootstrap is allowed only from ${INSTALLATION_BASE}`);
+    if (base !== INSTALLATION_BASE && !isAncestor(root, INSTALLATION_BASE, base))
+      throw new Error("ledger bootstrap base must descend from the recorded installation baseline");
     if (ledger.records.length !== 4)
       throw new Error("bootstrap may contain only the four canonical genesis records");
     return { mode: "bootstrap", appended: 4 };
@@ -725,8 +935,9 @@ export function validateAppendOnly(root, base, head, ledger) {
       )
     )
       throw new Error(`${name} is frozen after bootstrap`);
-  const baseIndex = JSON.parse(
-    readAt(root, base, `${LEDGER_RELATIVE}/index.json`).toString("utf8"),
+  const baseIndex = parseCanonicalJson(
+    readAt(root, base, `${LEDGER_RELATIVE}/index.json`),
+    "base approval-history index",
   );
   if (
     JSON.stringify(fixedIndexHeader(ledger.index)) !== JSON.stringify(fixedIndexHeader(baseIndex))
@@ -739,31 +950,58 @@ export function validateAppendOnly(root, base, head, ledger) {
   )
     throw new Error("record index prefix changed or was truncated");
   for (const old of oldRecords) {
-    const path = String(old.path);
-    if (!readFileSync(resolve(root, path)).equals(readAt(root, base, path)))
-      throw new Error(`historical record bytes changed: ${path}`);
+    if (
+      !exactKeys(old, ["sequence", "digest", "path"]) ||
+      !Number.isSafeInteger(old.sequence) ||
+      !DIGEST.test(old.digest) ||
+      old.path !== `${LEDGER_RELATIVE}/records/${old.digest}.json`
+    )
+      throw new Error("base record index binding mismatch");
+    const candidateBytes = readCandidateFile(
+      root,
+      head,
+      old.path,
+      `historical record ${old.sequence}`,
+      MAX_RECORD_BYTES,
+    );
+    if (!candidateBytes.equals(readAt(root, base, old.path)))
+      throw new Error(`historical record ${old.sequence} bytes changed`);
   }
   return { mode: "append", appended: ledger.records.length - oldRecords.length };
 }
 
-export function checkAuthApprovalHistory({ root, base, head }) {
-  const ledger = validateLedger(root, head);
+export function checkAuthApprovalHistory({
+  root,
+  base,
+  head,
+  trustedRoot = root,
+  trustedHead = head,
+}) {
+  const ledger = validateLedger(root, head, base, trustedRoot, trustedHead);
   const append = validateAppendOnly(root, base, head, ledger);
   return {
     mode: append.mode,
     appended: append.appended,
     records: ledger.recordCount,
     tipDigest: ledger.tipDigest,
+    effectivePhaseApprovals: ledger.effectivePhaseApprovals,
   };
 }
 
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const base = process.env.FLUYO_APPROVAL_HISTORY_BASE;
-  const head = process.env.FLUYO_APPROVAL_HISTORY_HEAD ?? git(defaultRoot, "rev-parse", "HEAD");
+  const root = process.env.FLUYO_APPROVAL_HISTORY_ROOT
+    ? resolve(process.env.FLUYO_APPROVAL_HISTORY_ROOT)
+    : defaultRoot;
+  const head = process.env.FLUYO_APPROVAL_HISTORY_HEAD ?? git(root, "rev-parse", "HEAD");
+  const trustedRoot = process.env.FLUYO_APPROVAL_HISTORY_TRUSTED_ROOT
+    ? resolve(process.env.FLUYO_APPROVAL_HISTORY_TRUSTED_ROOT)
+    : root;
+  const trustedHead = process.env.FLUYO_APPROVAL_HISTORY_TRUSTED_HEAD ?? head;
   if (!base) throw new Error("FLUYO_APPROVAL_HISTORY_BASE is required");
-  const result = checkAuthApprovalHistory({ root: defaultRoot, base, head });
+  const result = checkAuthApprovalHistory({ root, base, head, trustedRoot, trustedHead });
   console.log(
-    `Auth approval history passed: ${result.mode}, ${result.records} records, ${result.appended} appended, tip ${result.tipDigest}.`,
+    `Auth approval history passed: ${result.mode}, ${result.records} records, ${result.appended} appended, ${result.effectivePhaseApprovals.length} effective phase approvals, tip ${result.tipDigest}.`,
   );
 }

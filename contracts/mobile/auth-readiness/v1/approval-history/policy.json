@@ -5,9 +5,9 @@
     "genesisRecordCount": 4,
     "historicalSnapshotCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce",
     "installationBaseCommit": "0b5032b0e05539f31ad7efe1b8806ec55f5f91a2",
-    "schemaSha256": "1bdde18c4c156b9718cf55d76ec5f4bc6777df9685e5551ef07a94d00e3d45a2",
-    "validatorSha256": "8cbf39cbc672e93d292c9f59abd91b0d565a0510c91992bb2e1bc46d9adabc92",
-    "workflowSha256": "604e1773b6e064a7509a30147a2cc221692bc417fcf3e66fba7cbe34a5dcb291"
+    "schemaSha256": "8ebacdee02a2acd87248b8b26fdc5b34d88c331bfc9d7fbe02667de5678c80e3",
+    "validatorSha256": "a9daa32b2e65388a08047190dfd1ef390e9087ab811faa3eec9449458b749ca7",
+    "workflowSha256": "09046dd364f057abcce44de3d8f7a13db2911a6e6def4be74cd59366ecb40415"
   },
   "canonicalRecordEncoding": "utf8_nfc_safe_integer_recursive_utf8_key_order_two_space_lf_no_bom",
   "delegation": {
@@ -50,6 +50,7 @@
     "concurrentWritersMustRebaseOntoLatestChain": true,
     "decisionEventsDeniedInV1": true,
     "effectiveStateComesOnlyFromValidatedFold": true,
+    "phaseApprovalRemainsEffectiveOnlyWhileCitedReviewsStayLatestPassAndDelegationActive": true,
     "phaseApprovalRequiresAdrianaActiveDelegationEarlierLatestMatchingPassGatesAndBoundedNonproductionScope": true,
     "referencesMustNameEarlierRecordDigests": true,
     "reviewSupersessionMakesEarlierAttestationStale": true,
