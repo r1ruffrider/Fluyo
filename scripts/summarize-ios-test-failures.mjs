@@ -1,5 +1,7 @@
 import fs from "node:fs";
 
+import { githubWorkflowErrorAnnotation } from "./github-workflow-annotation.mjs";
+
 const authCorpusIds = new Set([
   "cold_start_without_candidate",
   "cold_start_with_candidate",
@@ -54,7 +56,16 @@ const diagnosticFallbackPattern =
   /\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\](?![A-Za-z0-9_])/;
 const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
 
-const [logPath, phaseFlag, phase] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const githubAnnotationIndex = args.indexOf("--github-annotation");
+const githubAnnotation = githubAnnotationIndex !== -1;
+if (githubAnnotation) {
+  args.splice(githubAnnotationIndex, 1);
+  if (args.includes("--github-annotation") || process.env.GITHUB_ACTIONS !== "true") {
+    throw new Error("GitHub annotation mode requires one flag and GitHub Actions.");
+  }
+}
+const [logPath, phaseFlag, phase, ...extraArgs] = args;
 const phases = new Set([
   "build_debug",
   "build_staging",
@@ -62,7 +73,7 @@ const phases = new Set([
   "test_minimum",
   "test_current",
 ]);
-if (!logPath || phaseFlag !== "--phase" || !phases.has(phase)) {
+if (!logPath || phaseFlag !== "--phase" || !phases.has(phase) || extraArgs.length !== 0) {
   throw new Error("Use a bounded iOS phase.");
 }
 
@@ -118,6 +129,42 @@ const boundedDiagnostic = authDiagnostic
     : diagnosticUnavailable
       ? "; stage=diagnostic; mismatch=unavailable"
       : "";
-process.stderr.write(
-  `iOS phase failed; phase=${phase}; category=${category}; test=${test}${boundedDiagnostic}; raw output discarded\n`,
-);
+if (githubAnnotation) {
+  const fields = [`phase=${phase}`, `category=${category}`];
+  if (authDiagnostic) {
+    fields.push(`corpus=${authDiagnostic[1]}`);
+    if (authDiagnostic[2]) {
+      fields.push("stage=snapshot", `mismatch=${authDiagnostic[2]}`);
+    } else if (authDiagnostic[3]) {
+      fields.push("stage=trace", "mismatch=sequence_unavailable");
+    } else if (authDiagnostic[4]) {
+      fields.push(
+        "stage=trace",
+        "mismatch=count",
+        `expected_count=${authDiagnostic[4]}`,
+        `actual_count=${authDiagnostic[5]}`,
+      );
+    } else {
+      fields.push(
+        "stage=trace",
+        "mismatch=sequence",
+        `index=${authDiagnostic[6]}`,
+        `expected=${authDiagnostic[7]}`,
+        `actual=${authDiagnostic[8]}`,
+      );
+    }
+  } else if (diagnosticFallback) {
+    if (test !== "unknown") fields.push(`test=${test}`);
+    fields.push(`stage=${diagnosticFallback[1]}`, `mismatch=${diagnosticFallback[2]}`);
+  } else if (diagnosticUnavailable) {
+    if (test !== "unknown") fields.push(`test=${test}`);
+    fields.push("stage=diagnostic", "mismatch=unavailable");
+  } else if (test !== "unknown") {
+    fields.push(`test=${test}`);
+  }
+  process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
+} else {
+  process.stderr.write(
+    `iOS phase failed; phase=${phase}; category=${category}; test=${test}${boundedDiagnostic}; raw output discarded\n`,
+  );
+}

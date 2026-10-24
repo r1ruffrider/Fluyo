@@ -4,6 +4,15 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { githubWorkflowAnnotationTitle } from "./github-workflow-annotation.mjs";
+
+const summarizeAnnotation = (file, phase, githubActions = "true") =>
+  spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", phase, "--github-annotation"],
+    { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: githubActions } },
+  );
+
 const root = mkdtempSync(join(tmpdir(), "fluyo-ios-summary-"));
 try {
   const file = join(root, "raw.log");
@@ -105,6 +114,10 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   assert.match(
     boundedOutput,
     /phase=test_minimum; category=auth_contract; test=unknown; corpus=callback_cancel; stage=snapshot; mismatch=state; raw output discarded/,
+  );
+  assert.equal(
+    boundedOutput,
+    "iOS phase failed; phase=test_minimum; category=auth_contract; test=unknown; corpus=callback_cancel; stage=snapshot; mismatch=state; raw output discarded\n",
   );
   for (const value of privateValues) assert.equal(boundedOutput.includes(value), false);
 
@@ -297,6 +310,62 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   const adversarialOutput = `${adversarial.stdout}${adversarial.stderr}`;
   assert.doesNotMatch(adversarialOutput, /vector=|stage=|mismatch=/);
   for (const value of privateValues) assert.equal(adversarialOutput.includes(value), false);
+
+  const annotationTest =
+    "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups";
+  const annotationCases = [
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]",
+      "corpus=cold_start_without_candidate; stage=snapshot; mismatch=state",
+    ],
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]",
+      "corpus=cold_start_without_candidate; stage=trace; mismatch=sequence_unavailable",
+    ],
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_trace_count_expected_2_actual_3]",
+      "corpus=cold_start_without_candidate; stage=trace; mismatch=count; expected_count=2; actual_count=3",
+    ],
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500]",
+      "corpus=cold_start_without_candidate; stage=trace; mismatch=sequence; index=1; expected=snapshot_published; actual=timer_500",
+    ],
+    ...fixedFallbacks.map(([stage, mismatch]) => [
+      `[auth_corpus_stage_${stage}_${mismatch}]`,
+      `test=${annotationTest}; stage=${stage}; mismatch=${mismatch}`,
+    ]),
+  ];
+  for (const [marker, expectedDiagnostic] of annotationCases) {
+    writeFileSync(
+      file,
+      `Test Case '-[FluyoTests.AuthRuntimeKernelTests ${annotationTest}]' failed (0.001 seconds). ${marker} learner@example.test\n::warning title=owned::private`,
+    );
+    const annotated = summarizeAnnotation(file, "test_current");
+    assert.equal(annotated.status, 0);
+    assert.equal(annotated.stderr, "");
+    assert.equal(
+      annotated.stdout,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=auth_contract; ${expectedDiagnostic}\n`,
+    );
+    assert.equal(annotated.stdout.match(/\n/g)?.length, 1);
+    assert.doesNotMatch(annotated.stdout, /example\.test|warning|owned|private/i);
+  }
+
+  writeFileSync(
+    file,
+    `AuthRuntimeKernelTests assertion failed [auth_corpus_stage_trace_diagnostic_rejected_private] learner@example.test\n::error title=owned::private`,
+  );
+  const genericAnnotation = summarizeAnnotation(file, "test_current");
+  assert.equal(genericAnnotation.status, 0);
+  assert.equal(genericAnnotation.stderr, "");
+  assert.equal(
+    genericAnnotation.stdout,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=assertion\n`,
+  );
+
+  const outsideActions = summarizeAnnotation(file, "test_current", "false");
+  assert.notEqual(outsideActions.status, 0);
+  assert.equal(outsideActions.stdout, "");
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

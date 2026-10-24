@@ -399,15 +399,36 @@ describe("native auth executable synthetic kernel", () => {
   it("carries only validated auth diagnostics and removes the Android sidecar", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
     const build = readFileSync(resolve(root, "apps/android/app/build.gradle.kts"), "utf8");
+    const summarizer = readFileSync(
+      resolve(root, "scripts/summarize-android-test-failures.mjs"),
+      "utf8",
+    );
+    const annotation = readFileSync(
+      resolve(root, "scripts/github-workflow-annotation.mjs"),
+      "utf8",
+    );
     expect(workflow).toContain(
       'AUTH_DIAGNOSTIC_FILE="$GITHUB_WORKSPACE/apps/android/app/build/auth-runtime-diagnostic.txt"',
     );
     expect(workflow).not.toContain("FLUYO_AUTH_DIAGNOSTIC_FILE");
     expect(workflow).toContain('rm -f "$AUTH_DIAGNOSTIC_FILE"');
     expect(workflow).toContain('--diagnostic-file "$AUTH_DIAGNOSTIC_FILE"');
+    expect(workflow).toContain("--github-annotation");
+    expect(workflow.match(/scripts\/github-workflow-annotation\.mjs/g)).toHaveLength(2);
+    expect(workflow.match(/scripts\/github-workflow-annotation\.test\.mjs/g)).toHaveLength(2);
     expect(build).toContain('layout.buildDirectory.file("auth-runtime-diagnostic.txt")');
     expect(build).toContain('systemProperty("fluyo.authDiagnosticFile"');
     expect(build).toContain("doFirst { authDiagnosticFile.get().asFile.delete() }");
+    expect(summarizer).toContain('process.env.GITHUB_ACTIONS !== "true"');
+    expect(summarizer).toContain('githubWorkflowErrorAnnotation(fields.join("; "))');
+    expect(annotation).toContain(
+      'export const githubWorkflowAnnotationTitle = "Fluyo native auth diagnostic"',
+    );
+    expect(annotation).toContain('replaceAll("%", "%25")');
+    expect(annotation).toContain('replaceAll("\\r", "%0D")');
+    expect(annotation).toContain('replaceAll("\\n", "%0A")');
+    expect(annotation).toContain('replaceAll(":", "%3A")');
+    expect(annotation).toContain('replaceAll(",", "%2C")');
   });
 
   it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {
@@ -437,6 +458,8 @@ describe("native auth executable synthetic kernel", () => {
       "packages/shared/src/auth-runtime-synthetic-contract.test.ts",
       "packages/shared/src/ios-foundation-structure.test.ts",
       "scripts/ios-ci.sh",
+      "scripts/github-workflow-annotation.mjs",
+      "scripts/github-workflow-annotation.test.mjs",
       "scripts/summarize-android-test-failures.mjs",
       "scripts/summarize-ios-test-failures.mjs",
       "scripts/summarize-ios-test-failures.test.mjs",

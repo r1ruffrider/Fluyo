@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { githubWorkflowAnnotationTitle } from "./github-workflow-annotation.mjs";
 
 const digest = "0e273eeddffd655f44ad86514da715c8925fadc99f093047e6d6ee1f6d33f214";
 const ids = readFileSync("contracts/mobile/auth-runtime-synthetic/v1/vectors.tsv", "utf8")
@@ -21,6 +23,16 @@ const summarize = (...args) =>
     encoding: "utf8",
     stdio: "pipe",
   });
+const summarizeAnnotation = (...args) =>
+  execFileSync(
+    process.execPath,
+    ["scripts/summarize-android-test-failures.mjs", ...args, "--github-annotation"],
+    {
+      encoding: "utf8",
+      stdio: "pipe",
+      env: { ...process.env, GITHUB_ACTIONS: "true" },
+    },
+  );
 const testcase = (id, index, className = "com.fluyo.app.AuthRuntimeKernelTest") =>
   `<testcase name="canonicalScenarioOrInvariant[${index}:${id}@${digest}]" classname="${className}"/>`;
 const xml = (cases, tests = 41) =>
@@ -283,6 +295,83 @@ try {
   assert.equal(adversarialFailure.testName, "auth_vector_unknown");
   assert.equal("authDiagnostic" in adversarialFailure, false);
   assert.doesNotMatch(adversarial, /example\.test|private/i);
+
+  const annotationCases = [
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]",
+      "corpus=cold_start_without_candidate; stage=snapshot; mismatch=state",
+    ],
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]",
+      "corpus=cold_start_without_candidate; stage=trace; mismatch=sequence_unavailable",
+    ],
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_trace_count_expected_2_actual_3]",
+      "corpus=cold_start_without_candidate; stage=trace; mismatch=count; expected_count=2; actual_count=3",
+    ],
+    [
+      "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500]",
+      "corpus=cold_start_without_candidate; stage=trace; mismatch=sequence; index=1; expected=snapshot_published; actual=timer_500",
+    ],
+    ...fixedFallbacks.map(([stage, mismatch]) => [
+      `[auth_corpus_stage_${stage}_${mismatch}]`,
+      `test=auth_corpus_cold_start_without_candidate; stage=${stage}; mismatch=${mismatch}`,
+    ]),
+  ];
+  for (const [marker, expectedDiagnostic] of annotationCases) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="${marker}">learner@example.test\n::warning title=owned::private</failure></testcase></testsuite>`,
+    );
+    const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
+    assert.equal(
+      annotation,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; ${expectedDiagnostic}\n`,
+    );
+    assert.equal(annotation.match(/\n/g)?.length, 1);
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private/i);
+  }
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_stage_snapshot_diagnostic_inconsistent]">first</failure></testcase><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]">second</failure></testcase></testsuite>`,
+  );
+  assert.equal(
+    summarizeAnnotation(summaryDir, "--phase", "unit_test"),
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test=auth_corpus_cold_start_without_candidate; stage=snapshot; mismatch=diagnostic_inconsistent\n`,
+  );
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_stage_trace_diagnostic_rejected_private]">learner@example.test\n::error title=owned::private</failure></testcase></testsuite>`,
+  );
+  assert.equal(
+    summarizeAnnotation(summaryDir, "--phase", "unit_test"),
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure\n`,
+  );
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_snapshot_state]">learner@example.test</failure></testcase></testsuite>`,
+  );
+  assert.equal(
+    summarize(summaryDir),
+    `{"structuredReports":1,"failures":[{"className":"auth_kernel","testName":"auth_corpus_cold_start_without_candidate","kind":"failure","category":"auth_contract","frameworkFailureCategory":"assertion","runtimeCategories":["assertion"],"sourceLine":null,"authDiagnostic":{"corpusId":"cold_start_without_candidate","stage":"snapshot","mismatch":"state"}}]}\n`,
+  );
+
+  const outsideActions = spawnSync(
+    process.execPath,
+    [
+      "scripts/summarize-android-test-failures.mjs",
+      summaryDir,
+      "--phase",
+      "unit_test",
+      "--github-annotation",
+    ],
+    { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "false" } },
+  );
+  assert.notEqual(outsideActions.status, 0);
+  assert.equal(outsideActions.stdout, "");
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

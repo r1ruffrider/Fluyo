@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { githubWorkflowErrorAnnotation } from "./github-workflow-annotation.mjs";
+
 const authCorpusIds = new Set([
   "cold_start_without_candidate",
   "cold_start_with_candidate",
@@ -95,6 +97,16 @@ if (diagnosticIndex !== -1) {
   const diagnosticFile = args[diagnosticIndex + 1] ?? null;
   args.splice(diagnosticIndex, 2);
   sidecarDiagnostic = readBoundedDiagnostic(diagnosticFile);
+}
+const githubAnnotationIndex = args.indexOf("--github-annotation");
+const githubAnnotation = githubAnnotationIndex !== -1;
+if (githubAnnotation) {
+  args.splice(githubAnnotationIndex, 1);
+  if (args.includes("--github-annotation") || process.env.GITHUB_ACTIONS !== "true" || !phase) {
+    throw new Error(
+      "GitHub annotation mode requires one flag, GitHub Actions, and a bounded phase.",
+    );
+  }
 }
 const roots = args;
 if (roots.length === 0) {
@@ -310,4 +322,30 @@ if (phase) {
     category: xmlFiles.length === 0 ? "pre_report_failure" : "structured_test_failure",
   };
 }
-process.stdout.write(`${JSON.stringify(summary)}\n`);
+if (githubAnnotation) {
+  const failure = failures.find(
+    (candidate) => candidate.className === "auth_kernel" && candidate.authDiagnostic,
+  );
+  const fields = [`phase=${phase}`, `category=${failure?.category ?? summary.diagnostic.category}`];
+  if (failure) {
+    const diagnostic = failure.authDiagnostic;
+    fields.push(
+      diagnostic.corpusId ? `corpus=${diagnostic.corpusId}` : `test=${failure.testName}`,
+      `stage=${diagnostic.stage}`,
+      `mismatch=${diagnostic.mismatch}`,
+    );
+    if (diagnostic.expectedCount !== undefined) {
+      fields.push(
+        `expected_count=${diagnostic.expectedCount}`,
+        `actual_count=${diagnostic.actualCount}`,
+      );
+    }
+    if (diagnostic.index !== undefined) fields.push(`index=${diagnostic.index}`);
+    if (diagnostic.expected !== undefined) {
+      fields.push(`expected=${diagnostic.expected}`, `actual=${diagnostic.actual}`);
+    }
+  }
+  process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
+} else {
+  process.stdout.write(`${JSON.stringify(summary)}\n`);
+}

@@ -10,6 +10,8 @@ on:
       - "packages/shared/src/auth-runtime-synthetic-contract.test.ts"
       - "scripts/android-evidence.mjs"
       - "scripts/scan-android-evidence.mjs"
+      - "scripts/github-workflow-annotation.mjs"
+      - "scripts/github-workflow-annotation.test.mjs"
       - "scripts/summarize-android-test-failures.mjs"
       - "scripts/verify-android-auth-kernel-results.mjs"
       - "scripts/verify-android-auth-kernel-results.test.mjs"
@@ -24,6 +26,8 @@ on:
       - "packages/shared/src/auth-runtime-synthetic-contract.test.ts"
       - "scripts/android-evidence.mjs"
       - "scripts/scan-android-evidence.mjs"
+      - "scripts/github-workflow-annotation.mjs"
+      - "scripts/github-workflow-annotation.test.mjs"
       - "scripts/summarize-android-test-failures.mjs"
       - "scripts/verify-android-auth-kernel-results.mjs"
       - "scripts/verify-android-auth-kernel-results.test.mjs"
@@ -204,7 +208,8 @@ jobs:
                 apps/android/app/build/test-results/testStagingDebugUnitTest \
                 apps/android/app/build/outputs/androidTest-results/managedDevice \
                 --phase "$phase" \
-                --diagnostic-file "$AUTH_DIAGNOSTIC_FILE"
+                --diagnostic-file "$AUTH_DIAGNOSTIC_FILE" \
+                --github-annotation
               echo "Android matrix leg failed; raw output was discarded"
               exit "$status"
             fi

@@ -197,6 +197,8 @@ describe("iOS unsigned foundation structure", () => {
     expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
     expect(workflow).toContain("if: success()");
     expect(workflow).toContain("retention-days: 7");
+    expect(workflow.match(/scripts\/github-workflow-annotation\.mjs/g)).toHaveLength(2);
+    expect(workflow.match(/scripts\/github-workflow-annotation\.test\.mjs/g)).toHaveLength(2);
     expect(script).toContain("/Applications/Xcode_16.2.app/Contents/Developer");
     expect(script).toContain("/Applications/Xcode_26.6.app/Contents/Developer");
     expect(script).toContain('ACTUAL_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD)"');
@@ -213,6 +215,11 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain('"runtimeIdentifier"');
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
+    expect(script).toContain('if [[ "${GITHUB_ACTIONS:-}" == "true" ]]');
+    expect(script).toContain("summary_args+=(--github-annotation)");
+    expect(script).toMatch(
+      /node "\$ROOT_DIR\/scripts\/summarize-ios-test-failures\.mjs" "\$\{summary_args\[@\]\}"\s+return 1/,
+    );
     expect(script).toContain("validate_app_configuration");
     expect(script).toContain("testNaturalDebugLaunchRendersAnInternalMarker");
     expect(script).toContain("testUnapprovedPublicHostIsRejectedFromInternalConfiguration");

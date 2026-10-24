@@ -150,8 +150,11 @@ run_xcodebuild() {
   local log_name="$1"
   shift
   if ! xcodebuild "$@" "${COMMON_SETTINGS[@]}" >"$LOG_DIR/$log_name.log" 2>&1; then
-    node "$ROOT_DIR/scripts/summarize-ios-test-failures.mjs" \
-      "$LOG_DIR/$log_name.log" --phase "${log_name//-/_}"
+    local summary_args=("$LOG_DIR/$log_name.log" --phase "${log_name//-/_}")
+    if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+      summary_args+=(--github-annotation)
+    fi
+    node "$ROOT_DIR/scripts/summarize-ios-test-failures.mjs" "${summary_args[@]}"
     return 1
   fi
   echo "$log_name passed"
