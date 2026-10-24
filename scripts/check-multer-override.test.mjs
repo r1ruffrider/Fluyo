@@ -116,6 +116,17 @@ function validTree() {
   };
 }
 
+function cleanTree() {
+  const tree = validTree();
+  const multerNode =
+    tree.dependencies["@fluyo/api"].dependencies["@nestjs/platform-express"].dependencies.multer;
+  delete tree.problems;
+  delete tree.error;
+  delete multerNode.invalid;
+  delete multerNode.problems;
+  return tree;
+}
+
 async function lateFilterFixture() {
   let filterCallbacks = 0;
   const upload = multer({
@@ -145,16 +156,16 @@ async function lateFilterFixture() {
 if (process.argv.includes("--late-filter-fixture")) {
   console.log(JSON.stringify(await lateFilterFixture()));
 } else {
-  test("accepts the exact override, lock, runtime resolution, and scoped npm tree", () => {
+  test("accepts the exact override, runtime resolution, and both safe scoped npm modes", () => {
     assert.deepEqual(validateMulterOverrideState(validState()), []);
-    assert.deepEqual(
-      validateScopedNpmLs({
-        status: 1,
-        tree: validTree(),
-        expectedMulterDirectory: multerDirectory,
-      }),
-      [],
-    );
+    for (const [status, tree] of [
+      [0, cleanTree()],
+      [1, validTree()],
+    ])
+      assert.deepEqual(
+        validateScopedNpmLs({ status, tree, expectedMulterDirectory: multerDirectory }),
+        [],
+      );
     assert.deepEqual(
       parseScopedNpmLsResult({
         status: 1,
@@ -179,25 +190,34 @@ if (process.argv.includes("--late-filter-fixture")) {
     assert.doesNotMatch(message, /STALE_OVERRIDE_REMOVAL/);
   });
 
-  test("rejects scoped npm tree contract changes and hidden dependency flags", () => {
-    const success = validTree();
+  test("rejects mixed, expanded, and malformed scoped npm modes", () => {
+    const mixedSuccess = validTree();
     assert.match(
       validateScopedNpmLs({
         status: 0,
-        tree: success,
+        tree: mixedSuccess,
         expectedMulterDirectory: multerDirectory,
       }).join("\n"),
-      /NPM_LS_CONTRACT_CHANGED/,
+      /clean-success mode/,
     );
-    const extraFlag = validTree();
+    const mixedFailure = cleanTree();
+    assert.notDeepEqual(
+      validateScopedNpmLs({
+        status: 1,
+        tree: mixedFailure,
+        expectedMulterDirectory: multerDirectory,
+      }),
+      [],
+    );
+    const extraFlag = cleanTree();
     extraFlag.dependencies["@fluyo/api"].extraneous = true;
     assert.match(
       validateScopedNpmLs({
-        status: 1,
+        status: 0,
         tree: extraFlag,
         expectedMulterDirectory: multerDirectory,
       }).join("\n"),
-      /only the exact Nest-to-Multer invalid edge/,
+      /clean-success mode/,
     );
     const extraProblem = validTree();
     extraProblem.problems.push("missing: other@1.0.0");
@@ -208,6 +228,35 @@ if (process.argv.includes("--late-filter-fixture")) {
         expectedMulterDirectory: multerDirectory,
       }).join("\n"),
       /root problem/,
+    );
+    const otherInvalid = validTree();
+    otherInvalid.dependencies["@fluyo/api"].invalid = '"0.0.0" from root';
+    assert.match(
+      validateScopedNpmLs({
+        status: 1,
+        tree: otherInvalid,
+        expectedMulterDirectory: multerDirectory,
+      }).join("\n"),
+      /invalid-edge mode/,
+    );
+    const missing = cleanTree();
+    delete missing.dependencies["@fluyo/api"].dependencies["@nestjs/platform-express"].dependencies
+      .multer;
+    assert.match(
+      validateScopedNpmLs({
+        status: 0,
+        tree: missing,
+        expectedMulterDirectory: multerDirectory,
+      }).join("\n"),
+      /exactly one Multer node/,
+    );
+    assert.match(
+      validateScopedNpmLs({
+        status: 2,
+        tree: cleanTree(),
+        expectedMulterDirectory: multerDirectory,
+      }).join("\n"),
+      /expected clean success or the known invalid edge/,
     );
   });
 

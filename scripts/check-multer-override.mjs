@@ -83,6 +83,15 @@ function dependencyFlags(value, location = "root", found = []) {
   return found;
 }
 
+function dependencyLocations(value, name, location = "root", found = []) {
+  for (const [key, child] of Object.entries(value?.dependencies ?? {})) {
+    const childLocation = `${location}.dependencies.${key}`;
+    if (key === name) found.push(childLocation);
+    dependencyLocations(child, name, childLocation, found);
+  }
+  return found;
+}
+
 const parseProblem = (problem) => {
   const match = /^invalid: multer@(\S+) (.+)$/.exec(problem ?? "");
   return match && { version: match[1], path: match[2] };
@@ -97,15 +106,8 @@ const sameRealPath = (left, right) => {
 
 export function validateScopedNpmLs({ status, tree, expectedMulterDirectory }) {
   const errors = [];
-  if (status === 0)
-    errors.push(
-      "NPM_LS_CONTRACT_CHANGED: scoped npm ls now succeeds. Investigate npm output semantics; this is not an override-removal signal unless Nest pins Multer 2.5.0 or newer.",
-    );
-  else if (status !== 1)
-    errors.push(
-      `Scoped npm ls exited ${status}; expected the single known invalid edge at exit 1.`,
-    );
-
+  const expectedLocation =
+    "root.dependencies.@fluyo/api.dependencies.@nestjs/platform-express.dependencies.multer";
   const multer =
     tree?.dependencies?.["@fluyo/api"]?.dependencies?.["@nestjs/platform-express"]?.dependencies
       ?.multer;
@@ -116,24 +118,44 @@ export function validateScopedNpmLs({ status, tree, expectedMulterDirectory }) {
       sameRealPath(problem.path, expectedMulterDirectory)
     );
   };
-  if (!validProblem(tree?.problems))
-    errors.push("Scoped npm ls root problem is not the sole installed Multer invalid edge.");
   mismatch(errors, "Scoped npm ls Multer version", multer?.version, EXPECTED_MULTER_VERSION);
   mismatch(errors, "Scoped npm ls Multer registry URL", multer?.resolved, EXPECTED_MULTER_RESOLVED);
-  if (!validProblem(multer?.problems))
-    errors.push("Scoped npm ls Multer node does not repeat the sole installed invalid edge.");
-
   const flags = dependencyFlags(tree);
-  if (
-    flags.length !== 1 ||
-    flags[0].location !==
-      "root.dependencies.@fluyo/api.dependencies.@nestjs/platform-express.dependencies.multer" ||
-    flags[0].key !== "invalid" ||
-    !/^"2\.4\.0" from node_modules[/\\]@nestjs[/\\]platform-express$/.test(flags[0].value ?? "")
-  )
-    errors.push("Scoped npm ls must contain only the exact Nest-to-Multer invalid edge.");
-  if (tree?.error?.code !== "ELSPROBLEMS")
-    errors.push("Scoped npm ls must classify the exact structural mismatch as ELSPROBLEMS.");
+  const locations = dependencyLocations(tree, "multer");
+  if (locations.length !== 1 || locations[0] !== expectedLocation)
+    errors.push("Scoped npm ls must contain exactly one Multer node under Nest platform-express.");
+
+  if (status === 0) {
+    if (
+      tree?.problems !== undefined ||
+      multer?.problems !== undefined ||
+      tree?.error !== undefined ||
+      flags.length !== 0
+    )
+      errors.push(
+        "Scoped npm ls clean-success mode must contain no problems, error, or dependency flags.",
+      );
+  } else if (status === 1) {
+    if (!validProblem(tree?.problems))
+      errors.push("Scoped npm ls root problem is not the sole installed Multer invalid edge.");
+    if (!validProblem(multer?.problems))
+      errors.push("Scoped npm ls Multer node does not repeat the sole installed invalid edge.");
+    if (
+      flags.length !== 1 ||
+      flags[0].location !== expectedLocation ||
+      flags[0].key !== "invalid" ||
+      !/^"2\.4\.0" from node_modules[/\\]@nestjs[/\\]platform-express$/.test(flags[0].value ?? "")
+    )
+      errors.push(
+        "Scoped npm ls invalid-edge mode must contain only the exact Nest-to-Multer edge.",
+      );
+    if (tree?.error?.code !== "ELSPROBLEMS")
+      errors.push("Scoped npm ls invalid-edge mode must be classified as ELSPROBLEMS.");
+  } else {
+    errors.push(
+      `Scoped npm ls exited ${status}; expected clean success or the known invalid edge.`,
+    );
+  }
   return errors;
 }
 
