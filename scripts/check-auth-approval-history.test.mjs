@@ -41,6 +41,7 @@ const ledgerDir = resolve(repoRoot, LEDGER_RELATIVE);
 const index = JSON.parse(readFileSync(resolve(ledgerDir, "index.json"), "utf8"));
 const policy = JSON.parse(readFileSync(resolve(ledgerDir, "policy.json"), "utf8"));
 const schema = JSON.parse(readFileSync(resolve(ledgerDir, "schema.json"), "utf8"));
+const genesisRecordCount = policy.bootstrap.genesisRecordCount;
 const records = index.records.map((entry) => ({
   entry,
   value: JSON.parse(readFileSync(resolve(repoRoot, entry.path), "utf8")),
@@ -128,6 +129,12 @@ function buildAppendFixture({
   git(root, "checkout", "--quiet", INSTALLATION_BASE);
   mkdirSync(resolve(root, LEDGER_RELATIVE), { recursive: true });
   cpSync(ledgerDir, resolve(root, LEDGER_RELATIVE), { recursive: true });
+  const fixtureIndexPath = resolve(root, LEDGER_RELATIVE, "index.json");
+  const fixtureIndex = JSON.parse(readFileSync(fixtureIndexPath, "utf8"));
+  for (const entry of fixtureIndex.records.slice(genesisRecordCount))
+    rmSync(resolve(root, entry.path));
+  fixtureIndex.records = fixtureIndex.records.slice(0, genesisRecordCount);
+  writeFileSync(fixtureIndexPath, canonicalText(fixtureIndex));
   mkdirSync(resolve(root, "scripts"), { recursive: true });
   cpSync(
     resolve(repoRoot, "scripts/check-auth-approval-history.mjs"),
@@ -226,7 +233,7 @@ function buildAppendFixture({
     appendHead,
     subject,
     phaseDigest,
-    phaseSequence: index.records.length + gates.length + 1,
+    phaseSequence: genesisRecordCount + gates.length + 1,
     gates,
   };
 }
@@ -267,9 +274,10 @@ test("freezes trusted schema, validator, workflow, policy, inventory, and four-r
   );
   assert.equal(index.policySha256, sha256(readFileSync(resolve(ledgerDir, "policy.json"))));
   assert.equal(index.schemaSha256, policy.bootstrap.schemaSha256);
-  assert.equal(records.length, 4);
+  assert.equal(genesisRecordCount, 4);
+  assert.equal(records.length >= genesisRecordCount, true);
   assert.deepEqual(
-    records.map(({ value }) => value.eventType),
+    records.slice(0, genesisRecordCount).map(({ value }) => value.eventType),
     [
       "GOVERNANCE_SELECTION",
       "DELEGATION_GRANT",
@@ -281,6 +289,15 @@ test("freezes trusted schema, validator, workflow, policy, inventory, and four-r
     readdirSync(resolve(ledgerDir, "records")).sort(),
     index.records.map(({ digest }) => `${digest}.json`).sort(),
   );
+  for (const [offset, { entry, value }] of records.entries()) {
+    assert.equal(entry.sequence, offset + 1);
+    assert.equal(value.sequence, offset + 1);
+    assert.equal(
+      value.previousRecordDigest,
+      offset === 0 ? null : records[offset - 1].entry.digest,
+    );
+    assert.equal(entry.digest, sha256(readFileSync(resolve(repoRoot, entry.path))));
+  }
   const fixture = buildAppendFixture();
   try {
     const result = fixture.bootstrapResult;
@@ -698,7 +715,7 @@ test(
   "rejects phase attacks with recomputed last-record digests and latest-review-wins staleness",
   () => {
     const fixture = buildAppendFixture();
-    const phaseSequence = 11;
+    const phaseSequence = fixture.phaseSequence;
     const reset = () => {
       git(fixture.root, "reset", "--hard", fixture.appendHead);
       git(fixture.root, "clean", "-fd");
