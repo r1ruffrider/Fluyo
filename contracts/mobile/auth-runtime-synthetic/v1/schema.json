@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2.0.0",
   "status": "repository_only_executable_synthetic_kernel",
-  "authStateBundleSha256": "0e273eeddffd655f44ad86514da715c8925fadc99f093047e6d6ee1f6d33f214",
+  "authStateBundleDigest": "0e273eeddffd655f44ad86514da715c8925fadc99f093047e6d6ee1f6d33f214",
   "authStateBundleAlgorithm": "sha256_filename_nul_be32_length_bytes_sorted",
   "corpusFile": "vectors.tsv",
   "fieldCount": 14,
@@ -19,7 +19,7 @@
     "rejectedWrites",
     "finalGeneration",
     "terminal",
-    "authStateBundleSha256"
+    "authStateBundleDigest"
   ],
   "kinds": ["scenario", "invariant"],
   "initials": ["fresh", "overflow"],

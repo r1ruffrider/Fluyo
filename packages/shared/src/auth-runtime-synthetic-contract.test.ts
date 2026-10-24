@@ -101,7 +101,7 @@ const parse = (bytes: Buffer) => {
       throw new Error("integer");
     }
     if (!/^[01]$/.test(row.terminal!)) throw new Error("terminal");
-    if (row.authStateBundleSha256 !== schema.authStateBundleSha256) throw new Error("digest");
+    if (row.authStateBundleDigest !== schema.authStateBundleDigest) throw new Error("digest");
     if (/https?:|@|\\|bearer|token|secret|exception|email/i.test(fields.slice(2).join("\t"))) {
       throw new Error("forbidden data");
     }
@@ -117,7 +117,7 @@ const parse = (bytes: Buffer) => {
 
 describe("native auth executable synthetic kernel", () => {
   it("binds immutable auth-state bytes and the exact executable inventory", () => {
-    expect(bundleDigest()).toBe(schema.authStateBundleSha256);
+    expect(bundleDigest()).toBe(schema.authStateBundleDigest);
     const rows = parse(corpus);
     expect(rows.filter((row) => row.kind === "scenario")).toHaveLength(28);
     expect(rows.filter((row) => row.kind === "invariant")).toHaveLength(13);
@@ -131,7 +131,7 @@ describe("native auth executable synthetic kernel", () => {
       Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), corpus]),
       Buffer.from(text.replace(/\n/g, "\r\n")),
       Buffer.from(text.replace("init_none", "unknown_step")),
-      Buffer.from(text.replace(String(schema.authStateBundleSha256), "f".repeat(64))),
+      Buffer.from(text.replace(String(schema.authStateBundleDigest), "f".repeat(64))),
       Buffer.from(`${text}${lines[1]}\n`),
       Buffer.from(`${[lines[0], ...lines.slice(2)].join("\n")}\n`),
       Buffer.from(text.replace("cold_start_without_candidate", "learner@example.test")),

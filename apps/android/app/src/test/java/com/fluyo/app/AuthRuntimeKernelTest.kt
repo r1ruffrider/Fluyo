@@ -386,7 +386,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             val bytes = requireNotNull(file).readBytes(); assertFalse(bytes.take(3) == listOf(0xef.toByte(), 0xbb.toByte(), 0xbf.toByte()))
             val decoder = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
             val text = decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString(); assertFalse(text.contains('\r')); assertTrue(text.endsWith('\n'))
-            val lines = text.dropLast(1).split('\n'); val expectedHeader = "kind\tid\tinitial\tsteps\tmonotonicTimes\tportCompletions\texpectedSnapshots\texpectedEffects\texpectedTrace\twipeOrder\trejectedWrites\tfinalGeneration\tterminal\tauthStateBundleSha256"
+            val lines = text.dropLast(1).split('\n'); val expectedHeader = "kind\tid\tinitial\tsteps\tmonotonicTimes\tportCompletions\texpectedSnapshots\texpectedEffects\texpectedTrace\twipeOrder\trejectedWrites\tfinalGeneration\tterminal\tauthStateBundleDigest"
             assertEquals(expectedHeader, lines.first()); val rows = lines.drop(1).map { Vector(it.split('\t')) }
             assertEquals(28, rows.count { it.kind == "scenario" }); assertEquals(13, rows.count { it.kind == "invariant" }); assertEquals(41, rows.map { it.id }.toSet().size); return rows
         }

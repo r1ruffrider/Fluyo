@@ -322,7 +322,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         var root = URL(fileURLWithPath: #filePath); for _ in 0..<4 { root.deleteLastPathComponent() }
         let data = try Data(contentsOf: root.appendingPathComponent("contracts/mobile/auth-runtime-synthetic/v1/vectors.tsv")); XCTAssertFalse(data.starts(with: [0xef, 0xbb, 0xbf]))
         let text = try XCTUnwrap(String(data: data, encoding: .utf8)); XCTAssertFalse(text.contains("\r")); XCTAssertTrue(text.hasSuffix("\n"))
-        let lines = text.dropLast().split(separator: "\n", omittingEmptySubsequences: false); XCTAssertEqual(String(lines[0]), "kind\tid\tinitial\tsteps\tmonotonicTimes\tportCompletions\texpectedSnapshots\texpectedEffects\texpectedTrace\twipeOrder\trejectedWrites\tfinalGeneration\tterminal\tauthStateBundleSha256")
+        let lines = text.dropLast().split(separator: "\n", omittingEmptySubsequences: false); XCTAssertEqual(String(lines[0]), "kind\tid\tinitial\tsteps\tmonotonicTimes\tportCompletions\texpectedSnapshots\texpectedEffects\texpectedTrace\twipeOrder\trejectedWrites\tfinalGeneration\tterminal\tauthStateBundleDigest")
         let rows = try lines.dropFirst().map { try Vector($0.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)) }; XCTAssertEqual(Set(rows.map(\.id)).count, 41); return rows
     }
     private static let digest = "0e273eeddffd655f44ad86514da715c8925fadc99f093047e6d6ee1f6d33f214"
