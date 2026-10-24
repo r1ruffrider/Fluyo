@@ -52,12 +52,17 @@ const authDiagnosticPattern = new RegExp(
   `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:(sequence_unavailable)|count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
 );
 const exactAuthDiagnosticPattern = new RegExp(`^${authDiagnosticPattern.source}\\r?\\n?$`);
+const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
+const exactDiagnosticUnavailablePattern = /^\[auth_corpus_diagnostic_unavailable\]\r?\n?$/;
+const unavailableDiagnostic = Object.freeze({ unavailable: true });
 const readBoundedDiagnostic = (file) => {
   if (!file || !fs.existsSync(file)) return null;
   const stat = fs.lstatSync(file);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 512) return null;
-  const match = fs.readFileSync(file, "utf8").match(exactAuthDiagnosticPattern);
-  return match && authCorpusIds.has(match[1]) ? match : null;
+  const raw = fs.readFileSync(file, "utf8");
+  const match = raw.match(exactAuthDiagnosticPattern);
+  if (match && authCorpusIds.has(match[1])) return match;
+  return exactDiagnosticUnavailablePattern.test(raw) ? unavailableDiagnostic : null;
 };
 
 const args = process.argv.slice(2);
@@ -221,14 +226,16 @@ for (const file of xmlFiles.sort()) {
     const escapedSourceName = sourceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
+    const inlineDiagnosticSource = `${rawAttribute(failureTag[2], "message")}\n${body}`;
     const inlineAuthDiagnostic = authKernel
-      ? `${rawAttribute(failureTag[2], "message")}\n${body}`.match(authDiagnosticPattern)
+      ? (inlineDiagnosticSource.match(authDiagnosticPattern) ??
+        (diagnosticUnavailablePattern.test(inlineDiagnosticSource) ? unavailableDiagnostic : null))
       : null;
     const authDiagnosticMatch = inlineAuthDiagnostic ?? sidecarDiagnostic;
     const authDiagnostic =
       authDiagnosticMatch &&
-      authCorpusIds.has(authDiagnosticMatch[1]) &&
-      authDiagnosticMatch[1] === authCorpusId
+      (authDiagnosticMatch === unavailableDiagnostic ||
+        (authCorpusIds.has(authDiagnosticMatch[1]) && authDiagnosticMatch[1] === authCorpusId))
         ? authDiagnosticMatch
         : null;
     failures.push({
@@ -248,27 +255,30 @@ for (const file of xmlFiles.sort()) {
       sourceLine,
       ...(authDiagnostic
         ? {
-            authDiagnostic: {
-              corpusId: authDiagnostic[1],
-              ...(authDiagnostic[2]
-                ? { stage: "snapshot", mismatch: authDiagnostic[2] }
-                : authDiagnostic[3]
-                  ? { stage: "trace", mismatch: "sequence_unavailable" }
-                  : authDiagnostic[4]
-                    ? {
-                        stage: "trace",
-                        mismatch: "count",
-                        expectedCount: authDiagnostic[4],
-                        actualCount: authDiagnostic[5],
-                      }
-                    : {
-                        stage: "trace",
-                        mismatch: "sequence",
-                        index: Number(authDiagnostic[6]),
-                        expected: authDiagnostic[7],
-                        actual: authDiagnostic[8],
-                      }),
-            },
+            authDiagnostic:
+              authDiagnostic === unavailableDiagnostic
+                ? { stage: "diagnostic", mismatch: "unavailable" }
+                : {
+                    corpusId: authDiagnostic[1],
+                    ...(authDiagnostic[2]
+                      ? { stage: "snapshot", mismatch: authDiagnostic[2] }
+                      : authDiagnostic[3]
+                        ? { stage: "trace", mismatch: "sequence_unavailable" }
+                        : authDiagnostic[4]
+                          ? {
+                              stage: "trace",
+                              mismatch: "count",
+                              expectedCount: authDiagnostic[4],
+                              actualCount: authDiagnostic[5],
+                            }
+                          : {
+                              stage: "trace",
+                              mismatch: "sequence",
+                              index: Number(authDiagnostic[6]),
+                              expected: authDiagnostic[7],
+                              actual: authDiagnostic[8],
+                            }),
+                  },
           }
         : {}),
     });

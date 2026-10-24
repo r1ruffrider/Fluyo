@@ -388,9 +388,11 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) {
         guard !matches else { return }
         let marker = "[auth_corpus_\(corpusId)_stage_\(boundedMismatch)]"
-        if marker.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil { print(marker) }
-        XCTFail(marker, file: file, line: line)
+        let boundedMarker = marker.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil ? marker : Self.diagnosticUnavailableMarker
+        print(boundedMarker)
+        XCTFail(boundedMarker, file: file, line: line)
     }
+    private static let diagnosticUnavailableMarker = "[auth_corpus_diagnostic_unavailable]"
     private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#
     private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(effect.generation, generation, file: file, line: line)

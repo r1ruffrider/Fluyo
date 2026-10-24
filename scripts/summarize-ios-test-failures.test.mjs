@@ -77,6 +77,37 @@ try {
 
   writeFileSync(
     file,
+    `AuthRuntimeKernelTests assertion failed [auth_corpus_diagnostic_unavailable] ${privateValues.join(" ")}`,
+  );
+  const diagnosticUnavailable = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const diagnosticUnavailableOutput = `${diagnosticUnavailable.stdout}${diagnosticUnavailable.stderr}`;
+  assert.match(
+    diagnosticUnavailableOutput,
+    /category=auth_contract; test=unknown; stage=diagnostic; mismatch=unavailable; raw output discarded/,
+  );
+  for (const value of privateValues)
+    assert.equal(diagnosticUnavailableOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `AuthRuntimeKernelTests assertion failed [auth_corpus_diagnostic_unavailable_private] ${privateValues.join(" ")}`,
+  );
+  const diagnosticUnavailableNearMatch = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const diagnosticUnavailableNearMatchOutput = `${diagnosticUnavailableNearMatch.stdout}${diagnosticUnavailableNearMatch.stderr}`;
+  assert.doesNotMatch(diagnosticUnavailableNearMatchOutput, /stage=|mismatch=/);
+  for (const value of privateValues)
+    assert.equal(diagnosticUnavailableNearMatchOutput.includes(value), false);
+
+  writeFileSync(
+    file,
     `AuthRuntimeKernelTests.swift:55: error: AuthRuntimeKernelTests.testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups : failed - [auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] ${privateValues.join(" ")}`,
   );
   const xctFail = spawnSync(

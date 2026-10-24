@@ -131,8 +131,7 @@ jobs:
           RESOURCE_TABLE="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-resources.txt"
           EMULATOR_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-emulator.log"
           INSTRUMENT_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-instrument.log"
-          AUTH_DIAGNOSTIC_FILE="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-auth-diagnostic.txt"
-          export FLUYO_AUTH_DIAGNOSTIC_FILE="$AUTH_DIAGNOSTIC_FILE"
+          AUTH_DIAGNOSTIC_FILE="$GITHUB_WORKSPACE/apps/android/app/build/auth-runtime-diagnostic.txt"
           AVD_HOME="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-avd"
           EMULATOR_PID=""
           cleanup() {
@@ -209,6 +208,7 @@ jobs:
               echo "Android matrix leg failed; raw output was discarded"
               exit "$status"
             fi
+            rm -f "$AUTH_DIAGNOSTIC_FILE"
           }
           verify_packaged_pseudo_locales() {
             local apk="$1"

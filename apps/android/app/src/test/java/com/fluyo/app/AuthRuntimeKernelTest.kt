@@ -438,13 +438,13 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         private fun requireCorpusMatch(matches: Boolean, corpusId: String, boundedMismatch: String) {
             if (matches) return
             val marker = "[auth_corpus_${corpusId}_stage_${boundedMismatch}]"
-            if (boundedDiagnosticPattern.matches(marker)) {
-                System.getProperty("fluyo.authDiagnosticFile")?.let { path ->
-                    Files.write(Path.of(path), "$marker\n".toByteArray(StandardCharsets.UTF_8))
-                }
+            val boundedMarker = if (boundedDiagnosticPattern.matches(marker)) marker else diagnosticUnavailableMarker
+            System.getProperty("fluyo.authDiagnosticFile")?.let { path ->
+                Files.write(Path.of(path), "$boundedMarker\n".toByteArray(StandardCharsets.UTF_8))
             }
-            throw AssertionError(marker)
+            throw AssertionError(boundedMarker)
         }
+        private const val diagnosticUnavailableMarker = "[auth_corpus_diagnostic_unavailable]"
         private val boundedDiagnosticPattern = Regex(
             """^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
         )

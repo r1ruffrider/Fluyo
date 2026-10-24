@@ -190,15 +190,17 @@ describe("native auth executable synthetic kernel", () => {
     }
     expect(swift).toContain("XCTAssertEqual(fullEffectHistory, vector.effects");
     expect(swift).toContain("requireCorpusMatch(trace == vector.trace");
-    expect(swift).toContain("XCTFail(marker");
-    expect(swift).toContain("print(marker)");
+    expect(swift).toContain("XCTFail(boundedMarker");
+    expect(swift).toContain("print(boundedMarker)");
+    expect(swift).toContain("[auth_corpus_diagnostic_unavailable]");
     expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
     expect(swift).toContain("entries.count < commands.count");
     expect(swift).toContain("verifyLateTimerRegistrationCancellation");
     expect(swift).toContain("withTaskCancellationHandler");
     expect(kotlin).toContain("assertEquals(vector.effects, fullEffectHistory)");
     expect(kotlin).toContain("requireCorpusMatch(vector.trace == trace");
-    expect(kotlin).toContain("throw AssertionError(marker)");
+    expect(kotlin).toContain("throw AssertionError(boundedMarker)");
+    expect(kotlin).toContain("[auth_corpus_diagnostic_unavailable]");
     expect(kotlin).toContain('System.getProperty("fluyo.authDiagnosticFile")');
     expect(kotlin).toContain("trace_(?:sequence_unavailable|");
     expect(kotlin).not.toMatch(/(?:System\.(?:out|err)\.)?print(?:ln)?\s*\(|\bLog\.\w+\s*\(/);
@@ -388,11 +390,15 @@ describe("native auth executable synthetic kernel", () => {
   it("carries only validated auth diagnostics and removes the Android sidecar", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
     const build = readFileSync(resolve(root, "apps/android/app/build.gradle.kts"), "utf8");
-    expect(workflow).toContain('export FLUYO_AUTH_DIAGNOSTIC_FILE="$AUTH_DIAGNOSTIC_FILE"');
+    expect(workflow).toContain(
+      'AUTH_DIAGNOSTIC_FILE="$GITHUB_WORKSPACE/apps/android/app/build/auth-runtime-diagnostic.txt"',
+    );
+    expect(workflow).not.toContain("FLUYO_AUTH_DIAGNOSTIC_FILE");
     expect(workflow).toContain('rm -f "$AUTH_DIAGNOSTIC_FILE"');
     expect(workflow).toContain('--diagnostic-file "$AUTH_DIAGNOSTIC_FILE"');
-    expect(build).toContain('providers.environmentVariable("FLUYO_AUTH_DIAGNOSTIC_FILE")');
-    expect(build).toContain('systemProperty("fluyo.authDiagnosticFile", diagnosticFile)');
+    expect(build).toContain('layout.buildDirectory.file("auth-runtime-diagnostic.txt")');
+    expect(build).toContain('systemProperty("fluyo.authDiagnosticFile"');
+    expect(build).toContain("doFirst { authDiagnosticFile.get().asFile.delete() }");
   });
 
   it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {

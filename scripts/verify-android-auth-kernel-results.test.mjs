@@ -107,6 +107,25 @@ try {
 
   writeFileSync(
     summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_diagnostic_unavailable] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const diagnosticUnavailable = summarize(summaryDir);
+  assert.deepEqual(JSON.parse(diagnosticUnavailable).failures[0].authDiagnostic, {
+    stage: "diagnostic",
+    mismatch: "unavailable",
+  });
+  assert.doesNotMatch(diagnosticUnavailable, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_diagnostic_unavailable_private] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const diagnosticUnavailableNearMatch = summarize(summaryDir);
+  assert.equal("authDiagnostic" in JSON.parse(diagnosticUnavailableNearMatch).failures[0], false);
+  assert.doesNotMatch(diagnosticUnavailableNearMatch, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
     `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
   );
   const unavailableNearMatch = summarize(summaryDir);
@@ -152,11 +171,24 @@ try {
     expected: "snapshot_published",
     actual: "timer_500",
   });
+  writeFileSync(diagnosticFile, "[auth_corpus_diagnostic_unavailable]\n");
+  const unavailableSidecar = summarize(
+    summaryDir,
+    "--phase",
+    "unit_test",
+    "--diagnostic-file",
+    diagnosticFile,
+  );
+  assert.deepEqual(JSON.parse(unavailableSidecar).failures[0].authDiagnostic, {
+    stage: "diagnostic",
+    mismatch: "unavailable",
+  });
   for (const rejected of [
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] learner@example.test\n",
     "[auth_corpus_cold_start_without_candidate_private_stage_snapshot_state]\n",
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_5000]\n",
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private]\n",
+    "[auth_corpus_diagnostic_unavailable_private]\n",
     "x".repeat(513),
   ]) {
     writeFileSync(diagnosticFile, rejected);

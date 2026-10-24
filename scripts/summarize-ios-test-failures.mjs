@@ -50,6 +50,7 @@ const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
 const authDiagnosticPattern = new RegExp(
   `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:(sequence_unavailable)|count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
 );
+const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
 
 const [logPath, phaseFlag, phase] = process.argv.slice(2);
 const phases = new Set([
@@ -92,7 +93,9 @@ const boundedDiagnostic = authDiagnostic
       : authDiagnostic[4]
         ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
         : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
-  : "";
+  : diagnosticUnavailablePattern.test(raw)
+    ? "; stage=diagnostic; mismatch=unavailable"
+    : "";
 process.stderr.write(
   `iOS phase failed; phase=${phase}; category=${category}; test=${test}${boundedDiagnostic}; raw output discarded\n`,
 );
