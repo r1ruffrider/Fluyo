@@ -95,6 +95,26 @@ try {
 
   writeFileSync(
     summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const unavailableBounded = summarize(summaryDir);
+  assert.deepEqual(JSON.parse(unavailableBounded).failures[0].authDiagnostic, {
+    corpusId: "cold_start_without_candidate",
+    stage: "trace",
+    mismatch: "sequence_unavailable",
+  });
+  assert.doesNotMatch(unavailableBounded, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const unavailableNearMatch = summarize(summaryDir);
+  assert.equal("authDiagnostic" in JSON.parse(unavailableNearMatch).failures[0], false);
+  assert.doesNotMatch(unavailableNearMatch, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
     `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError">java.lang.AssertionError: [auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500]\n\tat com.fluyo.app.AuthRuntimeKernelTest.canonicalScenarioOrInvariant(AuthRuntimeKernelTest.kt:59)</failure></testcase></testsuite>`,
   );
   const stacktraceBounded = summarize(summaryDir);
@@ -136,6 +156,7 @@ try {
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] learner@example.test\n",
     "[auth_corpus_cold_start_without_candidate_private_stage_snapshot_state]\n",
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_5000]\n",
+    "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private]\n",
     "x".repeat(513),
   ]) {
     writeFileSync(diagnosticFile, rejected);

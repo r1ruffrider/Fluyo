@@ -49,7 +49,7 @@ const traceValuePattern =
 const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
 const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
 const authDiagnosticPattern = new RegExp(
-  `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
+  `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:(sequence_unavailable)|count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
 );
 const exactAuthDiagnosticPattern = new RegExp(`^${authDiagnosticPattern.source}\\r?\\n?$`);
 const readBoundedDiagnostic = (file) => {
@@ -253,19 +253,21 @@ for (const file of xmlFiles.sort()) {
               ...(authDiagnostic[2]
                 ? { stage: "snapshot", mismatch: authDiagnostic[2] }
                 : authDiagnostic[3]
-                  ? {
-                      stage: "trace",
-                      mismatch: "count",
-                      expectedCount: authDiagnostic[3],
-                      actualCount: authDiagnostic[4],
-                    }
-                  : {
-                      stage: "trace",
-                      mismatch: "sequence",
-                      index: Number(authDiagnostic[5]),
-                      expected: authDiagnostic[6],
-                      actual: authDiagnostic[7],
-                    }),
+                  ? { stage: "trace", mismatch: "sequence_unavailable" }
+                  : authDiagnostic[4]
+                    ? {
+                        stage: "trace",
+                        mismatch: "count",
+                        expectedCount: authDiagnostic[4],
+                        actualCount: authDiagnostic[5],
+                      }
+                    : {
+                        stage: "trace",
+                        mismatch: "sequence",
+                        index: Number(authDiagnostic[6]),
+                        expected: authDiagnostic[7],
+                        actual: authDiagnostic[8],
+                      }),
             },
           }
         : {}),

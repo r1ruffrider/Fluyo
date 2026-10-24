@@ -199,7 +199,8 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlin).toContain("assertEquals(vector.effects, fullEffectHistory)");
     expect(kotlin).toContain("requireCorpusMatch(vector.trace == trace");
     expect(kotlin).toContain("throw AssertionError(marker)");
-    expect(kotlin).toContain('System.getenv("FLUYO_AUTH_DIAGNOSTIC_FILE")');
+    expect(kotlin).toContain('System.getProperty("fluyo.authDiagnosticFile")');
+    expect(kotlin).toContain("trace_(?:sequence_unavailable|");
     expect(kotlin).not.toMatch(/(?:System\.(?:out|err)\.)?print(?:ln)?\s*\(|\bLog\.\w+\s*\(/);
     expect(kotlin).toContain("assertEquals(vector.completions.filterNot");
     expect(kotlin).toContain("values.size < commands.size");
@@ -386,9 +387,12 @@ describe("native auth executable synthetic kernel", () => {
 
   it("carries only validated auth diagnostics and removes the Android sidecar", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
+    const build = readFileSync(resolve(root, "apps/android/app/build.gradle.kts"), "utf8");
     expect(workflow).toContain('export FLUYO_AUTH_DIAGNOSTIC_FILE="$AUTH_DIAGNOSTIC_FILE"');
     expect(workflow).toContain('rm -f "$AUTH_DIAGNOSTIC_FILE"');
     expect(workflow).toContain('--diagnostic-file "$AUTH_DIAGNOSTIC_FILE"');
+    expect(build).toContain('providers.environmentVariable("FLUYO_AUTH_DIAGNOSTIC_FILE")');
+    expect(build).toContain('systemProperty("fluyo.authDiagnosticFile", diagnosticFile)');
   });
 
   it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {
@@ -404,6 +408,7 @@ describe("native auth executable synthetic kernel", () => {
       ".github/workflows/android.yml",
       ".github/workflows/ci.yml",
       ".github/workflows/ios.yml",
+      "apps/android/app/build.gradle.kts",
       "apps/android/app/src/main/java/com/fluyo/app/AuthRuntimeKernel.kt",
       "apps/android/app/src/test/java/com/fluyo/app/AuthRuntimeKernelTest.kt",
       "apps/ios/Fluyo.xcodeproj/project.pbxproj",
@@ -443,7 +448,6 @@ describe("native auth executable synthetic kernel", () => {
     for (const path of [
       "package.json",
       "package-lock.json",
-      "apps/android/app/build.gradle.kts",
       "apps/android/app/src/main/AndroidManifest.xml",
       "apps/ios/Fluyo/Info.plist",
       "apps/ios/Config/Base.xcconfig",

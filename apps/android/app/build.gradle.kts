@@ -1,7 +1,15 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("androidx.baselineprofile")
+}
+
+tasks.withType<Test>().configureEach {
+    providers.environmentVariable("FLUYO_AUTH_DIAGNOSTIC_FILE").orNull?.let { diagnosticFile ->
+        systemProperty("fluyo.authDiagnosticFile", diagnosticFile)
+    }
 }
 
 android {

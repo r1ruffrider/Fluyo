@@ -61,6 +61,22 @@ try {
 
   writeFileSync(
     file,
+    `AuthRuntimeKernelTests assertion failed [auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable] ${privateValues.join(" ")}`,
+  );
+  const unavailableBounded = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const unavailableBoundedOutput = `${unavailableBounded.stdout}${unavailableBounded.stderr}`;
+  assert.match(
+    unavailableBoundedOutput,
+    /corpus=cold_start_without_candidate; stage=trace; mismatch=sequence_unavailable; raw output discarded/,
+  );
+  for (const value of privateValues) assert.equal(unavailableBoundedOutput.includes(value), false);
+
+  writeFileSync(
+    file,
     `AuthRuntimeKernelTests.swift:55: error: AuthRuntimeKernelTests.testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups : failed - [auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] ${privateValues.join(" ")}`,
   );
   const xctFail = spawnSync(
@@ -116,6 +132,20 @@ try {
   const nearMatchOutput = `${nearMatch.stdout}${nearMatch.stderr}`;
   assert.doesNotMatch(nearMatchOutput, /corpus=|stage=|mismatch=/);
   for (const value of privateValues) assert.equal(nearMatchOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `AuthRuntimeKernelTests assertion failed [auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private] ${privateValues.join(" ")}`,
+  );
+  const unavailableNearMatch = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const unavailableNearMatchOutput = `${unavailableNearMatch.stdout}${unavailableNearMatch.stderr}`;
+  assert.doesNotMatch(unavailableNearMatchOutput, /corpus=|stage=|mismatch=/);
+  for (const value of privateValues)
+    assert.equal(unavailableNearMatchOutput.includes(value), false);
 
   writeFileSync(
     file,

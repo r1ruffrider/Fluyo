@@ -320,17 +320,17 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
             await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setSuspendActivation(true)
             let work = Task { await coordinator.signOut() }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
-            let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), persistence = await ports.persistence(), wipe = await ports.wipeSummary()
+            let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), persistence = await ports.persistence(), wipe = await ports.wipeSummary(), activationCanceled = await ports.callback.activationWasCancelled()
             XCTAssertEqual(snapshot.state, .signedOut); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(persistence, [false, false, false, false]); XCTAssertEqual(wipe, "callback_headers_vault_owner_confirm")
+            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(persistence, [false, false, false, false]); XCTAssertEqual(wipe, "callback_headers_vault_owner_confirm"); XCTAssertFalse(activationCanceled)
         }
         do {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
             await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setResult(.malformed); await ports.callback.setSuspendActivation(true)
             let work = Task { await coordinator.receiveCallback(ingress()) }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
-            let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), history = await coordinator.presentationEffectHistory()
+            let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), history = await coordinator.presentationEffectHistory(), activationCanceled = await ports.callback.activationWasCancelled()
             XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(history.count, 1)
+            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(history.count, 1); XCTAssertFalse(activationCanceled)
         }
     }
 
@@ -391,7 +391,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         if marker.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil { print(marker) }
         XCTFail(marker, file: file, line: line)
     }
-    private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#
+    private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#
     private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(effect.generation, generation, file: file, line: line)
         XCTAssertEqual(effect.originatingState, .safeTerminalError, file: file, line: line)
@@ -459,6 +459,24 @@ private actor Gate {
     func waitUntilStarted() async { if started { return }; await withCheckedContinuation { startWaiters.append($0) } }
     func release() { released = true; releaseWaiters.forEach { $0.resume() }; releaseWaiters.removeAll() }
 }
+private actor CancellationAwareGate {
+    private var started = false, released = false, canceled = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = [], releaseWaiters: [CheckedContinuation<Bool, Never>] = []
+    func suspendPoint() async -> Bool {
+        started = true; startWaiters.forEach { $0.resume() }; startWaiters.removeAll()
+        if released { return true }; if Task.isCancelled { canceled = true; return false }
+        let completed = await withTaskCancellationHandler(operation: {
+            if Task.isCancelled { canceled = true; return false }
+            return await withCheckedContinuation { releaseWaiters.append($0) }
+        }, onCancel: { Task { await self.cancel() } })
+        if Task.isCancelled { canceled = true; return false }
+        return completed
+    }
+    func waitUntilStarted() async { if started { return }; await withCheckedContinuation { startWaiters.append($0) } }
+    func release() { released = true; releaseWaiters.forEach { $0.resume(returning: !canceled) }; releaseWaiters.removeAll() }
+    func wasCanceled() -> Bool { canceled }
+    private func cancel() { canceled = true; releaseWaiters.forEach { $0.resume(returning: false) }; releaseWaiters.removeAll() }
+}
 private actor OneShotSignal {
     private var signaled = false; private var waiters: [CheckedContinuation<Void, Never>] = []
     func wait() async { if signaled { return }; await withCheckedContinuation { waiters.append($0) } }
@@ -501,18 +519,18 @@ private actor ScriptVault: SessionVaultPort {
     func confirmEmpty(generation: UInt64) async -> Bool { await audit.add("vault_confirm"); return confirm && !storedCandidate }
 }
 private actor ScriptCallback: CallbackTransactionStorePort {
-    private let audit: Audit; private let completions: CompletionAudit; private let generations: GenerationCell; private let validationGate = Gate(), activationGate = Gate(), validationCancellationObserved = OneShotSignal()
+    private let audit: Audit; private let completions: CompletionAudit; private let generations: GenerationCell; private let validationGate = Gate(), activationGate = CancellationAwareGate(), validationCancellationObserved = OneShotSignal()
     private var result = CallbackConsumeResult.malformed, purgeResult = ConditionalMutationResult.applied, confirm = true, calls = 0, atomicWipe = false, pending = false, suspendValidation = false, suspendActivation = false, validationCanceled = false, purgeAfterValidationCancellation = false; private var canceled: Set<UInt64> = []
     init(_ audit: Audit, _ completions: CompletionAudit, _ generations: GenerationCell) { self.audit = audit; self.completions = completions; self.generations = generations }
     func setResult(_ value: CallbackConsumeResult) { result = value }; func setPurgeResult(_ value: ConditionalMutationResult) { purgeResult = value }; func setConfirm(_ value: Bool) { confirm = value }; func callCount() -> Int { calls }
     func setSuspendValidation(_ value: Bool) { suspendValidation = value }; func waitValidationStarted() async { await validationGate.waitUntilStarted() }; func validationCancellationDidComplete() -> Bool { validationCanceled }; func purgeObservedCancellation() -> Bool { purgeAfterValidationCancellation }
-    func setSuspendActivation(_ value: Bool) { suspendActivation = value }; func waitActivationStarted() async { await activationGate.waitUntilStarted() }; func releaseActivation() async { await activationGate.release() }
+    func setSuspendActivation(_ value: Bool) { suspendActivation = value }; func waitActivationStarted() async { await activationGate.waitUntilStarted() }; func releaseActivation() async { await activationGate.release() }; func activationWasCancelled() async -> Bool { await activationGate.wasCanceled() }
     func didAtomicWipe() -> Bool { atomicWipe }
     func seed() { pending = true }; func hasPending() -> Bool { pending }
     func validateConsumeAndWipe(_ ingress: OpaqueCallbackIngress, generation: UInt64) async -> CallbackConsumeResult { calls += 1; if suspendValidation { await validationGate.suspendPoint(); if canceled.contains(generation) { validationCanceled = true; await validationCancellationObserved.signal(); return .staleGeneration } }; let scripted: CallbackConsumeResult; switch await completions.take(["callback_consumed", "callback_malformed", "callback_expired", "callback_replayed", "callback_duplicate", "callback_unsupported", "callback_stale", "callback_failed"]) { case "callback_consumed": scripted = .consumed(.init("opaque-pkce")); case "callback_malformed": scripted = .malformed; case "callback_expired": scripted = .expired; case "callback_replayed": scripted = .replayed; case "callback_duplicate": scripted = .duplicate; case "callback_unsupported": scripted = .unsupported; case "callback_stale": scripted = .staleGeneration; case "callback_failed": scripted = .failed; default: scripted = result }; switch scripted { case .consumed, .malformed, .expired, .replayed, .unsupported: atomicWipe = true; default: atomicWipe = false }; if atomicWipe { pending = false }; return scripted }
     func purge(generation: UInt64) async -> ConditionalMutationResult { await audit.add("callback"); purgeAfterValidationCancellation = !suspendValidation || validationCanceled; let scripted: ConditionalMutationResult = await completions.take(["purge_failed"]) == "purge_failed" ? .failed : purgeResult; guard generations.compareAndMutate(generation, { if scripted == .applied { pending = false } }) else { return .staleGeneration }; return scripted }
     func confirmEmpty(generation: UInt64) async -> Bool { await audit.add("callback_confirm"); return confirm && !pending }
-    func activateGeneration(_ generation: UInt64) async { if suspendActivation { await activationGate.suspendPoint() }; generations.activate(generation) }
+    func activateGeneration(_ generation: UInt64) async { if suspendActivation, !(await activationGate.suspendPoint()) { return }; generations.activate(generation) }
     func cancelOwnedWork(generation: UInt64) async { canceled.insert(generation); if suspendValidation { await validationGate.release(); await validationCancellationObserved.wait() } }
 }
 private actor ScriptClock: AuthClockPort {

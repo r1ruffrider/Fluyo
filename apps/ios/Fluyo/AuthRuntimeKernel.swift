@@ -324,6 +324,10 @@ actor AuthRuntimeCoordinator {
     private func enqueueUnreserved(_ requestedGeneration: UInt64, _ origin: AuthRuntimeState, _ payload: AuthPresentationPayload) { if !terminal, generation == requestedGeneration { enqueueLocked(requestedGeneration, origin, payload) } }
     private func enqueueLocked(_ requestedGeneration: UInt64, _ origin: AuthRuntimeState, _ payload: AuthPresentationPayload) { let effect = AuthPresentationEffect(generation: requestedGeneration, sequence: nextEffectSequence, originatingState: origin, payload: payload); effects.append(effect); effectHistory.append(effect); nextEffectSequence += 1; trace.append(.effectEnqueued) }
     private func transitionAfterFence(_ expected: UInt64, _ snapshot: AuthRuntimeSnapshot, _ payloads: [AuthPresentationPayload]) async -> Bool {
+        let completion = Task { await self.transitionAfterFenceIrrevocably(expected, snapshot, payloads) }
+        return await withTaskCancellationHandler(operation: { await completion.value }, onCancel: {})
+    }
+    private func transitionAfterFenceIrrevocably(_ expected: UInt64, _ snapshot: AuthRuntimeSnapshot, _ payloads: [AuthPresentationPayload]) async -> Bool {
         guard let fencing = installFence(expected, kind: .cleanup, suppressStaleOutcome: true) else { return false }
         defer { finish(fencing) }
         await provider.cancelOwnedWork(generation: expected); guard valid(fencing) else { return false }
@@ -343,6 +347,10 @@ actor AuthRuntimeCoordinator {
         _ = await transitionAfterFence(reservation.generation, callbackTerminal(from: reservation.stable, outcome: category), [terminalEntryEffect()])
     }
     private func callbackStoreFailure(_ reservation: Reservation) async {
+        let completion = Task { await self.callbackStoreFailureIrrevocably(reservation) }
+        await withTaskCancellationHandler(operation: { await completion.value }, onCancel: {})
+    }
+    private func callbackStoreFailureIrrevocably(_ reservation: Reservation) async {
         guard let cleanup = await fenceForCleanup(reservation.generation) else { return }
         defer { finish(cleanup) }
         guard valid(cleanup) else { return }
@@ -354,6 +362,10 @@ actor AuthRuntimeCoordinator {
     }
 
     private func cleanup(_ destination: AuthRuntimeState, _ reservation: Reservation?, _ outcome: FixedAuthOutcomeCategory) async {
+        let completion = Task { await self.cleanupIrrevocably(destination, reservation, outcome) }
+        await withTaskCancellationHandler(operation: { await completion.value }, onCancel: {})
+    }
+    private func cleanupIrrevocably(_ destination: AuthRuntimeState, _ reservation: Reservation?, _ outcome: FixedAuthOutcomeCategory) async {
         let expected = reservation?.generation ?? generation; guard let cleanup = await fenceForCleanup(expected) else { return }
         defer { finish(cleanup) }
         guard valid(cleanup) else { return }
