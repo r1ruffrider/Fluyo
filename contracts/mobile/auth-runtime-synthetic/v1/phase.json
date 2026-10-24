@@ -1,0 +1,23 @@
+{
+  "phaseId": "AUTH-RUNTIME-SYNTHETIC-KERNEL-V1",
+  "classification": "credential_free_repository_only_non_production",
+  "sourceBase": "e2197c597a9a49f3685ceb2c2010cd5d067ff299",
+  "providerRequests": 0,
+  "liveRuntimeEvidence": 0,
+  "openMaterialDecisions": 14,
+  "satisfiedReadinessRequirements": 0,
+  "unsatisfiedReadinessRequirements": 69,
+  "mirroredLiveRows": {
+    "planned": 24,
+    "passed": 0,
+    "failed": 0,
+    "status": "unattempted"
+  },
+  "syntheticChecks": {
+    "ios": 41,
+    "android": 41,
+    "total": 82
+  },
+  "uiOnlyChecks": "not_applicable_kernel_only",
+  "completionClaimAllowed": false
+}

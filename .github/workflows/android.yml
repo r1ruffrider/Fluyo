@@ -5,18 +5,28 @@ on:
     paths:
       - "apps/android/**"
       - "contracts/mobile/android/foundation/v1/**"
+      - "contracts/mobile/auth-runtime-synthetic/v1/**"
+      - "contracts/mobile/auth-state/v1/**"
+      - "packages/shared/src/auth-runtime-synthetic-contract.test.ts"
       - "scripts/android-evidence.mjs"
       - "scripts/scan-android-evidence.mjs"
       - "scripts/summarize-android-test-failures.mjs"
+      - "scripts/verify-android-auth-kernel-results.mjs"
+      - "scripts/verify-android-auth-kernel-results.test.mjs"
       - ".github/workflows/android.yml"
   push:
     branches: [main]
     paths:
       - "apps/android/**"
       - "contracts/mobile/android/foundation/v1/**"
+      - "contracts/mobile/auth-runtime-synthetic/v1/**"
+      - "contracts/mobile/auth-state/v1/**"
+      - "packages/shared/src/auth-runtime-synthetic-contract.test.ts"
       - "scripts/android-evidence.mjs"
       - "scripts/scan-android-evidence.mjs"
       - "scripts/summarize-android-test-failures.mjs"
+      - "scripts/verify-android-auth-kernel-results.mjs"
+      - "scripts/verify-android-auth-kernel-results.test.mjs"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
@@ -158,6 +168,11 @@ jobs:
               wait "$EMULATOR_PID" >/dev/null 2>&1 || true
             fi
             rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"
+            rm -rf \
+              "$GITHUB_WORKSPACE/apps/android/app/build/test-results/testDevelopmentDebugUnitTest" \
+              "$GITHUB_WORKSPACE/apps/android/app/build/test-results/testStagingDebugUnitTest" \
+              "$GITHUB_WORKSPACE/apps/android/app/build/reports/tests/testDevelopmentDebugUnitTest" \
+              "$GITHUB_WORKSPACE/apps/android/app/build/reports/tests/testStagingDebugUnitTest"
             local cleanup_failed=1
             for cleanup_attempt in 1 2 3 4 5; do
               if rm -rf "$AVD_HOME" >/dev/null 2>&1; then
@@ -183,6 +198,8 @@ jobs:
             if [[ "$status" -ne 0 ]]; then
               cd "$GITHUB_WORKSPACE"
               node scripts/summarize-android-test-failures.mjs \
+                apps/android/app/build/test-results/testDevelopmentDebugUnitTest \
+                apps/android/app/build/test-results/testStagingDebugUnitTest \
                 apps/android/app/build/outputs/androidTest-results/managedDevice \
                 --phase "$phase"
               echo "Android matrix leg failed; raw output was discarded"
@@ -418,6 +435,10 @@ jobs:
           }
           if [[ "${{ matrix.leg }}" == "minimum" ]]; then
             run_gradle_phase unit_test :app:testDevelopmentDebugUnitTest
+            cd "$GITHUB_WORKSPACE"
+            node scripts/verify-android-auth-kernel-results.mjs \
+              apps/android/app/build/test-results/testDevelopmentDebugUnitTest
+            cd apps/android
             run_gradle_phase assemble_internal :app:assembleDevelopmentDebug
             verify_packaged_pseudo_locales app/build/outputs/apk/development/debug/app-development-debug.apk
             run_gradle_phase compile_instrumentation :app:assembleDevelopmentDebugAndroidTest
@@ -428,6 +449,10 @@ jobs:
               app/build/outputs/apk/androidTest/development/debug/app-development-debug-androidTest.apk
           else
             run_gradle_phase unit_test :app:testStagingDebugUnitTest
+            cd "$GITHUB_WORKSPACE"
+            node scripts/verify-android-auth-kernel-results.mjs \
+              apps/android/app/build/test-results/testStagingDebugUnitTest
+            cd apps/android
             run_gradle_phase assemble_internal :app:assembleStagingDebug
             verify_packaged_pseudo_locales app/build/outputs/apk/staging/debug/app-staging-debug.apk
             run_gradle_phase assemble_production_inert :app:assembleProductionDebug
