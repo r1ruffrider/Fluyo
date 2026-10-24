@@ -192,7 +192,9 @@ describe("native auth executable synthetic kernel", () => {
     expect(swift).toContain("requireCorpusMatch(trace == vector.trace");
     expect(swift).toContain("XCTFail(boundedMarker");
     expect(swift).toContain("print(boundedMarker)");
-    expect(swift).toContain("[auth_corpus_diagnostic_unavailable]");
+    expect(swift).toContain("diagnostic_inconsistent");
+    expect(swift).toContain("diagnostic_rejected");
+    expect(swift).not.toContain("[auth_corpus_diagnostic_unavailable]");
     expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
     expect(swift).toContain("entries.count < commands.count");
     expect(swift).toContain("verifyLateTimerRegistrationCancellation");
@@ -200,7 +202,9 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlin).toContain("assertEquals(vector.effects, fullEffectHistory)");
     expect(kotlin).toContain("requireCorpusMatch(vector.trace == trace");
     expect(kotlin).toContain("throw AssertionError(boundedMarker)");
-    expect(kotlin).toContain("[auth_corpus_diagnostic_unavailable]");
+    expect(kotlin).toContain("diagnostic_inconsistent");
+    expect(kotlin).toContain("diagnostic_rejected");
+    expect(kotlin).not.toContain("[auth_corpus_diagnostic_unavailable]");
     expect(kotlin).toContain('System.getProperty("fluyo.authDiagnosticFile")');
     expect(kotlin).toContain("StandardOpenOption.CREATE_NEW");
     expect(kotlin).toContain("catch (_: FileAlreadyExistsException)");

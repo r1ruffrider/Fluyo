@@ -171,6 +171,48 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   for (const value of privateValues)
     assert.equal(diagnosticUnavailableNearMatchOutput.includes(value), false);
 
+  const fixedFallbacks = [
+    ["snapshot", "diagnostic_inconsistent"],
+    ["snapshot", "diagnostic_rejected"],
+    ["trace", "diagnostic_inconsistent"],
+    ["trace", "diagnostic_rejected"],
+  ];
+  for (const [stage, mismatch] of fixedFallbacks) {
+    const marker = `[auth_corpus_stage_${stage}_${mismatch}]`;
+    writeFileSync(
+      file,
+      `AuthRuntimeKernelTests assertion failed ${marker} ${privateValues.join(" ")}`,
+    );
+    const fixedFallback = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const fixedFallbackOutput = `${fixedFallback.stdout}${fixedFallback.stderr}`;
+    assert.match(
+      fixedFallbackOutput,
+      new RegExp(
+        `category=auth_contract; test=unknown; stage=${stage}; mismatch=${mismatch}; raw output discarded`,
+      ),
+    );
+    for (const value of privateValues) assert.equal(fixedFallbackOutput.includes(value), false);
+
+    for (const nearMatch of [`${marker.slice(0, -1)}_private]`, `${marker}_private`]) {
+      writeFileSync(
+        file,
+        `AuthRuntimeKernelTests assertion failed ${nearMatch} ${privateValues.join(" ")}`,
+      );
+      const rejected = spawnSync(
+        process.execPath,
+        ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+        { encoding: "utf8" },
+      );
+      const rejectedOutput = `${rejected.stdout}${rejected.stderr}`;
+      assert.doesNotMatch(rejectedOutput, /stage=|mismatch=/);
+      for (const value of privateValues) assert.equal(rejectedOutput.includes(value), false);
+    }
+  }
+
   writeFileSync(
     file,
     `AuthRuntimeKernelTests.swift:55: error: AuthRuntimeKernelTests.testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups : failed - [auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] ${privateValues.join(" ")}`,

@@ -52,6 +52,10 @@ const authDiagnosticPattern = new RegExp(
   `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:(sequence_unavailable)|count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
 );
 const exactAuthDiagnosticPattern = new RegExp(`^${authDiagnosticPattern.source}\\r?\\n?$`);
+const diagnosticFallbackPattern =
+  /\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\](?![A-Za-z0-9_])/;
+const exactDiagnosticFallbackPattern =
+  /^\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\]\r?\n?$/;
 const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
 const exactDiagnosticUnavailablePattern = /^\[auth_corpus_diagnostic_unavailable\]\r?\n?$/;
 const unavailableDiagnostic = Object.freeze({ unavailable: true });
@@ -62,6 +66,8 @@ const readBoundedDiagnostic = (file) => {
   const raw = fs.readFileSync(file, "utf8");
   const match = raw.match(exactAuthDiagnosticPattern);
   if (match && authCorpusIds.has(match[1])) return match;
+  const fallback = raw.match(exactDiagnosticFallbackPattern);
+  if (fallback) return Object.freeze({ fallback: true, stage: fallback[1], mismatch: fallback[2] });
   return exactDiagnosticUnavailablePattern.test(raw) ? unavailableDiagnostic : null;
 };
 
@@ -227,14 +233,24 @@ for (const file of xmlFiles.sort()) {
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
     const inlineDiagnosticSource = `${rawAttribute(failureTag[2], "message")}\n${body}`;
+    const inlineFallbackMatch = inlineDiagnosticSource.match(diagnosticFallbackPattern);
     const inlineAuthDiagnostic = authKernel
       ? (inlineDiagnosticSource.match(authDiagnosticPattern) ??
-        (diagnosticUnavailablePattern.test(inlineDiagnosticSource) ? unavailableDiagnostic : null))
+        (inlineFallbackMatch
+          ? Object.freeze({
+              fallback: true,
+              stage: inlineFallbackMatch[1],
+              mismatch: inlineFallbackMatch[2],
+            })
+          : diagnosticUnavailablePattern.test(inlineDiagnosticSource)
+            ? unavailableDiagnostic
+            : null))
       : null;
     const authDiagnosticMatch = inlineAuthDiagnostic ?? sidecarDiagnostic;
     const authDiagnostic =
       authDiagnosticMatch &&
       (authDiagnosticMatch === unavailableDiagnostic ||
+        authDiagnosticMatch.fallback === true ||
         (authCorpusIds.has(authDiagnosticMatch[1]) && authDiagnosticMatch[1] === authCorpusId))
         ? authDiagnosticMatch
         : null;
@@ -258,27 +274,29 @@ for (const file of xmlFiles.sort()) {
             authDiagnostic:
               authDiagnostic === unavailableDiagnostic
                 ? { stage: "diagnostic", mismatch: "unavailable" }
-                : {
-                    corpusId: authDiagnostic[1],
-                    ...(authDiagnostic[2]
-                      ? { stage: "snapshot", mismatch: authDiagnostic[2] }
-                      : authDiagnostic[3]
-                        ? { stage: "trace", mismatch: "sequence_unavailable" }
-                        : authDiagnostic[4]
-                          ? {
-                              stage: "trace",
-                              mismatch: "count",
-                              expectedCount: authDiagnostic[4],
-                              actualCount: authDiagnostic[5],
-                            }
-                          : {
-                              stage: "trace",
-                              mismatch: "sequence",
-                              index: Number(authDiagnostic[6]),
-                              expected: authDiagnostic[7],
-                              actual: authDiagnostic[8],
-                            }),
-                  },
+                : authDiagnostic.fallback === true
+                  ? { stage: authDiagnostic.stage, mismatch: authDiagnostic.mismatch }
+                  : {
+                      corpusId: authDiagnostic[1],
+                      ...(authDiagnostic[2]
+                        ? { stage: "snapshot", mismatch: authDiagnostic[2] }
+                        : authDiagnostic[3]
+                          ? { stage: "trace", mismatch: "sequence_unavailable" }
+                          : authDiagnostic[4]
+                            ? {
+                                stage: "trace",
+                                mismatch: "count",
+                                expectedCount: authDiagnostic[4],
+                                actualCount: authDiagnostic[5],
+                              }
+                            : {
+                                stage: "trace",
+                                mismatch: "sequence",
+                                index: Number(authDiagnostic[6]),
+                                expected: authDiagnostic[7],
+                                actual: authDiagnostic[8],
+                              }),
+                    },
           }
         : {}),
     });

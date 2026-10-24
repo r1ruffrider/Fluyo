@@ -50,6 +50,8 @@ const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
 const authDiagnosticPattern = new RegExp(
   `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:(sequence_unavailable)|count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
 );
+const diagnosticFallbackPattern =
+  /\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\](?![A-Za-z0-9_])/;
 const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
 
 const [logPath, phaseFlag, phase] = process.argv.slice(2);
@@ -70,6 +72,7 @@ const allowedTests = [
   "testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation",
   "testCleanupFailureIsFencedAndDelayedEffectsAreGenerationBoundOneShot",
   "testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed",
+  "testDiagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
 ];
 const test =
   allowedTests.find((name) => {
@@ -82,11 +85,12 @@ const test =
 const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
+const diagnosticFallback = raw.match(diagnosticFallbackPattern);
 const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
 const compileFailurePattern =
   /(?:\b(?:SwiftCompile|SwiftEmitModule|EmitSwiftModule)\b[^\r\n]*(?:failed|failure|nonzero exit)|failed to build module|\.swift:\d+:\d+:\s*error:)/i;
 const category =
-  authDiagnostic || diagnosticUnavailable || test !== "unknown"
+  authDiagnostic || diagnosticFallback || diagnosticUnavailable || test !== "unknown"
     ? "auth_contract"
     : /linker command failed|undefined symbol/i.test(raw)
       ? "link"
@@ -109,9 +113,11 @@ const boundedDiagnostic = authDiagnostic
       : authDiagnostic[4]
         ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
         : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
-  : diagnosticUnavailable
-    ? "; stage=diagnostic; mismatch=unavailable"
-    : "";
+  : diagnosticFallback
+    ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
+    : diagnosticUnavailable
+      ? "; stage=diagnostic; mismatch=unavailable"
+      : "";
 process.stderr.write(
   `iOS phase failed; phase=${phase}; category=${category}; test=${test}${boundedDiagnostic}; raw output discarded\n`,
 );

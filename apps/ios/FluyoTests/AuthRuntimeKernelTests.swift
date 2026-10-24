@@ -3,6 +3,8 @@ import XCTest
 @testable import Fluyo
 
 final class AuthRuntimeKernelTests: XCTestCase {
+    private enum DiagnosticStage: String { case snapshot, trace }
+    private static let diagnosticCorpusId = "cold_start_without_candidate"
     private struct Vector {
         let kind: String, id: String, initial: String
         let steps: [String], times: [UInt64], completions: [String], snapshots: [String]
@@ -40,6 +42,36 @@ final class AuthRuntimeKernelTests: XCTestCase {
         await verifyLateTimerRegistrationCancellation()
     }
 
+    func testDiagnosticGrammarAndFallbackSelectionAreTotalAndClosed() {
+        let snapshots = ["count", "shape", "state", "candidate", "owner", "destination", "outcome", "generation"]
+        for mismatch in snapshots {
+            XCTAssertEqual(selectBoundedDiagnostic(Self.diagnosticCorpusId, .snapshot, mismatch), "[auth_corpus_\(Self.diagnosticCorpusId)_stage_snapshot_\(mismatch)]")
+        }
+        XCTAssertEqual(selectBoundedDiagnostic(Self.diagnosticCorpusId, .snapshot, "none"), "[auth_corpus_stage_snapshot_diagnostic_inconsistent]")
+
+        XCTAssertEqual(selectBoundedDiagnostic(Self.diagnosticCorpusId, .trace, "sequence_unavailable"), "[auth_corpus_\(Self.diagnosticCorpusId)_stage_trace_sequence_unavailable]")
+        let counts = (0...63).map(String.init) + ["64_plus"]
+        for expected in counts { for actual in counts {
+            let mismatch = "count_expected_\(expected)_actual_\(actual)"
+            XCTAssertEqual(selectBoundedDiagnostic(Self.diagnosticCorpusId, .trace, mismatch), "[auth_corpus_\(Self.diagnosticCorpusId)_stage_trace_\(mismatch)]")
+        }}
+        let traceValues = traceDiagnosticValues.sorted()
+        for index in 0...63 { for expected in traceValues { for actual in traceValues {
+            let mismatch = "sequence_index_\(index)_expected_\(expected)_actual_\(actual)"
+            XCTAssertEqual(selectBoundedDiagnostic(Self.diagnosticCorpusId, .trace, mismatch), "[auth_corpus_\(Self.diagnosticCorpusId)_stage_trace_\(mismatch)]")
+        }}}
+        XCTAssertEqual(selectBoundedDiagnostic(Self.diagnosticCorpusId, .trace, "none"), "[auth_corpus_stage_trace_diagnostic_inconsistent]")
+
+        let privateInput = "private_value"
+        for stage in [DiagnosticStage.snapshot, .trace] {
+            let invalid = selectBoundedDiagnostic(Self.diagnosticCorpusId, stage, privateInput)
+            let wrongCorpus = selectBoundedDiagnostic("callback_cancel", stage, "none")
+            XCTAssertEqual(invalid, "[auth_corpus_stage_\(stage.rawValue)_diagnostic_rejected]")
+            XCTAssertEqual(wrongCorpus, "[auth_corpus_stage_\(stage.rawValue)_diagnostic_rejected]")
+            XCTAssertFalse(invalid.contains(privateInput)); XCTAssertFalse(wrongCorpus.contains("callback_cancel"))
+        }
+    }
+
     private func run(_ vector: Vector) async throws {
         XCTAssertEqual(vector.digest, Self.digest, vector.id)
         let ports = ScriptPorts(times: vector.times, completionCommands: vector.completions.filter { $0 != "none" })
@@ -47,13 +79,13 @@ final class AuthRuntimeKernelTests: XCTestCase {
         var rejected = 0
         for step in vector.steps { rejected += try await execute(step, coordinator, ports) }
         let snapshots = await coordinator.snapshotHistory().map { normalize($0.0, $0.1) }
-        requireCorpusMatch(snapshots == vector.snapshots, vector.id, "snapshot_\(snapshotMismatch(vector.snapshots, snapshots))")
+        requireCorpusMatch(snapshots == vector.snapshots, vector.id, .snapshot, snapshotMismatch(vector.snapshots, snapshots))
         let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); XCTAssertEqual(fullEffectHistory, vector.effects, vector.id)
         let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
         let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
         let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
         XCTAssertTrue(firstDrain.allSatisfy { $0.generation == generation }, vector.id); XCTAssertTrue(secondDrain.isEmpty, vector.id); XCTAssertTrue(staleDrain.isEmpty, vector.id)
-        requireCorpusMatch(trace == vector.trace, vector.id, "trace_\(traceMismatch(vector.trace, trace))"); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
+        requireCorpusMatch(trace == vector.trace, vector.id, .trace, traceMismatch(vector.trace, trace)); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
         XCTAssertEqual(completions, vector.completions.filter { $0 != "none" }, vector.id)
         if vector.id == "warm_callback_success" { let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") }
         XCTAssertEqual(generation, vector.generation, vector.id); XCTAssertEqual(terminal, vector.terminal, vector.id)
@@ -379,20 +411,24 @@ final class AuthRuntimeKernelTests: XCTestCase {
         return "sequence_index_\(index)_expected_\(expected[index])_actual_\(actual[index])"
     }
     private func boundedTraceCount(_ count: Int) -> String { count < 64 ? String(count) : "64_plus" }
-    private let traceDiagnosticValues: Set<String> = [
-        "init_read", "callback_reserved", "callback_consumed", "callback_rejected", "callback_duplicate", "callback_overlap",
-        "provider_exchange", "provider_refresh", "owner_verify", "vault_replace", "owner_bind", "timer_500", "timer_15000",
-        "timer_30000", "generation_fence", "callback_purge", "headers_clear", "vault_clear", "owner_purge", "callback_confirm",
-        "vault_confirm", "owner_confirm", "stale_rejected", "snapshot_published", "effect_enqueued", "terminal_latched",
-    ]
-    private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) {
+    private let traceDiagnosticValues: [String] = [
+        AuthTraceEntry.initRead, .callbackReserved, .callbackConsumed, .callbackRejected, .callbackDuplicate, .callbackOverlap,
+        .providerExchange, .providerRefresh, .ownerVerify, .vaultReplace, .ownerBind, .timer500, .timer15000, .timer30000,
+        .generationFence, .callbackPurge, .headersClear, .vaultClear, .ownerPurge, .callbackConfirm, .vaultConfirm, .ownerConfirm,
+        .staleRejected, .snapshotPublished, .effectEnqueued, .terminalLatched,
+    ].map(\.rawValue)
+    private func selectBoundedDiagnostic(_ corpusId: String, _ stage: DiagnosticStage, _ mismatch: String) -> String {
+        let detailed = "[auth_corpus_\(corpusId)_stage_\(stage.rawValue)_\(mismatch)]"
+        if detailed.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil { return detailed }
+        let reason = corpusId == Self.diagnosticCorpusId && mismatch == "none" ? "diagnostic_inconsistent" : "diagnostic_rejected"
+        return "[auth_corpus_stage_\(stage.rawValue)_\(reason)]"
+    }
+    private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ stage: DiagnosticStage, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) {
         guard !matches else { return }
-        let marker = "[auth_corpus_\(corpusId)_stage_\(boundedMismatch)]"
-        let boundedMarker = marker.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil ? marker : Self.diagnosticUnavailableMarker
+        let boundedMarker = selectBoundedDiagnostic(corpusId, stage, boundedMismatch)
         print(boundedMarker)
         XCTFail(boundedMarker, file: file, line: line)
     }
-    private static let diagnosticUnavailableMarker = "[auth_corpus_diagnostic_unavailable]"
     private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#
     private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(effect.generation, generation, file: file, line: line)

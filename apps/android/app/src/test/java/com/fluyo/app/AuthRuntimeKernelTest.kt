@@ -27,6 +27,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
+private enum class DiagnosticStage(val wire: String) { SNAPSHOT("snapshot"), TRACE("trace") }
+
+private const val diagnosticCorpusId = "cold_start_without_candidate"
+private val boundedDiagnosticPattern = Regex(
+    """^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
+)
+
+private fun selectBoundedDiagnostic(corpusId: String, stage: DiagnosticStage, mismatch: String): String {
+    val detailed = "[auth_corpus_${corpusId}_stage_${stage.wire}_${mismatch}]"
+    if (boundedDiagnosticPattern.matches(detailed)) return detailed
+    val reason = if (corpusId == diagnosticCorpusId && mismatch == "none") "diagnostic_inconsistent" else "diagnostic_rejected"
+    return "[auth_corpus_stage_${stage.wire}_${reason}]"
+}
+
 private fun writeFirstBoundedDiagnostic(path: Path, marker: String) {
     try {
         Files.write(path, "$marker\n".toByteArray(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW)
@@ -41,7 +55,7 @@ class AuthDiagnosticSidecarTest {
         val path = directory.resolve("auth-runtime-diagnostic.txt")
         try {
             writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
-            writeFirstBoundedDiagnostic(path, "[auth_corpus_diagnostic_unavailable]")
+            writeFirstBoundedDiagnostic(path, "[auth_corpus_stage_snapshot_diagnostic_rejected]")
             assertEquals("[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n", Files.readString(path))
 
             Files.delete(path)
@@ -50,6 +64,37 @@ class AuthDiagnosticSidecarTest {
         } finally {
             Files.deleteIfExists(path)
             Files.deleteIfExists(directory)
+        }
+    }
+
+    @Test fun diagnosticGrammarAndFallbackSelectionAreTotalAndClosed() {
+        val snapshotClasses = listOf("count", "shape", "state", "candidate", "owner", "destination", "outcome", "generation")
+        for (mismatch in snapshotClasses) {
+            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_snapshot_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.SNAPSHOT, mismatch))
+        }
+        assertEquals("[auth_corpus_stage_snapshot_diagnostic_inconsistent]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.SNAPSHOT, "none"))
+
+        assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_sequence_unavailable]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, "sequence_unavailable"))
+        val counts = (0..63).map(Int::toString) + "64_plus"
+        for (expected in counts) for (actual in counts) {
+            val mismatch = "count_expected_${expected}_actual_${actual}"
+            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, mismatch))
+        }
+        val traceValues = AuthTraceEntry.values().map { it.wire }
+        for (index in 0..63) for (expected in traceValues) for (actual in traceValues) {
+            val mismatch = "sequence_index_${index}_expected_${expected}_actual_${actual}"
+            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, mismatch))
+        }
+        assertEquals("[auth_corpus_stage_trace_diagnostic_inconsistent]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, "none"))
+
+        val privateInput = "private_value"
+        for (stage in DiagnosticStage.values()) {
+            val invalid = selectBoundedDiagnostic(diagnosticCorpusId, stage, privateInput)
+            val wrongCorpus = selectBoundedDiagnostic("callback_cancel", stage, "none")
+            assertEquals("[auth_corpus_stage_${stage.wire}_diagnostic_rejected]", invalid)
+            assertEquals("[auth_corpus_stage_${stage.wire}_diagnostic_rejected]", wrongCorpus)
+            assertFalse(invalid.contains(privateInput))
+            assertFalse(wrongCorpus.contains("callback_cancel"))
         }
     }
 }
@@ -75,7 +120,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             rejectedWrites += execute(step, coordinator, ports)
         }
         val snapshots = coordinator.snapshotHistory().map { normalize(it.first, it.second) }
-        requireCorpusMatch(vector.snapshots == snapshots, vector.id, "snapshot_${snapshotMismatch(vector.snapshots, snapshots)}")
+        requireCorpusMatch(vector.snapshots == snapshots, vector.id, DiagnosticStage.SNAPSHOT, snapshotMismatch(vector.snapshots, snapshots))
         val generation = coordinator.currentGeneration()
         val fullEffectHistory = coordinator.presentationEffectHistory().map(::normalize)
         assertEquals(vector.effects, fullEffectHistory)
@@ -85,7 +130,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         val staleGeneration = if (generation == 1uL) 2uL else 1uL
         assertTrue(coordinator.drainPresentationEffects(staleGeneration).isEmpty())
         val trace = coordinator.normalizedTrace().map { it.wire }
-        requireCorpusMatch(vector.trace == trace, vector.id, "trace_${traceMismatch(vector.trace, trace)}")
+        requireCorpusMatch(vector.trace == trace, vector.id, DiagnosticStage.TRACE, traceMismatch(vector.trace, trace))
         assertEquals(vector.completions.filterNot { it == "none" }, ports.completionValues())
         if (vector.id == "warm_callback_success") assertEquals("opaque-pkce", ports.provider.lastExchangeStorage)
         assertEquals(vector.wipe, ports.wipeSummary())
@@ -464,19 +509,14 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         }
         private fun boundedTraceCount(count: Int): String = if (count < 64) count.toString() else "64_plus"
         private val traceDiagnosticValues = AuthTraceEntry.values().map { it.wire }.toSet()
-        private fun requireCorpusMatch(matches: Boolean, corpusId: String, boundedMismatch: String) {
+        private fun requireCorpusMatch(matches: Boolean, corpusId: String, stage: DiagnosticStage, boundedMismatch: String) {
             if (matches) return
-            val marker = "[auth_corpus_${corpusId}_stage_${boundedMismatch}]"
-            val boundedMarker = if (boundedDiagnosticPattern.matches(marker)) marker else diagnosticUnavailableMarker
+            val boundedMarker = selectBoundedDiagnostic(corpusId, stage, boundedMismatch)
             System.getProperty("fluyo.authDiagnosticFile")?.let { path ->
                 writeFirstBoundedDiagnostic(Path.of(path), boundedMarker)
             }
             throw AssertionError(boundedMarker)
         }
-        private const val diagnosticUnavailableMarker = "[auth_corpus_diagnostic_unavailable]"
-        private val boundedDiagnosticPattern = Regex(
-            """^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
-        )
         private fun assertTerminalEffect(effect: AuthPresentationEffect, generation: ULong) {
             assertEquals(generation, effect.generation)
             assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, effect.originatingState)

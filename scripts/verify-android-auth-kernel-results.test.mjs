@@ -124,6 +124,33 @@ try {
   assert.equal("authDiagnostic" in JSON.parse(diagnosticUnavailableNearMatch).failures[0], false);
   assert.doesNotMatch(diagnosticUnavailableNearMatch, /example\.test|private/i);
 
+  const fixedFallbacks = [
+    ["snapshot", "diagnostic_inconsistent"],
+    ["snapshot", "diagnostic_rejected"],
+    ["trace", "diagnostic_inconsistent"],
+    ["trace", "diagnostic_rejected"],
+  ];
+  for (const [stage, mismatch] of fixedFallbacks) {
+    const marker = `[auth_corpus_stage_${stage}_${mismatch}]`;
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="${marker} learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+    );
+    const fixedFallback = summarize(summaryDir);
+    assert.deepEqual(JSON.parse(fixedFallback).failures[0].authDiagnostic, { stage, mismatch });
+    assert.doesNotMatch(fixedFallback, /example\.test|private/i);
+
+    for (const nearMatch of [`${marker.slice(0, -1)}_private]`, `${marker}_private`]) {
+      writeFileSync(
+        summaryFile,
+        `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="${nearMatch} learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+      );
+      const rejected = summarize(summaryDir);
+      assert.equal("authDiagnostic" in JSON.parse(rejected).failures[0], false);
+      assert.doesNotMatch(rejected, /example\.test|private/i);
+    }
+  }
+
   writeFileSync(
     summaryFile,
     `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
@@ -183,12 +210,28 @@ try {
     stage: "diagnostic",
     mismatch: "unavailable",
   });
+  for (const [stage, mismatch] of fixedFallbacks) {
+    writeFileSync(diagnosticFile, `[auth_corpus_stage_${stage}_${mismatch}]\n`);
+    const fixedFallbackSidecar = summarize(
+      summaryDir,
+      "--phase",
+      "unit_test",
+      "--diagnostic-file",
+      diagnosticFile,
+    );
+    assert.deepEqual(JSON.parse(fixedFallbackSidecar).failures[0].authDiagnostic, {
+      stage,
+      mismatch,
+    });
+  }
   for (const rejected of [
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] learner@example.test\n",
     "[auth_corpus_cold_start_without_candidate_private_stage_snapshot_state]\n",
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_5000]\n",
     "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private]\n",
     "[auth_corpus_diagnostic_unavailable_private]\n",
+    "[auth_corpus_stage_snapshot_diagnostic_inconsistent_private]\n",
+    "[auth_corpus_stage_trace_diagnostic_rejected]_private\n",
     "x".repeat(513),
   ]) {
     writeFileSync(diagnosticFile, rejected);
