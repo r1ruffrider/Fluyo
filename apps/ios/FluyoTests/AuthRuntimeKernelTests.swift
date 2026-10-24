@@ -46,7 +46,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         var rejected = 0
         for step in vector.steps { rejected += try await execute(step, coordinator, ports) }
         let snapshots = await coordinator.snapshotHistory().map { normalize($0.0, $0.1) }
-        XCTAssertEqual(snapshots, vector.snapshots, vector.id)
+        XCTAssertEqual(snapshots, vector.snapshots, "auth_corpus_\(vector.id)_stage_snapshot_\(snapshotMismatch(vector.snapshots, snapshots))")
         let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); XCTAssertEqual(fullEffectHistory, vector.effects, vector.id)
         let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
         let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
@@ -313,6 +313,17 @@ final class AuthRuntimeKernelTests: XCTestCase {
 
     private func makeCoordinator(_ ports: ScriptPorts, generation: UInt64 = 1) -> AuthRuntimeCoordinator { .init(provider: ports.provider, vault: ports.vault, callbackStore: ports.callback, clock: ports.clock, ownerStore: ports.owner, telemetry: TrapTelemetry(), initialGeneration: generation) }
     private func normalize(_ value: AuthRuntimeSnapshot, _ generation: UInt64) -> String { [value.state.rawValue, value.hasSessionCandidate.rawValue, value.hasVerifiedOwnerState ? "1" : "0", value.safeDestinationId.rawValue, value.fixedOutcomeCategory?.rawValue ?? "none", String(generation)].joined(separator: ",") }
+    private func snapshotMismatch(_ expected: [String], _ actual: [String]) -> String {
+        guard expected.count == actual.count else { return "count" }
+        let fields = ["state", "candidate", "owner", "destination", "outcome", "generation"]
+        for index in expected.indices {
+            let expectedFields = expected[index].split(separator: ",", omittingEmptySubsequences: false)
+            let actualFields = actual[index].split(separator: ",", omittingEmptySubsequences: false)
+            guard expectedFields.count == fields.count, actualFields.count == fields.count else { return "shape" }
+            for field in fields.indices where expectedFields[field] != actualFields[field] { return fields[field] }
+        }
+        return "none"
+    }
     private func normalize(_ effect: AuthPresentationEffect) -> String {
         let payload = "aggregate:\(effect.payload.focus?.rawValue ?? "none"):\(effect.payload.announcement?.rawValue ?? "none"):\(effect.payload.priority?.rawValue ?? "none"):\(effect.payload.navigation?.rawValue ?? "none")"
         return "\(effect.generation):\(effect.sequence):\(effect.originatingState.rawValue):\(payload)"

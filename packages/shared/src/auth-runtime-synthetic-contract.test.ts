@@ -17,6 +17,16 @@ const acceptance = JSON.parse(
   readFileSync(resolve(authState, "acceptance.json"), "utf8"),
 ) as Record<string, unknown>;
 const phaseBase = "e2197c597a9a49f3685ceb2c2010cd5d067ff299";
+const authReadinessApprovalTemporaryRootPrefix = ".tmp-auth-readiness-approval-";
+
+const phaseUntrackedPaths = (paths: string[]) =>
+  paths.filter(
+    (path) =>
+      Boolean(path) &&
+      !path.startsWith(".tmp/") &&
+      !path.startsWith(".security-tmp/") &&
+      !path.startsWith(authReadinessApprovalTemporaryRootPrefix),
+  );
 
 const strings = (value: unknown, label: string): string[] => {
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
@@ -326,6 +336,14 @@ describe("native auth executable synthetic kernel", () => {
   });
 
   it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {
+    expect(
+      phaseUntrackedPaths([
+        ".tmp-auth-readiness-approval-abc123/",
+        ".tmp-auth-readiness-approvals-abc123/policy.json",
+        "unexpected.txt",
+      ]),
+    ).toEqual([".tmp-auth-readiness-approvals-abc123/policy.json", "unexpected.txt"]);
+
     const allowed = [
       ".github/workflows/android.yml",
       ".github/workflows/ios.yml",
@@ -362,11 +380,9 @@ describe("native auth executable synthetic kernel", () => {
       encoding: "utf8",
     })
       .trim()
-      .split(/\r?\n/)
-      .filter(
-        (path) => Boolean(path) && !path.startsWith(".tmp/") && !path.startsWith(".security-tmp/"),
-      );
-    expect([...new Set([...tracked, ...untracked])].sort()).toEqual(allowed);
+      .split(/\r?\n/);
+    const phaseUntracked = phaseUntrackedPaths(untracked);
+    expect([...new Set([...tracked, ...phaseUntracked])].sort()).toEqual(allowed);
     for (const path of [
       "package.json",
       "package-lock.json",

@@ -46,7 +46,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             rejectedWrites += execute(step, coordinator, ports)
         }
         val snapshots = coordinator.snapshotHistory().map { normalize(it.first, it.second) }
-        assertEquals(vector.snapshots, snapshots)
+        assertEquals("auth_corpus_${vector.id}_stage_snapshot_${snapshotMismatch(vector.snapshots, snapshots)}", vector.snapshots, snapshots)
         val generation = coordinator.currentGeneration()
         val fullEffectHistory = coordinator.presentationEffectHistory().map(::normalize)
         assertEquals(vector.effects, fullEffectHistory)
@@ -382,6 +382,17 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         private fun ingress() = OpaqueCallbackIngress("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected")
         private fun coordinator(ports: ScriptPorts, generation: ULong) = AuthRuntimeCoordinator(ports.provider, ports.vault, ports.callback, ports.clock, ports.owner, TrapTelemetry(), generation)
         private fun normalize(value: AuthRuntimeSnapshot, generation: ULong) = listOf(value.state.wire, value.hasSessionCandidate.wire, if (value.hasVerifiedOwnerState) "1" else "0", value.safeDestinationId.wire, value.fixedOutcomeCategory?.wire ?: "none", generation.toString()).joinToString(",")
+        private fun snapshotMismatch(expected: List<String>, actual: List<String>): String {
+            if (expected.size != actual.size) return "count"
+            val fields = listOf("state", "candidate", "owner", "destination", "outcome", "generation")
+            for (index in expected.indices) {
+                val expectedFields = expected[index].split(',')
+                val actualFields = actual[index].split(',')
+                if (expectedFields.size != fields.size || actualFields.size != fields.size) return "shape"
+                for (field in fields.indices) if (expectedFields[field] != actualFields[field]) return fields[field]
+            }
+            return "none"
+        }
         private fun normalize(effect: AuthPresentationEffect): String {
             val p = effect.payload
             val payload = "aggregate:${p.focus?.wire ?: "none"}:${p.announcement?.wire ?: "none"}:${p.priority?.wire ?: "none"}:${p.navigation?.wire ?: "none"}"

@@ -1,6 +1,50 @@
 import fs from "node:fs";
 import path from "node:path";
 
+const authCorpusIds = new Set([
+  "cold_start_without_candidate",
+  "cold_start_with_candidate",
+  "warm_callback_success",
+  "cold_callback_success",
+  "callback_cancel",
+  "callback_malformed",
+  "callback_expired",
+  "callback_replay",
+  "callback_duplicate_delivery",
+  "callback_unsupported",
+  "callback_overlap_rejected",
+  "refresh_success",
+  "refresh_explicit_revocation",
+  "refresh_transient_failure_preserves_candidate",
+  "refresh_repeated_401_clears",
+  "forbidden_403_preserves_session",
+  "offline_startup_preserves_verified_display_only",
+  "background_foreground",
+  "termination_relaunch_without_transaction",
+  "account_switch_cleanup",
+  "stale_response_discarded",
+  "stale_storage_write_discarded",
+  "vault_corruption_cleanup",
+  "clock_skew",
+  "owner_subject_mismatch",
+  "zero_telemetry_launch",
+  "zero_telemetry_resume",
+  "zero_telemetry_error",
+  "public_state_is_secret_free",
+  "callback_transaction_is_purpose_environment_host_path_and_expiry_bound",
+  "callback_transaction_consumes_once_and_wipes",
+  "valid_verified_session_survives_bad_link",
+  "generation_change_cancels_work_and_blocks_stale_writes",
+  "owner_data_waits_for_private_subject_confirmation",
+  "transient_refresh_failure_preserves_candidate",
+  "explicit_invalidation_and_repeated_401_clear",
+  "403_never_refreshes_or_signs_out",
+  "offline_never_confirms_new_owner_or_expands_access",
+  "cleanup_precedes_signed_out_or_new_owner_exposure",
+  "no_op_telemetry_has_zero_retention_and_zero_transport",
+  "evidence_is_closed_and_mutation_safe",
+]);
+
 const args = process.argv.slice(2);
 const phaseIndex = args.indexOf("--phase");
 const allowedPhases = new Set([
@@ -146,18 +190,31 @@ for (const file of xmlFiles.sort()) {
     const className = attribute(attributes, "classname");
     const authKernel = className === "com.fluyo.app.AuthRuntimeKernelTest";
     const rawTestName = rawAttribute(attributes, "name");
-    const authIndex = rawTestName.match(
-      /^canonicalScenarioOrInvariant\[((?:[0-9]|[1-3][0-9]|40)):[a-z0-9_]+@[0-9a-f]{64}\]$/,
-    )?.[1];
+    const authNameMatch = rawTestName.match(
+      /^canonicalScenarioOrInvariant\[(?:[0-9]|[1-3][0-9]|40):([a-z0-9_]+)@[0-9a-f]{64}\]$/,
+    );
+    const authCorpusId =
+      authNameMatch && authCorpusIds.has(authNameMatch[1]) ? authNameMatch[1] : null;
     const sourceName = className.split(".").at(-1)?.split("$")[0] ?? "unknown";
     const escapedSourceName = sourceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
+    const authDiagnosticMatch = authKernel
+      ? `${rawAttribute(failureTag[2], "message")}\n${body}`.match(
+          /\bauth_corpus_([a-z0-9_]+)_stage_(snapshot)_(count|shape|state|candidate|owner|destination|outcome|generation)\b/,
+        )
+      : null;
+    const authDiagnostic =
+      authDiagnosticMatch &&
+      authCorpusIds.has(authDiagnosticMatch[1]) &&
+      authDiagnosticMatch[1] === authCorpusId
+        ? authDiagnosticMatch
+        : null;
     failures.push({
       className: authKernel ? "auth_kernel" : className,
       testName:
-        authKernel && authIndex !== undefined
-          ? `auth_vector_${authIndex}`
+        authKernel && authCorpusId
+          ? `auth_corpus_${authCorpusId}`
           : authKernel
             ? "auth_vector_unknown"
             : attribute(attributes, "name"),
@@ -168,6 +225,15 @@ for (const file of xmlFiles.sort()) {
       frameworkFailureCategory: frameworkFailureCategory(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,
+      ...(authDiagnostic
+        ? {
+            authDiagnostic: {
+              corpusId: authDiagnostic[1],
+              stage: authDiagnostic[2],
+              mismatch: authDiagnostic[3],
+            },
+          }
+        : {}),
     });
   }
 }

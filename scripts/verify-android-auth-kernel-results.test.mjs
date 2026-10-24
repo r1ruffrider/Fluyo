@@ -16,6 +16,11 @@ const run = (...args) =>
     encoding: "utf8",
     stdio: "pipe",
   });
+const summarize = (...args) =>
+  execFileSync(process.execPath, ["scripts/summarize-android-test-failures.mjs", ...args], {
+    encoding: "utf8",
+    stdio: "pipe",
+  });
 const testcase = (id, index, className = "com.fluyo.app.AuthRuntimeKernelTest") =>
   `<testcase name="canonicalScenarioOrInvariant[${index}:${id}@${digest}]" classname="${className}"/>`;
 const xml = (cases, tests = 41) =>
@@ -53,6 +58,33 @@ try {
     writeFileSync(ios, `${lines.join("\n")}\n`);
     assert.throws(() => run("--ios-log", ios));
   }
+
+  const summaryDir = join(root, "summary");
+  mkdirSync(summaryDir);
+  const summaryFile = join(summaryDir, "TEST-auth.xml");
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:callback_cancel@${digest}]"><failure type="java.lang.AssertionError" message="auth_corpus_callback_cancel_stage_snapshot_state learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const bounded = summarize(summaryDir);
+  const failure = JSON.parse(bounded).failures[0];
+  assert.equal(failure.testName, "auth_corpus_callback_cancel");
+  assert.deepEqual(failure.authDiagnostic, {
+    corpusId: "callback_cancel",
+    stage: "snapshot",
+    mismatch: "state",
+  });
+  assert.doesNotMatch(bounded, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:callback_cancel_private@${digest}]"><failure message="auth_corpus_callback_cancel_private_stage_snapshot_state">learner@example.test C:\\private\\path</failure></testcase></testsuite>`,
+  );
+  const adversarial = summarize(summaryDir);
+  const adversarialFailure = JSON.parse(adversarial).failures[0];
+  assert.equal(adversarialFailure.testName, "auth_vector_unknown");
+  assert.equal("authDiagnostic" in adversarialFailure, false);
+  assert.doesNotMatch(adversarial, /example\.test|private/i);
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

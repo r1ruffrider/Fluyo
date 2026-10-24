@@ -1,5 +1,49 @@
 import fs from "node:fs";
 
+const authCorpusIds = new Set([
+  "cold_start_without_candidate",
+  "cold_start_with_candidate",
+  "warm_callback_success",
+  "cold_callback_success",
+  "callback_cancel",
+  "callback_malformed",
+  "callback_expired",
+  "callback_replay",
+  "callback_duplicate_delivery",
+  "callback_unsupported",
+  "callback_overlap_rejected",
+  "refresh_success",
+  "refresh_explicit_revocation",
+  "refresh_transient_failure_preserves_candidate",
+  "refresh_repeated_401_clears",
+  "forbidden_403_preserves_session",
+  "offline_startup_preserves_verified_display_only",
+  "background_foreground",
+  "termination_relaunch_without_transaction",
+  "account_switch_cleanup",
+  "stale_response_discarded",
+  "stale_storage_write_discarded",
+  "vault_corruption_cleanup",
+  "clock_skew",
+  "owner_subject_mismatch",
+  "zero_telemetry_launch",
+  "zero_telemetry_resume",
+  "zero_telemetry_error",
+  "public_state_is_secret_free",
+  "callback_transaction_is_purpose_environment_host_path_and_expiry_bound",
+  "callback_transaction_consumes_once_and_wipes",
+  "valid_verified_session_survives_bad_link",
+  "generation_change_cancels_work_and_blocks_stale_writes",
+  "owner_data_waits_for_private_subject_confirmation",
+  "transient_refresh_failure_preserves_candidate",
+  "explicit_invalidation_and_repeated_401_clear",
+  "403_never_refreshes_or_signs_out",
+  "offline_never_confirms_new_owner_or_expands_access",
+  "cleanup_precedes_signed_out_or_new_owner_exposure",
+  "no_op_telemetry_has_zero_retention_and_zero_transport",
+  "evidence_is_closed_and_mutation_safe",
+]);
+
 const [logPath, phaseFlag, phase] = process.argv.slice(2);
 const phases = new Set([
   "build_debug",
@@ -30,6 +74,14 @@ const allowedTests = [
   "testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed",
 ];
 const test = allowedTests.find((name) => raw.includes(name)) ?? "unknown";
+const authDiagnosticMatch = raw.match(
+  /\bauth_corpus_([a-z0-9_]+)_stage_(snapshot)_(count|shape|state|candidate|owner|destination|outcome|generation)\b/,
+);
+const authDiagnostic =
+  authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
+const boundedDiagnostic = authDiagnostic
+  ? `; corpus=${authDiagnostic[1]}; stage=${authDiagnostic[2]}; mismatch=${authDiagnostic[3]}`
+  : "";
 process.stderr.write(
-  `iOS phase failed; phase=${phase}; category=${category}; test=${test}; raw output discarded\n`,
+  `iOS phase failed; phase=${phase}; category=${category}; test=${test}${boundedDiagnostic}; raw output discarded\n`,
 );
