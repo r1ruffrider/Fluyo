@@ -17,6 +17,7 @@ const contractDirectory = resolve(repositoryRoot, "contracts/mobile/auth-readine
 const evidenceDirectory = resolve(contractDirectory, "evidence");
 const docsDirectory = resolve(repositoryRoot, "docs");
 const baseCommit = "c97fffbb48d5c35e38a103a4b68e1a4cbaaf69ee";
+const historicalSnapshotCommit = "8ce28a7e57150ebf30499a447faee686ca50f3ce";
 const policyRelativePath = "contracts/mobile/auth-readiness/v1/decision-policy.json";
 const policyBytes = readFileSync(resolve(contractDirectory, "decision-policy.json"));
 const policy = JSON.parse(policyBytes.toString("utf8")) as JsonObject;
@@ -1381,7 +1382,7 @@ describe("native auth pre-approval decision evidence", () => {
     }
   });
 
-  it("is bound to the exact base and unchanged raw decision policy", () => {
+  it("is bound to the exact historical snapshot and unchanged raw decision policy", () => {
     expect(index).toMatchObject({
       schemaVersion: "1.0.0",
       packetKind: "pre_approval_decision_evidence",
@@ -1397,7 +1398,20 @@ describe("native auth pre-approval decision evidence", () => {
     const basePolicy = gitBuffer("show", `${baseCommit}:${policyRelativePath}`);
     expect(policyBytes.equals(basePolicy)).toBe(true);
     expect(sha256(policyBytes)).toBe(asObject(index.decisionPolicy).sha256);
-    expect(gitText("diff", "--name-only", baseCommit, "--", "apps", policyRelativePath)).toBe("");
+    expect(gitText("rev-list", "--parents", "-n", "1", historicalSnapshotCommit)).toBe(
+      `${historicalSnapshotCommit} ${baseCommit}`,
+    );
+    expect(
+      gitText(
+        "diff",
+        "--name-only",
+        baseCommit,
+        historicalSnapshotCommit,
+        "--",
+        "apps",
+        policyRelativePath,
+      ),
+    ).toBe("");
     expect(gitText("status", "--porcelain=v1", "--untracked-files=all", "--", "apps")).toBe("");
   });
 
