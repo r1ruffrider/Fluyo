@@ -1,0 +1,106 @@
+{
+  "bootstrap": {
+    "decisionPolicySha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696",
+    "evidenceIndexSha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de",
+    "genesisRecordCount": 4,
+    "historicalSnapshotCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce",
+    "installationBaseCommit": "0b5032b0e05539f31ad7efe1b8806ec55f5f91a2",
+    "schemaSha256": "8ebacdee02a2acd87248b8b26fdc5b34d88c331bfc9d7fbe02667de5678c80e3",
+    "validatorSha256": "61fd39ca80f2f53460b490a956b0fb964b66c79248ca495e09dc593aa703aed6",
+    "workflowSha256": "09046dd364f057abcce44de3d8f7a13db2911a6e6def4be74cd59366ecb40415"
+  },
+  "canonicalRecordEncoding": "utf8_nfc_safe_integer_recursive_utf8_key_order_two_space_lf_no_bom",
+  "delegation": {
+    "deniedActions": [
+      "accept_any_of_fourteen_material_native_auth_decisions",
+      "production_action",
+      "credential_or_secret_action",
+      "external_account_action",
+      "dashboard_action",
+      "domain_action",
+      "signing_action",
+      "store_action",
+      "physical_device_action",
+      "spend_action",
+      "publication_or_release_action",
+      "destructive_or_data_action"
+    ],
+    "requiredPhaseGates": [
+      "Catalina architecture PASS",
+      "Natalia security PASS",
+      "Renata environment and CI PASS",
+      "all relevant domain specialists PASS",
+      "protected CI PASS",
+      "Elana exact-head PASS last"
+    ],
+    "sameSubjectBundleRequired": true,
+    "scope": "credential_free_repository_only_nonproduction_phase_after_required_gates"
+  },
+  "eventTypes": [
+    "GOVERNANCE_SELECTION",
+    "DELEGATION_GRANT",
+    "DELEGATION_REVOCATION",
+    "MIGRATION_SNAPSHOT",
+    "REVIEW_ATTESTATION",
+    "PHASE_APPROVAL",
+    "TOOLING_CHANGE_AUTHORIZATION"
+  ],
+  "foldRules": {
+    "appendOnly": true,
+    "concurrentWritersMustRebaseOntoLatestChain": true,
+    "decisionEventsDeniedInV1": true,
+    "effectiveStateComesOnlyFromValidatedFold": true,
+    "phaseApprovalRemainsEffectiveOnlyWhileCitedReviewsStayLatestPassAndDelegationActive": true,
+    "phaseApprovalRequiresAdrianaActiveDelegationEarlierLatestMatchingPassGatesAndBoundedNonproductionScope": true,
+    "referencesMustNameEarlierRecordDigests": true,
+    "reviewSupersessionMakesEarlierAttestationStale": true,
+    "revocationAndReviewSupersessionRequireNewRecord": true
+  },
+  "gateInventory": {
+    "domainGatesDeclaredPerPhase": true,
+    "finalIndependentGateMustHaveGreatestSequence": true,
+    "fixedReviewers": {
+      "ARCHITECTURE": "Catalina",
+      "ENVIRONMENT_AND_CI": "Renata",
+      "INDEPENDENT_EXACT_HEAD_QA": "Elana",
+      "PROTECTED_CI": "GitHub Actions",
+      "SECURITY": "Natalia"
+    },
+    "requiredCategories": [
+      "ARCHITECTURE",
+      "SECURITY",
+      "ENVIRONMENT_AND_CI",
+      "DOMAIN_SPECIALIST",
+      "PROTECTED_CI",
+      "INDEPENDENT_EXACT_HEAD_QA"
+    ],
+    "samePhaseHeadAndSubjectBundleRequired": true
+  },
+  "honestLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+  "ledgerId": "fluyo-native-auth-approval-history-v1",
+  "materialDecisionIds": [
+    "AUTH-SDK-IOS",
+    "AUTH-SDK-ANDROID",
+    "AUTH-METHODS",
+    "AUTH-SIGNOUT-SCOPE",
+    "AUTH-CALLBACK-DOMAINS",
+    "AUTH-AASA",
+    "AUTH-ASSETLINKS",
+    "AUTH-SUPABASE-ALLOWLIST",
+    "AUTH-STORAGE-IOS",
+    "AUTH-STORAGE-ANDROID",
+    "AUTH-NONPROD-CUSTODY",
+    "AUTH-RECOVERY-DELIVERY",
+    "AUTH-REVOCATION",
+    "AUTH-ACCOUNT-DELETION"
+  ],
+  "recordDigest": "lowercase_sha256_of_exact_canonical_record_bytes",
+  "roster": {
+    "delegatedPhaseApprover": "Adriana",
+    "materialAndGovernanceGrantor": "Marlon",
+    "orchestratorAndMergeOwner": "Adriana",
+    "soleFinalIndependentExactHeadQa": "Elana"
+  },
+  "schemaVersion": "1.0.0",
+  "subjectBundleEncoding": "paths_sorted_by_utf8_bytes_then_utf8_path_0x00_ascii_lowercase_sha256_0x0a"
+}

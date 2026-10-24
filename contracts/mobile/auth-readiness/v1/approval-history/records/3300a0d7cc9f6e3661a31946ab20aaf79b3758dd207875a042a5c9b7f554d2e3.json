@@ -1,0 +1,102 @@
+{
+  "actor": "Marlon",
+  "authority": {
+    "grantedBy": "Marlon",
+    "kind": "direct_material_owner_authority",
+    "referenceRecordDigests": [
+      "7ba81df658a221c77dbe83f57057aceae2e166af73751afcf94f540c00a3cd75",
+      "cbe86117722946fd2846b44a494b514883ddf6896eee518aab9a3512fc3a8f04"
+    ]
+  },
+  "eventType": "TOOLING_CHANGE_AUTHORIZATION",
+  "ledgerId": "fluyo-native-auth-approval-history-v1",
+  "payload": {
+    "atomicSemantics": {
+      "forbiddenChanges": [
+        "any other package-lock node or field",
+        "scripts or dependency classes",
+        "auth SDK or runtime source",
+        "Vite Rolldown OXC PostCSS or unrelated integrity metadata"
+      ],
+      "lockfileChanges": [
+        "apps/api workspace package devDependency field",
+        "packages/shared workspace package devDependency field",
+        "node_modules/vitest",
+        "node_modules/@vitest/expect",
+        "node_modules/@vitest/mocker",
+        "node_modules/@vitest/pretty-format",
+        "node_modules/@vitest/runner",
+        "node_modules/@vitest/snapshot",
+        "node_modules/@vitest/spy",
+        "node_modules/@vitest/utils"
+      ],
+      "manifestChanges": [
+        "apps/api/package.json:/devDependencies/vitest:4.1.11->4.1.12",
+        "packages/shared/package.json:/devDependencies/vitest:4.1.11->4.1.12"
+      ]
+    },
+    "baseBundleSha256": "7c19687d547d1bf56c9989d22a77b3534faf054460f0ae18c9283312e1f26119",
+    "baseFiles": [
+      {
+        "path": "apps/api/package.json",
+        "sha256": "6e4562fdc68730e6630b5e56bc74fd2f4622c02c82c10b7fcc1db4db6d4d68a0"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "055cf50ecd5c82f751af4bf4a306adccf00a3e8b28c0e7fa4071c73fe88caeb2"
+      },
+      {
+        "path": "packages/shared/package.json",
+        "sha256": "34b42e520583bd00ae79d682fe1e39b4c0145800fc4efaf483b056b41e12cefe"
+      }
+    ],
+    "classification": "credential_free_dev_tool_only",
+    "decision": "DEPENDENCY_LOCK_REMEDIATION_OPTION_A",
+    "externalActionAuthorization": false,
+    "nativeEvidenceSatisfaction": false,
+    "runtimeOrProductAuthorization": false,
+    "targetBundleSha256": "a39114aac53673c51d57eb6341e4a17da9575d64a5dc17b1d092bc250a5c2ab5",
+    "targetFiles": [
+      {
+        "path": "apps/api/package.json",
+        "sha256": "fa9d0b1598e0b6453d16551ecde04fb4220b1ac49962e06014cb88f89d706d38"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "025d0a914a31dc77cfa8fabcb2a9445b658333fbd3148d89cfe42b3637a94249"
+      },
+      {
+        "path": "packages/shared/package.json",
+        "sha256": "6c2a592699e6ed188cbdf1826578320fd6b3bb7504579709cb6875a727bdc82e"
+      }
+    ]
+  },
+  "previousRecordDigest": "cbe86117722946fd2846b44a494b514883ddf6896eee518aab9a3512fc3a8f04",
+  "provenance": {
+    "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
+    "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+    "recordedBy": "Adriana",
+    "recordingMethod": "repository_governance_record",
+    "sourceCommit": "a886b75af125b5a69e2ee3f42471ceb2700eeec1"
+  },
+  "recordedAtUtc": "2026-10-23T21:00:36.372Z",
+  "schemaVersion": "1.0.0",
+  "sequence": 3,
+  "subject": {
+    "bundleSha256": "7c19687d547d1bf56c9989d22a77b3534faf054460f0ae18c9283312e1f26119",
+    "files": [
+      {
+        "path": "apps/api/package.json",
+        "sha256": "6e4562fdc68730e6630b5e56bc74fd2f4622c02c82c10b7fcc1db4db6d4d68a0"
+      },
+      {
+        "path": "package-lock.json",
+        "sha256": "055cf50ecd5c82f751af4bf4a306adccf00a3e8b28c0e7fa4071c73fe88caeb2"
+      },
+      {
+        "path": "packages/shared/package.json",
+        "sha256": "34b42e520583bd00ae79d682fe1e39b4c0145800fc4efaf483b056b41e12cefe"
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+name: Auth approval history
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  approval-history:
+    name: Auth approval history
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FLUYO_APPROVAL_HISTORY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      FLUYO_APPROVAL_HISTORY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      FLUYO_APPROVAL_HISTORY_ROOT: ${{ github.workspace }}/candidate
+      FLUYO_APPROVAL_HISTORY_TRUSTED_HEAD: ${{ github.event.pull_request.base.sha || github.sha }}
+      FLUYO_APPROVAL_HISTORY_TRUSTED_ROOT: ${{ github.workspace }}/trusted
+    steps:
+      - name: Checkout exact trusted control plane
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
+          path: trusted
+          persist-credentials: false
+
+      - name: Materialize exact candidate as untrusted data
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Verify immutable endpoints and trusted control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C trusted rev-parse HEAD)" = "${FLUYO_APPROVAL_HISTORY_TRUSTED_HEAD}"
+          test "$(git -C candidate rev-parse HEAD)" = "${FLUYO_APPROVAL_HISTORY_HEAD}"
+          git -C candidate cat-file -e "${FLUYO_APPROVAL_HISTORY_BASE}^{commit}"
+          git -C candidate merge-base --is-ancestor "${FLUYO_APPROVAL_HISTORY_BASE}" "${FLUYO_APPROVAL_HISTORY_HEAD}"
+
+      - name: Validate candidate data with base-controlled validator
+        run: node trusted/scripts/check-auth-approval-history.mjs
