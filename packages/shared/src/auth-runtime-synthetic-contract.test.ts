@@ -200,6 +200,7 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlin).toContain("requireCorpusMatch(vector.trace == trace");
     expect(kotlin).toContain("throw AssertionError(marker)");
     expect(kotlin).toContain('System.getenv("FLUYO_AUTH_DIAGNOSTIC_FILE")');
+    expect(kotlin).not.toMatch(/(?:System\.(?:out|err)\.)?print(?:ln)?\s*\(|\bLog\.\w+\s*\(/);
     expect(kotlin).toContain("assertEquals(vector.completions.filterNot");
     expect(kotlin).toContain("values.size < commands.size");
     expect(swiftRuntime).toContain("guard requestedGeneration == generation else { return [] }");

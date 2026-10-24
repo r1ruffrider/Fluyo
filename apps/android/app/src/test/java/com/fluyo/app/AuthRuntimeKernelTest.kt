@@ -439,7 +439,6 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             if (matches) return
             val marker = "[auth_corpus_${corpusId}_stage_${boundedMismatch}]"
             if (boundedDiagnosticPattern.matches(marker)) {
-                System.err.println(marker)
                 System.getenv("FLUYO_AUTH_DIAGNOSTIC_FILE")?.let { path ->
                     Files.write(Path.of(path), "$marker\n".toByteArray(StandardCharsets.UTF_8))
                 }
