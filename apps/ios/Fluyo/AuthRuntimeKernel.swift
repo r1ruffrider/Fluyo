@@ -146,6 +146,7 @@ actor AuthRuntimeCoordinator {
         enqueueLocked(reservation.generation, .initializing, .init(focus: nil, announcement: .initializing, priority: .polite, navigation: nil))
     }
     private func finishInitialization(_ reservation: Reservation, _ task: Task<Void, Never>) async {
+        task.cancel()
         await clock.cancelOwnedTimers(generation: reservation.generation)
         await task.value
         finish(reservation)
@@ -219,6 +220,7 @@ actor AuthRuntimeCoordinator {
         enqueueLocked(reservation.generation, .refreshPending, .init(focus: .heading, announcement: .refreshPending, priority: .polite, navigation: nil))
     }
     private func finishRefresh(_ reservation: Reservation, _ task: Task<Void, Never>) async {
+        task.cancel()
         await clock.cancelOwnedTimers(generation: reservation.generation)
         await task.value
         effects.removeAll { $0.generation == reservation.generation && $0.originatingState == .refreshPending }

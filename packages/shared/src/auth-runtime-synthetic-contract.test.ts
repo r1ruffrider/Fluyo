@@ -190,15 +190,27 @@ describe("native auth executable synthetic kernel", () => {
     }
     expect(swift).toContain("XCTAssertEqual(fullEffectHistory, vector.effects");
     expect(swift).toContain("requireCorpusMatch(trace == vector.trace");
-    expect(swift).toContain('XCTFail("[auth_corpus_\\(corpusId)_stage_');
+    expect(swift).toContain("XCTFail(marker");
+    expect(swift).toContain("print(marker)");
     expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
+    expect(swift).toContain("entries.count < commands.count");
+    expect(swift).toContain("verifyLateTimerRegistrationCancellation");
+    expect(swift).toContain("withTaskCancellationHandler");
     expect(kotlin).toContain("assertEquals(vector.effects, fullEffectHistory)");
     expect(kotlin).toContain("requireCorpusMatch(vector.trace == trace");
-    expect(kotlin).toContain('throw AssertionError("[auth_corpus_${corpusId}_stage_');
+    expect(kotlin).toContain("throw AssertionError(marker)");
+    expect(kotlin).toContain('System.getenv("FLUYO_AUTH_DIAGNOSTIC_FILE")');
     expect(kotlin).toContain("assertEquals(vector.completions.filterNot");
+    expect(kotlin).toContain("values.size < commands.size");
     expect(swiftRuntime).toContain("guard requestedGeneration == generation else { return [] }");
     expect(swiftRuntime).toContain(
       "enqueueLocked(generation, .safeTerminalError, terminalEntryEffect())",
+    );
+    expect(swiftRuntime).toMatch(
+      /finishInitialization[^]*task\.cancel\(\)[^]*cancelOwnedTimers[^]*await task\.value/,
+    );
+    expect(swiftRuntime).toMatch(
+      /finishRefresh[^]*task\.cancel\(\)[^]*cancelOwnedTimers[^]*await task\.value/,
     );
     expect(kotlinRuntime).toContain("if (forGeneration != generationValue)");
     expect(kotlinRuntime).toContain(
@@ -369,6 +381,13 @@ describe("native auth executable synthetic kernel", () => {
     expect(workflow.match(/fetch-depth: 0/g)).toHaveLength(8);
     expect(workflow.match(/- name: Verify exact checkout/g)).toHaveLength(8);
     expect(workflow.match(/test "\$\(git rev-parse HEAD\)" = "\$FLUYO_CI_HEAD"/g)).toHaveLength(8);
+  });
+
+  it("carries only validated auth diagnostics and removes the Android sidecar", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
+    expect(workflow).toContain('export FLUYO_AUTH_DIAGNOSTIC_FILE="$AUTH_DIAGNOSTIC_FILE"');
+    expect(workflow).toContain('rm -f "$AUTH_DIAGNOSTIC_FILE"');
+    expect(workflow).toContain('--diagnostic-file "$AUTH_DIAGNOSTIC_FILE"');
   });
 
   it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {

@@ -37,6 +37,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let overflow = try XCTUnwrap(try loadCorpus().first { $0.id == "evidence_is_closed_and_mutation_safe" }); try await run(overflow)
         let ports = ScriptPorts(times: [30_000]); let coordinator = makeCoordinator(ports); await coordinator.scheduleTimeout(.totalActionable)
         let requests = await ports.clock.requests(); XCTAssertEqual(requests, [30_000])
+        await verifyLateTimerRegistrationCancellation()
     }
 
     private func run(_ vector: Vector) async throws {
@@ -108,7 +109,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
 
     private func validateInvariant(_ id: String, _ coordinator: AuthRuntimeCoordinator, _ ports: ScriptPorts) async throws {
         switch id {
-        case "public_state_is_secret_free": let snapshot = await coordinator.snapshot(); XCTAssertEqual(Mirror(reflecting: snapshot).children.compactMap(\.label), ["state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"])
+        case "public_state_is_secret_free": let snapshot = await coordinator.snapshot(); XCTAssertEqual(Mirror(reflecting: snapshot).children.compactMap(\.label), ["state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"]); await verifyCompletionAuditTracksRemainingCommands()
         case "callback_transaction_is_purpose_environment_host_path_and_expiry_bound": let calls = await ports.callback.callCount(); XCTAssertGreaterThan(calls, 0); try await verifyCallbackStoreFailure()
         case "callback_transaction_consumes_once_and_wipes":
             let store = StrictCallbackStore(now: 999, expiresAt: 1_000); let first = await store.validateConsumeAndWipe(ingress(), generation: 1); let second = await store.validateConsumeAndWipe(ingress(), generation: 1); let empty = await store.confirmEmpty(generation: 1); let calls = await ports.vault.replaceCallsAfterSeed()
@@ -124,6 +125,32 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "evidence_is_closed_and_mutation_safe": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal)
         case "no_op_telemetry_has_zero_retention_and_zero_transport": XCTAssertEqual(Mirror(reflecting: TrapTelemetry()).children.count, 0)
         default: break
+        }
+    }
+
+    private func verifyCompletionAuditTracksRemainingCommands() async {
+        let audit = CompletionAudit(["vault_none"])
+        let before = await audit.hasCommands(), consumed = await audit.take(["vault_none"]), after = await audit.hasCommands()
+        XCTAssertTrue(before); XCTAssertEqual(consumed, "vault_none"); XCTAssertFalse(after)
+    }
+
+    private func verifyLateTimerRegistrationCancellation() async {
+        do {
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
+            await ports.clock.setSuspendRegistration(true); await ports.vault.setSuspendRead(true)
+            let work = Task { await coordinator.initialize(online: true) }
+            await ports.vault.waitReadStarted(); await ports.clock.waitRegistrationStarted(); await ports.vault.releaseRead(); await work.value
+            let snapshot = await coordinator.snapshot(), history = await coordinator.presentationEffectHistory()
+            XCTAssertEqual(snapshot.state, .signedOut); XCTAssertTrue(history.isEmpty)
+        }
+        do {
+            let ports = ScriptPorts(times: [0, 0]); let coordinator = makeCoordinator(ports)
+            await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true)
+            await ports.clock.setSuspendRegistration(true); await ports.provider.setSuspendRefresh(true)
+            let work = Task { await coordinator.handle401(candidate()) }
+            await ports.provider.waitRefreshStarted(); await ports.clock.waitRegistrationStarted(); await ports.provider.releaseRefresh(); await work.value
+            let snapshot = await coordinator.snapshot(), history = await coordinator.presentationEffectHistory()
+            XCTAssertEqual(snapshot.state, .authenticated); XCTAssertTrue(history.isEmpty)
         }
     }
 
@@ -359,8 +386,12 @@ final class AuthRuntimeKernelTests: XCTestCase {
         "vault_confirm", "owner_confirm", "stale_rejected", "snapshot_published", "effect_enqueued", "terminal_latched",
     ]
     private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) {
-        guard matches else { XCTFail("[auth_corpus_\(corpusId)_stage_\(boundedMismatch)]", file: file, line: line); return }
+        guard !matches else { return }
+        let marker = "[auth_corpus_\(corpusId)_stage_\(boundedMismatch)]"
+        if marker.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil { print(marker) }
+        XCTFail(marker, file: file, line: line)
     }
+    private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#
     private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(effect.generation, generation, file: file, line: line)
         XCTAssertEqual(effect.originatingState, .safeTerminalError, file: file, line: line)
@@ -402,7 +433,7 @@ private actor CompletionAudit {
     private let commands: [String]; private var entries: [String] = []
     init(_ commands: [String] = []) { self.commands = commands }
     func take(_ allowed: Set<String>) -> String? { guard commands.indices.contains(entries.count) else { return nil }; let command = commands[entries.count]; guard allowed.contains(command) else { return nil }; entries.append(command); return command }
-    func hasCommands() -> Bool { !commands.isEmpty }
+    func hasCommands() -> Bool { entries.count < commands.count }
     func values() -> [String] { entries }
 }
 private final class GenerationCell: @unchecked Sendable {
@@ -454,15 +485,17 @@ private actor ScriptProvider: AuthProviderPort {
     func cancelOwnedWork(generation: UInt64) async { canceled.insert(generation); if suspendExchange { await exchangeGate.release(); await cancellationObserved.wait() }; if suspendRefresh { await refreshGate.release(); await refreshCancellationObserved.wait() } }
 }
 private actor ScriptVault: SessionVaultPort {
-    private let replaceGate = Gate(); private let audit: Audit; private let completions: CompletionAudit; private let generations: GenerationCell; private var readCandidate = false, suspendReplace = false
+    private let readGate = Gate(), replaceGate = Gate(); private let audit: Audit; private let completions: CompletionAudit; private let generations: GenerationCell; private var readCandidate = false, suspendRead = false, suspendReplace = false
     private var replaceResult = ConditionalMutationResult.applied, clearResult = ConditionalMutationResult.applied, confirm = true, replaceCalls = 0, seedReplaces = 0, storedCandidate = false, latestGeneration: UInt64 = 0, staleWrites = 0
     init(_ audit: Audit, _ completions: CompletionAudit, _ generations: GenerationCell) { self.audit = audit; self.completions = completions; self.generations = generations }
-    func setReadCandidate(_ value: Bool) { readCandidate = value }; func setSuspendReplace(_ value: Bool) { suspendReplace = value }; func setReplaceResult(_ value: ConditionalMutationResult) { replaceResult = value }
+    func setReadCandidate(_ value: Bool) { readCandidate = value }; func setSuspendRead(_ value: Bool) { suspendRead = value }; func setSuspendReplace(_ value: Bool) { suspendReplace = value }; func setReplaceResult(_ value: ConditionalMutationResult) { replaceResult = value }
+    func waitReadStarted() async { await readGate.waitUntilStarted() }
+    func releaseRead() async { await readGate.release() }
     func waitReplaceStarted() async { await replaceGate.waitUntilStarted() }
     func releaseReplace() async { await replaceGate.release() }
     func setClearResult(_ value: ConditionalMutationResult) { clearResult = value }; func setConfirm(_ value: Bool) { confirm = value }; func replaceCallsAfterSeed() -> Int { max(0, replaceCalls - seedReplaces) }
     func seed() { storedCandidate = true }; func hasStoredCandidate() -> Bool { storedCandidate }; func staleWriteCount() -> Int { staleWrites }
-    func read(generation: UInt64) async -> AuthPortResult<OpaqueSessionCandidate?> { let command = await completions.take(["vault_candidate", "vault_none"]); let hasCandidate = command == "vault_candidate" || (command == nil && readCandidate); storedCandidate = hasCandidate; return .success(hasCandidate ? .init("synthetic") : nil) }
+    func read(generation: UInt64) async -> AuthPortResult<OpaqueSessionCandidate?> { if suspendRead { await readGate.suspendPoint() }; let command = await completions.take(["vault_candidate", "vault_none"]); let hasCandidate = command == "vault_candidate" || (command == nil && readCandidate); storedCandidate = hasCandidate; return .success(hasCandidate ? .init("synthetic") : nil) }
     func replace(_ candidate: OpaqueSessionCandidate, generation: UInt64) async -> ConditionalMutationResult { replaceCalls += 1; if readCandidate, seedReplaces == 0 { seedReplaces = 1 }; let command = await completions.take(["suspended", "replace_failed"]); if command == "suspended" || (command == nil && suspendReplace) { await replaceGate.suspendPoint() }; let result: ConditionalMutationResult = command == "replace_failed" ? .failed : replaceResult; guard generations.compareAndMutate(generation, { latestGeneration = generation; if result == .applied { storedCandidate = true } }) else { staleWrites += 1; return .staleGeneration }; return result }
     func clear(generation: UInt64) async -> ConditionalMutationResult { await audit.add("vault"); guard generations.compareAndMutate(generation, { latestGeneration = generation; if clearResult == .applied { storedCandidate = false } }) else { staleWrites += 1; return .staleGeneration }; return clearResult }
     func confirmEmpty(generation: UInt64) async -> Bool { await audit.add("vault_confirm"); return confirm && !storedCandidate }
@@ -484,14 +517,34 @@ private actor ScriptCallback: CallbackTransactionStorePort {
 }
 private actor ScriptClock: AuthClockPort {
     private final class SleepHandle: @unchecked Sendable { let generation: UInt64, gate = Gate(), cancellationObserved = OneShotSignal(); var canceled = false; init(_ generation: UInt64) { self.generation = generation } }
-    private let times: [UInt64]; private let completions: CompletionAudit; private var index = 0, sleeps: [UInt64] = [], suspendSleep = false; private var delayedElapsed: UInt64?; private var active: [SleepHandle] = []
+    private let times: [UInt64]; private let registrationGate = Gate(); private let completions: CompletionAudit; private var index = 0, sleeps: [UInt64] = [], suspendSleep = false, suspendRegistration = false; private var delayedElapsed: UInt64?; private var active: [SleepHandle] = []
     init(_ times: [UInt64], _ completions: CompletionAudit) { self.times = times; self.completions = completions }
     func monotonicMilliseconds() async -> UInt64 { defer { index += 1 }; return times.indices.contains(index) ? times[index] : (times.last ?? 0) }
     func setSuspendSleep(_ value: Bool) { suspendSleep = value }
+    func setSuspendRegistration(_ value: Bool) { suspendRegistration = value }
     func setDelayedElapsed(_ value: UInt64) { delayedElapsed = value }
+    func waitRegistrationStarted() async { await registrationGate.waitUntilStarted() }
     func waitSleepStarted() async { while active.isEmpty { await Task.yield() }; if let handle = active.last { await handle.gate.waitUntilStarted() } }
     func releaseSleep() async { for handle in active { await handle.gate.release() } }
-    func sleep(milliseconds: UInt64, generation: UInt64) async -> Bool { sleeps.append(milliseconds); let handle = SleepHandle(generation); active.append(handle); if await completions.take(["timer_fired"]) == "timer_fired" { active.removeAll { $0 === handle }; return true }; if milliseconds == 500, let delayedElapsed { active.removeAll { $0 === handle }; return delayedElapsed >= milliseconds }; let shouldSuspend = suspendSleep || (await completions.hasCommands()) || milliseconds == 500; if shouldSuspend { await handle.gate.suspendPoint() }; active.removeAll { $0 === handle }; if handle.canceled { await handle.cancellationObserved.signal() }; return !shouldSuspend && !handle.canceled }
+    func sleep(milliseconds: UInt64, generation: UInt64) async -> Bool {
+        sleeps.append(milliseconds)
+        if suspendRegistration {
+            let gate = registrationGate
+            await withTaskCancellationHandler(operation: { await gate.suspendPoint() }, onCancel: { Task { await gate.release() } })
+        }
+        guard !Task.isCancelled else { return false }
+        let handle = SleepHandle(generation); active.append(handle); defer { active.removeAll { $0 === handle } }
+        let fired: Bool
+        if await completions.take(["timer_fired"]) == "timer_fired" { fired = !Task.isCancelled }
+        else if milliseconds == 500, let delayedElapsed { fired = delayedElapsed >= milliseconds && !Task.isCancelled }
+        else {
+            let shouldSuspend = suspendSleep || (await completions.hasCommands()) || milliseconds == 500
+            if shouldSuspend { await withTaskCancellationHandler(operation: { await handle.gate.suspendPoint() }, onCancel: { Task { await handle.gate.release() } }) }
+            fired = !shouldSuspend && !Task.isCancelled
+        }
+        if handle.canceled { await handle.cancellationObserved.signal(); return false }
+        return fired
+    }
     func cancelOwnedTimers(generation: UInt64) async { let handles = active.filter { $0.generation == generation }; for handle in handles { handle.canceled = true; await handle.gate.release() }; for handle in handles { await handle.cancellationObserved.wait() } }
     func requests() -> [UInt64] { sleeps }
 }

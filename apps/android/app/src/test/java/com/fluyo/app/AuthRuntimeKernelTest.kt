@@ -130,7 +130,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
 
     private suspend fun validateInvariant(id: String, coordinator: AuthRuntimeCoordinator, ports: ScriptPorts) {
         when (id) {
-            "public_state_is_secret_free" -> assertEquals(setOf("state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"), AuthRuntimeSnapshot::class.java.declaredFields.filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) }.map { it.name }.toSet())
+            "public_state_is_secret_free" -> { assertEquals(setOf("state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"), AuthRuntimeSnapshot::class.java.declaredFields.filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) }.map { it.name }.toSet()); verifyCompletionAuditTracksRemainingCommands() }
             "callback_transaction_is_purpose_environment_host_path_and_expiry_bound" -> { assertTrue(ports.callback.calls > 0); verifyCallbackStoreFailure() }
             "callback_transaction_consumes_once_and_wipes" -> {
                 val store = StrictCallbackStore(999uL, 1_000uL)
@@ -149,6 +149,11 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             "no_op_telemetry_has_zero_retention_and_zero_transport" -> assertEquals(0, TrapTelemetry::class.java.declaredFields.count { !it.isSynthetic })
             "evidence_is_closed_and_mutation_safe" -> assertTrue(coordinator.isTerminalFenced())
         }
+    }
+
+    private fun verifyCompletionAuditTracksRemainingCommands() {
+        val audit = CompletionAudit(listOf("vault_none"))
+        assertTrue(audit.hasCommands()); assertEquals("vault_none", audit.take("vault_none")); assertFalse(audit.hasCommands())
     }
 
     private suspend fun strictCallbackChecks() {
@@ -431,8 +436,19 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         private fun boundedTraceCount(count: Int): String = if (count < 64) count.toString() else "64_plus"
         private val traceDiagnosticValues = AuthTraceEntry.values().map { it.wire }.toSet()
         private fun requireCorpusMatch(matches: Boolean, corpusId: String, boundedMismatch: String) {
-            if (!matches) throw AssertionError("[auth_corpus_${corpusId}_stage_${boundedMismatch}]")
+            if (matches) return
+            val marker = "[auth_corpus_${corpusId}_stage_${boundedMismatch}]"
+            if (boundedDiagnosticPattern.matches(marker)) {
+                System.err.println(marker)
+                System.getenv("FLUYO_AUTH_DIAGNOSTIC_FILE")?.let { path ->
+                    Files.write(Path.of(path), "$marker\n".toByteArray(StandardCharsets.UTF_8))
+                }
+            }
+            throw AssertionError(marker)
         }
+        private val boundedDiagnosticPattern = Regex(
+            """^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
+        )
         private fun assertTerminalEffect(effect: AuthPresentationEffect, generation: ULong) {
             assertEquals(generation, effect.generation)
             assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, effect.originatingState)
@@ -469,7 +485,7 @@ private class CompletionAudit(private val commands: List<String> = emptyList()) 
         values += command
         return command
     }
-    @Synchronized fun hasCommands() = commands.isNotEmpty()
+    @Synchronized fun hasCommands() = values.size < commands.size
     @Synchronized fun snapshot(): List<String> = values.toList()
 }
 private class GenerationCell {

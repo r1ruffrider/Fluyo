@@ -51,6 +51,14 @@ const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
 const authDiagnosticPattern = new RegExp(
   `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
 );
+const exactAuthDiagnosticPattern = new RegExp(`^${authDiagnosticPattern.source}\\r?\\n?$`);
+const readBoundedDiagnostic = (file) => {
+  if (!file || !fs.existsSync(file)) return null;
+  const stat = fs.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 512) return null;
+  const match = fs.readFileSync(file, "utf8").match(exactAuthDiagnosticPattern);
+  return match && authCorpusIds.has(match[1]) ? match : null;
+};
 
 const args = process.argv.slice(2);
 const phaseIndex = args.indexOf("--phase");
@@ -69,6 +77,13 @@ if (phaseIndex !== -1) {
   phase = args[phaseIndex + 1] ?? null;
   args.splice(phaseIndex, 2);
   if (!allowedPhases.has(phase)) throw new Error("Unsupported bounded Android failure phase.");
+}
+let sidecarDiagnostic = null;
+const diagnosticIndex = args.indexOf("--diagnostic-file");
+if (diagnosticIndex !== -1) {
+  const diagnosticFile = args[diagnosticIndex + 1] ?? null;
+  args.splice(diagnosticIndex, 2);
+  sidecarDiagnostic = readBoundedDiagnostic(diagnosticFile);
 }
 const roots = args;
 if (roots.length === 0) {
@@ -206,9 +221,10 @@ for (const file of xmlFiles.sort()) {
     const escapedSourceName = sourceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
-    const authDiagnosticMatch = authKernel
+    const inlineAuthDiagnostic = authKernel
       ? `${rawAttribute(failureTag[2], "message")}\n${body}`.match(authDiagnosticPattern)
       : null;
+    const authDiagnosticMatch = inlineAuthDiagnostic ?? sidecarDiagnostic;
     const authDiagnostic =
       authDiagnosticMatch &&
       authCorpusIds.has(authDiagnosticMatch[1]) &&

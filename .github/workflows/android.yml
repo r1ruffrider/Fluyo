@@ -131,6 +131,8 @@ jobs:
           RESOURCE_TABLE="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-resources.txt"
           EMULATOR_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-emulator.log"
           INSTRUMENT_LOG="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-instrument.log"
+          AUTH_DIAGNOSTIC_FILE="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-auth-diagnostic.txt"
+          export FLUYO_AUTH_DIAGNOSTIC_FILE="$AUTH_DIAGNOSTIC_FILE"
           AVD_HOME="$RUNNER_TEMP/fluyo-android-${{ matrix.leg }}-avd"
           EMULATOR_PID=""
           cleanup() {
@@ -167,7 +169,7 @@ jobs:
               fi
               wait "$EMULATOR_PID" >/dev/null 2>&1 || true
             fi
-            rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG"
+            rm -f "$RAW_LOG" "$RESOURCE_TABLE" "$EMULATOR_LOG" "$INSTRUMENT_LOG" "$AUTH_DIAGNOSTIC_FILE"
             rm -rf \
               "$GITHUB_WORKSPACE/apps/android/app/build/test-results/testDevelopmentDebugUnitTest" \
               "$GITHUB_WORKSPACE/apps/android/app/build/test-results/testStagingDebugUnitTest" \
@@ -191,6 +193,7 @@ jobs:
           run_gradle_phase() {
             local phase="$1"
             shift
+            rm -f "$AUTH_DIAGNOSTIC_FILE"
             set +e
             ./gradlew "${COMMON[@]}" "$@" >"$RAW_LOG" 2>&1
             local status=$?
@@ -201,7 +204,8 @@ jobs:
                 apps/android/app/build/test-results/testDevelopmentDebugUnitTest \
                 apps/android/app/build/test-results/testStagingDebugUnitTest \
                 apps/android/app/build/outputs/androidTest-results/managedDevice \
-                --phase "$phase"
+                --phase "$phase" \
+                --diagnostic-file "$AUTH_DIAGNOSTIC_FILE"
               echo "Android matrix leg failed; raw output was discarded"
               exit "$status"
             fi
