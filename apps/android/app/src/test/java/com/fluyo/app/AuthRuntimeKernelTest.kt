@@ -40,9 +40,9 @@ class AuthDiagnosticSidecarTest {
         val directory = Files.createTempDirectory("fluyo-auth-diagnostic-")
         val path = directory.resolve("auth-runtime-diagnostic.txt")
         try {
-            writeFirstBoundedDiagnostic(path, "[auth_corpus_diagnostic_unavailable]")
             writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
-            assertEquals("[auth_corpus_diagnostic_unavailable]\n", Files.readString(path))
+            writeFirstBoundedDiagnostic(path, "[auth_corpus_diagnostic_unavailable]")
+            assertEquals("[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n", Files.readString(path))
 
             Files.delete(path)
             writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]")

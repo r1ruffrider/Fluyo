@@ -83,21 +83,24 @@ const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
 const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
-const category = /linker command failed|undefined symbol/i.test(raw)
-  ? "link"
-  : /compile|swift compiler error|failed to build module/i.test(raw)
-    ? "compile"
-    : /simulator|simctl|destination.*unavailable/i.test(raw)
-      ? "simulator"
-      : /timed out|timeout/i.test(raw)
-        ? "timeout"
-        : /configuration|xcconfig|Info\.plist/i.test(raw)
-          ? "configuration"
-          : authDiagnostic || diagnosticUnavailable || test !== "unknown"
-            ? "auth_contract"
-            : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
-              ? "assertion"
-              : "unknown";
+const compileFailurePattern =
+  /(?:\b(?:SwiftCompile|SwiftEmitModule|EmitSwiftModule)\b[^\r\n]*(?:failed|failure|nonzero exit)|failed to build module|\.swift:\d+:\d+:\s*error:)/i;
+const category =
+  authDiagnostic || diagnosticUnavailable || test !== "unknown"
+    ? "auth_contract"
+    : /linker command failed|undefined symbol/i.test(raw)
+      ? "link"
+      : compileFailurePattern.test(raw)
+        ? "compile"
+        : /simulator|simctl|destination.*unavailable/i.test(raw)
+          ? "simulator"
+          : /timed out|timeout/i.test(raw)
+            ? "timeout"
+            : /configuration|xcconfig|Info\.plist/i.test(raw)
+              ? "configuration"
+              : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
+                ? "assertion"
+                : "unknown";
 const boundedDiagnostic = authDiagnostic
   ? authDiagnostic[2]
     ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`

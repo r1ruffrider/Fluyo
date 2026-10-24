@@ -29,7 +29,7 @@ try {
 
   writeFileSync(
     file,
-    `Swift compiler error: failed to compile AuthRuntimeKernelTests.swift ${privateValues.join(" ")}`,
+    `AuthRuntimeKernelTests.swift:55:13: error: cannot find symbol ${privateValues.join(" ")}`,
   );
   const compileFailure = spawnSync(
     process.execPath,
@@ -58,6 +58,23 @@ try {
     /phase=test_current; category=link; test=unknown; raw output discarded/,
   );
   for (const value of privateValues) assert.equal(linkFailureOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `CompileSwiftSources normal arm64 AuthRuntimeKernelTests.swift
+Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups]' failed (0.001 seconds). [auth_corpus_cold_start_without_candidate_stage_snapshot_state] ${privateValues.join(" ")}`,
+  );
+  const mixedAuthFailure = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const mixedAuthFailureOutput = `${mixedAuthFailure.stdout}${mixedAuthFailure.stderr}`;
+  assert.match(
+    mixedAuthFailureOutput,
+    /phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; corpus=cold_start_without_candidate; stage=snapshot; mismatch=state; raw output discarded/,
+  );
+  for (const value of privateValues) assert.equal(mixedAuthFailureOutput.includes(value), false);
 
   writeFileSync(
     file,
