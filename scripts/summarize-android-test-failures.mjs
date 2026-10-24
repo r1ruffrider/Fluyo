@@ -144,15 +144,27 @@ for (const file of xmlFiles.sort()) {
     const kind = failureTag?.[1] ?? null;
     if (!kind) continue;
     const className = attribute(attributes, "classname");
+    const authKernel = className === "com.fluyo.app.AuthRuntimeKernelTest";
+    const rawTestName = rawAttribute(attributes, "name");
+    const authIndex = rawTestName.match(
+      /^canonicalScenarioOrInvariant\[((?:[0-9]|[1-3][0-9]|40)):[a-z0-9_]+@[0-9a-f]{64}\]$/,
+    )?.[1];
     const sourceName = className.split(".").at(-1)?.split("$")[0] ?? "unknown";
     const escapedSourceName = sourceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
     failures.push({
-      className,
-      testName: attribute(attributes, "name"),
+      className: authKernel ? "auth_kernel" : className,
+      testName:
+        authKernel && authIndex !== undefined
+          ? `auth_vector_${authIndex}`
+          : authKernel
+            ? "auth_vector_unknown"
+            : attribute(attributes, "name"),
       kind,
-      category: boundedStageCategory(failureTag[2], body) ?? failureCategory(failureTag[2]),
+      category:
+        boundedStageCategory(failureTag[2], body) ??
+        (authKernel ? "auth_contract" : failureCategory(failureTag[2])),
       frameworkFailureCategory: frameworkFailureCategory(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,
