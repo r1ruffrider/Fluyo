@@ -1,29 +1,28 @@
 {
-  "actor": "Adriana",
+  "actor": "Marlon",
   "authority": {
     "grantedBy": "Marlon",
-    "kind": "administrative_migration_recording",
-    "referenceRecordDigests": [
-      "3c5855b5f622d09f3a6b5ccf721b7aff995863a01086f5ec2df4744696478cb8",
-      "319b304ec5101d9c2edcfef7a48dd7026267382a346fa4eab9b05acd72b13ceb",
-      "cbc0725e75b12df6f87f11140fddf09a8ac196c884ec96f57734676f6a5aa5b7"
-    ]
+    "kind": "direct_material_owner_authority",
+    "referenceRecordDigests": []
   },
-  "eventType": "MIGRATION_SNAPSHOT",
+  "eventType": "DELEGATION_GRANT",
   "ledgerId": "fluyo-native-auth-approval-history-v1",
   "payload": {
-    "decisionCounts": {
-      "accepted": 0,
-      "blocked": 9,
-      "proposed": 5
-    },
-    "delegationGrantRecordDigest": "319b304ec5101d9c2edcfef7a48dd7026267382a346fa4eab9b05acd72b13ceb",
-    "evidenceRequirements": {
-      "total": 69,
-      "unsatisfied": 69
-    },
-    "governanceSelectionRecordDigest": "3c5855b5f622d09f3a6b5ccf721b7aff995863a01086f5ec2df4744696478cb8",
-    "materialDecisionApprover": "Marlon",
+    "delegate": "Adriana",
+    "deniedActions": [
+      "accept_any_of_fourteen_material_native_auth_decisions",
+      "production_action",
+      "credential_or_secret_action",
+      "external_account_action",
+      "dashboard_action",
+      "domain_action",
+      "signing_action",
+      "store_action",
+      "physical_device_action",
+      "spend_action",
+      "publication_or_release_action",
+      "destructive_or_data_action"
+    ],
     "materialDecisionIds": [
       "AUTH-SDK-IOS",
       "AUTH-SDK-ANDROID",
@@ -40,20 +39,19 @@
       "AUTH-REVOCATION",
       "AUTH-ACCOUNT-DELETION"
     ],
-    "nativeMatrix": {
-      "total": 24,
-      "unattempted": 24
-    },
-    "responsibleAfterApproval": "Adriana",
-    "runtimeEvidence": {
-      "conducted": 0,
-      "failed": 0,
-      "passed": 0,
-      "unattempted": 24
-    },
-    "toolingAuthorizationRecordDigest": "cbc0725e75b12df6f87f11140fddf09a8ac196c884ec96f57734676f6a5aa5b7"
+    "requiredPhaseGates": [
+      "Catalina architecture PASS",
+      "Natalia security PASS",
+      "Renata environment and CI PASS",
+      "all relevant domain specialists PASS",
+      "protected CI PASS",
+      "Elana exact-head PASS last"
+    ],
+    "sameSubjectBundleRequired": true,
+    "scope": "credential_free_repository_only_nonproduction_phase_after_required_gates",
+    "usableOnlyAfterLedgerMerge": true
   },
-  "previousRecordDigest": "cbc0725e75b12df6f87f11140fddf09a8ac196c884ec96f57734676f6a5aa5b7",
+  "previousRecordDigest": "7ba81df658a221c77dbe83f57057aceae2e166af73751afcf94f540c00a3cd75",
   "provenance": {
     "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
     "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
@@ -63,7 +61,7 @@
   },
   "recordedAtUtc": "2026-10-23T21:00:36.372Z",
   "schemaVersion": "1.0.0",
-  "sequence": 4,
+  "sequence": 2,
   "subject": {
     "bundleSha256": "a18d7f6e37775993a816fbcfb8fef3477430a6e083d39a7b4fc5e1bf26ed777a",
     "files": [

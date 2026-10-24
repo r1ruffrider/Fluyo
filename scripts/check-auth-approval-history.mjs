@@ -629,16 +629,26 @@ const validateEvent = (record, earlier, state) => {
         throw new Error(`phase requires exactly one ${category} gate`);
     const domains = asObjects(payload.requiredDomainGates);
     if (!domains.length) throw new Error("phase requires a nonempty domain-gate inventory");
-    for (const domain of domains)
-      if (
-        !gates.some(
-          ({ record: review }) =>
-            review.payload.gate === "DOMAIN_SPECIALIST" &&
-            review.payload.domain === domain.domain &&
-            review.payload.reviewer === domain.reviewer,
-        )
-      )
-        throw new Error("required domain gate is missing");
+    const domainPairs = domains.map(({ domain, reviewer }) => ({ domain, reviewer }));
+    const canonicalDomainPairs = [...domainPairs].sort(
+      (left, right) =>
+        compareUtf8(left.domain, right.domain) || compareUtf8(left.reviewer, right.reviewer),
+    );
+    const citedDomainPairs = gates
+      .filter(({ record: review }) => review.payload.gate === "DOMAIN_SPECIALIST")
+      .map(({ record: review }) => ({
+        domain: review.payload.domain,
+        reviewer: review.payload.reviewer,
+      }));
+    if (
+      new Set(domainPairs.map(({ domain }) => domain)).size !== domainPairs.length ||
+      new Set(domainPairs.map((pair) => JSON.stringify(pair))).size !== domainPairs.length ||
+      JSON.stringify(domainPairs) !== JSON.stringify(canonicalDomainPairs) ||
+      JSON.stringify(citedDomainPairs) !== JSON.stringify(domainPairs)
+    )
+      throw new Error(
+        "phase domain-gate inventory must exactly match cited gates in canonical order",
+      );
     const elana = gates.find(
       ({ record: review }) => review.payload.gate === "INDEPENDENT_EXACT_HEAD_QA",
     );

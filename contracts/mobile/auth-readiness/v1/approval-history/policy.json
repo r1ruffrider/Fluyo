@@ -6,7 +6,7 @@
     "historicalSnapshotCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce",
     "installationBaseCommit": "0b5032b0e05539f31ad7efe1b8806ec55f5f91a2",
     "schemaSha256": "8ebacdee02a2acd87248b8b26fdc5b34d88c331bfc9d7fbe02667de5678c80e3",
-    "validatorSha256": "a9daa32b2e65388a08047190dfd1ef390e9087ab811faa3eec9449458b749ca7",
+    "validatorSha256": "61fd39ca80f2f53460b490a956b0fb964b66c79248ca495e09dc593aa703aed6",
     "workflowSha256": "09046dd364f057abcce44de3d8f7a13db2911a6e6def4be74cd59366ecb40415"
   },
   "canonicalRecordEncoding": "utf8_nfc_safe_integer_recursive_utf8_key_order_two_space_lf_no_bom",

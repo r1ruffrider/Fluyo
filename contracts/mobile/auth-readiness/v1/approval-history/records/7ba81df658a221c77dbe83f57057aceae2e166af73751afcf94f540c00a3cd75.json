@@ -13,7 +13,7 @@
     "evidenceIndexSha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de",
     "historicalSnapshotCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce",
     "installationBaseCommit": "0b5032b0e05539f31ad7efe1b8806ec55f5f91a2",
-    "policySha256": "9df6e220e682abef7281f5e513e60104f607de36d600f9460d3d8a426c1327f9",
+    "policySha256": "50ff36d460e75c3a4d56f9f46583086b7025458548ffe139c94563931f724bce",
     "retiredMechanism": "P_TO_A_TO_V_GIT_ANCESTRY_FOR_FUTURE_APPROVALS",
     "schemaSha256": "8ebacdee02a2acd87248b8b26fdc5b34d88c331bfc9d7fbe02667de5678c80e3",
     "selection": "APPEND_ONLY_CONTENT_ADDRESSED_SQUASH_COMPATIBLE"

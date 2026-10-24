@@ -115,7 +115,10 @@ function baseRecord(eventType, actor, kind, subject, sourceCommit, payload, refe
   };
 }
 
-function buildAppendFixture() {
+function buildAppendFixture({
+  domainReviews = [{ domain: "records", reviewer: "Bianca" }],
+  requiredDomainGates = domainReviews,
+} = {}) {
   const root = mkdtempSync(resolve(tmpdir(), "fluyo-auth-ledger-"));
   git(root, "init", "--quiet");
   git(root, "config", "user.name", "Fluyo ledger test");
@@ -161,7 +164,7 @@ function buildAppendFixture() {
     ["ARCHITECTURE", "Catalina", null],
     ["SECURITY", "Natalia", null],
     ["ENVIRONMENT_AND_CI", "Renata", null],
-    ["DOMAIN_SPECIALIST", "Bianca", "records"],
+    ...domainReviews.map(({ domain, reviewer }) => ["DOMAIN_SPECIALIST", reviewer, domain]),
     ["PROTECTED_CI", "GitHub Actions", null],
     ["INDEPENDENT_EXACT_HEAD_QA", "Elana", null],
   ];
@@ -205,7 +208,7 @@ function buildAppendFixture() {
         deniedActionFlags: Object.fromEntries(DENIED_FLAG_KEYS.map((key) => [key, false])),
         gateRecordDigests: gates,
         phaseId: "fixture-phase",
-        requiredDomainGates: [{ domain: "records", reviewer: "Bianca" }],
+        requiredDomainGates,
         reviewedHead: subjectHead,
         scope: policy.delegation.scope,
         subjectBundleSha256: subject.bundleSha256,
@@ -223,6 +226,7 @@ function buildAppendFixture() {
     appendHead,
     subject,
     phaseDigest,
+    phaseSequence: index.records.length + gates.length + 1,
     gates,
   };
 }
@@ -759,6 +763,67 @@ test(
         () => validateLedger(fixture.root, staleHead, fixture.appendBase),
         /stale or missing review/,
       );
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  },
+  { timeout: 90_000 },
+);
+
+test(
+  "requires the declared and cited domain inventories to match exactly in canonical order",
+  () => {
+    const domainReviews = [
+      { domain: "billing", reviewer: "Daria" },
+      { domain: "records", reviewer: "Bianca" },
+    ];
+    const extraFixture = buildAppendFixture({
+      domainReviews,
+      requiredDomainGates: domainReviews.slice(0, 1),
+    });
+    try {
+      assert.throws(
+        () => validateLedger(extraFixture.root, extraFixture.appendHead, extraFixture.appendBase),
+        /domain-gate inventory must exactly match/,
+      );
+    } finally {
+      rmSync(extraFixture.root, { recursive: true, force: true });
+    }
+
+    const fixture = buildAppendFixture({ domainReviews });
+    const reset = () => {
+      git(fixture.root, "reset", "--hard", fixture.appendHead);
+      git(fixture.root, "clean", "-fd");
+    };
+    const rejectMutation = (name, mutation, pattern = /domain-gate inventory/) => {
+      mutateRecord(fixture.root, fixture.phaseSequence, mutation);
+      const attackHead = commit(fixture.root, name);
+      assert.throws(() => validateLedger(fixture.root, attackHead, fixture.appendBase), pattern);
+      reset();
+    };
+    try {
+      const accepted = validateLedger(fixture.root, fixture.appendHead, fixture.appendBase);
+      assert.equal(accepted.effectivePhaseApprovals.length, 1);
+      rejectMutation(
+        "duplicate domain and reviewer",
+        (value) => {
+          value.payload.requiredDomainGates.splice(1, 0, {
+            domain: "billing",
+            reviewer: "Daria",
+          });
+        },
+        /schema failed|domain-gate inventory/,
+      );
+      rejectMutation("mismatched domain reviewer", (value) => {
+        value.payload.requiredDomainGates[0].reviewer = "Mallory";
+      });
+      rejectMutation("noncanonical declared domain inventory", (value) => {
+        value.payload.requiredDomainGates.reverse();
+      });
+      rejectMutation("noncanonical cited domain inventory", (value) => {
+        const digests = value.payload.gateRecordDigests;
+        [digests[3], digests[4]] = [digests[4], digests[3]];
+      });
     } finally {
       rmSync(fixture.root, { recursive: true, force: true });
     }

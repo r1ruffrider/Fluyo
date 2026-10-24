@@ -4,8 +4,8 @@
     "grantedBy": "Marlon",
     "kind": "direct_material_owner_authority",
     "referenceRecordDigests": [
-      "3c5855b5f622d09f3a6b5ccf721b7aff995863a01086f5ec2df4744696478cb8",
-      "319b304ec5101d9c2edcfef7a48dd7026267382a346fa4eab9b05acd72b13ceb"
+      "7ba81df658a221c77dbe83f57057aceae2e166af73751afcf94f540c00a3cd75",
+      "cbe86117722946fd2846b44a494b514883ddf6896eee518aab9a3512fc3a8f04"
     ]
   },
   "eventType": "TOOLING_CHANGE_AUTHORIZATION",
@@ -71,7 +71,7 @@
       }
     ]
   },
-  "previousRecordDigest": "319b304ec5101d9c2edcfef7a48dd7026267382a346fa4eab9b05acd72b13ceb",
+  "previousRecordDigest": "cbe86117722946fd2846b44a494b514883ddf6896eee518aab9a3512fc3a8f04",
   "provenance": {
     "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
     "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
