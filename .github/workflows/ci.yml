@@ -154,6 +154,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Test auth approval history validator
+        run: node --test scripts/check-auth-approval-history.test.mjs
+
   build:
     name: Build
     runs-on: ubuntu-latest

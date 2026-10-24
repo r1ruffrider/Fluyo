@@ -1152,9 +1152,10 @@ describe("native live-auth readiness decision packet v1", () => {
     }
   });
 
-  it("keeps the contract bundle limited to the decision policy and README", () => {
+  it("keeps the contract bundle limited to the historical packet and approval history", () => {
     expect(readdirSync(contractDirectory).sort()).toEqual([
       "README.md",
+      "approval-history",
       "decision-policy.json",
       "evidence",
     ]);

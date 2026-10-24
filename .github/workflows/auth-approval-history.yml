@@ -1,0 +1,37 @@
+name: Auth approval history
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  approval-history:
+    name: Auth approval history
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FLUYO_APPROVAL_HISTORY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      FLUYO_APPROVAL_HISTORY_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout exact ledger head with full history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Validate immutable endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${FLUYO_APPROVAL_HISTORY_BASE}^{commit}"
+          git cat-file -e "${FLUYO_APPROVAL_HISTORY_HEAD}^{commit}"
+          git merge-base --is-ancestor "${FLUYO_APPROVAL_HISTORY_BASE}" "${FLUYO_APPROVAL_HISTORY_HEAD}"
+          test "$(git rev-parse HEAD)" = "${FLUYO_APPROVAL_HISTORY_HEAD}"
+
+      - name: Validate append-only approval history
+        run: node scripts/check-auth-approval-history.mjs

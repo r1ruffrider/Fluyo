@@ -1,0 +1,45 @@
+{
+  "actor": "Marlon",
+  "authority": {
+    "grantedBy": "Marlon",
+    "kind": "direct_material_owner_authority",
+    "referenceRecordDigests": []
+  },
+  "eventType": "GOVERNANCE_SELECTION",
+  "ledgerId": "fluyo-native-auth-approval-history-v1",
+  "payload": {
+    "decisionPolicySha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696",
+    "effectiveFor": "future_native_auth_approval_and_phase_history",
+    "evidenceIndexSha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de",
+    "historicalSnapshotCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce",
+    "installationBaseCommit": "0b5032b0e05539f31ad7efe1b8806ec55f5f91a2",
+    "policySha256": "b26f428b3a9a0f9746ddc56a4006e4a806317225d374314c83aa4887e17500d8",
+    "retiredMechanism": "P_TO_A_TO_V_GIT_ANCESTRY_FOR_FUTURE_APPROVALS",
+    "schemaSha256": "1bdde18c4c156b9718cf55d76ec5f4bc6777df9685e5551ef07a94d00e3d45a2",
+    "selection": "APPEND_ONLY_CONTENT_ADDRESSED_SQUASH_COMPATIBLE"
+  },
+  "previousRecordDigest": null,
+  "provenance": {
+    "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
+    "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+    "recordedBy": "Adriana",
+    "recordingMethod": "repository_governance_record",
+    "sourceCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce"
+  },
+  "recordedAtUtc": "2026-10-23T21:00:36.372Z",
+  "schemaVersion": "1.0.0",
+  "sequence": 1,
+  "subject": {
+    "bundleSha256": "a18d7f6e37775993a816fbcfb8fef3477430a6e083d39a7b4fc5e1bf26ed777a",
+    "files": [
+      {
+        "path": "contracts/mobile/auth-readiness/v1/decision-policy.json",
+        "sha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696"
+      },
+      {
+        "path": "contracts/mobile/auth-readiness/v1/evidence/index.json",
+        "sha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de"
+      }
+    ]
+  }
+}

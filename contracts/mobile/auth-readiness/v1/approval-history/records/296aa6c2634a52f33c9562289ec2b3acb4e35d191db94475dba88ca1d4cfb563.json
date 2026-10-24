@@ -1,0 +1,80 @@
+{
+  "actor": "Adriana",
+  "authority": {
+    "grantedBy": "Marlon",
+    "kind": "administrative_migration_recording",
+    "referenceRecordDigests": [
+      "5117830473b4eba9d3dcf45c938590b7886c746bd94354874ad2ae49fc5d91cb",
+      "8594dbd2588cf145da84cecbeb3aeba67c36d5bc9ab298f7fbae1dd0e94464d0",
+      "30e6a10cdbe6e9a9b58cfaccbc521a64a06936addb9a518445e8e2b342aaaf32"
+    ]
+  },
+  "eventType": "MIGRATION_SNAPSHOT",
+  "ledgerId": "fluyo-native-auth-approval-history-v1",
+  "payload": {
+    "decisionCounts": {
+      "accepted": 0,
+      "blocked": 9,
+      "proposed": 5
+    },
+    "delegationGrantRecordDigest": "8594dbd2588cf145da84cecbeb3aeba67c36d5bc9ab298f7fbae1dd0e94464d0",
+    "evidenceRequirements": {
+      "total": 69,
+      "unsatisfied": 69
+    },
+    "governanceSelectionRecordDigest": "5117830473b4eba9d3dcf45c938590b7886c746bd94354874ad2ae49fc5d91cb",
+    "materialDecisionApprover": "Marlon",
+    "materialDecisionIds": [
+      "AUTH-SDK-IOS",
+      "AUTH-SDK-ANDROID",
+      "AUTH-METHODS",
+      "AUTH-SIGNOUT-SCOPE",
+      "AUTH-CALLBACK-DOMAINS",
+      "AUTH-AASA",
+      "AUTH-ASSETLINKS",
+      "AUTH-SUPABASE-ALLOWLIST",
+      "AUTH-STORAGE-IOS",
+      "AUTH-STORAGE-ANDROID",
+      "AUTH-NONPROD-CUSTODY",
+      "AUTH-RECOVERY-DELIVERY",
+      "AUTH-REVOCATION",
+      "AUTH-ACCOUNT-DELETION"
+    ],
+    "nativeMatrix": {
+      "total": 24,
+      "unattempted": 24
+    },
+    "responsibleAfterApproval": "Adriana",
+    "runtimeEvidence": {
+      "conducted": 0,
+      "failed": 0,
+      "passed": 0,
+      "unattempted": 24
+    },
+    "toolingAuthorizationRecordDigest": "30e6a10cdbe6e9a9b58cfaccbc521a64a06936addb9a518445e8e2b342aaaf32"
+  },
+  "previousRecordDigest": "30e6a10cdbe6e9a9b58cfaccbc521a64a06936addb9a518445e8e2b342aaaf32",
+  "provenance": {
+    "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
+    "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+    "recordedBy": "Adriana",
+    "recordingMethod": "repository_governance_record",
+    "sourceCommit": "8ce28a7e57150ebf30499a447faee686ca50f3ce"
+  },
+  "recordedAtUtc": "2026-10-23T21:00:36.372Z",
+  "schemaVersion": "1.0.0",
+  "sequence": 4,
+  "subject": {
+    "bundleSha256": "a18d7f6e37775993a816fbcfb8fef3477430a6e083d39a7b4fc5e1bf26ed777a",
+    "files": [
+      {
+        "path": "contracts/mobile/auth-readiness/v1/decision-policy.json",
+        "sha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696"
+      },
+      {
+        "path": "contracts/mobile/auth-readiness/v1/evidence/index.json",
+        "sha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de"
+      }
+    ]
+  }
+}
