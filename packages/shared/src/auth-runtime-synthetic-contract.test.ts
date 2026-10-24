@@ -202,6 +202,11 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlin).toContain("throw AssertionError(boundedMarker)");
     expect(kotlin).toContain("[auth_corpus_diagnostic_unavailable]");
     expect(kotlin).toContain('System.getProperty("fluyo.authDiagnosticFile")');
+    expect(kotlin).toContain("StandardOpenOption.CREATE_NEW");
+    expect(kotlin).toContain("catch (_: FileAlreadyExistsException)");
+    expect(kotlin).toContain("preservesFirstMarkerUntilTaskCleanup");
+    expect(kotlin).not.toContain("StandardOpenOption.TRUNCATE_EXISTING");
+    expect(kotlin).not.toContain("StandardOpenOption.CREATE,");
     expect(kotlin).toContain("trace_(?:sequence_unavailable|");
     expect(kotlin).not.toMatch(/(?:System\.(?:out|err)\.)?print(?:ln)?\s*\(|\bLog\.\w+\s*\(/);
     expect(kotlin).toContain("assertEquals(vector.completions.filterNot");

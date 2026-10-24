@@ -4,8 +4,10 @@ import java.lang.reflect.Modifier
 import java.net.URI
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
@@ -24,6 +26,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+
+private fun writeFirstBoundedDiagnostic(path: Path, marker: String) {
+    try {
+        Files.write(path, "$marker\n".toByteArray(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW)
+    } catch (_: FileAlreadyExistsException) {
+        // The first bounded failure is the diagnostic evidence for this test task.
+    }
+}
+
+class AuthDiagnosticSidecarTest {
+    @Test fun preservesFirstMarkerUntilTaskCleanup() {
+        val directory = Files.createTempDirectory("fluyo-auth-diagnostic-")
+        val path = directory.resolve("auth-runtime-diagnostic.txt")
+        try {
+            writeFirstBoundedDiagnostic(path, "[auth_corpus_diagnostic_unavailable]")
+            writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
+            assertEquals("[auth_corpus_diagnostic_unavailable]\n", Files.readString(path))
+
+            Files.delete(path)
+            writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]")
+            assertEquals("[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]\n", Files.readString(path))
+        } finally {
+            Files.deleteIfExists(path)
+            Files.deleteIfExists(directory)
+        }
+    }
+}
 
 @RunWith(Parameterized::class)
 class AuthRuntimeKernelTest(private val vector: Vector) {
@@ -440,7 +469,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             val marker = "[auth_corpus_${corpusId}_stage_${boundedMismatch}]"
             val boundedMarker = if (boundedDiagnosticPattern.matches(marker)) marker else diagnosticUnavailableMarker
             System.getProperty("fluyo.authDiagnosticFile")?.let { path ->
-                Files.write(Path.of(path), "$boundedMarker\n".toByteArray(StandardCharsets.UTF_8))
+                writeFirstBoundedDiagnostic(Path.of(path), boundedMarker)
             }
             throw AssertionError(boundedMarker)
         }

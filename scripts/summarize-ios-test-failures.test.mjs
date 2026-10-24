@@ -23,9 +23,57 @@ try {
   const output = `${result.stdout}${result.stderr}`;
   assert.match(
     output,
-    /phase=test_current; category=auth_contract; test=unknown; raw output discarded/,
+    /phase=test_current; category=assertion; test=unknown; raw output discarded/,
   );
   for (const value of privateValues) assert.equal(output.includes(value), false);
+
+  writeFileSync(
+    file,
+    `Swift compiler error: failed to compile AuthRuntimeKernelTests.swift ${privateValues.join(" ")}`,
+  );
+  const compileFailure = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const compileFailureOutput = `${compileFailure.stdout}${compileFailure.stderr}`;
+  assert.match(
+    compileFailureOutput,
+    /phase=test_current; category=compile; test=unknown; raw output discarded/,
+  );
+  for (const value of privateValues) assert.equal(compileFailureOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `linker command failed with exit code 1; undefined symbol AuthRuntimeKernelTests ${privateValues.join(" ")}`,
+  );
+  const linkFailure = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const linkFailureOutput = `${linkFailure.stdout}${linkFailure.stderr}`;
+  assert.match(
+    linkFailureOutput,
+    /phase=test_current; category=link; test=unknown; raw output discarded/,
+  );
+  for (const value of privateValues) assert.equal(linkFailureOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups]' failed (0.001 seconds). ${privateValues.join(" ")}`,
+  );
+  const allowlistedFailure = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const allowlistedFailureOutput = `${allowlistedFailure.stdout}${allowlistedFailure.stderr}`;
+  assert.match(
+    allowlistedFailureOutput,
+    /phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; raw output discarded/,
+  );
+  for (const value of privateValues) assert.equal(allowlistedFailureOutput.includes(value), false);
 
   writeFileSync(
     file,

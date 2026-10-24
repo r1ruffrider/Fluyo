@@ -65,26 +65,39 @@ if (!logPath || phaseFlag !== "--phase" || !phases.has(phase)) {
 }
 
 const raw = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "";
-const categories = [
-  ["auth_contract", /AuthRuntimeKernelTests|auth runtime|synthetic kernel/i],
-  ["assertion", /XCTAssert|assertion failed|test case .* failed/i],
-  ["compile", /compile|swift compiler error|failed to build module/i],
-  ["link", /linker command failed|undefined symbol/i],
-  ["simulator", /simulator|simctl|destination.*unavailable/i],
-  ["timeout", /timed out|timeout/i],
-  ["configuration", /configuration|xcconfig|Info\.plist/i],
-];
-const category = categories.find(([, pattern]) => pattern.test(raw))?.[0] ?? "unknown";
 const allowedTests = [
   "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups",
   "testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation",
   "testCleanupFailureIsFencedAndDelayedEffectsAreGenerationBoundOneShot",
   "testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed",
 ];
-const test = allowedTests.find((name) => raw.includes(name)) ?? "unknown";
+const test =
+  allowedTests.find((name) => {
+    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(
+      `(?:Test Case ['"]?-\\[[^\\]\\r\\n]*AuthRuntimeKernelTests ${escapedName}\\]['"]? failed|AuthRuntimeKernelTests\\.${escapedName}\\s*:\\s*failed)`,
+      "i",
+    ).test(raw);
+  }) ?? "unknown";
 const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
+const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
+const category = /linker command failed|undefined symbol/i.test(raw)
+  ? "link"
+  : /compile|swift compiler error|failed to build module/i.test(raw)
+    ? "compile"
+    : /simulator|simctl|destination.*unavailable/i.test(raw)
+      ? "simulator"
+      : /timed out|timeout/i.test(raw)
+        ? "timeout"
+        : /configuration|xcconfig|Info\.plist/i.test(raw)
+          ? "configuration"
+          : authDiagnostic || diagnosticUnavailable || test !== "unknown"
+            ? "auth_contract"
+            : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
+              ? "assertion"
+              : "unknown";
 const boundedDiagnostic = authDiagnostic
   ? authDiagnostic[2]
     ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
@@ -93,7 +106,7 @@ const boundedDiagnostic = authDiagnostic
       : authDiagnostic[4]
         ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
         : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
-  : diagnosticUnavailablePattern.test(raw)
+  : diagnosticUnavailable
     ? "; stage=diagnostic; mismatch=unavailable"
     : "";
 process.stderr.write(
