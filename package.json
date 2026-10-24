@@ -9,7 +9,7 @@
     "apps/web"
   ],
   "scripts": {
-    "audit:policy": "node scripts/check-npm-audit.mjs",
+    "audit:policy": "node scripts/check-npm-audit.mjs && node scripts/check-multer-override.mjs",
     "build": "npm run build --workspace @fluyo/shared && npm run build --workspace @fluyo/api && npm run build --workspace @fluyo/web",
     "dev": "npm run build --workspace @fluyo/shared && dotenv -e .env -- concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm run dev --workspace @fluyo/api\" \"npm run dev --workspace @fluyo/web\"",
     "format": "prettier --write .",
@@ -48,7 +48,8 @@
     "react-dom": "19.2.7",
     "minimatch@3.1.5": {
       "brace-expansion": "1.1.21"
-    }
+    },
+    "multer": "2.5.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-linux-x64-gnu": "1.1.5",
