@@ -168,7 +168,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
 
     private func verifyWarmCancelPreservesCandidate() async throws {
-        let ports = ScriptPorts(times: [0, 500]); let coordinator = makeCoordinator(ports)
+        let ports = ScriptPorts(times: [0, 0, 500]); let coordinator = makeCoordinator(ports)
         await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true)
         await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
         async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback(); await ports.provider.releaseExchange(); _ = await work
@@ -179,7 +179,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
 
     private func verifyCancelAvailabilityBoundaries() async throws {
         for now in [UInt64(499), 500, 501] {
-            let ports = ScriptPorts(times: [0, now]); let coordinator = makeCoordinator(ports)
+            let ports = ScriptPorts(times: [0, 0, now]); let coordinator = makeCoordinator(ports)
             await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true)
             await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
             async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback()
@@ -302,7 +302,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func verifyDelayedEffectCancellation() async throws {
         let ports = ScriptPorts(times: [0, 500]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.clock.setSuspendSleep(true)
         async let delayed: Void = coordinator.scheduleDelayedAnnouncement(.safeTerminalError, priority: .polite); await ports.clock.waitSleepStarted(); await coordinator.handle403(); await ports.clock.releaseSleep(); _ = await delayed
-        let generation = await coordinator.currentGeneration(); let effects = await coordinator.drainPresentationEffects(for: generation); XCTAssertTrue(effects.isEmpty)
+        let generation = await coordinator.currentGeneration(); let effects = await coordinator.drainPresentationEffects(for: generation); XCTAssertEqual(effects.count, 1)
+        let effect = try XCTUnwrap(effects.first); XCTAssertEqual(effect.originatingState, .safeTerminalError); XCTAssertEqual(effect.payload.focus, .heading); XCTAssertEqual(effect.payload.announcement, .safeTerminalError); XCTAssertEqual(effect.payload.priority, .assertive); XCTAssertNil(effect.payload.navigation)
+        let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.count, 1); XCTAssertEqual(history.first?.sequence, effect.sequence)
     }
 
     private func exerciseTerminalEntryPoints(_ coordinator: AuthRuntimeCoordinator) async {

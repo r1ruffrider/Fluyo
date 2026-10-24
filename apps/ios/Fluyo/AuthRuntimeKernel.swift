@@ -41,45 +41,45 @@ enum AuthTraceEntry: String {
     case effectEnqueued = "effect_enqueued", terminalLatched = "terminal_latched"
 }
 
-final class OpaqueSessionCandidate: CustomStringConvertible { let storage: String; init(_ storage: String) { self.storage = storage }; var description: String { "<opaque-session-candidate>" } }
-final class OpaqueOwnerSubject: CustomStringConvertible { let storage: String; init(_ storage: String) { self.storage = storage }; var description: String { "<opaque-owner-subject>" } }
-final class OpaqueCallbackIngress: CustomStringConvertible { let storage: String; init(_ storage: String) { self.storage = storage }; var description: String { "<opaque-callback-ingress>" } }
+final class OpaqueSessionCandidate: CustomStringConvertible, Sendable { let storage: String; init(_ storage: String) { self.storage = storage }; var description: String { "<opaque-session-candidate>" } }
+final class OpaqueOwnerSubject: CustomStringConvertible, Sendable { let storage: String; init(_ storage: String) { self.storage = storage }; var description: String { "<opaque-owner-subject>" } }
+final class OpaqueCallbackIngress: CustomStringConvertible, Sendable { let storage: String; init(_ storage: String) { self.storage = storage }; var description: String { "<opaque-callback-ingress>" } }
 
-enum AuthPortResult<T> { case success(T), transientFailure, explicitInvalidation, forbidden, malformed }
-enum ConditionalMutationResult { case applied, staleGeneration, failed }
-enum CallbackConsumeResult { case consumed(OpaqueSessionCandidate), malformed, expired, replayed, duplicate, unsupported, staleGeneration, failed }
+enum AuthPortResult<T: Sendable>: Sendable { case success(T), transientFailure, explicitInvalidation, forbidden, malformed }
+enum ConditionalMutationResult: Sendable { case applied, staleGeneration, failed }
+enum CallbackConsumeResult: Sendable { case consumed(OpaqueSessionCandidate), malformed, expired, replayed, duplicate, unsupported, staleGeneration, failed }
 
-protocol AuthProviderPort {
+protocol AuthProviderPort: Sendable {
     func exchange(_ candidate: OpaqueSessionCandidate, generation: UInt64) async -> AuthPortResult<OpaqueSessionCandidate>
     func refresh(_ candidate: OpaqueSessionCandidate, generation: UInt64) async -> AuthPortResult<OpaqueSessionCandidate>
     func verifyOwner(_ candidate: OpaqueSessionCandidate, generation: UInt64) async -> AuthPortResult<OpaqueOwnerSubject>
     func cancelOwnedWork(generation: UInt64) async
 }
-protocol SessionVaultPort {
+protocol SessionVaultPort: Sendable {
     func read(generation: UInt64) async -> AuthPortResult<OpaqueSessionCandidate?>
     func replace(_ candidate: OpaqueSessionCandidate, generation: UInt64) async -> ConditionalMutationResult
     func clear(generation: UInt64) async -> ConditionalMutationResult
     func confirmEmpty(generation: UInt64) async -> Bool
 }
-protocol CallbackTransactionStorePort {
+protocol CallbackTransactionStorePort: Sendable {
     func validateConsumeAndWipe(_ ingress: OpaqueCallbackIngress, generation: UInt64) async -> CallbackConsumeResult
     func purge(generation: UInt64) async -> ConditionalMutationResult
     func confirmEmpty(generation: UInt64) async -> Bool
     func activateGeneration(_ generation: UInt64) async
     func cancelOwnedWork(generation: UInt64) async
 }
-protocol AuthClockPort {
+protocol AuthClockPort: Sendable {
     func monotonicMilliseconds() async -> UInt64
     func sleep(milliseconds: UInt64, generation: UInt64) async -> Bool
     func cancelOwnedTimers(generation: UInt64) async
 }
-protocol OwnerDataStorePort {
+protocol OwnerDataStorePort: Sendable {
     func bind(_ owner: OpaqueOwnerSubject, generation: UInt64) async -> ConditionalMutationResult
     func clearHeadersAndRequests(generation: UInt64) async -> ConditionalMutationResult
     func purgeOwnerData(generation: UInt64) async -> ConditionalMutationResult
     func confirmEmpty(generation: UInt64) async -> Bool
 }
-protocol StructurallyNoOpTelemetryPort {}
+protocol StructurallyNoOpTelemetryPort: Sendable {}
 
 actor AuthRuntimeCoordinator {
     private enum OperationKind { case initialize, callback, refresh, timer, cleanup }

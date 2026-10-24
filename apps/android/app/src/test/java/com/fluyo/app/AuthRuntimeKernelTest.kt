@@ -196,7 +196,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
     }
 
     private suspend fun verifyWarmCancelPreservesCandidate() = coroutineScope {
-        val ports = ScriptPorts(listOf(0uL, 500uL)); val coordinator = coordinator(ports, 1uL)
+        val ports = ScriptPorts(listOf(0uL, 0uL, 500uL)); val coordinator = coordinator(ports, 1uL)
         ports.vault.readCandidate = true; coordinator.initialize(true)
         ports.callback.result = CallbackConsumeResult.Consumed(candidate()); ports.provider.suspendExchange = true
         val work = async { coordinator.receiveCallback(ingress()) }; ports.provider.exchangeStarted.await()
@@ -209,7 +209,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
 
     private suspend fun verifyCancelAvailabilityBoundaries() {
         for (now in listOf(499uL, 500uL, 501uL)) coroutineScope {
-            val ports = ScriptPorts(listOf(0uL, now)); val coordinator = coordinator(ports, 1uL)
+            val ports = ScriptPorts(listOf(0uL, 0uL, now)); val coordinator = coordinator(ports, 1uL)
             ports.vault.readCandidate = false; coordinator.initialize(true)
             ports.callback.result = CallbackConsumeResult.Consumed(candidate()); ports.provider.suspendExchange = true
             val work = async { coordinator.receiveCallback(ingress()) }; ports.provider.exchangeStarted.await(); coordinator.cancelCallback()
@@ -357,7 +357,15 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         ports.vault.readCandidate = false; coordinator.initialize(true); ports.clock.suspendSleep = true
         val delayed = async { coordinator.scheduleDelayedAnnouncement(AuthAnnouncementMessageId.SAFE_TERMINAL_ERROR, AuthAnnouncementPriority.POLITE) }
         ports.clock.waitSleepStarted(); coordinator.handle403(); ports.clock.releaseSleep(); delayed.await()
-        assertTrue(coordinator.drainPresentationEffects(coordinator.currentGeneration()).isEmpty())
+        val effects = coordinator.drainPresentationEffects(coordinator.currentGeneration())
+        assertEquals(1, effects.size)
+        val effect = effects.single()
+        assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, effect.originatingState)
+        assertEquals(AuthFocusTarget.HEADING, effect.payload.focus)
+        assertEquals(AuthAnnouncementMessageId.SAFE_TERMINAL_ERROR, effect.payload.announcement)
+        assertEquals(AuthAnnouncementPriority.ASSERTIVE, effect.payload.priority)
+        assertTrue(effect.payload.navigation == null)
+        assertEquals(effects, coordinator.presentationEffectHistory())
     }
 
     private suspend fun exerciseTerminalEntryPoints(coordinator: AuthRuntimeCoordinator) {
