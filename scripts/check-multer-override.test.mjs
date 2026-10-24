@@ -260,6 +260,24 @@ if (process.argv.includes("--late-filter-fixture")) {
     );
   });
 
+  test("rejects hidden nested diagnostics in both scoped npm modes", () => {
+    for (const [status, makeTree] of [
+      [0, cleanTree],
+      [1, validTree],
+    ]) {
+      for (const diagnostic of ["problems", "error"]) {
+        const tree = makeTree();
+        tree.dependencies["@fluyo/api"].dependencies.unrelated = {
+          [diagnostic]: diagnostic === "problems" ? ["hidden"] : { code: "HIDDEN" },
+        };
+        assert.notDeepEqual(
+          validateScopedNpmLs({ status, tree, expectedMulterDirectory: multerDirectory }),
+          [],
+        );
+      }
+    }
+  });
+
   test("bounds scoped npm process failures and output", () => {
     for (const [result, pattern] of [
       [{ error: { code: "ETIMEDOUT" } }, /NPM_LS_TIMEOUT/],

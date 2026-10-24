@@ -92,6 +92,15 @@ function dependencyLocations(value, name, location = "root", found = []) {
   return found;
 }
 
+function diagnosticKeys(value, location = "root", found = []) {
+  if (!value || typeof value !== "object") return found;
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "problems" || key === "error") found.push({ location, key });
+    diagnosticKeys(child, `${location}.${key}`, found);
+  }
+  return found;
+}
+
 const parseProblem = (problem) => {
   const match = /^invalid: multer@(\S+) (.+)$/.exec(problem ?? "");
   return match && { version: match[1], path: match[2] };
@@ -121,21 +130,29 @@ export function validateScopedNpmLs({ status, tree, expectedMulterDirectory }) {
   mismatch(errors, "Scoped npm ls Multer version", multer?.version, EXPECTED_MULTER_VERSION);
   mismatch(errors, "Scoped npm ls Multer registry URL", multer?.resolved, EXPECTED_MULTER_RESOLVED);
   const flags = dependencyFlags(tree);
+  const diagnostics = diagnosticKeys(tree);
   const locations = dependencyLocations(tree, "multer");
   if (locations.length !== 1 || locations[0] !== expectedLocation)
     errors.push("Scoped npm ls must contain exactly one Multer node under Nest platform-express.");
 
   if (status === 0) {
-    if (
-      tree?.problems !== undefined ||
-      multer?.problems !== undefined ||
-      tree?.error !== undefined ||
-      flags.length !== 0
-    )
+    if (diagnostics.length !== 0 || flags.length !== 0)
       errors.push(
-        "Scoped npm ls clean-success mode must contain no problems, error, or dependency flags.",
+        "Scoped npm ls clean-success mode must contain no diagnostic keys or dependency flags.",
       );
   } else if (status === 1) {
+    const allowedDiagnostics = new Set([
+      "root:problems",
+      `${expectedLocation}:problems`,
+      "root:error",
+    ]);
+    if (
+      diagnostics.length !== allowedDiagnostics.size ||
+      diagnostics.some(({ location, key }) => !allowedDiagnostics.has(`${location}:${key}`))
+    )
+      errors.push(
+        "Scoped npm ls invalid-edge mode contains diagnostics outside approved locations.",
+      );
     if (!validProblem(tree?.problems))
       errors.push("Scoped npm ls root problem is not the sole installed Multer invalid edge.");
     if (!validProblem(multer?.problems))
