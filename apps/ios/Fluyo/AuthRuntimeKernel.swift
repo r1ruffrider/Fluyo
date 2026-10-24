@@ -115,7 +115,7 @@ actor AuthRuntimeCoordinator {
     func presentationEffectHistory() -> [AuthPresentationEffect] { effectHistory }
     func isTerminalFenced() -> Bool { terminal }
     func drainPresentationEffects(for requestedGeneration: UInt64) -> [AuthPresentationEffect] {
-        guard !terminal, requestedGeneration == generation else { return [] }
+        guard requestedGeneration == generation else { return [] }
         let drained = effects; effects.removeAll(keepingCapacity: false); return drained
     }
 
@@ -394,7 +394,7 @@ actor AuthRuntimeCoordinator {
         let reservation = Reservation(generation: generation, id: nextReservation, kind: kind, stable: snapshotValue, stateVersion: stateVersion, startedAt: 0)
         nextReservation += 1; active = reservation; return reservation
     }
-    private func latchTerminal(_ category: FixedAuthOutcomeCategory) { terminal = true; active = nil; effects.removeAll(keepingCapacity: false); snapshotValue = terminalSnapshot(category); stateVersion += 1; publishedSnapshots.append((snapshotValue, generation)); trace.append(.terminalLatched) }
+    private func latchTerminal(_ category: FixedAuthOutcomeCategory) { terminal = true; active = nil; effects.removeAll(keepingCapacity: false); snapshotValue = terminalSnapshot(category); stateVersion += 1; publishedSnapshots.append((snapshotValue, generation)); trace.append(.terminalLatched); enqueueLocked(generation, .safeTerminalError, terminalEntryEffect()) }
     private func signedOut(_ outcome: FixedAuthOutcomeCategory) -> AuthRuntimeSnapshot { .init(state: .signedOut, hasSessionCandidate: .absent, hasVerifiedOwnerState: false, safeDestinationId: .signedOut, fixedOutcomeCategory: outcome) }
     private func offline(_ owner: Bool) -> AuthRuntimeSnapshot { .init(state: .offlineSessionCandidate, hasSessionCandidate: .present, hasVerifiedOwnerState: owner, safeDestinationId: .signedOut, fixedOutcomeCategory: .success) }
     private func offline(from stable: AuthRuntimeSnapshot, outcome: FixedAuthOutcomeCategory) -> AuthRuntimeSnapshot { .init(state: .offlineSessionCandidate, hasSessionCandidate: .present, hasVerifiedOwnerState: stable.hasVerifiedOwnerState, safeDestinationId: stable.safeDestinationId, fixedOutcomeCategory: outcome) }

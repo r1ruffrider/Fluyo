@@ -46,13 +46,13 @@ final class AuthRuntimeKernelTests: XCTestCase {
         var rejected = 0
         for step in vector.steps { rejected += try await execute(step, coordinator, ports) }
         let snapshots = await coordinator.snapshotHistory().map { normalize($0.0, $0.1) }
-        XCTAssertTrue(snapshots == vector.snapshots, "[auth_corpus_\(vector.id)_stage_snapshot_\(snapshotMismatch(vector.snapshots, snapshots))]")
+        requireCorpusMatch(snapshots == vector.snapshots, vector.id, "snapshot_\(snapshotMismatch(vector.snapshots, snapshots))")
         let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); XCTAssertEqual(fullEffectHistory, vector.effects, vector.id)
         let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
         let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
         let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
         XCTAssertTrue(firstDrain.allSatisfy { $0.generation == generation }, vector.id); XCTAssertTrue(secondDrain.isEmpty, vector.id); XCTAssertTrue(staleDrain.isEmpty, vector.id)
-        XCTAssertTrue(trace == vector.trace, "[auth_corpus_\(vector.id)_stage_trace_\(traceMismatch(vector.trace, trace))]"); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
+        requireCorpusMatch(trace == vector.trace, vector.id, "trace_\(traceMismatch(vector.trace, trace))"); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
         XCTAssertEqual(completions, vector.completions.filter { $0 != "none" }, vector.id)
         if vector.id == "warm_callback_success" { let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") }
         XCTAssertEqual(generation, vector.generation, vector.id); XCTAssertEqual(terminal, vector.terminal, vector.id)
@@ -162,7 +162,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let terminal = await coordinator.isTerminalFenced(); let snapshot = await coordinator.snapshot(); let generation = await coordinator.currentGeneration()
             let effects = await coordinator.drainPresentationEffects(for: generation); let audit = await ports.audit.values(); let persistence = await ports.persistence()
             XCTAssertTrue(terminal, failure.rawValue); XCTAssertEqual(snapshot.fixedOutcomeCategory, .transientFailure, failure.rawValue)
-            XCTAssertTrue(effects.isEmpty, failure.rawValue); XCTAssertEqual(audit, failure.expectedPrefix, failure.rawValue)
+            XCTAssertEqual(effects.count, 1, failure.rawValue); if let effect = effects.first { assertTerminalEffect(effect, generation) }
+            let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
+            XCTAssertTrue(secondDrain.isEmpty, failure.rawValue); XCTAssertTrue(staleDrain.isEmpty, failure.rawValue); XCTAssertEqual(audit, failure.expectedPrefix, failure.rawValue)
             XCTAssertEqual(persistence, failure.expectedPersistence, failure.rawValue)
         }
     }
@@ -356,6 +358,17 @@ final class AuthRuntimeKernelTests: XCTestCase {
         "timer_30000", "generation_fence", "callback_purge", "headers_clear", "vault_clear", "owner_purge", "callback_confirm",
         "vault_confirm", "owner_confirm", "stale_rejected", "snapshot_published", "effect_enqueued", "terminal_latched",
     ]
+    private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) {
+        guard matches else { XCTFail("[auth_corpus_\(corpusId)_stage_\(boundedMismatch)]", file: file, line: line); return }
+    }
+    private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(effect.generation, generation, file: file, line: line)
+        XCTAssertEqual(effect.originatingState, .safeTerminalError, file: file, line: line)
+        XCTAssertEqual(effect.payload.focus, .heading, file: file, line: line)
+        XCTAssertEqual(effect.payload.announcement, .safeTerminalError, file: file, line: line)
+        XCTAssertEqual(effect.payload.priority, .assertive, file: file, line: line)
+        XCTAssertNil(effect.payload.navigation, file: file, line: line)
+    }
     private func normalize(_ effect: AuthPresentationEffect) -> String {
         let payload = "aggregate:\(effect.payload.focus?.rawValue ?? "none"):\(effect.payload.announcement?.rawValue ?? "none"):\(effect.payload.priority?.rawValue ?? "none"):\(effect.payload.navigation?.rawValue ?? "none")"
         return "\(effect.generation):\(effect.sequence):\(effect.originatingState.rawValue):\(payload)"

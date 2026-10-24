@@ -189,11 +189,21 @@ describe("native auth executable synthetic kernel", () => {
       expect(source).toContain("pauseAfterComparison");
     }
     expect(swift).toContain("XCTAssertEqual(fullEffectHistory, vector.effects");
-    expect(swift).toContain("XCTAssertTrue(trace == vector.trace");
+    expect(swift).toContain("requireCorpusMatch(trace == vector.trace");
+    expect(swift).toContain('XCTFail("[auth_corpus_\\(corpusId)_stage_');
     expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
     expect(kotlin).toContain("assertEquals(vector.effects, fullEffectHistory)");
-    expect(kotlin).toContain('assertTrue("[auth_corpus_${vector.id}_stage_trace_');
+    expect(kotlin).toContain("requireCorpusMatch(vector.trace == trace");
+    expect(kotlin).toContain('throw AssertionError("[auth_corpus_${corpusId}_stage_');
     expect(kotlin).toContain("assertEquals(vector.completions.filterNot");
+    expect(swiftRuntime).toContain("guard requestedGeneration == generation else { return [] }");
+    expect(swiftRuntime).toContain(
+      "enqueueLocked(generation, .safeTerminalError, terminalEntryEffect())",
+    );
+    expect(kotlinRuntime).toContain("if (forGeneration != generationValue)");
+    expect(kotlinRuntime).toContain(
+      "enqueueLocked(generationValue, AuthRuntimeState.SAFE_TERMINAL_ERROR, terminalEntryEffect())",
+    );
     expect(kotlinRuntime).toContain("withContext(NonCancellable) { cleanupIrrevocably");
     expect(kotlinRuntime).toContain(
       "withContext(NonCancellable) { transitionAfterFenceIrrevocably",
@@ -348,6 +358,19 @@ describe("native auth executable synthetic kernel", () => {
     );
   });
 
+  it("pins every protected CI job to the exact event head", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/ci.yml"), "utf8");
+    expect(workflow).toContain(
+      "FLUYO_CI_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
+    );
+    expect(
+      workflow.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g),
+    ).toHaveLength(8);
+    expect(workflow.match(/fetch-depth: 0/g)).toHaveLength(8);
+    expect(workflow.match(/- name: Verify exact checkout/g)).toHaveLength(8);
+    expect(workflow.match(/test "\$\(git rev-parse HEAD\)" = "\$FLUYO_CI_HEAD"/g)).toHaveLength(8);
+  });
+
   it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {
     expect(
       phaseUntrackedPaths([
@@ -359,6 +382,7 @@ describe("native auth executable synthetic kernel", () => {
 
     const allowed = [
       ".github/workflows/android.yml",
+      ".github/workflows/ci.yml",
       ".github/workflows/ios.yml",
       "apps/android/app/src/main/java/com/fluyo/app/AuthRuntimeKernel.kt",
       "apps/android/app/src/test/java/com/fluyo/app/AuthRuntimeKernelTest.kt",

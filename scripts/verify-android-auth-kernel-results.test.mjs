@@ -95,6 +95,21 @@ try {
 
   writeFileSync(
     summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError">java.lang.AssertionError: [auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500]\n\tat com.fluyo.app.AuthRuntimeKernelTest.canonicalScenarioOrInvariant(AuthRuntimeKernelTest.kt:59)</failure></testcase></testsuite>`,
+  );
+  const stacktraceBounded = summarize(summaryDir);
+  assert.deepEqual(JSON.parse(stacktraceBounded).failures[0].authDiagnostic, {
+    corpusId: "cold_start_without_candidate",
+    stage: "trace",
+    mismatch: "sequence",
+    index: 1,
+    expected: "snapshot_published",
+    actual: "timer_500",
+  });
+  assert.doesNotMatch(stacktraceBounded, /example\.test|private/i);
+
+  writeFileSync(
+    summaryFile,
     `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_count_expected_2_actual_3] learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
   );
   const countBounded = summarize(summaryDir);

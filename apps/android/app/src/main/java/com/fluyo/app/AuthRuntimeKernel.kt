@@ -152,7 +152,7 @@ class AuthRuntimeCoordinator(
     fun presentationEffectHistory(): List<AuthPresentationEffect> = boundary.withLock { effectHistory.toList() }
     fun isTerminalFenced(): Boolean = boundary.withLock { terminal }
     fun drainPresentationEffects(forGeneration: ULong): List<AuthPresentationEffect> = boundary.withLock {
-        if (terminal || forGeneration != generationValue) return@withLock emptyList()
+        if (forGeneration != generationValue) return@withLock emptyList()
         buildList { while (effects.isNotEmpty()) add(effects.removeFirst()) }
     }
 
@@ -512,6 +512,7 @@ class AuthRuntimeCoordinator(
     private fun latchTerminalLocked(cause: InternalTerminalCause) {
         terminal = true; terminalCause = cause; active = null; effects.clear(); snapshotValue = terminalSnapshot(FixedAuthOutcomeCategory.TRANSIENT_FAILURE); stateVersion += 1uL; publishedSnapshots += snapshotValue to generationValue
         trace += AuthTraceEntry.TERMINAL_LATCHED
+        enqueueLocked(generationValue, AuthRuntimeState.SAFE_TERMINAL_ERROR, terminalEntryEffect())
     }
     private fun signedOut(outcome: FixedAuthOutcomeCategory) = AuthRuntimeSnapshot(AuthRuntimeState.SIGNED_OUT, SessionCandidateStatus.ABSENT, false, SafeDestinationId.SIGNED_OUT, outcome)
     private fun offline(owner: Boolean) = AuthRuntimeSnapshot(AuthRuntimeState.OFFLINE_SESSION_CANDIDATE, SessionCandidateStatus.PRESENT, owner, SafeDestinationId.SIGNED_OUT, FixedAuthOutcomeCategory.SUCCESS)

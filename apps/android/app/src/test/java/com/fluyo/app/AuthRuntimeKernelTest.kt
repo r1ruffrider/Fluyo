@@ -46,7 +46,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             rejectedWrites += execute(step, coordinator, ports)
         }
         val snapshots = coordinator.snapshotHistory().map { normalize(it.first, it.second) }
-        assertTrue("[auth_corpus_${vector.id}_stage_snapshot_${snapshotMismatch(vector.snapshots, snapshots)}]", vector.snapshots == snapshots)
+        requireCorpusMatch(vector.snapshots == snapshots, vector.id, "snapshot_${snapshotMismatch(vector.snapshots, snapshots)}")
         val generation = coordinator.currentGeneration()
         val fullEffectHistory = coordinator.presentationEffectHistory().map(::normalize)
         assertEquals(vector.effects, fullEffectHistory)
@@ -56,7 +56,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         val staleGeneration = if (generation == 1uL) 2uL else 1uL
         assertTrue(coordinator.drainPresentationEffects(staleGeneration).isEmpty())
         val trace = coordinator.normalizedTrace().map { it.wire }
-        assertTrue("[auth_corpus_${vector.id}_stage_trace_${traceMismatch(vector.trace, trace)}]", vector.trace == trace)
+        requireCorpusMatch(vector.trace == trace, vector.id, "trace_${traceMismatch(vector.trace, trace)}")
         assertEquals(vector.completions.filterNot { it == "none" }, ports.completionValues())
         if (vector.id == "warm_callback_success") assertEquals("opaque-pkce", ports.provider.lastExchangeStorage)
         assertEquals(vector.wipe, ports.wipeSummary())
@@ -190,7 +190,12 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             val coordinator = coordinator(ports, 1uL); coordinator.signOut()
             assertTrue(failure.name, coordinator.isTerminalFenced())
             assertEquals(failure.name, FixedAuthOutcomeCategory.TRANSIENT_FAILURE, coordinator.snapshot().fixedOutcomeCategory)
-            assertTrue(failure.name, coordinator.drainPresentationEffects(coordinator.currentGeneration()).isEmpty())
+            val generation = coordinator.currentGeneration()
+            val effects = coordinator.drainPresentationEffects(generation)
+            assertEquals(failure.name, 1, effects.size)
+            assertTerminalEffect(effects.single(), generation)
+            assertTrue(failure.name, coordinator.drainPresentationEffects(generation).isEmpty())
+            assertTrue(failure.name, coordinator.drainPresentationEffects(if (generation == 1uL) 2uL else 1uL).isEmpty())
             assertEquals(failure.name, failure.expectedPrefix, ports.cleanup)
             assertEquals(failure.name, failure.expectedPersistence, ports.persistence())
         }
@@ -425,6 +430,17 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         }
         private fun boundedTraceCount(count: Int): String = if (count < 64) count.toString() else "64_plus"
         private val traceDiagnosticValues = AuthTraceEntry.values().map { it.wire }.toSet()
+        private fun requireCorpusMatch(matches: Boolean, corpusId: String, boundedMismatch: String) {
+            if (!matches) throw AssertionError("[auth_corpus_${corpusId}_stage_${boundedMismatch}]")
+        }
+        private fun assertTerminalEffect(effect: AuthPresentationEffect, generation: ULong) {
+            assertEquals(generation, effect.generation)
+            assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, effect.originatingState)
+            assertEquals(AuthFocusTarget.HEADING, effect.payload.focus)
+            assertEquals(AuthAnnouncementMessageId.SAFE_TERMINAL_ERROR, effect.payload.announcement)
+            assertEquals(AuthAnnouncementPriority.ASSERTIVE, effect.payload.priority)
+            assertTrue(effect.payload.navigation == null)
+        }
         private fun normalize(effect: AuthPresentationEffect): String {
             val p = effect.payload
             val payload = "aggregate:${p.focus?.wire ?: "none"}:${p.announcement?.wire ?: "none"}:${p.priority?.wire ?: "none"}:${p.navigation?.wire ?: "none"}"
