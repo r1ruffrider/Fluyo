@@ -262,6 +262,48 @@ class AuthDiagnosticSidecarTest {
     }
 }
 
+class AuthRuntimeSuppressedStaleLifecycleTest {
+    @Test fun suppressingNoLatePathEmitsNoStale() = runTest {
+        val ports = ScriptPorts(listOf(0uL))
+        val coordinator = AuthRuntimeCoordinator(ports.provider, ports.vault, ports.callback, ports.clock, ports.owner, TrapTelemetry(), 1uL)
+        ports.vault.readCandidate = false
+        coordinator.initialize(true)
+        ports.callback.result = CallbackConsumeResult.Malformed
+
+        coordinator.receiveCallback(OpaqueCallbackIngress("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected"))
+        coordinator.receiveCallback(OpaqueCallbackIngress("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected"))
+
+        val trace = coordinator.normalizedTrace()
+        assertEquals("suppressed_no_late_fence_count", 2, trace.count { it == AuthTraceEntry.GENERATION_FENCE })
+        assertFalse("suppressed_no_late_stale_absent", trace.contains(AuthTraceEntry.STALE_REJECTED))
+    }
+
+    @Test fun failedTerminalPathClearsSuppressionWithoutStale() = runTest {
+        coroutineScope {
+            val ports = ScriptPorts(listOf(0uL))
+            val coordinator = AuthRuntimeCoordinator(ports.provider, ports.vault, ports.callback, ports.clock, ports.owner, TrapTelemetry(), 1uL)
+            ports.vault.readCandidate = false
+            coordinator.initialize(true)
+            ports.callback.result = CallbackConsumeResult.Malformed
+            ports.callback.suspendActivation = true
+            ports.callback.purgeResult = ConditionalMutationResult.FAILED
+
+            val rejected = async {
+                coordinator.receiveCallback(OpaqueCallbackIngress("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected"))
+            }
+            ports.callback.activationStarted.await()
+            val terminalCleanup = async { coordinator.signOut() }
+            while (coordinator.currentGeneration() < 3uL) yield()
+            ports.callback.activationRelease.complete(Unit)
+            rejected.await()
+            terminalCleanup.await()
+
+            assertTrue("suppressed_failed_terminal_fenced", coordinator.isTerminalFenced())
+            assertFalse("suppressed_failed_terminal_stale_absent", coordinator.normalizedTrace().contains(AuthTraceEntry.STALE_REJECTED))
+        }
+    }
+}
+
 @RunWith(Parameterized::class)
 class AuthRuntimeKernelTest(private val vector: Vector) {
     class Vector(val fields: List<String>) {
@@ -405,7 +447,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             "explicit_invalidation_and_repeated_401_clear" -> assertEquals(SessionCandidateStatus.ABSENT, coordinator.snapshot().hasSessionCandidate)
             "403_never_refreshes_or_signs_out" -> { assertEquals(0, ports.provider.refreshCalls); assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, coordinator.snapshot().state); assertTrue(coordinator.snapshot().hasVerifiedOwnerState) }
             "offline_never_confirms_new_owner_or_expands_access" -> { assertEquals(0, ports.provider.verifyCalls); assertFalse(coordinator.snapshot().hasVerifiedOwnerState) }
-            "cleanup_precedes_signed_out_or_new_owner_exposure" -> { assertTrue(coordinator.isTerminalFenced()); verifyDelayedEffectCancellation(); verifyCleanupReservationLiveness(); verifyPostFenceCancellationIsIrrevocable(); verifySuppressedStaleLifecycle() }
+            "cleanup_precedes_signed_out_or_new_owner_exposure" -> { assertTrue(coordinator.isTerminalFenced()); verifyDelayedEffectCancellation(); verifyCleanupReservationLiveness(); verifyPostFenceCancellationIsIrrevocable() }
             "no_op_telemetry_has_zero_retention_and_zero_transport" -> assertEquals(0, TrapTelemetry::class.java.declaredFields.count { !it.isSynthetic })
             "evidence_is_closed_and_mutation_safe" -> assertTrue(coordinator.isTerminalFenced())
         }
@@ -623,30 +665,6 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             val snapshot = coordinator.snapshot()
             assertEquals(AuthRuntimeState.UNUSABLE_LINK, snapshot.state); assertEquals(SessionCandidateStatus.ABSENT, snapshot.hasSessionCandidate); assertFalse(snapshot.hasVerifiedOwnerState)
             assertEquals(2uL, coordinator.currentGeneration()); assertFalse(coordinator.isTerminalFenced()); assertEquals(1, coordinator.presentationEffectHistory().size)
-        }
-    }
-
-    private suspend fun verifySuppressedStaleLifecycle() {
-        run {
-            val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
-            ports.vault.readCandidate = false; coordinator.initialize(true); ports.callback.result = CallbackConsumeResult.Malformed
-            coordinator.receiveCallback(ingress()); coordinator.receiveCallback(ingress())
-            val trace = coordinator.normalizedTrace()
-            assertEquals(2, trace.count { it == AuthTraceEntry.GENERATION_FENCE })
-            assertFalse(trace.contains(AuthTraceEntry.STALE_REJECTED))
-        }
-        coroutineScope {
-            val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
-            ports.vault.readCandidate = false; coordinator.initialize(true); ports.callback.result = CallbackConsumeResult.Malformed
-            ports.callback.suspendActivation = true; ports.callback.purgeResult = ConditionalMutationResult.FAILED
-            val rejected = async { coordinator.receiveCallback(ingress()) }
-            ports.callback.activationStarted.await()
-            val terminalCleanup = async { coordinator.signOut() }
-            while (coordinator.currentGeneration() < 3uL) yield()
-            ports.callback.activationRelease.complete(Unit)
-            rejected.await(); terminalCleanup.await()
-            assertTrue(coordinator.isTerminalFenced())
-            assertFalse(coordinator.normalizedTrace().contains(AuthTraceEntry.STALE_REJECTED))
         }
     }
 
