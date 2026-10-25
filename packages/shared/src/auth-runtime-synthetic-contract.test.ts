@@ -399,6 +399,10 @@ describe("native auth executable synthetic kernel", () => {
   it("carries only validated auth diagnostics and removes the Android sidecar", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/android.yml"), "utf8");
     const build = readFileSync(resolve(root, "apps/android/app/build.gradle.kts"), "utf8");
+    const kernelTest = readFileSync(
+      resolve(root, "apps/android/app/src/test/java/com/fluyo/app/AuthRuntimeKernelTest.kt"),
+      "utf8",
+    );
     const summarizer = readFileSync(
       resolve(root, "scripts/summarize-android-test-failures.mjs"),
       "utf8",
@@ -419,6 +423,31 @@ describe("native auth executable synthetic kernel", () => {
     expect(build).toContain('layout.buildDirectory.file("auth-runtime-diagnostic.txt")');
     expect(build).toContain('systemProperty("fluyo.authDiagnosticFile"');
     expect(build).toContain("doFirst { authDiagnosticFile.get().asFile.delete() }");
+    const diagnosticCorpusSet = kernelTest.match(
+      /private val diagnosticCorpusIds = setOf\(([\s\S]*?)\n\)/,
+    );
+    expect(diagnosticCorpusSet).not.toBeNull();
+    const diagnosticCorpusIds = [
+      ...(diagnosticCorpusSet?.[1] ?? "").matchAll(/"([a-z0-9_]+)"/g),
+    ].map((match) => match[1]);
+    const contractCorpusIds = readFileSync(
+      resolve(root, "contracts/mobile/auth-runtime-synthetic/v1/vectors.tsv"),
+      "utf8",
+    )
+      .trim()
+      .split(/\r?\n/)
+      .slice(1)
+      .map((row) => row.split("\t")[1]);
+    expect(diagnosticCorpusIds).toEqual(contractCorpusIds);
+    expect(kernelTest).toContain("require(corpusId in diagnosticCorpusIds)");
+    expect(kernelTest).toContain('val envelope = "corpus=$corpusId\\nmarker=$marker\\n"');
+    expect(kernelTest).toContain(
+      "writeFirstBoundedDiagnostic(Path.of(path), corpusId, boundedMarker)",
+    );
+    expect(summarizer).toContain("raw.match(/^corpus=([a-z0-9_]+)\\nmarker=([^\\n]+)\\n$/)");
+    expect(summarizer).toContain("sidecarDiagnostic?.corpusId === authCorpusId");
+    expect(summarizer).toContain("stat.size > 512");
+    expect(summarizer).toContain("stat.isSymbolicLink()");
     expect(summarizer).toContain('process.env.GITHUB_ACTIONS !== "true"');
     expect(summarizer).toContain('githubWorkflowErrorAnnotation(fields.join("; "))');
     expect(annotation).toContain(

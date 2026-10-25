@@ -78,6 +78,56 @@ if (!logPath || phaseFlag !== "--phase" || !phases.has(phase) || extraArgs.lengt
 }
 
 const raw = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf8") : "";
+const compilerErrorPattern =
+  /(?:^|[\r\n])(?:[^\r\n]*[\\/])?([^\\/\r\n:]+\.swift):(\d{1,12}):(\d{1,12}):\s*error:\s*([^\r\n]*)/g;
+const compilerErrorMatch = compilerErrorPattern.exec(raw);
+const compilerSources = new Set(["AuthRuntimeKernel.swift", "AuthRuntimeKernelTests.swift"]);
+const boundedCoordinate = (value) => {
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number >= 1 && number <= 65_535 ? String(number) : "0";
+};
+const compilerReason = (message) => {
+  if (
+    /strongly transferred|task[- ]isolated.*(?:sent|transfer)|sending .* risks causing data races/i.test(
+      message,
+    )
+  ) {
+    return "task_transfer";
+  }
+  if (
+    /non[- ]sendable|does not conform to (?:the )?['"]?Sendable|capture of .* non-sendable/i.test(
+      message,
+    )
+  ) {
+    return "sendability";
+  }
+  if (/actor[- ]isolated|main actor[- ]isolated|global actor/i.test(message)) {
+    return "actor_isolation";
+  }
+  if (
+    /type of expression is ambiguous|generic parameter .* could not be inferred|could not infer/i.test(
+      message,
+    )
+  ) {
+    return "type_inference";
+  }
+  if (/cannot convert value of type|cannot assign value of type|cannot use .* as/i.test(message)) {
+    return "type_mismatch";
+  }
+  if (/has no member|cannot find .* in scope/i.test(message)) return "missing_member";
+  if (/expected |consecutive statements|unterminated|extraneous .* at top level/i.test(message)) {
+    return "syntax";
+  }
+  return "other";
+};
+const compilerDiagnostic = compilerErrorMatch
+  ? Object.freeze({
+      source: compilerSources.has(compilerErrorMatch[1]) ? compilerErrorMatch[1] : "unknown",
+      line: boundedCoordinate(compilerErrorMatch[2]),
+      column: boundedCoordinate(compilerErrorMatch[3]),
+      reason: compilerReason(compilerErrorMatch[4]),
+    })
+  : null;
 const allowedTests = [
   "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups",
   "testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation",
@@ -101,21 +151,23 @@ const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
 const compileFailurePattern =
   /(?:\b(?:SwiftCompile|SwiftEmitModule|EmitSwiftModule)\b[^\r\n]*(?:failed|failure|nonzero exit)|failed to build module|\.swift:\d+:\d+:\s*error:)/i;
 const category =
-  authDiagnostic || diagnosticFallback || diagnosticUnavailable || test !== "unknown"
+  authDiagnostic || diagnosticFallback || diagnosticUnavailable
     ? "auth_contract"
     : /linker command failed|undefined symbol/i.test(raw)
       ? "link"
-      : compileFailurePattern.test(raw)
+      : compilerDiagnostic || compileFailurePattern.test(raw)
         ? "compile"
-        : /simulator|simctl|destination.*unavailable/i.test(raw)
-          ? "simulator"
-          : /timed out|timeout/i.test(raw)
-            ? "timeout"
-            : /configuration|xcconfig|Info\.plist/i.test(raw)
-              ? "configuration"
-              : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
-                ? "assertion"
-                : "unknown";
+        : test !== "unknown"
+          ? "auth_contract"
+          : /simulator|simctl|destination.*unavailable/i.test(raw)
+            ? "simulator"
+            : /timed out|timeout/i.test(raw)
+              ? "timeout"
+              : /configuration|xcconfig|Info\.plist/i.test(raw)
+                ? "configuration"
+                : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
+                  ? "assertion"
+                  : "unknown";
 const boundedDiagnostic = authDiagnostic
   ? authDiagnostic[2]
     ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
@@ -159,8 +211,16 @@ if (githubAnnotation) {
   } else if (diagnosticUnavailable) {
     if (test !== "unknown") fields.push(`test=${test}`);
     fields.push("stage=diagnostic", "mismatch=unavailable");
-  } else if (test !== "unknown") {
+  } else if (test !== "unknown" && category === "auth_contract") {
     fields.push(`test=${test}`);
+  }
+  if (category === "compile" && compilerDiagnostic) {
+    fields.push(
+      `source=${compilerDiagnostic.source}`,
+      `line=${compilerDiagnostic.line}`,
+      `column=${compilerDiagnostic.column}`,
+      `reason=${compilerDiagnostic.reason}`,
+    );
   }
   process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
 } else {

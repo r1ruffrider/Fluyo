@@ -186,6 +186,7 @@ describe("iOS unsigned foundation structure", () => {
   it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");
+    const failureSummarizer = read("scripts/summarize-ios-test-failures.mjs");
     const evidence = read("scripts/ios-evidence.mjs");
     const scanner = read("scripts/scan-ios-evidence.mjs");
     expect(workflow).toContain("runs-on: macos-14");
@@ -217,6 +218,25 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
     expect(script).toContain('if [[ "${GITHUB_ACTIONS:-}" == "true" ]]');
     expect(script).toContain("summary_args+=(--github-annotation)");
+    expect(failureSummarizer).toContain(
+      'new Set(["AuthRuntimeKernel.swift", "AuthRuntimeKernelTests.swift"])',
+    );
+    expect(failureSummarizer).toContain("compilerErrorPattern.exec(raw)");
+    expect(failureSummarizer).toContain("number <= 65_535");
+    for (const reason of [
+      "task_transfer",
+      "sendability",
+      "actor_isolation",
+      "type_inference",
+      "type_mismatch",
+      "missing_member",
+      "syntax",
+      "other",
+    ]) {
+      expect(failureSummarizer).toContain(`return "${reason}"`);
+    }
+    expect(failureSummarizer).toContain("source: compilerSources.has(compilerErrorMatch[1])");
+    expect(failureSummarizer).toContain('if (category === "compile" && compilerDiagnostic)');
     expect(script).toMatch(
       /node "\$ROOT_DIR\/scripts\/summarize-ios-test-failures\.mjs" "\$\{summary_args\[@\]\}"\s+return 1/,
     );

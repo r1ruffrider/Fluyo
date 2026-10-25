@@ -30,8 +30,27 @@ import org.junit.runners.Parameterized
 private enum class DiagnosticStage(val wire: String) { SNAPSHOT("snapshot"), TRACE("trace") }
 
 private const val diagnosticCorpusId = "cold_start_without_candidate"
+private val diagnosticCorpusIds = setOf(
+    "cold_start_without_candidate", "cold_start_with_candidate", "warm_callback_success", "cold_callback_success",
+    "callback_cancel", "callback_malformed", "callback_expired", "callback_replay", "callback_duplicate_delivery",
+    "callback_unsupported", "callback_overlap_rejected", "refresh_success", "refresh_explicit_revocation",
+    "refresh_transient_failure_preserves_candidate", "refresh_repeated_401_clears", "forbidden_403_preserves_session",
+    "offline_startup_preserves_verified_display_only", "background_foreground", "termination_relaunch_without_transaction",
+    "account_switch_cleanup", "stale_response_discarded", "stale_storage_write_discarded", "vault_corruption_cleanup",
+    "clock_skew", "owner_subject_mismatch", "zero_telemetry_launch", "zero_telemetry_resume", "zero_telemetry_error",
+    "public_state_is_secret_free", "callback_transaction_is_purpose_environment_host_path_and_expiry_bound",
+    "callback_transaction_consumes_once_and_wipes", "valid_verified_session_survives_bad_link",
+    "generation_change_cancels_work_and_blocks_stale_writes", "owner_data_waits_for_private_subject_confirmation",
+    "transient_refresh_failure_preserves_candidate", "explicit_invalidation_and_repeated_401_clear",
+    "403_never_refreshes_or_signs_out", "offline_never_confirms_new_owner_or_expands_access",
+    "cleanup_precedes_signed_out_or_new_owner_exposure", "no_op_telemetry_has_zero_retention_and_zero_transport",
+    "evidence_is_closed_and_mutation_safe",
+)
 private val boundedDiagnosticPattern = Regex(
     """^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
+)
+private val fixedDiagnosticPattern = Regex(
+    """^\[auth_corpus_stage_(?:snapshot|trace)_(?:diagnostic_inconsistent|diagnostic_rejected)\]$""",
 )
 
 private fun selectBoundedDiagnostic(corpusId: String, stage: DiagnosticStage, mismatch: String): String {
@@ -41,9 +60,12 @@ private fun selectBoundedDiagnostic(corpusId: String, stage: DiagnosticStage, mi
     return "[auth_corpus_stage_${stage.wire}_${reason}]"
 }
 
-private fun writeFirstBoundedDiagnostic(path: Path, marker: String) {
+private fun writeFirstBoundedDiagnostic(path: Path, corpusId: String, marker: String) {
+    require(corpusId in diagnosticCorpusIds)
+    require(boundedDiagnosticPattern.matches(marker) || fixedDiagnosticPattern.matches(marker))
+    val envelope = "corpus=$corpusId\nmarker=$marker\n"
     try {
-        Files.write(path, "$marker\n".toByteArray(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW)
+        Files.write(path, envelope.toByteArray(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW)
     } catch (_: FileAlreadyExistsException) {
         // The first bounded failure is the diagnostic evidence for this test task.
     }
@@ -54,13 +76,13 @@ class AuthDiagnosticSidecarTest {
         val directory = Files.createTempDirectory("fluyo-auth-diagnostic-")
         val path = directory.resolve("auth-runtime-diagnostic.txt")
         try {
-            writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
-            writeFirstBoundedDiagnostic(path, "[auth_corpus_stage_snapshot_diagnostic_rejected]")
-            assertEquals("[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n", Files.readString(path))
+            writeFirstBoundedDiagnostic(path, diagnosticCorpusId, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
+            writeFirstBoundedDiagnostic(path, "callback_cancel", "[auth_corpus_stage_snapshot_diagnostic_rejected]")
+            assertEquals("corpus=$diagnosticCorpusId\nmarker=[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n", Files.readString(path))
 
             Files.delete(path)
-            writeFirstBoundedDiagnostic(path, "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]")
-            assertEquals("[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]\n", Files.readString(path))
+            writeFirstBoundedDiagnostic(path, diagnosticCorpusId, "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]")
+            assertEquals("corpus=$diagnosticCorpusId\nmarker=[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]\n", Files.readString(path))
         } finally {
             Files.deleteIfExists(path)
             Files.deleteIfExists(directory)
@@ -68,6 +90,25 @@ class AuthDiagnosticSidecarTest {
     }
 
     @Test fun diagnosticGrammarAndFallbackSelectionAreTotalAndClosed() {
+        assertEquals(41, diagnosticCorpusIds.size)
+        for (corpusId in diagnosticCorpusIds) {
+            val directory = Files.createTempDirectory("fluyo-auth-diagnostic-id-")
+            val path = directory.resolve("auth-runtime-diagnostic.txt")
+            try {
+                writeFirstBoundedDiagnostic(path, corpusId, "[auth_corpus_stage_trace_diagnostic_rejected]")
+                assertEquals("corpus=$corpusId\nmarker=[auth_corpus_stage_trace_diagnostic_rejected]\n", Files.readString(path))
+            } finally {
+                Files.deleteIfExists(path)
+                Files.deleteIfExists(directory)
+            }
+        }
+        var privateCorpusRejected = false
+        try {
+            writeFirstBoundedDiagnostic(Path.of("unused-private-sidecar"), "private_corpus", "[auth_corpus_stage_trace_diagnostic_rejected]")
+        } catch (_: IllegalArgumentException) {
+            privateCorpusRejected = true
+        }
+        assertTrue(privateCorpusRejected)
         val snapshotClasses = listOf("count", "shape", "state", "candidate", "owner", "destination", "outcome", "generation")
         for (mismatch in snapshotClasses) {
             assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_snapshot_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.SNAPSHOT, mismatch))
@@ -513,7 +554,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             if (matches) return
             val boundedMarker = selectBoundedDiagnostic(corpusId, stage, boundedMismatch)
             System.getProperty("fluyo.authDiagnosticFile")?.let { path ->
-                writeFirstBoundedDiagnostic(Path.of(path), boundedMarker)
+                writeFirstBoundedDiagnostic(Path.of(path), corpusId, boundedMarker)
             }
             throw AssertionError(boundedMarker)
         }

@@ -351,6 +351,140 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
     assert.doesNotMatch(annotated.stdout, /example\.test|warning|owned|private/i);
   }
 
+  const compilerCases = [
+    [
+      "AuthRuntimeKernel.swift",
+      "327",
+      "18",
+      "task-isolated value passed as a strongly transferred parameter; later accesses could race learner@example.test",
+      "task_transfer",
+    ],
+    [
+      "AuthRuntimeKernelTests.swift",
+      "324",
+      "20",
+      "capture of 'privatePorts' with non-sendable type 'ScriptPorts' in a @Sendable closure",
+      "sendability",
+    ],
+    [
+      "AuthRuntimeKernel.swift",
+      "91",
+      "7",
+      "main actor-isolated property 'privateValue' cannot be referenced from a nonisolated context",
+      "actor_isolation",
+    ],
+    [
+      "AuthRuntimeKernelTests.swift",
+      "102",
+      "11",
+      "type of expression is ambiguous without a type annotation for PrivateSymbol",
+      "type_inference",
+    ],
+    [
+      "AuthRuntimeKernel.swift",
+      "203",
+      "16",
+      "cannot convert value of type 'PrivateValue' to expected argument type 'AuthTraceEntry'",
+      "type_mismatch",
+    ],
+    [
+      "AuthRuntimeKernelTests.swift",
+      "207",
+      "9",
+      "value of type 'AuthTraceEntry' has no member 'privateMember'",
+      "missing_member",
+    ],
+    [
+      "AuthRuntimeKernel.swift",
+      "18",
+      "3",
+      "expected expression after operator privateSymbol",
+      "syntax",
+    ],
+    [
+      "AuthRuntimeKernelTests.swift",
+      "19",
+      "4",
+      "the compiler rejected privateSymbol learner@example.test",
+      "other",
+    ],
+  ];
+  for (const [source, line, column, message, reason] of compilerCases) {
+    writeFileSync(
+      file,
+      `/Users/private/DerivedData/Fluyo/${source}:${line}:${column}: error: ${message}\n::warning title=owned::private`,
+    );
+    const annotated = summarizeAnnotation(file, "test_current");
+    assert.equal(annotated.status, 0);
+    assert.equal(annotated.stderr, "");
+    assert.equal(
+      annotated.stdout,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=compile; source=${source}; line=${line}; column=${column}; reason=${reason}\n`,
+    );
+    assert.equal(annotated.stdout.match(/\n/g)?.length, 1);
+    assert.doesNotMatch(
+      annotated.stdout,
+      /example\.test|DerivedData|private|warning|owned|PrivateSymbol|privateSymbol|privateMember|privatePorts|PrivateValue/i,
+    );
+  }
+
+  writeFileSync(
+    file,
+    "/Users/private/Private.swift:999999:999999: error: the compiler rejected learner@example.test",
+  );
+  const unknownCompilerSource = summarizeAnnotation(file, "test_minimum");
+  assert.equal(
+    unknownCompilerSource.stdout,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=test_minimum; category=compile; source=unknown; line=0; column=0; reason=other\n`,
+  );
+  assert.doesNotMatch(unknownCompilerSource.stdout, /Private|example\.test/i);
+
+  writeFileSync(
+    file,
+    `/Users/private/AuthRuntimeKernel.swift:12:7: error: sending 'privateValue' risks causing data races
+/Users/private/AuthRuntimeKernelTests.swift:99:4: error: value of type 'Secret' has no member 'raw'`,
+  );
+  const firstCompilerError = summarizeAnnotation(file, "test_current");
+  assert.equal(
+    firstCompilerError.stdout,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=compile; source=AuthRuntimeKernel.swift; line=12; column=7; reason=task_transfer\n`,
+  );
+  assert.doesNotMatch(firstCompilerError.stdout, /Secret|raw|privateValue/i);
+
+  writeFileSync(
+    file,
+    `/Users/private/AuthRuntimeKernel.swift:44:8: error: capture of 'privateValue' with non-sendable type 'PrivatePorts' in a @Sendable closure
+Test Case '-[FluyoTests.AuthRuntimeKernelTests ${annotationTest}]' failed (0.001 seconds). learner@example.test`,
+  );
+  const compileOutranksNamedTest = summarizeAnnotation(file, "test_current");
+  assert.equal(
+    compileOutranksNamedTest.stdout,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=compile; source=AuthRuntimeKernel.swift; line=44; column=8; reason=sendability\n`,
+  );
+
+  writeFileSync(
+    file,
+    `/Users/private/AuthRuntimeKernel.swift:44:8: error: capture of 'privateValue' with non-sendable type 'PrivatePorts' in a @Sendable closure
+Test Case '-[FluyoTests.AuthRuntimeKernelTests ${annotationTest}]' failed (0.001 seconds). [auth_corpus_callback_cancel_stage_snapshot_state] learner@example.test`,
+  );
+  const markerOutranksCompile = summarizeAnnotation(file, "test_current");
+  assert.equal(
+    markerOutranksCompile.stdout,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=auth_contract; corpus=callback_cancel; stage=snapshot; mismatch=state\n`,
+  );
+
+  writeFileSync(
+    file,
+    `/Users/private/AuthRuntimeKernel.swift:44:8: error: capture of 'privateValue' with non-sendable type 'PrivatePorts' in a @Sendable closure
+undefined symbol: privateSymbol
+linker command failed with exit code 1`,
+  );
+  const linkOutranksCompile = summarizeAnnotation(file, "test_current");
+  assert.equal(
+    linkOutranksCompile.stdout,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=test_current; category=link\n`,
+  );
+
   writeFileSync(
     file,
     `AuthRuntimeKernelTests assertion failed [auth_corpus_stage_trace_diagnostic_rejected_private] learner@example.test\n::error title=owned::private`,

@@ -37,6 +37,7 @@ const testcase = (id, index, className = "com.fluyo.app.AuthRuntimeKernelTest") 
   `<testcase name="canonicalScenarioOrInvariant[${index}:${id}@${digest}]" classname="${className}"/>`;
 const xml = (cases, tests = 41) =>
   `<testsuite name="com.fluyo.app.AuthRuntimeKernelTest" tests="${tests}" skipped="0" failures="0" errors="0">${cases}</testsuite>`;
+const sidecarEnvelope = (corpusId, marker) => `corpus=${corpusId}\nmarker=${marker}\n`;
 
 try {
   const dir = join(root, "results");
@@ -123,6 +124,7 @@ try {
   );
   const diagnosticUnavailable = summarize(summaryDir);
   assert.deepEqual(JSON.parse(diagnosticUnavailable).failures[0].authDiagnostic, {
+    corpusId: "cold_start_without_candidate",
     stage: "diagnostic",
     mismatch: "unavailable",
   });
@@ -149,7 +151,11 @@ try {
       `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="${marker} learner@example.test">C:\\private\\path</failure></testcase></testsuite>`,
     );
     const fixedFallback = summarize(summaryDir);
-    assert.deepEqual(JSON.parse(fixedFallback).failures[0].authDiagnostic, { stage, mismatch });
+    assert.deepEqual(JSON.parse(fixedFallback).failures[0].authDiagnostic, {
+      corpusId: "cold_start_without_candidate",
+      stage,
+      mismatch,
+    });
     assert.doesNotMatch(fixedFallback, /example\.test|private/i);
 
     for (const nearMatch of [`${marker.slice(0, -1)}_private]`, `${marker}_private`]) {
@@ -189,7 +195,10 @@ try {
   const diagnosticFile = join(root, "auth-diagnostic.txt");
   writeFileSync(
     diagnosticFile,
-    "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500]\n",
+    sidecarEnvelope(
+      "cold_start_without_candidate",
+      "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500]",
+    ),
   );
   writeFileSync(
     summaryFile,
@@ -210,7 +219,10 @@ try {
     expected: "snapshot_published",
     actual: "timer_500",
   });
-  writeFileSync(diagnosticFile, "[auth_corpus_diagnostic_unavailable]\n");
+  writeFileSync(
+    diagnosticFile,
+    sidecarEnvelope("cold_start_without_candidate", "[auth_corpus_diagnostic_unavailable]"),
+  );
   const unavailableSidecar = summarize(
     summaryDir,
     "--phase",
@@ -219,11 +231,15 @@ try {
     diagnosticFile,
   );
   assert.deepEqual(JSON.parse(unavailableSidecar).failures[0].authDiagnostic, {
+    corpusId: "cold_start_without_candidate",
     stage: "diagnostic",
     mismatch: "unavailable",
   });
   for (const [stage, mismatch] of fixedFallbacks) {
-    writeFileSync(diagnosticFile, `[auth_corpus_stage_${stage}_${mismatch}]\n`);
+    writeFileSync(
+      diagnosticFile,
+      sidecarEnvelope("cold_start_without_candidate", `[auth_corpus_stage_${stage}_${mismatch}]`),
+    );
     const fixedFallbackSidecar = summarize(
       summaryDir,
       "--phase",
@@ -232,18 +248,20 @@ try {
       diagnosticFile,
     );
     assert.deepEqual(JSON.parse(fixedFallbackSidecar).failures[0].authDiagnostic, {
+      corpusId: "cold_start_without_candidate",
       stage,
       mismatch,
     });
   }
   for (const rejected of [
-    "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_500] learner@example.test\n",
-    "[auth_corpus_cold_start_without_candidate_private_stage_snapshot_state]\n",
-    "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_index_1_expected_snapshot_published_actual_timer_5000]\n",
-    "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable_private]\n",
-    "[auth_corpus_diagnostic_unavailable_private]\n",
-    "[auth_corpus_stage_snapshot_diagnostic_inconsistent_private]\n",
-    "[auth_corpus_stage_trace_diagnostic_rejected]_private\n",
+    "corpus=private_corpus\nmarker=[auth_corpus_stage_trace_diagnostic_rejected]\n",
+    "corpus=cold_start_without_candidate\nmarker=[auth_corpus_stage_trace_diagnostic_rejected]\nprivate=learner@example.test\n",
+    "corpus=cold_start_without_candidate\r\nmarker=[auth_corpus_stage_trace_diagnostic_rejected]\r\n",
+    "corpus=cold_start_without_candidate\nmarker=[auth_corpus_stage_trace_diagnostic_rejected] learner@example.test\n",
+    "corpus=cold_start_without_candidate\nmarker=[auth_corpus_cold_start_without_candidate_private_stage_snapshot_state]\n",
+    "corpus=callback_cancel\nmarker=[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n",
+    "corpus=cold_start_without_candidate\nmarker=[auth_corpus_stage_trace_diagnostic_rejected]_private\n",
+    "marker=[auth_corpus_stage_trace_diagnostic_rejected]\ncorpus=cold_start_without_candidate\n",
     "x".repeat(513),
   ]) {
     writeFileSync(diagnosticFile, rejected);
@@ -252,6 +270,40 @@ try {
     ).failures[0];
     assert.equal("authDiagnostic" in rejectedSidecar, false);
   }
+
+  for (const corpusId of ids) {
+    writeFileSync(
+      diagnosticFile,
+      sidecarEnvelope(corpusId, "[auth_corpus_stage_trace_diagnostic_rejected]"),
+    );
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[${ids.indexOf(corpusId)}:${corpusId}@${digest}]"><failure type="java.lang.AssertionError">message unavailable</failure></testcase></testsuite>`,
+    );
+    assert.deepEqual(
+      JSON.parse(summarize(summaryDir, "--phase", "unit_test", "--diagnostic-file", diagnosticFile))
+        .failures[0].authDiagnostic,
+      { corpusId, stage: "trace", mismatch: "diagnostic_rejected" },
+    );
+  }
+
+  writeFileSync(
+    diagnosticFile,
+    sidecarEnvelope("callback_cancel", "[auth_corpus_stage_trace_diagnostic_rejected]"),
+  );
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError">first</failure></testcase><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[4:callback_cancel@${digest}]"><failure type="java.lang.AssertionError">later</failure></testcase></testsuite>`,
+  );
+  const crossCorpus = JSON.parse(
+    summarize(summaryDir, "--phase", "unit_test", "--diagnostic-file", diagnosticFile),
+  );
+  assert.equal("authDiagnostic" in crossCorpus.failures[0], false);
+  assert.deepEqual(crossCorpus.failures[1].authDiagnostic, {
+    corpusId: "callback_cancel",
+    stage: "trace",
+    mismatch: "diagnostic_rejected",
+  });
 
   writeFileSync(
     summaryFile,
@@ -315,7 +367,7 @@ try {
     ],
     ...fixedFallbacks.map(([stage, mismatch]) => [
       `[auth_corpus_stage_${stage}_${mismatch}]`,
-      `test=auth_corpus_cold_start_without_candidate; stage=${stage}; mismatch=${mismatch}`,
+      `corpus=cold_start_without_candidate; stage=${stage}; mismatch=${mismatch}`,
     ]),
   ];
   for (const [marker, expectedDiagnostic] of annotationCases) {
@@ -338,8 +390,29 @@ try {
   );
   assert.equal(
     summarizeAnnotation(summaryDir, "--phase", "unit_test"),
-    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test=auth_corpus_cold_start_without_candidate; stage=snapshot; mismatch=diagnostic_inconsistent\n`,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; corpus=cold_start_without_candidate; stage=snapshot; mismatch=diagnostic_inconsistent\n`,
   );
+
+  writeFileSync(
+    diagnosticFile,
+    sidecarEnvelope("callback_cancel", "[auth_corpus_stage_trace_diagnostic_rejected]"),
+  );
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.OtherTest" name="other"><failure type="java.lang.AssertionError">learner@example.test\n::warning title=owned::private</failure></testcase></testsuite>`,
+  );
+  const orphanAnnotation = summarizeAnnotation(
+    summaryDir,
+    "--phase",
+    "unit_test",
+    "--diagnostic-file",
+    diagnosticFile,
+  );
+  assert.equal(
+    orphanAnnotation,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure; corpus=callback_cancel; stage=trace; mismatch=diagnostic_rejected\n`,
+  );
+  assert.doesNotMatch(orphanAnnotation, /example\.test|warning|owned|private/i);
 
   writeFileSync(
     summaryFile,
