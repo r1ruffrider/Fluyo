@@ -240,6 +240,27 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlinRuntime).toContain(
       "withContext(NonCancellable) { transitionAfterFenceIrrevocably",
     );
+    for (const runtime of [swiftRuntime, kotlinRuntime]) {
+      expect(runtime).toContain("pendingSuppressedStaleGenerations");
+    }
+    expect(kotlinRuntime).toMatch(
+      /reservation\.generation in staleOutcomeSuppressedGenerations[^]*pendingSuppressedStaleGenerations \+= reservation\.generation/,
+    );
+    expect(swiftRuntime).toMatch(
+      /staleOutcomeSuppressedGenerations\.contains\(reservation\.generation\)[^]*pendingSuppressedStaleGenerations\.insert\(reservation\.generation\)/,
+    );
+    expect(kotlinRuntime).toMatch(
+      /publishLocked\(snapshot\)[^]*payloads\.forEach[^]*staleOutcomeSuppressedGenerations\.remove\(expected\)[^]*pendingSuppressedStaleGenerations\.remove\(expected\)[^]*STALE_REJECTED/,
+    );
+    expect(kotlinRuntime).toMatch(
+      /if \(!committed\)[^]*staleOutcomeSuppressedGenerations\.remove\(expected\)[^]*pendingSuppressedStaleGenerations\.remove\(expected\)/,
+    );
+    expect(swiftRuntime).toMatch(
+      /publishLocked\(snapshot\)[^]*for payload in payloads[^]*staleOutcomeSuppressedGenerations\.remove\(expected\)[^]*pendingSuppressedStaleGenerations\.remove\(expected\)[^]*staleRejected/,
+    );
+    expect(swiftRuntime).toMatch(
+      /if !committed[^]*staleOutcomeSuppressedGenerations\.remove\(expected\)[^]*pendingSuppressedStaleGenerations\.remove\(expected\)/,
+    );
     expect(swiftRuntime).not.toContain("guard valid(reservation), !Task.isCancelled");
   });
 
@@ -297,6 +318,22 @@ describe("native auth executable synthetic kernel", () => {
     expect(corpus.toString("utf8")).not.toMatch(/status_heading|signed_in|safe_link_error/);
     const rows = parse(corpus);
     const byId = new Map(rows.map((row) => [row.id, row]));
+    const callbackCancelTrace = byId.get("callback_cancel")!.expectedTrace!.split(">");
+    const callbackFence = callbackCancelTrace.indexOf("generation_fence");
+    const callbackSnapshot = callbackCancelTrace.indexOf("snapshot_published", callbackFence);
+    const callbackStale = callbackCancelTrace.indexOf("stale_rejected");
+    expect(callbackFence).toBeLessThan(callbackSnapshot);
+    expect(callbackSnapshot).toBeLessThan(callbackStale);
+    expect(callbackCancelTrace.filter((entry) => entry === "stale_rejected")).toHaveLength(1);
+    const signOutTrace = byId.get("stale_response_discarded")!.expectedTrace!.split(">");
+    expect(signOutTrace.indexOf("generation_fence")).toBeLessThan(
+      signOutTrace.indexOf("stale_rejected"),
+    );
+    expect(signOutTrace.indexOf("stale_rejected")).toBeLessThan(
+      signOutTrace.indexOf("callback_purge"),
+    );
+    expect(signOutTrace.filter((entry) => entry === "stale_rejected")).toHaveLength(1);
+    expect(byId.get("callback_malformed")?.expectedTrace).not.toContain("stale_rejected");
     for (const id of [
       "callback_duplicate_delivery",
       "callback_overlap_rejected",

@@ -102,6 +102,7 @@ actor AuthRuntimeCoordinator {
     private var trace: [AuthTraceEntry] = []
     private var publishedSnapshots: [(AuthRuntimeSnapshot, UInt64)] = []
     private var staleOutcomeSuppressedGenerations: Set<UInt64> = []
+    private var pendingSuppressedStaleGenerations: Set<UInt64> = []
 
     init(provider: any AuthProviderPort, vault: any SessionVaultPort, callbackStore: any CallbackTransactionStorePort, clock: any AuthClockPort, ownerStore: any OwnerDataStorePort, telemetry: any StructurallyNoOpTelemetryPort, initialGeneration: UInt64 = 1) {
         self.provider = provider; self.vault = vault; self.callbackStore = callbackStore
@@ -313,7 +314,14 @@ actor AuthRuntimeCoordinator {
         let reservation = Reservation(generation: generation, id: nextReservation, kind: .timer, stable: snapshotValue, stateVersion: stateVersion, startedAt: startedAt)
         nextReservation += 1; active = reservation; return reservation
     }
-    private func valid(_ reservation: Reservation) -> Bool { let result = !terminal && generation == reservation.generation && active?.id == reservation.id; if !result, !terminal { trace.append(.staleRejected) }; return result }
+    private func valid(_ reservation: Reservation) -> Bool {
+        let result = !terminal && generation == reservation.generation && active?.id == reservation.id
+        if !result, !terminal {
+            if staleOutcomeSuppressedGenerations.contains(reservation.generation) { pendingSuppressedStaleGenerations.insert(reservation.generation) }
+            else { trace.append(.staleRejected) }
+        }
+        return result
+    }
     private func finish(_ reservation: Reservation) { if active?.id == reservation.id { active = nil } }
     private func append(_ entry: AuthTraceEntry, _ reservation: Reservation) { if valid(reservation) { trace.append(entry) } }
     private func publish(_ snapshot: AuthRuntimeSnapshot, _ reservation: Reservation) { if valid(reservation) { publishLocked(snapshot) } }
@@ -329,12 +337,25 @@ actor AuthRuntimeCoordinator {
     }
     private func transitionAfterFenceIrrevocably(_ expected: UInt64, _ snapshot: AuthRuntimeSnapshot, _ payloads: [AuthPresentationPayload]) async -> Bool {
         guard let fencing = installFence(expected, kind: .cleanup, suppressStaleOutcome: true) else { return false }
-        defer { finish(fencing) }
-        await provider.cancelOwnedWork(generation: expected); guard valid(fencing) else { return false }
-        await callbackStore.cancelOwnedWork(generation: expected); guard valid(fencing) else { return false }
-        await clock.cancelOwnedTimers(generation: expected); guard valid(fencing) else { return false }
-        await callbackStore.activateGeneration(fencing.generation); guard valid(fencing) else { return false }
-        publish(snapshot, fencing); for payload in payloads { enqueue(fencing, snapshot.state, payload) }; return true
+        var committed = false
+        defer {
+            if !committed {
+                staleOutcomeSuppressedGenerations.remove(expected)
+                pendingSuppressedStaleGenerations.remove(expected)
+            }
+            finish(fencing)
+        }
+        await provider.cancelOwnedWork(generation: expected); guard !terminal, generation == fencing.generation, active?.id == fencing.id else { return false }
+        await callbackStore.cancelOwnedWork(generation: expected); guard !terminal, generation == fencing.generation, active?.id == fencing.id else { return false }
+        await clock.cancelOwnedTimers(generation: expected); guard !terminal, generation == fencing.generation, active?.id == fencing.id else { return false }
+        await callbackStore.activateGeneration(fencing.generation); guard !terminal, generation == fencing.generation, active?.id == fencing.id else { return false }
+        guard !terminal, generation == fencing.generation, active?.id == fencing.id else { return false }
+        publishLocked(snapshot)
+        for payload in payloads { enqueueLocked(fencing.generation, snapshot.state, payload) }
+        staleOutcomeSuppressedGenerations.remove(expected)
+        if pendingSuppressedStaleGenerations.remove(expected) != nil { trace.append(.staleRejected) }
+        committed = true
+        return true
     }
 
     private func rejectCallback(_ category: FixedAuthOutcomeCategory, _ reservation: Reservation) async {

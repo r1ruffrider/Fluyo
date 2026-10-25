@@ -89,12 +89,33 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
         let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
         let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
+        assertFenceTraceSemantics(vector.id, trace)
         XCTAssertTrue(firstDrain.allSatisfy { $0.generation == generation }, vector.id); XCTAssertTrue(secondDrain.isEmpty, vector.id); XCTAssertTrue(staleDrain.isEmpty, vector.id)
         requireCorpusMatch(trace == vector.trace, vector.id, .trace, traceMismatch(vector.trace, trace)); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
         XCTAssertEqual(completions, vector.completions.filter { $0 != "none" }, vector.id)
         if vector.id == "warm_callback_success" { let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") }
         XCTAssertEqual(generation, vector.generation, vector.id); XCTAssertEqual(terminal, vector.terminal, vector.id)
         try await validateInvariant(vector.id, coordinator, ports)
+    }
+
+    private func assertFenceTraceSemantics(_ id: String, _ trace: [String]) {
+        switch id {
+        case "callback_cancel":
+            let fence = trace.firstIndex(of: AuthTraceEntry.generationFence.rawValue)!
+            let snapshot = trace.indices.first { $0 > fence && trace[$0] == AuthTraceEntry.snapshotPublished.rawValue }!
+            let stale = trace.firstIndex(of: AuthTraceEntry.staleRejected.rawValue)!
+            XCTAssertLessThan(fence, snapshot); XCTAssertLessThan(snapshot, stale)
+            XCTAssertEqual(trace.filter { $0 == AuthTraceEntry.staleRejected.rawValue }.count, 1)
+        case "stale_response_discarded", "generation_change_cancels_work_and_blocks_stale_writes":
+            let fence = trace.firstIndex(of: AuthTraceEntry.generationFence.rawValue)!
+            let stale = trace.firstIndex(of: AuthTraceEntry.staleRejected.rawValue)!
+            let purge = trace.firstIndex(of: AuthTraceEntry.callbackPurge.rawValue)!
+            XCTAssertLessThan(fence, stale); XCTAssertLessThan(stale, purge)
+            XCTAssertEqual(trace.filter { $0 == AuthTraceEntry.staleRejected.rawValue }.count, 1)
+        case "callback_malformed":
+            XCTAssertFalse(trace.contains(AuthTraceEntry.staleRejected.rawValue))
+        default: break
+        }
     }
 
     private func execute(_ step: String, _ coordinator: AuthRuntimeCoordinator, _ ports: ScriptPorts) async throws -> Int {
@@ -163,7 +184,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "explicit_invalidation_and_repeated_401_clear": let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.hasSessionCandidate, .absent)
         case "403_never_refreshes_or_signs_out": let calls = await ports.provider.refreshCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertEqual(snapshot.state, .safeTerminalError); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
         case "offline_never_confirms_new_owner_or_expands_access": let calls = await ports.provider.verifyCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-        case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness(); try await verifyPostFenceCancellationIsIrrevocable()
+        case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness(); try await verifyPostFenceCancellationIsIrrevocable(); try await verifySuppressedStaleLifecycle()
         case "evidence_is_closed_and_mutation_safe": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal)
         case "no_op_telemetry_has_zero_retention_and_zero_transport": XCTAssertEqual(Mirror(reflecting: TrapTelemetry()).children.count, 0)
         default: break
@@ -340,8 +361,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func verifyEveryDestructiveMutationRejectsStaleGeneration() async throws {
         do {
             let p = ScriptPorts(times: [0]); await p.callback.seed(); p.generations.pauseAfterComparison(1)
-            let mutation = Task.detached { await p.callback.purge(generation: 1) }; await Task.detached { p.generations.waitComparisonStarted() }.value
-            let activation = Task.detached { p.generations.activate(2) }; await Task.yield(); p.generations.releaseComparison()
+            let callback = p.callback, generations = p.generations
+            let mutation = Task.detached { await callback.purge(generation: 1) }; await Task.detached { generations.waitComparisonStarted() }.value
+            let activation = Task.detached { generations.activate(2) }; await Task.yield(); generations.releaseComparison()
             let applied = await mutation.value; XCTAssertEqual(applied, .applied); await activation.value; let pendingAfterMutation = await p.callback.hasPending(); XCTAssertFalse(pendingAfterMutation)
             await p.callback.seed(); let stale = await p.callback.purge(generation: 1), pendingAfterStale = await p.callback.hasPending(); XCTAssertEqual(stale, .staleGeneration); XCTAssertTrue(pendingAfterStale)
         }
@@ -384,6 +406,34 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), history = await coordinator.presentationEffectHistory(), activationCanceled = await ports.callback.activationWasCancelled()
             XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
             XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(history.count, 1); XCTAssertFalse(activationCanceled)
+        }
+    }
+
+    private func verifySuppressedStaleLifecycle() async throws {
+        do {
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
+            await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setResult(.malformed)
+            await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
+            let trace = await coordinator.normalizedTrace()
+            XCTAssertEqual(trace.filter { $0 == .generationFence }.count, 2); XCTAssertFalse(trace.contains(.staleRejected))
+        }
+        do {
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
+            await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setResult(.malformed)
+            await ports.callback.setSuspendActivation(true); await ports.callback.setPurgeResult(.failed)
+            let interruptedIngress = SyntheticAuthFixture.ingress()
+            async let rejected: Void = coordinator.receiveCallback(interruptedIngress)
+            await ports.callback.waitActivationStarted()
+            async let terminalCleanup: Void = coordinator.signOut()
+            while true {
+                let currentGeneration = await coordinator.currentGeneration()
+                if currentGeneration == 3 { break }
+                await Task.yield()
+            }
+            await ports.callback.releaseActivation()
+            _ = await (rejected, terminalCleanup)
+            let terminal = await coordinator.isTerminalFenced(), trace = await coordinator.normalizedTrace()
+            XCTAssertTrue(terminal); XCTAssertFalse(trace.contains(.staleRejected))
         }
     }
 

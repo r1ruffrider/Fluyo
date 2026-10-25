@@ -215,10 +215,21 @@ describe("iOS unsigned foundation structure", () => {
       testCaseBody.match(
         /let \w+(?:Ingress|Candidate) = SyntheticAuthFixture\.(?:ingress|candidate)\(\)\r?\n\s*(?:async let \w+: Void =|let \w+ = Task \{)/g,
       ),
-    ).toHaveLength(15);
+    ).toHaveLength(16);
     for (const start of testCaseBody.match(/(?:async let[^\n]*|Task\s*\{[^{}]*\})/g) ?? []) {
       expect(start).not.toMatch(/SyntheticAuthFixture\.(?:candidate|ingress)\(\)/);
     }
+    expect(testCaseBody).toContain("let callback = p.callback, generations = p.generations");
+    const detachedBodies = [...testCaseBody.matchAll(/Task\.detached\s*\{([^{}]*)\}/g)].map(
+      (match) => match[1],
+    );
+    expect(detachedBodies).toHaveLength(3);
+    expect(detachedBodies.join("\n")).not.toMatch(/\bp\./);
+    expect(detachedBodies).toEqual([
+      " await callback.purge(generation: 1) ",
+      " generations.waitComparisonStarted() ",
+      " generations.activate(2) ",
+    ]);
   });
 
   it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {

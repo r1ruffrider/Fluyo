@@ -294,6 +294,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         assertTrue(coordinator.drainPresentationEffects(staleGeneration).isEmpty())
         val trace = coordinator.normalizedTrace().map { it.wire }
         requireCorpusMatch(vector.trace == trace, vector.id, renderTraceDiagnostic(vector.id, classifyTraceDiagnostic(vector.trace, trace)))
+        assertFenceTraceSemantics(vector.id, trace)
         assertEquals(vector.completions.filterNot { it == "none" }, ports.completionValues())
         if (vector.id == "warm_callback_success") assertEquals("opaque-pkce", ports.provider.lastExchangeStorage)
         assertEquals(vector.wipe, ports.wipeSummary())
@@ -365,6 +366,28 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         else -> throw AssertionError("unknown closed step")
     }
 
+    private fun assertFenceTraceSemantics(id: String, trace: List<String>) {
+        val fence = AuthTraceEntry.GENERATION_FENCE.wire
+        val stale = AuthTraceEntry.STALE_REJECTED.wire
+        when (id) {
+            "callback_cancel" -> {
+                val fenceIndex = trace.indexOf(fence)
+                val snapshotIndex = trace.indices.first { it > fenceIndex && trace[it] == AuthTraceEntry.SNAPSHOT_PUBLISHED.wire }
+                val staleIndex = trace.indexOf(stale)
+                assertTrue(fenceIndex < snapshotIndex && snapshotIndex < staleIndex)
+                assertEquals(1, trace.count { it == stale })
+            }
+            "stale_response_discarded", "generation_change_cancels_work_and_blocks_stale_writes" -> {
+                val fenceIndex = trace.indexOf(fence)
+                val staleIndex = trace.indexOf(stale)
+                val purgeIndex = trace.indexOf(AuthTraceEntry.CALLBACK_PURGE.wire)
+                assertTrue(fenceIndex < staleIndex && staleIndex < purgeIndex)
+                assertEquals(1, trace.count { it == stale })
+            }
+            "callback_malformed" -> assertFalse(trace.contains(stale))
+        }
+    }
+
     private suspend fun validateInvariant(id: String, coordinator: AuthRuntimeCoordinator, ports: ScriptPorts) {
         when (id) {
             "public_state_is_secret_free" -> { assertEquals(setOf("state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"), AuthRuntimeSnapshot::class.java.declaredFields.filter { !it.isSynthetic && !Modifier.isStatic(it.modifiers) }.map { it.name }.toSet()); verifyCompletionAuditTracksRemainingCommands() }
@@ -382,7 +405,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             "explicit_invalidation_and_repeated_401_clear" -> assertEquals(SessionCandidateStatus.ABSENT, coordinator.snapshot().hasSessionCandidate)
             "403_never_refreshes_or_signs_out" -> { assertEquals(0, ports.provider.refreshCalls); assertEquals(AuthRuntimeState.SAFE_TERMINAL_ERROR, coordinator.snapshot().state); assertTrue(coordinator.snapshot().hasVerifiedOwnerState) }
             "offline_never_confirms_new_owner_or_expands_access" -> { assertEquals(0, ports.provider.verifyCalls); assertFalse(coordinator.snapshot().hasVerifiedOwnerState) }
-            "cleanup_precedes_signed_out_or_new_owner_exposure" -> { assertTrue(coordinator.isTerminalFenced()); verifyDelayedEffectCancellation(); verifyCleanupReservationLiveness(); verifyPostFenceCancellationIsIrrevocable() }
+            "cleanup_precedes_signed_out_or_new_owner_exposure" -> { assertTrue(coordinator.isTerminalFenced()); verifyDelayedEffectCancellation(); verifyCleanupReservationLiveness(); verifyPostFenceCancellationIsIrrevocable(); verifySuppressedStaleLifecycle() }
             "no_op_telemetry_has_zero_retention_and_zero_transport" -> assertEquals(0, TrapTelemetry::class.java.declaredFields.count { !it.isSynthetic })
             "evidence_is_closed_and_mutation_safe" -> assertTrue(coordinator.isTerminalFenced())
         }
@@ -600,6 +623,30 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             val snapshot = coordinator.snapshot()
             assertEquals(AuthRuntimeState.UNUSABLE_LINK, snapshot.state); assertEquals(SessionCandidateStatus.ABSENT, snapshot.hasSessionCandidate); assertFalse(snapshot.hasVerifiedOwnerState)
             assertEquals(2uL, coordinator.currentGeneration()); assertFalse(coordinator.isTerminalFenced()); assertEquals(1, coordinator.presentationEffectHistory().size)
+        }
+    }
+
+    private suspend fun verifySuppressedStaleLifecycle() {
+        run {
+            val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
+            ports.vault.readCandidate = false; coordinator.initialize(true); ports.callback.result = CallbackConsumeResult.Malformed
+            coordinator.receiveCallback(ingress()); coordinator.receiveCallback(ingress())
+            val trace = coordinator.normalizedTrace()
+            assertEquals(2, trace.count { it == AuthTraceEntry.GENERATION_FENCE })
+            assertFalse(trace.contains(AuthTraceEntry.STALE_REJECTED))
+        }
+        coroutineScope {
+            val ports = ScriptPorts(listOf(0uL)); val coordinator = coordinator(ports, 1uL)
+            ports.vault.readCandidate = false; coordinator.initialize(true); ports.callback.result = CallbackConsumeResult.Malformed
+            ports.callback.suspendActivation = true; ports.callback.purgeResult = ConditionalMutationResult.FAILED
+            val rejected = async { coordinator.receiveCallback(ingress()) }
+            ports.callback.activationStarted.await()
+            val terminalCleanup = async { coordinator.signOut() }
+            while (coordinator.currentGeneration() < 3uL) yield()
+            ports.callback.activationRelease.complete(Unit)
+            rejected.await(); terminalCleanup.await()
+            assertTrue(coordinator.isTerminalFenced())
+            assertFalse(coordinator.normalizedTrace().contains(AuthTraceEntry.STALE_REJECTED))
         }
     }
 

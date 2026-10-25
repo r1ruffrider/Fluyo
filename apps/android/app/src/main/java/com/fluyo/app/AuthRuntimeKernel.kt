@@ -144,6 +144,7 @@ class AuthRuntimeCoordinator(
     private val trace = mutableListOf<AuthTraceEntry>()
     private val publishedSnapshots = mutableListOf<Pair<AuthRuntimeSnapshot, ULong>>()
     private val staleOutcomeSuppressedGenerations = mutableSetOf<ULong>()
+    private val pendingSuppressedStaleGenerations = mutableSetOf<ULong>()
 
     fun snapshot(): AuthRuntimeSnapshot = boundary.withLock { snapshotValue }
     fun currentGeneration(): ULong = boundary.withLock { generationValue }
@@ -373,7 +374,14 @@ class AuthRuntimeCoordinator(
         if (generationValue == ULong.MAX_VALUE) { latchTerminalLocked(InternalTerminalCause.GENERATION_EXHAUSTED); return@withLock null }
         Reservation(generationValue, nextReservation++, OperationKind.TIMER, snapshotValue, stateVersion, startedAt).also { active = it }
     }
-    private fun valid(reservation: Reservation): Boolean = boundary.withLock { validLocked(reservation).also { if (!it && !terminal) trace += AuthTraceEntry.STALE_REJECTED } }
+    private fun valid(reservation: Reservation): Boolean = boundary.withLock {
+        validLocked(reservation).also { valid ->
+            if (!valid && !terminal) {
+                if (reservation.generation in staleOutcomeSuppressedGenerations) pendingSuppressedStaleGenerations += reservation.generation
+                else trace += AuthTraceEntry.STALE_REJECTED
+            }
+        }
+    }
     private fun validLocked(reservation: Reservation) = !terminal && generationValue == reservation.generation && active?.id == reservation.id
     private fun finish(reservation: Reservation) = boundary.withLock { if (active?.id == reservation.id) active = null }
     private fun append(entry: AuthTraceEntry, reservation: Reservation) = boundary.withLock { if (validLocked(reservation)) trace += entry }
@@ -393,16 +401,34 @@ class AuthRuntimeCoordinator(
 
     private suspend fun transitionAfterFenceIrrevocably(expected: ULong, snapshot: AuthRuntimeSnapshot, payloads: List<AuthPresentationPayload>): Boolean {
         val fencing = installFence(expected, OperationKind.CLEANUP, suppressStaleOutcome = true) ?: return false
+        var committed = false
         return try {
-            provider.cancelOwnedWork(expected); if (!valid(fencing)) return false
-            callbackStore.cancelOwnedWork(expected); if (!valid(fencing)) return false
-            clock.cancelOwnedTimers(expected); if (!valid(fencing)) return false
-            callbackStore.activateGeneration(fencing.generation); if (!valid(fencing)) return false
+            provider.cancelOwnedWork(expected); if (!boundary.withLock { validLocked(fencing) }) return false
+            callbackStore.cancelOwnedWork(expected); if (!boundary.withLock { validLocked(fencing) }) return false
+            clock.cancelOwnedTimers(expected); if (!boundary.withLock { validLocked(fencing) }) return false
+            callbackStore.activateGeneration(fencing.generation); if (!boundary.withLock { validLocked(fencing) }) return false
             boundary.withLock {
                 if (!validLocked(fencing)) false
-                else { publishLocked(snapshot); payloads.forEach { enqueueLocked(fencing.generation, snapshot.state, it) }; true }
+                else {
+                    publishLocked(snapshot)
+                    payloads.forEach { enqueueLocked(fencing.generation, snapshot.state, it) }
+                    staleOutcomeSuppressedGenerations.remove(expected)
+                    if (pendingSuppressedStaleGenerations.remove(expected)) trace += AuthTraceEntry.STALE_REJECTED
+                    committed = true
+                    true
+                }
             }
-        } finally { withContext(NonCancellable) { finish(fencing) } }
+        } finally {
+            withContext(NonCancellable) {
+                boundary.withLock {
+                    if (!committed) {
+                        staleOutcomeSuppressedGenerations.remove(expected)
+                        pendingSuppressedStaleGenerations.remove(expected)
+                    }
+                    if (active?.id == fencing.id) active = null
+                }
+            }
+        }
     }
 
     private suspend fun rejectCallback(category: FixedAuthOutcomeCategory, reservation: Reservation) {
