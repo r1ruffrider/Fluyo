@@ -15,6 +15,10 @@ const suppressedStaleLifecycleAssertions = new Map([
     new Set(["suppressed_failed_terminal_fenced", "suppressed_failed_terminal_stale_absent"]),
   ],
 ]);
+const diagnosticSidecarMethods = new Set([
+  "preservesFirstMarkerUntilTaskCleanup",
+  "diagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
+]);
 const authCorpusIds = new Set([
   "cold_start_without_candidate",
   "cold_start_with_candidate",
@@ -193,6 +197,34 @@ const suppressedStaleLifecycleDiagnostic = (className, testName, failureTag) => 
   );
   return assertion ? Object.freeze({ test: testName, assertion }) : null;
 };
+const boundedAuthFailureIdentity = (className, testName, authCorpusId, body) => {
+  let testClass = null;
+  let test = null;
+  if (className === "com.fluyo.app.AuthRuntimeKernelTest" && authCorpusId) {
+    testClass = "auth_kernel";
+    test = `auth_corpus_${authCorpusId}`;
+  } else if (
+    className === "com.fluyo.app.AuthDiagnosticSidecarTest" &&
+    diagnosticSidecarMethods.has(testName)
+  ) {
+    testClass = "auth_diagnostic_sidecar";
+    test = testName;
+  } else if (
+    className === suppressedStaleLifecycleClass &&
+    suppressedStaleLifecycleAssertions.has(testName)
+  ) {
+    testClass = "auth_suppressed_stale_lifecycle";
+    test = testName;
+  } else {
+    return null;
+  }
+  const lineMatch = body.match(
+    /(?:^|[(/\\\s])AuthRuntimeKernelTest\.kt:([1-9][0-9]{0,3})(?![0-9])/,
+  );
+  const parsedLine = lineMatch ? Number(lineMatch[1]) : null;
+  const sourceLine = parsedLine !== null && parsedLine <= 2000 ? parsedLine : null;
+  return Object.freeze({ testClass, test, sourceLine });
+};
 const frameworkFailureCategory = (tag) => {
   const match = tag.match(/(?:^|\s)type="([^"]*)"/);
   const value = match?.[1] ?? "";
@@ -283,6 +315,7 @@ const runtimeCategories = (body) => {
 const failures = [];
 const annotationProvenance = new WeakMap();
 const suppressedStaleLifecycleDiagnostics = new WeakMap();
+const boundedAuthFailureIdentities = new WeakMap();
 for (const file of xmlFiles.sort()) {
   const xml = fs.readFileSync(file, "utf8");
   for (const match of xml.matchAll(/<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g)) {
@@ -352,6 +385,12 @@ for (const file of xmlFiles.sort()) {
       rawTestName,
       failureTag[2],
     );
+    const boundedAuthFailure = boundedAuthFailureIdentity(
+      className,
+      rawTestName,
+      authCorpusId,
+      body,
+    );
     const failure = {
       className: authKernel ? "auth_kernel" : className,
       testName:
@@ -378,6 +417,7 @@ for (const file of xmlFiles.sort()) {
     if (lifecycleDiagnostic) {
       suppressedStaleLifecycleDiagnostics.set(failure, lifecycleDiagnostic);
     }
+    if (boundedAuthFailure) boundedAuthFailureIdentities.set(failure, boundedAuthFailure);
   }
 }
 
@@ -398,9 +438,12 @@ if (githubAnnotation) {
   const lifecycleDiagnostic = lifecycleFailure
     ? suppressedStaleLifecycleDiagnostics.get(lifecycleFailure)
     : null;
+  const boundedAuthFailure = failures
+    .map((candidate) => boundedAuthFailureIdentities.get(candidate))
+    .find(Boolean);
   const fields = [
     `phase=${phase}`,
-    `category=${failure || lifecycleDiagnostic ? "auth_contract" : summary.diagnostic.category}`,
+    `category=${failure || lifecycleDiagnostic || boundedAuthFailure ? "auth_contract" : summary.diagnostic.category}`,
   ];
   const provenance = failure
     ? annotationProvenance.get(failure)
@@ -436,6 +479,11 @@ if (githubAnnotation) {
     }
   } else if (lifecycleDiagnostic) {
     fields.push(`test=${lifecycleDiagnostic.test}`, `assertion=${lifecycleDiagnostic.assertion}`);
+  } else if (boundedAuthFailure) {
+    fields.push(`test_class=${boundedAuthFailure.testClass}`, `test=${boundedAuthFailure.test}`);
+    if (boundedAuthFailure.sourceLine !== null) {
+      fields.push(`source_line=${boundedAuthFailure.sourceLine}`);
+    }
   }
   process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
 } else {

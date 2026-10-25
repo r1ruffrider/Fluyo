@@ -456,11 +456,108 @@ try {
       `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest" name="${testName}"><failure type="java.lang.AssertionError" message="${message}">learner@example.test\n::error title=owned::private</failure></testcase></testsuite>`,
     );
     const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
+    const exactMethod =
+      testName === "suppressingNoLatePathEmitsNoStale" ||
+      testName === "failedTerminalPathClearsSuppressionWithoutStale";
+    assert.equal(
+      annotation,
+      exactMethod
+        ? `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_suppressed_stale_lifecycle; test=${testName}\n`
+        : `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure\n`,
+    );
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private/i);
+  }
+
+  const boundedAuthFallbackCases = [
+    [
+      "com.fluyo.app.AuthRuntimeKernelTest",
+      `canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]`,
+      "auth_kernel",
+      "auth_corpus_cold_start_without_candidate",
+      447,
+    ],
+    [
+      "com.fluyo.app.AuthDiagnosticSidecarTest",
+      "preservesFirstMarkerUntilTaskCleanup",
+      "auth_diagnostic_sidecar",
+      "preservesFirstMarkerUntilTaskCleanup",
+      133,
+    ],
+    [
+      "com.fluyo.app.AuthDiagnosticSidecarTest",
+      "diagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
+      "auth_diagnostic_sidecar",
+      "diagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
+      151,
+    ],
+    [
+      "com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest",
+      "suppressingNoLatePathEmitsNoStale",
+      "auth_suppressed_stale_lifecycle",
+      "suppressingNoLatePathEmitsNoStale",
+      266,
+    ],
+    [
+      "com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest",
+      "failedTerminalPathClearsSuppressionWithoutStale",
+      "auth_suppressed_stale_lifecycle",
+      "failedTerminalPathClearsSuppressionWithoutStale",
+      282,
+    ],
+  ];
+  for (const [
+    className,
+    testName,
+    testClass,
+    expectedTest,
+    sourceLine,
+  ] of boundedAuthFallbackCases) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="${className}" name="${testName}"><failure type="java.lang.AssertionError" message="unclassified learner@example.test">at private.path(AuthRuntimeKernelTest.kt:${sourceLine})\n::warning title=owned::private</failure></testcase></testsuite>`,
+    );
+    const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
+    assert.equal(
+      annotation,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=${testClass}; test=${expectedTest}; source_line=${sourceLine}\n`,
+    );
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private|unclassified/i);
+  }
+
+  writeFileSync(
+    summaryFile,
+    `<testsuite><testcase classname="com.fluyo.app.AuthDiagnosticSidecarTest" name="preservesFirstMarkerUntilTaskCleanup"><failure type="java.lang.AssertionError" message="unclassified learner@example.test">PrivateAuthRuntimeKernelTest.kt:133\nAuthRuntimeKernelTest.kt:2001\n::warning title=owned::private</failure></testcase></testsuite>`,
+  );
+  assert.equal(
+    summarizeAnnotation(summaryDir, "--phase", "unit_test"),
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_diagnostic_sidecar; test=preservesFirstMarkerUntilTaskCleanup\n`,
+  );
+
+  const rejectedAuthFallbackCases = [
+    ["com.fluyo.app.AuthDiagnosticSidecarTestPrivate", "preservesFirstMarkerUntilTaskCleanup"],
+    ["com.fluyo.app.AuthDiagnosticSidecarTest", "preservesFirstMarkerUntilTaskCleanupPrivate"],
+    [
+      "com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTestPrivate",
+      "failedTerminalPathClearsSuppressionWithoutStale",
+    ],
+    [
+      "com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest",
+      "failedTerminalPathClearsSuppressionWithoutStalePrivate",
+    ],
+    ["com.fluyo.app.AuthRuntimeKernelTestPrivate", "canonicalScenarioOrInvariant"],
+    ["com.fluyo.app.AuthRuntimeKernelTest", "canonicalScenarioOrInvariant"],
+  ];
+  for (const [className, testName] of rejectedAuthFallbackCases) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="${className}" name="${testName}"><failure type="java.lang.AssertionError" message="learner@example.test">AuthRuntimeKernelTest.kt:447\n::warning title=owned::private</failure></testcase></testsuite>`,
+    );
+    const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
     assert.equal(
       annotation,
       `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure\n`,
     );
-    assert.doesNotMatch(annotation, /example\.test|warning|owned|private|suppressed/i);
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private|source_line|test_class/i);
   }
 
   writeFileSync(
@@ -530,7 +627,7 @@ try {
   );
   assert.equal(
     summarizeAnnotation(summaryDir, "--phase", "unit_test"),
-    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure\n`,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_kernel; test=auth_corpus_cold_start_without_candidate\n`,
   );
 
   writeFileSync(
