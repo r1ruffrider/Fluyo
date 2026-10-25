@@ -413,6 +413,56 @@ try {
     assert.doesNotMatch(annotation, /example\.test|warning|owned|private/i);
   }
 
+  const suppressedLifecycleCases = [
+    [
+      "suppressingNoLatePathEmitsNoStale",
+      "suppressed_no_late_fence_count",
+      " expected:&lt;2&gt; but was:&lt;1&gt;",
+    ],
+    ["suppressingNoLatePathEmitsNoStale", "suppressed_no_late_stale_absent", ""],
+    ["failedTerminalPathClearsSuppressionWithoutStale", "suppressed_failed_terminal_fenced", ""],
+    [
+      "failedTerminalPathClearsSuppressionWithoutStale",
+      "suppressed_failed_terminal_stale_absent",
+      "",
+    ],
+  ];
+  for (const [testName, assertion, junitSuffix] of suppressedLifecycleCases) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest" name="${testName}"><failure type="java.lang.AssertionError" message="${assertion}${junitSuffix}">learner@example.test\n::warning title=owned::private</failure></testcase></testsuite>`,
+    );
+    const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
+    assert.equal(
+      annotation,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test=${testName}; assertion=${assertion}\n`,
+    );
+    assert.equal(annotation.match(/\n/g)?.length, 1);
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private|expected|but was/i);
+  }
+
+  const rejectedSuppressedLifecycleCases = [
+    ["suppressingNoLatePathEmitsNoStalePrivate", "suppressed_no_late_fence_count"],
+    ["suppressingNoLatePathEmitsNoStale", "suppressed_no_late_fence_count_private"],
+    ["suppressingNoLatePathEmitsNoStale", "suppressed_failed_terminal_fenced"],
+    [
+      "failedTerminalPathClearsSuppressionWithoutStale",
+      "private suppressed_failed_terminal_fenced",
+    ],
+  ];
+  for (const [testName, message] of rejectedSuppressedLifecycleCases) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest" name="${testName}"><failure type="java.lang.AssertionError" message="${message}">learner@example.test\n::error title=owned::private</failure></testcase></testsuite>`,
+    );
+    const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
+    assert.equal(
+      annotation,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure\n`,
+    );
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private|suppressed/i);
+  }
+
   writeFileSync(
     summaryFile,
     `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_stage_snapshot_diagnostic_inconsistent]">first</failure></testcase><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure type="java.lang.AssertionError" message="[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]">second</failure></testcase></testsuite>`,

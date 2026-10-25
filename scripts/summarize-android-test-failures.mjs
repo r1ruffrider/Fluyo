@@ -4,6 +4,17 @@ import path from "node:path";
 import { githubWorkflowErrorAnnotation } from "./github-workflow-annotation.mjs";
 
 const diagnosticProducer = "typed_trace_v2";
+const suppressedStaleLifecycleClass = "com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest";
+const suppressedStaleLifecycleAssertions = new Map([
+  [
+    "suppressingNoLatePathEmitsNoStale",
+    new Set(["suppressed_no_late_fence_count", "suppressed_no_late_stale_absent"]),
+  ],
+  [
+    "failedTerminalPathClearsSuppressionWithoutStale",
+    new Set(["suppressed_failed_terminal_fenced", "suppressed_failed_terminal_stale_absent"]),
+  ],
+]);
 const authCorpusIds = new Set([
   "cold_start_without_candidate",
   "cold_start_with_candidate",
@@ -172,6 +183,16 @@ const rawAttribute = (tag, name) => {
   const match = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
   return match?.[1] ?? "";
 };
+const suppressedStaleLifecycleDiagnostic = (className, testName, failureTag) => {
+  if (className !== suppressedStaleLifecycleClass) return null;
+  const allowedAssertions = suppressedStaleLifecycleAssertions.get(testName);
+  if (!allowedAssertions) return null;
+  const message = rawAttribute(failureTag, "message");
+  const assertion = [...allowedAssertions].find(
+    (candidate) => message === candidate || message.startsWith(`${candidate} expected:&lt;`),
+  );
+  return assertion ? Object.freeze({ test: testName, assertion }) : null;
+};
 const frameworkFailureCategory = (tag) => {
   const match = tag.match(/(?:^|\s)type="([^"]*)"/);
   const value = match?.[1] ?? "";
@@ -261,6 +282,7 @@ const runtimeCategories = (body) => {
 
 const failures = [];
 const annotationProvenance = new WeakMap();
+const suppressedStaleLifecycleDiagnostics = new WeakMap();
 for (const file of xmlFiles.sort()) {
   const xml = fs.readFileSync(file, "utf8");
   for (const match of xml.matchAll(/<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g)) {
@@ -325,6 +347,11 @@ for (const file of xmlFiles.sort()) {
           ? { marker: inlineGeneric, provenance: { origin: "inline" } }
           : null;
     const authDiagnostic = selectedDiagnostic?.marker ?? null;
+    const lifecycleDiagnostic = suppressedStaleLifecycleDiagnostic(
+      className,
+      rawTestName,
+      failureTag[2],
+    );
     const failure = {
       className: authKernel ? "auth_kernel" : className,
       testName:
@@ -348,6 +375,9 @@ for (const file of xmlFiles.sort()) {
     };
     failures.push(failure);
     if (authDiagnostic) annotationProvenance.set(failure, selectedDiagnostic.provenance);
+    if (lifecycleDiagnostic) {
+      suppressedStaleLifecycleDiagnostics.set(failure, lifecycleDiagnostic);
+    }
   }
 }
 
@@ -362,7 +392,16 @@ if (githubAnnotation) {
   const failure = failures.find(
     (candidate) => candidate.className === "auth_kernel" && candidate.authDiagnostic,
   );
-  const fields = [`phase=${phase}`, `category=${failure?.category ?? summary.diagnostic.category}`];
+  const lifecycleFailure = failures.find((candidate) =>
+    suppressedStaleLifecycleDiagnostics.has(candidate),
+  );
+  const lifecycleDiagnostic = lifecycleFailure
+    ? suppressedStaleLifecycleDiagnostics.get(lifecycleFailure)
+    : null;
+  const fields = [
+    `phase=${phase}`,
+    `category=${failure || lifecycleDiagnostic ? "auth_contract" : summary.diagnostic.category}`,
+  ];
   const provenance = failure
     ? annotationProvenance.get(failure)
     : sidecarDiagnostic
@@ -395,6 +434,8 @@ if (githubAnnotation) {
         fields.push(`producer=${diagnosticProducer}`);
       }
     }
+  } else if (lifecycleDiagnostic) {
+    fields.push(`test=${lifecycleDiagnostic.test}`, `assertion=${lifecycleDiagnostic.assertion}`);
   }
   process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
 } else {
