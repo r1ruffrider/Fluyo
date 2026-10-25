@@ -204,6 +204,11 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlin).toContain("throw AssertionError(boundedMarker)");
     expect(kotlin).toContain("diagnostic_inconsistent");
     expect(kotlin).toContain("diagnostic_rejected");
+    expect(kotlin).toContain("private sealed class BoundedTraceCount");
+    expect(kotlin).toContain("private sealed class TraceDiagnostic");
+    expect(kotlin).toContain("private fun classifyTraceDiagnostic");
+    expect(kotlin).toContain("private fun renderTraceDiagnostic");
+    expect(kotlin).not.toContain("private fun traceMismatch");
     expect(kotlin).not.toContain("[auth_corpus_diagnostic_unavailable]");
     expect(kotlin).toContain('System.getProperty("fluyo.authDiagnosticFile")');
     expect(kotlin).toContain("StandardOpenOption.CREATE_NEW");

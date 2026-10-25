@@ -183,6 +183,20 @@ describe("iOS unsigned foundation structure", () => {
     }
   });
 
+  it("keeps async completion checks outside Boolean autoclosures", () => {
+    const kernelTests = read("apps/ios/FluyoTests/AuthRuntimeKernelTests.swift");
+    expect(kernelTests).not.toMatch(/(?:&&|\|\|)[^;\n{}]*\bawait\b/);
+    expect(kernelTests).toContain("let sleepSuspended = suspendSleep");
+    expect(kernelTests).toContain("if sleepSuspended { pendingCommands = false }");
+    expect(kernelTests).toContain("else { pendingCommands = await completions.hasCommands() }");
+    expect(kernelTests).toContain(
+      "let shouldSuspend = sleepSuspended || pendingCommands || milliseconds == 500",
+    );
+    expect(kernelTests).toContain("setSuspendSleep");
+    expect(kernelTests).toContain('completions.take(["timer_fired"])');
+    expect(kernelTests).toContain("setDelayedElapsed");
+  });
+
   it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");

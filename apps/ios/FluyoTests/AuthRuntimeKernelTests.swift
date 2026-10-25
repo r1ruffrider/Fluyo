@@ -594,7 +594,10 @@ private actor ScriptClock: AuthClockPort {
         if await completions.take(["timer_fired"]) == "timer_fired" { fired = !Task.isCancelled }
         else if milliseconds == 500, let delayedElapsed { fired = delayedElapsed >= milliseconds && !Task.isCancelled }
         else {
-            let shouldSuspend = suspendSleep || (await completions.hasCommands()) || milliseconds == 500
+            let sleepSuspended = suspendSleep
+            let pendingCommands: Bool
+            if sleepSuspended { pendingCommands = false } else { pendingCommands = await completions.hasCommands() }
+            let shouldSuspend = sleepSuspended || pendingCommands || milliseconds == 500
             if shouldSuspend { await withTaskCancellationHandler(operation: { await handle.gate.suspendPoint() }, onCancel: { Task { await handle.gate.release() } }) }
             fired = !shouldSuspend && !Task.isCancelled
         }

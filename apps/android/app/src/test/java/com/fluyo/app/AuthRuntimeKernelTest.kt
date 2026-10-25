@@ -27,8 +27,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-private enum class DiagnosticStage(val wire: String) { SNAPSHOT("snapshot"), TRACE("trace") }
-
 private const val diagnosticCorpusId = "cold_start_without_candidate"
 private val diagnosticCorpusIds = setOf(
     "cold_start_without_candidate", "cold_start_with_candidate", "warm_callback_success", "cold_callback_success",
@@ -53,11 +51,58 @@ private val fixedDiagnosticPattern = Regex(
     """^\[auth_corpus_stage_(?:snapshot|trace)_(?:diagnostic_inconsistent|diagnostic_rejected)\]$""",
 )
 
-private fun selectBoundedDiagnostic(corpusId: String, stage: DiagnosticStage, mismatch: String): String {
-    val detailed = "[auth_corpus_${corpusId}_stage_${stage.wire}_${mismatch}]"
+private sealed class BoundedTraceCount(val wire: String) {
+    data class Exact(val value: Int) : BoundedTraceCount(value.toString()) {
+        init { require(value in 0..63) }
+    }
+    object SixtyFourPlus : BoundedTraceCount("64_plus")
+
+    companion object {
+        fun from(count: Int): BoundedTraceCount = when {
+            count in 0..63 -> Exact(count)
+            count >= 64 -> SixtyFourPlus
+            else -> throw IllegalArgumentException("Trace count must be non-negative.")
+        }
+    }
+}
+
+private sealed class TraceDiagnostic {
+    data class Count(val expected: BoundedTraceCount, val actual: BoundedTraceCount) : TraceDiagnostic()
+    object SequenceUnavailable : TraceDiagnostic()
+    data class Sequence(val index: Int, val expected: AuthTraceEntry, val actual: AuthTraceEntry) : TraceDiagnostic() {
+        init { require(index in 0..63) }
+    }
+    object None : TraceDiagnostic()
+}
+
+private fun selectSnapshotDiagnostic(corpusId: String, mismatch: String): String {
+    val detailed = "[auth_corpus_${corpusId}_stage_snapshot_${mismatch}]"
     if (boundedDiagnosticPattern.matches(detailed)) return detailed
     val reason = if (corpusId == diagnosticCorpusId && mismatch == "none") "diagnostic_inconsistent" else "diagnostic_rejected"
-    return "[auth_corpus_stage_${stage.wire}_${reason}]"
+    return "[auth_corpus_stage_snapshot_${reason}]"
+}
+
+private fun renderTraceDiagnostic(corpusId: String, diagnostic: TraceDiagnostic): String {
+    if (corpusId != diagnosticCorpusId) return "[auth_corpus_stage_trace_diagnostic_rejected]"
+    return when (diagnostic) {
+        is TraceDiagnostic.Count -> "[auth_corpus_${corpusId}_stage_trace_count_expected_${diagnostic.expected.wire}_actual_${diagnostic.actual.wire}]"
+        TraceDiagnostic.SequenceUnavailable -> "[auth_corpus_${corpusId}_stage_trace_sequence_unavailable]"
+        is TraceDiagnostic.Sequence -> "[auth_corpus_${corpusId}_stage_trace_sequence_index_${diagnostic.index}_expected_${diagnostic.expected.wire}_actual_${diagnostic.actual.wire}]"
+        TraceDiagnostic.None -> "[auth_corpus_stage_trace_diagnostic_inconsistent]"
+    }
+}
+
+private val traceEntriesByWire = AuthTraceEntry.values().associateBy { it.wire }
+
+private fun classifyTraceDiagnostic(expected: List<String>, actual: List<String>): TraceDiagnostic {
+    if (expected.size != actual.size) {
+        return TraceDiagnostic.Count(BoundedTraceCount.from(expected.size), BoundedTraceCount.from(actual.size))
+    }
+    val index = expected.indices.firstOrNull { expected[it] != actual[it] } ?: return TraceDiagnostic.None
+    if (index >= 64) return TraceDiagnostic.SequenceUnavailable
+    val expectedEntry = traceEntriesByWire[expected[index]] ?: return TraceDiagnostic.SequenceUnavailable
+    val actualEntry = traceEntriesByWire[actual[index]] ?: return TraceDiagnostic.SequenceUnavailable
+    return TraceDiagnostic.Sequence(index, expectedEntry, actualEntry)
 }
 
 private fun writeFirstBoundedDiagnostic(path: Path, corpusId: String, marker: String) {
@@ -109,34 +154,78 @@ class AuthDiagnosticSidecarTest {
             privateCorpusRejected = true
         }
         assertTrue(privateCorpusRejected)
+        val rejectionDirectory = Files.createTempDirectory("fluyo-auth-diagnostic-rejection-")
+        val rejectionPath = rejectionDirectory.resolve("auth-runtime-diagnostic.txt")
+        try {
+            var privateMarkerRejected = false
+            try {
+                writeFirstBoundedDiagnostic(rejectionPath, diagnosticCorpusId, "[auth_corpus_${diagnosticCorpusId}_stage_trace_private_value]")
+            } catch (_: IllegalArgumentException) {
+                privateMarkerRejected = true
+            }
+            assertTrue(privateMarkerRejected)
+            assertFalse(Files.exists(rejectionPath))
+        } finally {
+            Files.deleteIfExists(rejectionPath)
+            Files.deleteIfExists(rejectionDirectory)
+        }
         val snapshotClasses = listOf("count", "shape", "state", "candidate", "owner", "destination", "outcome", "generation")
         for (mismatch in snapshotClasses) {
-            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_snapshot_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.SNAPSHOT, mismatch))
+            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_snapshot_${mismatch}]", selectSnapshotDiagnostic(diagnosticCorpusId, mismatch))
         }
-        assertEquals("[auth_corpus_stage_snapshot_diagnostic_inconsistent]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.SNAPSHOT, "none"))
+        assertEquals("[auth_corpus_stage_snapshot_diagnostic_inconsistent]", selectSnapshotDiagnostic(diagnosticCorpusId, "none"))
 
-        assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_sequence_unavailable]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, "sequence_unavailable"))
-        val counts = (0..63).map(Int::toString) + "64_plus"
+        val unavailableMarker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.SequenceUnavailable)
+        assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_sequence_unavailable]", unavailableMarker)
+        assertTrue(boundedDiagnosticPattern.matches(unavailableMarker))
+        val counts: List<BoundedTraceCount> = (0..63).map { BoundedTraceCount.Exact(it) } + BoundedTraceCount.SixtyFourPlus
         for (expected in counts) for (actual in counts) {
-            val mismatch = "count_expected_${expected}_actual_${actual}"
-            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, mismatch))
+            val marker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.Count(expected, actual))
+            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_count_expected_${expected.wire}_actual_${actual.wire}]", marker)
+            assertTrue(boundedDiagnosticPattern.matches(marker))
         }
-        val traceValues = AuthTraceEntry.values().map { it.wire }
-        for (index in 0..63) for (expected in traceValues) for (actual in traceValues) {
-            val mismatch = "sequence_index_${index}_expected_${expected}_actual_${actual}"
-            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_${mismatch}]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, mismatch))
+        for (index in 0..63) for (expected in AuthTraceEntry.values()) for (actual in AuthTraceEntry.values()) {
+            val marker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.Sequence(index, expected, actual))
+            assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_sequence_index_${index}_expected_${expected.wire}_actual_${actual.wire}]", marker)
+            assertTrue(boundedDiagnosticPattern.matches(marker))
         }
-        assertEquals("[auth_corpus_stage_trace_diagnostic_inconsistent]", selectBoundedDiagnostic(diagnosticCorpusId, DiagnosticStage.TRACE, "none"))
+        val equalMarker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.None)
+        assertEquals("[auth_corpus_stage_trace_diagnostic_inconsistent]", equalMarker)
+        assertTrue(fixedDiagnosticPattern.matches(equalMarker))
+
+        assertEquals(
+            TraceDiagnostic.Count(BoundedTraceCount.Exact(0), BoundedTraceCount.Exact(63)),
+            classifyTraceDiagnostic(emptyList(), List(63) { AuthTraceEntry.INIT_READ.wire }),
+        )
+        assertEquals(
+            TraceDiagnostic.Count(BoundedTraceCount.Exact(63), BoundedTraceCount.SixtyFourPlus),
+            classifyTraceDiagnostic(List(63) { AuthTraceEntry.INIT_READ.wire }, List(64) { AuthTraceEntry.INIT_READ.wire }),
+        )
+        assertEquals(
+            TraceDiagnostic.Sequence(0, AuthTraceEntry.INIT_READ, AuthTraceEntry.SNAPSHOT_PUBLISHED),
+            classifyTraceDiagnostic(listOf(AuthTraceEntry.INIT_READ.wire), listOf(AuthTraceEntry.SNAPSHOT_PUBLISHED.wire)),
+        )
+        val expectedAt63 = MutableList(64) { AuthTraceEntry.INIT_READ.wire }
+        val actualAt63 = expectedAt63.toMutableList().also { it[63] = AuthTraceEntry.SNAPSHOT_PUBLISHED.wire }
+        assertEquals(
+            TraceDiagnostic.Sequence(63, AuthTraceEntry.INIT_READ, AuthTraceEntry.SNAPSHOT_PUBLISHED),
+            classifyTraceDiagnostic(expectedAt63, actualAt63),
+        )
+        assertEquals(TraceDiagnostic.None, classifyTraceDiagnostic(expectedAt63, expectedAt63))
+        val unknownDiagnostic = classifyTraceDiagnostic(listOf("private_value"), listOf(AuthTraceEntry.INIT_READ.wire))
+        assertEquals(TraceDiagnostic.SequenceUnavailable, unknownDiagnostic)
+        assertFalse(renderTraceDiagnostic(diagnosticCorpusId, unknownDiagnostic).contains("private_value"))
 
         val privateInput = "private_value"
-        for (stage in DiagnosticStage.values()) {
-            val invalid = selectBoundedDiagnostic(diagnosticCorpusId, stage, privateInput)
-            val wrongCorpus = selectBoundedDiagnostic("callback_cancel", stage, "none")
-            assertEquals("[auth_corpus_stage_${stage.wire}_diagnostic_rejected]", invalid)
-            assertEquals("[auth_corpus_stage_${stage.wire}_diagnostic_rejected]", wrongCorpus)
-            assertFalse(invalid.contains(privateInput))
-            assertFalse(wrongCorpus.contains("callback_cancel"))
-        }
+        val invalidSnapshot = selectSnapshotDiagnostic(diagnosticCorpusId, privateInput)
+        val wrongSnapshotCorpus = selectSnapshotDiagnostic("callback_cancel", "none")
+        val wrongTraceCorpus = renderTraceDiagnostic("callback_cancel", TraceDiagnostic.None)
+        assertEquals("[auth_corpus_stage_snapshot_diagnostic_rejected]", invalidSnapshot)
+        assertEquals("[auth_corpus_stage_snapshot_diagnostic_rejected]", wrongSnapshotCorpus)
+        assertEquals("[auth_corpus_stage_trace_diagnostic_rejected]", wrongTraceCorpus)
+        assertFalse(invalidSnapshot.contains(privateInput))
+        assertFalse(wrongSnapshotCorpus.contains("callback_cancel"))
+        assertFalse(wrongTraceCorpus.contains("callback_cancel"))
     }
 }
 
@@ -161,7 +250,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             rejectedWrites += execute(step, coordinator, ports)
         }
         val snapshots = coordinator.snapshotHistory().map { normalize(it.first, it.second) }
-        requireCorpusMatch(vector.snapshots == snapshots, vector.id, DiagnosticStage.SNAPSHOT, snapshotMismatch(vector.snapshots, snapshots))
+        requireCorpusMatch(vector.snapshots == snapshots, vector.id, selectSnapshotDiagnostic(vector.id, snapshotMismatch(vector.snapshots, snapshots)))
         val generation = coordinator.currentGeneration()
         val fullEffectHistory = coordinator.presentationEffectHistory().map(::normalize)
         assertEquals(vector.effects, fullEffectHistory)
@@ -171,7 +260,7 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
         val staleGeneration = if (generation == 1uL) 2uL else 1uL
         assertTrue(coordinator.drainPresentationEffects(staleGeneration).isEmpty())
         val trace = coordinator.normalizedTrace().map { it.wire }
-        requireCorpusMatch(vector.trace == trace, vector.id, DiagnosticStage.TRACE, traceMismatch(vector.trace, trace))
+        requireCorpusMatch(vector.trace == trace, vector.id, renderTraceDiagnostic(vector.id, classifyTraceDiagnostic(vector.trace, trace)))
         assertEquals(vector.completions.filterNot { it == "none" }, ports.completionValues())
         if (vector.id == "warm_callback_success") assertEquals("opaque-pkce", ports.provider.lastExchangeStorage)
         assertEquals(vector.wipe, ports.wipeSummary())
@@ -539,20 +628,8 @@ class AuthRuntimeKernelTest(private val vector: Vector) {
             }
             return "none"
         }
-        private fun traceMismatch(expected: List<String>, actual: List<String>): String {
-            if (expected.size != actual.size) return "count_expected_${boundedTraceCount(expected.size)}_actual_${boundedTraceCount(actual.size)}"
-            val index = expected.indices.firstOrNull { expected[it] != actual[it] } ?: return "none"
-            if (index >= 64) return "sequence_unavailable"
-            val expectedEntry = expected[index]
-            val actualEntry = actual[index]
-            if (expectedEntry !in traceDiagnosticValues || actualEntry !in traceDiagnosticValues) return "sequence_unavailable"
-            return "sequence_index_${index}_expected_${expectedEntry}_actual_${actualEntry}"
-        }
-        private fun boundedTraceCount(count: Int): String = if (count < 64) count.toString() else "64_plus"
-        private val traceDiagnosticValues = AuthTraceEntry.values().map { it.wire }.toSet()
-        private fun requireCorpusMatch(matches: Boolean, corpusId: String, stage: DiagnosticStage, boundedMismatch: String) {
+        private fun requireCorpusMatch(matches: Boolean, corpusId: String, boundedMarker: String) {
             if (matches) return
-            val boundedMarker = selectBoundedDiagnostic(corpusId, stage, boundedMismatch)
             System.getProperty("fluyo.authDiagnosticFile")?.let { path ->
                 writeFirstBoundedDiagnostic(Path.of(path), corpusId, boundedMarker)
             }
