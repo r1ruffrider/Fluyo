@@ -462,7 +462,7 @@ try {
     assert.equal(
       annotation,
       exactMethod
-        ? `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_suppressed_stale_lifecycle; test=${testName}\n`
+        ? `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_suppressed_stale_lifecycle; test=${testName}; outcome=known_test_unclassified\n`
         : `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=structured_test_failure\n`,
     );
     assert.doesNotMatch(annotation, /example\.test|warning|owned|private/i);
@@ -519,9 +519,9 @@ try {
     const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
     assert.equal(
       annotation,
-      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=${testClass}; test=${expectedTest}; source_line=${sourceLine}\n`,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=${testClass}; test=${expectedTest}; outcome=known_test_unclassified; source_line=${sourceLine}\n`,
     );
-    assert.doesNotMatch(annotation, /example\.test|warning|owned|private|unclassified/i);
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private/i);
   }
 
   writeFileSync(
@@ -530,8 +530,86 @@ try {
   );
   assert.equal(
     summarizeAnnotation(summaryDir, "--phase", "unit_test"),
-    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_diagnostic_sidecar; test=preservesFirstMarkerUntilTaskCleanup\n`,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_diagnostic_sidecar; test=preservesFirstMarkerUntilTaskCleanup; outcome=known_test_unclassified\n`,
   );
+
+  const foundationJvmFallbackCases = [
+    [
+      "com.fluyo.app.AppConfigurationTest",
+      "developmentAndStagingAcceptOnlyPublicTestConfiguration",
+      "app_configuration",
+      "AppConfigurationTest.kt",
+      11,
+    ],
+    [
+      "com.fluyo.app.AppConfigurationTest",
+      "productionIsInertAndDoesNotAcceptInheritedValues",
+      "app_configuration",
+      "AppConfigurationTest.kt",
+      19,
+    ],
+    [
+      "com.fluyo.app.AppConfigurationTest",
+      "unknownEnvironmentFailsClosed",
+      "app_configuration",
+      "AppConfigurationTest.kt",
+      25,
+    ],
+    [
+      "com.fluyo.app.FoundationShellModelTest",
+      "validInternalConfigurationResolvesToSignedOut",
+      "foundation_shell_model",
+      "FoundationShellModelTest.kt",
+      33,
+    ],
+    [
+      "com.fluyo.app.FoundationShellModelTest",
+      "invalidOrProductionConfigurationResolvesToFailure",
+      "foundation_shell_model",
+      "FoundationShellModelTest.kt",
+      41,
+    ],
+    [
+      "com.fluyo.app.FoundationShellModelTest",
+      "retryCancelsThePriorTransitionAndSettlesOnce",
+      "foundation_shell_model",
+      "FoundationShellModelTest.kt",
+      58,
+    ],
+    [
+      "com.fluyo.app.FoundationTelemetryTest",
+      "noOpSinkAcceptsOnlyTheTypedRecordAndRetainsNothing",
+      "foundation_telemetry",
+      "FoundationTelemetryTest.kt",
+      6,
+    ],
+  ];
+  for (const [className, testName, testClass, source, sourceLine] of foundationJvmFallbackCases) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="${className}" name="${testName}"><failure type="java.lang.AssertionError" message="learner@example.test unclassified">at private.path(${source}:${sourceLine})\n::warning title=owned::private</failure></testcase></testsuite>`,
+    );
+    const annotation = summarizeAnnotation(summaryDir, "--phase", "unit_test");
+    assert.equal(
+      annotation,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=${testClass}; test=${testName}; outcome=known_test_unclassified; source_line=${sourceLine}\n`,
+    );
+    assert.doesNotMatch(annotation, /example\.test|warning|owned|private/i);
+  }
+
+  for (const [className, testName, testClass, source] of foundationJvmFallbackCases.filter(
+    ([, , , candidateSource], index, cases) =>
+      cases.findIndex(([, , , firstSource]) => firstSource === candidateSource) === index,
+  )) {
+    writeFileSync(
+      summaryFile,
+      `<testsuite><testcase classname="${className}" name="${testName}"><failure type="java.lang.AssertionError" message="learner@example.test">Private${source}:11\n${source}:501\n::warning title=owned::private</failure></testcase></testsuite>`,
+    );
+    assert.equal(
+      summarizeAnnotation(summaryDir, "--phase", "unit_test"),
+      `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=${testClass}; test=${testName}; outcome=known_test_unclassified\n`,
+    );
+  }
 
   const rejectedAuthFallbackCases = [
     ["com.fluyo.app.AuthDiagnosticSidecarTestPrivate", "preservesFirstMarkerUntilTaskCleanup"],
@@ -546,6 +624,30 @@ try {
     ],
     ["com.fluyo.app.AuthRuntimeKernelTestPrivate", "canonicalScenarioOrInvariant"],
     ["com.fluyo.app.AuthRuntimeKernelTest", "canonicalScenarioOrInvariant"],
+    [
+      "com.fluyo.app.AppConfigurationTestPrivate",
+      "developmentAndStagingAcceptOnlyPublicTestConfiguration",
+    ],
+    [
+      "com.fluyo.app.AppConfigurationTest",
+      "developmentAndStagingAcceptOnlyPublicTestConfigurationPrivate",
+    ],
+    [
+      "com.fluyo.app.FoundationShellModelTestPrivate",
+      "validInternalConfigurationResolvesToSignedOut",
+    ],
+    [
+      "com.fluyo.app.FoundationShellModelTest",
+      "validInternalConfigurationResolvesToSignedOutPrivate",
+    ],
+    [
+      "com.fluyo.app.FoundationTelemetryTestPrivate",
+      "noOpSinkAcceptsOnlyTheTypedRecordAndRetainsNothing",
+    ],
+    [
+      "com.fluyo.app.FoundationTelemetryTest",
+      "noOpSinkAcceptsOnlyTheTypedRecordAndRetainsNothingPrivate",
+    ],
   ];
   for (const [className, testName] of rejectedAuthFallbackCases) {
     writeFileSync(
@@ -627,7 +729,7 @@ try {
   );
   assert.equal(
     summarizeAnnotation(summaryDir, "--phase", "unit_test"),
-    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_kernel; test=auth_corpus_cold_start_without_candidate\n`,
+    `::error title=${githubWorkflowAnnotationTitle}::phase=unit_test; category=auth_contract; test_class=auth_kernel; test=auth_corpus_cold_start_without_candidate; outcome=known_test_unclassified\n`,
   );
 
   writeFileSync(

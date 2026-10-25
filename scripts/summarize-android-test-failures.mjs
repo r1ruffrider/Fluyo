@@ -19,6 +19,65 @@ const diagnosticSidecarMethods = new Set([
   "preservesFirstMarkerUntilTaskCleanup",
   "diagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
 ]);
+const knownJvmUnitTests = new Map([
+  [
+    "com.fluyo.app.AuthRuntimeKernelTest",
+    Object.freeze({ alias: "auth_kernel", source: "AuthRuntimeKernelTest.kt", maxLine: 2000 }),
+  ],
+  [
+    "com.fluyo.app.AuthDiagnosticSidecarTest",
+    Object.freeze({
+      alias: "auth_diagnostic_sidecar",
+      source: "AuthRuntimeKernelTest.kt",
+      maxLine: 2000,
+      methods: diagnosticSidecarMethods,
+    }),
+  ],
+  [
+    suppressedStaleLifecycleClass,
+    Object.freeze({
+      alias: "auth_suppressed_stale_lifecycle",
+      source: "AuthRuntimeKernelTest.kt",
+      maxLine: 2000,
+      methods: new Set(suppressedStaleLifecycleAssertions.keys()),
+    }),
+  ],
+  [
+    "com.fluyo.app.AppConfigurationTest",
+    Object.freeze({
+      alias: "app_configuration",
+      source: "AppConfigurationTest.kt",
+      maxLine: 500,
+      methods: new Set([
+        "developmentAndStagingAcceptOnlyPublicTestConfiguration",
+        "productionIsInertAndDoesNotAcceptInheritedValues",
+        "unknownEnvironmentFailsClosed",
+      ]),
+    }),
+  ],
+  [
+    "com.fluyo.app.FoundationShellModelTest",
+    Object.freeze({
+      alias: "foundation_shell_model",
+      source: "FoundationShellModelTest.kt",
+      maxLine: 500,
+      methods: new Set([
+        "validInternalConfigurationResolvesToSignedOut",
+        "invalidOrProductionConfigurationResolvesToFailure",
+        "retryCancelsThePriorTransitionAndSettlesOnce",
+      ]),
+    }),
+  ],
+  [
+    "com.fluyo.app.FoundationTelemetryTest",
+    Object.freeze({
+      alias: "foundation_telemetry",
+      source: "FoundationTelemetryTest.kt",
+      maxLine: 500,
+      methods: new Set(["noOpSinkAcceptsOnlyTheTypedRecordAndRetainsNothing"]),
+    }),
+  ],
+]);
 const authCorpusIds = new Set([
   "cold_start_without_candidate",
   "cold_start_with_candidate",
@@ -198,32 +257,23 @@ const suppressedStaleLifecycleDiagnostic = (className, testName, failureTag) => 
   return assertion ? Object.freeze({ test: testName, assertion }) : null;
 };
 const boundedAuthFailureIdentity = (className, testName, authCorpusId, body) => {
-  let testClass = null;
+  const knownTest = knownJvmUnitTests.get(className);
+  if (!knownTest) return null;
   let test = null;
   if (className === "com.fluyo.app.AuthRuntimeKernelTest" && authCorpusId) {
-    testClass = "auth_kernel";
     test = `auth_corpus_${authCorpusId}`;
-  } else if (
-    className === "com.fluyo.app.AuthDiagnosticSidecarTest" &&
-    diagnosticSidecarMethods.has(testName)
-  ) {
-    testClass = "auth_diagnostic_sidecar";
-    test = testName;
-  } else if (
-    className === suppressedStaleLifecycleClass &&
-    suppressedStaleLifecycleAssertions.has(testName)
-  ) {
-    testClass = "auth_suppressed_stale_lifecycle";
+  } else if (knownTest.methods?.has(testName)) {
     test = testName;
   } else {
     return null;
   }
+  const escapedSource = knownTest.source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const lineMatch = body.match(
-    /(?:^|[(/\\\s])AuthRuntimeKernelTest\.kt:([1-9][0-9]{0,3})(?![0-9])/,
+    new RegExp(`(?:^|[(/\\\\\\s])${escapedSource}:([1-9][0-9]{0,3})(?![0-9])`),
   );
   const parsedLine = lineMatch ? Number(lineMatch[1]) : null;
-  const sourceLine = parsedLine !== null && parsedLine <= 2000 ? parsedLine : null;
-  return Object.freeze({ testClass, test, sourceLine });
+  const sourceLine = parsedLine !== null && parsedLine <= knownTest.maxLine ? parsedLine : null;
+  return Object.freeze({ testClass: knownTest.alias, test, sourceLine });
 };
 const frameworkFailureCategory = (tag) => {
   const match = tag.match(/(?:^|\s)type="([^"]*)"/);
@@ -480,7 +530,11 @@ if (githubAnnotation) {
   } else if (lifecycleDiagnostic) {
     fields.push(`test=${lifecycleDiagnostic.test}`, `assertion=${lifecycleDiagnostic.assertion}`);
   } else if (boundedAuthFailure) {
-    fields.push(`test_class=${boundedAuthFailure.testClass}`, `test=${boundedAuthFailure.test}`);
+    fields.push(
+      `test_class=${boundedAuthFailure.testClass}`,
+      `test=${boundedAuthFailure.test}`,
+      "outcome=known_test_unclassified",
+    );
     if (boundedAuthFailure.sourceLine !== null) {
       fields.push(`source_line=${boundedAuthFailure.sourceLine}`);
     }
