@@ -208,6 +208,8 @@ describe("native auth executable synthetic kernel", () => {
     expect(kotlin).toContain("private sealed class TraceDiagnostic");
     expect(kotlin).toContain("private fun classifyTraceDiagnostic");
     expect(kotlin).toContain("private fun renderTraceDiagnostic");
+    expect(kotlin).toContain("private fun parseDiagnosticMarker");
+    expect(kotlin).not.toContain("private const val diagnosticCorpusId");
     expect(kotlin).not.toContain("private fun traceMismatch");
     expect(kotlin).not.toContain("[auth_corpus_diagnostic_unavailable]");
     expect(kotlin).toContain('System.getProperty("fluyo.authDiagnosticFile")');
@@ -445,12 +447,16 @@ describe("native auth executable synthetic kernel", () => {
       .map((row) => row.split("\t")[1]);
     expect(diagnosticCorpusIds).toEqual(contractCorpusIds);
     expect(kernelTest).toContain("require(corpusId in diagnosticCorpusIds)");
-    expect(kernelTest).toContain('val envelope = "corpus=$corpusId\\nmarker=$marker\\n"');
+    expect(kernelTest).toContain('private const val diagnosticProducer = "typed_trace_v2"');
+    expect(kernelTest).toContain(
+      'val envelope = "producer=$diagnosticProducer\\ncorpus=$corpusId\\nmarker=$marker\\n"',
+    );
     expect(kernelTest).toContain(
       "writeFirstBoundedDiagnostic(Path.of(path), corpusId, boundedMarker)",
     );
-    expect(summarizer).toContain("raw.match(/^corpus=([a-z0-9_]+)\\nmarker=([^\\n]+)\\n$/)");
+    expect(summarizer).toContain("producer=(typed_trace_v2)\\ncorpus=([a-z0-9_]+)");
     expect(summarizer).toContain("sidecarDiagnostic?.corpusId === authCorpusId");
+    expect(summarizer).toContain('origin: "sidecar", producer: matchingSidecar.producer');
     expect(summarizer).toContain("stat.size > 512");
     expect(summarizer).toContain("stat.isSymbolicLink()");
     expect(summarizer).toContain('process.env.GITHUB_ACTIONS !== "true"');

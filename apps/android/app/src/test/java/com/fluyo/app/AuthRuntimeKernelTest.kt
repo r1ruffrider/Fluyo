@@ -27,7 +27,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-private const val diagnosticCorpusId = "cold_start_without_candidate"
+private const val diagnosticProducer = "typed_trace_v2"
 private val diagnosticCorpusIds = setOf(
     "cold_start_without_candidate", "cold_start_with_candidate", "warm_callback_success", "cold_callback_success",
     "callback_cancel", "callback_malformed", "callback_expired", "callback_replay", "callback_duplicate_delivery",
@@ -44,12 +44,23 @@ private val diagnosticCorpusIds = setOf(
     "cleanup_precedes_signed_out_or_new_owner_exposure", "no_op_telemetry_has_zero_retention_and_zero_transport",
     "evidence_is_closed_and_mutation_safe",
 )
-private val boundedDiagnosticPattern = Regex(
-    """^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
+private val detailedDiagnosticPattern = Regex(
+    """^\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$""",
 )
 private val fixedDiagnosticPattern = Regex(
     """^\[auth_corpus_stage_(?:snapshot|trace)_(?:diagnostic_inconsistent|diagnostic_rejected)\]$""",
 )
+
+private data class ParsedDiagnosticMarker(val corpusId: String?)
+
+private fun parseDiagnosticMarker(marker: String): ParsedDiagnosticMarker? {
+    val detailed = detailedDiagnosticPattern.matchEntire(marker)
+    if (detailed != null) {
+        val corpusId = detailed.groupValues[1]
+        return if (corpusId in diagnosticCorpusIds) ParsedDiagnosticMarker(corpusId) else null
+    }
+    return if (fixedDiagnosticPattern.matches(marker)) ParsedDiagnosticMarker(null) else null
+}
 
 private sealed class BoundedTraceCount(val wire: String) {
     data class Exact(val value: Int) : BoundedTraceCount(value.toString()) {
@@ -76,14 +87,15 @@ private sealed class TraceDiagnostic {
 }
 
 private fun selectSnapshotDiagnostic(corpusId: String, mismatch: String): String {
+    require(corpusId in diagnosticCorpusIds)
     val detailed = "[auth_corpus_${corpusId}_stage_snapshot_${mismatch}]"
-    if (boundedDiagnosticPattern.matches(detailed)) return detailed
-    val reason = if (corpusId == diagnosticCorpusId && mismatch == "none") "diagnostic_inconsistent" else "diagnostic_rejected"
+    if (parseDiagnosticMarker(detailed)?.corpusId == corpusId) return detailed
+    val reason = if (mismatch == "none") "diagnostic_inconsistent" else "diagnostic_rejected"
     return "[auth_corpus_stage_snapshot_${reason}]"
 }
 
 private fun renderTraceDiagnostic(corpusId: String, diagnostic: TraceDiagnostic): String {
-    if (corpusId != diagnosticCorpusId) return "[auth_corpus_stage_trace_diagnostic_rejected]"
+    require(corpusId in diagnosticCorpusIds)
     return when (diagnostic) {
         is TraceDiagnostic.Count -> "[auth_corpus_${corpusId}_stage_trace_count_expected_${diagnostic.expected.wire}_actual_${diagnostic.actual.wire}]"
         TraceDiagnostic.SequenceUnavailable -> "[auth_corpus_${corpusId}_stage_trace_sequence_unavailable]"
@@ -107,8 +119,9 @@ private fun classifyTraceDiagnostic(expected: List<String>, actual: List<String>
 
 private fun writeFirstBoundedDiagnostic(path: Path, corpusId: String, marker: String) {
     require(corpusId in diagnosticCorpusIds)
-    require(boundedDiagnosticPattern.matches(marker) || fixedDiagnosticPattern.matches(marker))
-    val envelope = "corpus=$corpusId\nmarker=$marker\n"
+    val parsedMarker = requireNotNull(parseDiagnosticMarker(marker))
+    require(parsedMarker.corpusId == null || parsedMarker.corpusId == corpusId)
+    val envelope = "producer=$diagnosticProducer\ncorpus=$corpusId\nmarker=$marker\n"
     try {
         Files.write(path, envelope.toByteArray(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW)
     } catch (_: FileAlreadyExistsException) {
@@ -118,16 +131,17 @@ private fun writeFirstBoundedDiagnostic(path: Path, corpusId: String, marker: St
 
 class AuthDiagnosticSidecarTest {
     @Test fun preservesFirstMarkerUntilTaskCleanup() {
+        val corpusId = "cold_start_without_candidate"
         val directory = Files.createTempDirectory("fluyo-auth-diagnostic-")
         val path = directory.resolve("auth-runtime-diagnostic.txt")
         try {
-            writeFirstBoundedDiagnostic(path, diagnosticCorpusId, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
+            writeFirstBoundedDiagnostic(path, corpusId, "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]")
             writeFirstBoundedDiagnostic(path, "callback_cancel", "[auth_corpus_stage_snapshot_diagnostic_rejected]")
-            assertEquals("corpus=$diagnosticCorpusId\nmarker=[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n", Files.readString(path))
+            assertEquals("producer=$diagnosticProducer\ncorpus=$corpusId\nmarker=[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n", Files.readString(path))
 
             Files.delete(path)
-            writeFirstBoundedDiagnostic(path, diagnosticCorpusId, "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]")
-            assertEquals("corpus=$diagnosticCorpusId\nmarker=[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]\n", Files.readString(path))
+            writeFirstBoundedDiagnostic(path, corpusId, "[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]")
+            assertEquals("producer=$diagnosticProducer\ncorpus=$corpusId\nmarker=[auth_corpus_cold_start_without_candidate_stage_trace_sequence_unavailable]\n", Files.readString(path))
         } finally {
             Files.deleteIfExists(path)
             Files.deleteIfExists(directory)
@@ -140,8 +154,19 @@ class AuthDiagnosticSidecarTest {
             val directory = Files.createTempDirectory("fluyo-auth-diagnostic-id-")
             val path = directory.resolve("auth-runtime-diagnostic.txt")
             try {
-                writeFirstBoundedDiagnostic(path, corpusId, "[auth_corpus_stage_trace_diagnostic_rejected]")
-                assertEquals("corpus=$corpusId\nmarker=[auth_corpus_stage_trace_diagnostic_rejected]\n", Files.readString(path))
+                val markers = listOf(
+                    renderTraceDiagnostic(corpusId, TraceDiagnostic.Count(BoundedTraceCount.Exact(0), BoundedTraceCount.Exact(63))),
+                    renderTraceDiagnostic(corpusId, TraceDiagnostic.Sequence(0, AuthTraceEntry.INIT_READ, AuthTraceEntry.SNAPSHOT_PUBLISHED)),
+                    renderTraceDiagnostic(corpusId, TraceDiagnostic.SequenceUnavailable),
+                    renderTraceDiagnostic(corpusId, TraceDiagnostic.None),
+                )
+                for (marker in markers) {
+                    val parsed = requireNotNull(parseDiagnosticMarker(marker))
+                    assertTrue(parsed.corpusId == null || parsed.corpusId == corpusId)
+                    writeFirstBoundedDiagnostic(path, corpusId, marker)
+                    assertEquals("producer=$diagnosticProducer\ncorpus=$corpusId\nmarker=$marker\n", Files.readString(path))
+                    Files.delete(path)
+                }
             } finally {
                 Files.deleteIfExists(path)
                 Files.deleteIfExists(directory)
@@ -154,12 +179,19 @@ class AuthDiagnosticSidecarTest {
             privateCorpusRejected = true
         }
         assertTrue(privateCorpusRejected)
+        var privateRenderRejected = false
+        try {
+            renderTraceDiagnostic("private_corpus", TraceDiagnostic.None)
+        } catch (_: IllegalArgumentException) {
+            privateRenderRejected = true
+        }
+        assertTrue(privateRenderRejected)
         val rejectionDirectory = Files.createTempDirectory("fluyo-auth-diagnostic-rejection-")
         val rejectionPath = rejectionDirectory.resolve("auth-runtime-diagnostic.txt")
         try {
             var privateMarkerRejected = false
             try {
-                writeFirstBoundedDiagnostic(rejectionPath, diagnosticCorpusId, "[auth_corpus_${diagnosticCorpusId}_stage_trace_private_value]")
+                writeFirstBoundedDiagnostic(rejectionPath, "cold_start_without_candidate", "[auth_corpus_cold_start_without_candidate_stage_trace_private_value]")
             } catch (_: IllegalArgumentException) {
                 privateMarkerRejected = true
             }
@@ -169,6 +201,7 @@ class AuthDiagnosticSidecarTest {
             Files.deleteIfExists(rejectionPath)
             Files.deleteIfExists(rejectionDirectory)
         }
+        val diagnosticCorpusId = "cold_start_without_candidate"
         val snapshotClasses = listOf("count", "shape", "state", "candidate", "owner", "destination", "outcome", "generation")
         for (mismatch in snapshotClasses) {
             assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_snapshot_${mismatch}]", selectSnapshotDiagnostic(diagnosticCorpusId, mismatch))
@@ -177,17 +210,17 @@ class AuthDiagnosticSidecarTest {
 
         val unavailableMarker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.SequenceUnavailable)
         assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_sequence_unavailable]", unavailableMarker)
-        assertTrue(boundedDiagnosticPattern.matches(unavailableMarker))
+        assertEquals(diagnosticCorpusId, parseDiagnosticMarker(unavailableMarker)?.corpusId)
         val counts: List<BoundedTraceCount> = (0..63).map { BoundedTraceCount.Exact(it) } + BoundedTraceCount.SixtyFourPlus
         for (expected in counts) for (actual in counts) {
             val marker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.Count(expected, actual))
             assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_count_expected_${expected.wire}_actual_${actual.wire}]", marker)
-            assertTrue(boundedDiagnosticPattern.matches(marker))
+            assertEquals(diagnosticCorpusId, parseDiagnosticMarker(marker)?.corpusId)
         }
         for (index in 0..63) for (expected in AuthTraceEntry.values()) for (actual in AuthTraceEntry.values()) {
             val marker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.Sequence(index, expected, actual))
             assertEquals("[auth_corpus_${diagnosticCorpusId}_stage_trace_sequence_index_${index}_expected_${expected.wire}_actual_${actual.wire}]", marker)
-            assertTrue(boundedDiagnosticPattern.matches(marker))
+            assertEquals(diagnosticCorpusId, parseDiagnosticMarker(marker)?.corpusId)
         }
         val equalMarker = renderTraceDiagnostic(diagnosticCorpusId, TraceDiagnostic.None)
         assertEquals("[auth_corpus_stage_trace_diagnostic_inconsistent]", equalMarker)
@@ -218,14 +251,14 @@ class AuthDiagnosticSidecarTest {
 
         val privateInput = "private_value"
         val invalidSnapshot = selectSnapshotDiagnostic(diagnosticCorpusId, privateInput)
-        val wrongSnapshotCorpus = selectSnapshotDiagnostic("callback_cancel", "none")
-        val wrongTraceCorpus = renderTraceDiagnostic("callback_cancel", TraceDiagnostic.None)
+        val otherSnapshotCorpus = selectSnapshotDiagnostic("callback_cancel", "none")
+        val otherTraceCorpus = renderTraceDiagnostic("callback_cancel", TraceDiagnostic.None)
         assertEquals("[auth_corpus_stage_snapshot_diagnostic_rejected]", invalidSnapshot)
-        assertEquals("[auth_corpus_stage_snapshot_diagnostic_rejected]", wrongSnapshotCorpus)
-        assertEquals("[auth_corpus_stage_trace_diagnostic_rejected]", wrongTraceCorpus)
+        assertEquals("[auth_corpus_stage_snapshot_diagnostic_inconsistent]", otherSnapshotCorpus)
+        assertEquals("[auth_corpus_stage_trace_diagnostic_inconsistent]", otherTraceCorpus)
         assertFalse(invalidSnapshot.contains(privateInput))
-        assertFalse(wrongSnapshotCorpus.contains("callback_cancel"))
-        assertFalse(wrongTraceCorpus.contains("callback_cancel"))
+        assertFalse(otherSnapshotCorpus.contains("callback_cancel"))
+        assertFalse(otherTraceCorpus.contains("callback_cancel"))
     }
 }
 

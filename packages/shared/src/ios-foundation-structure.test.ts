@@ -197,6 +197,30 @@ describe("iOS unsigned foundation structure", () => {
     expect(kernelTests).toContain("setDelayedElapsed");
   });
 
+  it("keeps synthetic values out of XCTestCase concurrency captures", () => {
+    const kernelTests = read("apps/ios/FluyoTests/AuthRuntimeKernelTests.swift");
+    const fixtureIndex = kernelTests.indexOf("private enum SyntheticAuthFixture");
+    const testCaseIndex = kernelTests.indexOf("final class AuthRuntimeKernelTests: XCTestCase");
+    expect(fixtureIndex).toBeGreaterThan(-1);
+    expect(fixtureIndex).toBeLessThan(testCaseIndex);
+    const testCaseBody = kernelTests.slice(testCaseIndex);
+    expect(testCaseBody).not.toContain("private func candidate()");
+    expect(testCaseBody).not.toContain("private func ingress()");
+    expect(
+      testCaseBody
+        .replaceAll("SyntheticAuthFixture.candidate()", "")
+        .replaceAll("SyntheticAuthFixture.ingress()", ""),
+    ).not.toMatch(/\b(?:candidate|ingress)\(\)/);
+    expect(
+      testCaseBody.match(
+        /let \w+(?:Ingress|Candidate) = SyntheticAuthFixture\.(?:ingress|candidate)\(\)\r?\n\s*(?:async let \w+: Void =|let \w+ = Task \{)/g,
+      ),
+    ).toHaveLength(15);
+    for (const start of testCaseBody.match(/(?:async let[^\n]*|Task\s*\{[^{}]*\})/g) ?? []) {
+      expect(start).not.toMatch(/SyntheticAuthFixture\.(?:candidate|ingress)\(\)/);
+    }
+  });
+
   it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");

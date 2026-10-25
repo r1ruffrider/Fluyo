@@ -2,6 +2,11 @@ import Foundation
 import XCTest
 @testable import Fluyo
 
+private enum SyntheticAuthFixture {
+    static func candidate() -> OpaqueSessionCandidate { .init("synthetic") }
+    static func ingress() -> OpaqueCallbackIngress { .init("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected") }
+}
+
 final class AuthRuntimeKernelTests: XCTestCase {
     private enum DiagnosticStage: String { case snapshot, trace }
     private static let diagnosticCorpusId = "cold_start_without_candidate"
@@ -97,37 +102,42 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "init_none": await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true)
         case "init_candidate": await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true)
         case "init_offline": await ports.vault.setReadCandidate(true); await coordinator.initialize(online: false)
-        case "callback_success": await ports.callback.setResult(.consumed(candidate())); await coordinator.receiveCallback(ingress())
+        case "callback_success": await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
         case "callback_malformed", "strict_callback":
-            await ports.callback.setResult(.malformed); await coordinator.receiveCallback(ingress()); if step == "strict_callback" { try await strictCallbackChecks() }
-        case "callback_expired": await ports.callback.setResult(.expired); await coordinator.receiveCallback(ingress())
-        case "callback_replay": await ports.callback.setResult(.replayed); await coordinator.receiveCallback(ingress())
-        case "callback_duplicate": await ports.callback.setResult(.duplicate); await coordinator.receiveCallback(ingress())
-        case "callback_unsupported": await ports.callback.setResult(.unsupported); await coordinator.receiveCallback(ingress())
-        case "callback_store_fail": await ports.callback.setResult(.failed); await coordinator.receiveCallback(ingress())
+            await ports.callback.setResult(.malformed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); if step == "strict_callback" { try await strictCallbackChecks() }
+        case "callback_expired": await ports.callback.setResult(.expired); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
+        case "callback_replay": await ports.callback.setResult(.replayed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
+        case "callback_duplicate": await ports.callback.setResult(.duplicate); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
+        case "callback_unsupported": await ports.callback.setResult(.unsupported); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
+        case "callback_store_fail": await ports.callback.setResult(.failed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
         case "callback_cancel":
-            await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-            async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback(); await ports.provider.releaseExchange(); _ = await work; try await verifyWarmCancelPreservesCandidate(); try await verifyCancelAvailabilityBoundaries(); return 1
+            await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+            let callbackCancelIngress = SyntheticAuthFixture.ingress()
+            async let work: Void = coordinator.receiveCallback(callbackCancelIngress); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback(); await ports.provider.releaseExchange(); _ = await work; try await verifyWarmCancelPreservesCandidate(); try await verifyCancelAvailabilityBoundaries(); return 1
         case "callback_overlap":
-            await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-            let task = Task { await coordinator.receiveCallback(ingress()) }; await ports.provider.waitExchangeStarted(); await coordinator.receiveCallback(ingress()); task.cancel(); await ports.provider.releaseExchange(); _ = await task.value; return 1
-        case "refresh_success": await ports.provider.setRefreshResult(.success(candidate())); await coordinator.handle401(candidate())
-        case "refresh_invalid": await ports.provider.setRefreshResult(.explicitInvalidation); await coordinator.handle401(candidate())
-        case "refresh_transient": await ports.provider.setRefreshResult(.transientFailure); await coordinator.handle401(candidate())
-        case "refresh_repeated": await ports.provider.setRefreshResult(.success(candidate())); await coordinator.handle401(candidate()); await coordinator.handle401(candidate())
+            await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+            let callbackOverlapIngress = SyntheticAuthFixture.ingress()
+            let task = Task { await coordinator.receiveCallback(callbackOverlapIngress) }
+            await ports.provider.waitExchangeStarted(); await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); task.cancel(); await ports.provider.releaseExchange(); _ = await task.value; return 1
+        case "refresh_success": await ports.provider.setRefreshResult(.success(SyntheticAuthFixture.candidate())); await coordinator.handle401(SyntheticAuthFixture.candidate())
+        case "refresh_invalid": await ports.provider.setRefreshResult(.explicitInvalidation); await coordinator.handle401(SyntheticAuthFixture.candidate())
+        case "refresh_transient": await ports.provider.setRefreshResult(.transientFailure); await coordinator.handle401(SyntheticAuthFixture.candidate())
+        case "refresh_repeated": await ports.provider.setRefreshResult(.success(SyntheticAuthFixture.candidate())); await coordinator.handle401(SyntheticAuthFixture.candidate()); await coordinator.handle401(SyntheticAuthFixture.candidate())
         case "refresh_boundary_checks": try await verifyRefreshTimerBoundaries()
         case "forbidden": await coordinator.handle403()
         case "noop", "telemetry_noop", "source_scan": break
         case "switch": await coordinator.switchAccount()
         case "signout": await coordinator.signOut()
         case "signout_during_exchange":
-            await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-            async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.signOut(); await ports.provider.releaseExchange(); _ = await work; return 1
+            await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+            let signOutExchangeIngress = SyntheticAuthFixture.ingress()
+            async let work: Void = coordinator.receiveCallback(signOutExchangeIngress); await ports.provider.waitExchangeStarted(); await coordinator.signOut(); await ports.provider.releaseExchange(); _ = await work; return 1
         case "signout_during_replace":
-            await ports.callback.setResult(.consumed(candidate())); await ports.vault.setSuspendReplace(true)
-            async let work: Void = coordinator.receiveCallback(ingress()); await ports.vault.waitReplaceStarted(); await coordinator.signOut(); await ports.vault.releaseReplace(); _ = await work; return 1
-        case "vault_replace_fail": await ports.callback.setResult(.consumed(candidate())); await ports.vault.setReplaceResult(.failed); await coordinator.receiveCallback(ingress()); return 1
-        case "owner_bind_fail": await ports.callback.setResult(.consumed(candidate())); await ports.owner.setBindResult(.failed); await coordinator.receiveCallback(ingress()); return 1
+            await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.vault.setSuspendReplace(true)
+            let signOutReplaceIngress = SyntheticAuthFixture.ingress()
+            async let work: Void = coordinator.receiveCallback(signOutReplaceIngress); await ports.vault.waitReplaceStarted(); await coordinator.signOut(); await ports.vault.releaseReplace(); _ = await work; return 1
+        case "vault_replace_fail": await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.vault.setReplaceResult(.failed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); return 1
+        case "owner_bind_fail": await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.owner.setBindResult(.failed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); return 1
         case "timeout15": await coordinator.scheduleTimeout(.providerOrApiStep); try await verifyTotalTimeoutBoundary()
         case "timeout30": await coordinator.scheduleTimeout(.totalActionable)
         case "callback_purge_fail", "cleanup_each_failure":
@@ -144,7 +154,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "public_state_is_secret_free": let snapshot = await coordinator.snapshot(); XCTAssertEqual(Mirror(reflecting: snapshot).children.compactMap(\.label), ["state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"]); await verifyCompletionAuditTracksRemainingCommands()
         case "callback_transaction_is_purpose_environment_host_path_and_expiry_bound": let calls = await ports.callback.callCount(); XCTAssertGreaterThan(calls, 0); try await verifyCallbackStoreFailure()
         case "callback_transaction_consumes_once_and_wipes":
-            let store = StrictCallbackStore(now: 999, expiresAt: 1_000); let first = await store.validateConsumeAndWipe(ingress(), generation: 1); let second = await store.validateConsumeAndWipe(ingress(), generation: 1); let empty = await store.confirmEmpty(generation: 1); let calls = await ports.vault.replaceCallsAfterSeed()
+            let store = StrictCallbackStore(now: 999, expiresAt: 1_000); let first = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1); let second = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1); let empty = await store.confirmEmpty(generation: 1); let calls = await ports.vault.replaceCallsAfterSeed()
             guard case .consumed = first else { return XCTFail("not consumed") }; guard case .replayed = second else { return XCTFail("not replay protected") }; XCTAssertTrue(empty); XCTAssertEqual(calls, 0)
         case "valid_verified_session_survives_bad_link": let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
         case "generation_change_cancels_work_and_blocks_stale_writes": let trace = await coordinator.normalizedTrace(); XCTAssertTrue(trace.contains(.staleRejected)); try await verifySwitchFencesInFlight(); try await verifyCallbackValidationCancellationPrecedesPurge(); try await verifyEveryDestructiveMutationRejectsStaleGeneration()
@@ -179,7 +189,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let ports = ScriptPorts(times: [0, 0]); let coordinator = makeCoordinator(ports)
             await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true)
             await ports.clock.setSuspendRegistration(true); await ports.provider.setSuspendRefresh(true)
-            let work = Task { await coordinator.handle401(candidate()) }
+            let refreshCandidate = SyntheticAuthFixture.candidate()
+            let work = Task { await coordinator.handle401(refreshCandidate) }
             await ports.provider.waitRefreshStarted(); await ports.clock.waitRegistrationStarted(); await ports.provider.releaseRefresh(); await work.value
             let snapshot = await coordinator.snapshot(), history = await coordinator.presentationEffectHistory()
             XCTAssertEqual(snapshot.state, .authenticated); XCTAssertTrue(history.isEmpty)
@@ -187,19 +198,19 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
 
     private func strictCallbackChecks() async throws {
-        let valid = StrictCallbackStore(now: 999, expiresAt: 1_000); guard case let .consumed(candidate) = await valid.validateConsumeAndWipe(ingress(), generation: 1) else { return XCTFail("valid callback") }; XCTAssertEqual(candidate.storage, "opaque-pkce"); XCTAssertNotEqual(candidate.storage, "expected")
-        guard case .replayed = await valid.validateConsumeAndWipe(ingress(), generation: 1) else { return XCTFail("replay") }
+        let valid = StrictCallbackStore(now: 999, expiresAt: 1_000); guard case let .consumed(candidate) = await valid.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("valid callback") }; XCTAssertEqual(candidate.storage, "opaque-pkce"); XCTAssertNotEqual(candidate.storage, "expected")
+        guard case .replayed = await valid.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("replay") }
         let distinct = StrictCallbackStore(now: 999, expiresAt: 1_000, oauthState: "state-two", verifier: "verifier-two")
         let distinctIngress = OpaqueCallbackIngress("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=state-two&nonce=expected")
         guard case let .consumed(verifier) = await distinct.validateConsumeAndWipe(distinctIngress, generation: 1) else { return XCTFail("distinct verifier") }; XCTAssertEqual(verifier.storage, "verifier-two")
-        let expired = StrictCallbackStore(now: 1_000, expiresAt: 1_000); guard case .expired = await expired.validateConsumeAndWipe(ingress(), generation: 1) else { return XCTFail("expiry") }
-        let rollback = StrictCallbackStore(now: 999, expiresAt: 2_000, issuedAt: 1_000); guard case .expired = await rollback.validateConsumeAndWipe(ingress(), generation: 1) else { return XCTFail("rollback") }
+        let expired = StrictCallbackStore(now: 1_000, expiresAt: 1_000); guard case .expired = await expired.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("expiry") }
+        let rollback = StrictCallbackStore(now: 999, expiresAt: 2_000, issuedAt: 1_000); guard case .expired = await rollback.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("rollback") }
         let pendingAdversaries = [
             StrictCallbackStore(now: 999, expiresAt: 1_000, purpose: "other"), StrictCallbackStore(now: 999, expiresAt: 1_000, environment: "prod"),
             StrictCallbackStore(now: 999, expiresAt: 1_000, host: "other.dev.fluyo.test"), StrictCallbackStore(now: 999, expiresAt: 1_000, path: "/other"),
             StrictCallbackStore(now: 999, expiresAt: 1_000, oauthState: "other"), StrictCallbackStore(now: 999, expiresAt: 1_000, nonce: "other"),
         ]
-        for store in pendingAdversaries { guard case .malformed = await store.validateConsumeAndWipe(ingress(), generation: 1) else { return XCTFail("accepted mismatched pending transaction") } }
+        for store in pendingAdversaries { guard case .malformed = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("accepted mismatched pending transaction") } }
         let adversaries = [
             "http://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected",
             "https://AUTH.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected",
@@ -231,8 +242,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func verifyWarmCancelPreservesCandidate() async throws {
         let ports = ScriptPorts(times: [0, 0, 500]); let coordinator = makeCoordinator(ports)
         await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true)
-        await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-        async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback(); await ports.provider.releaseExchange(); _ = await work
+        await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+        let warmCancelIngress = SyntheticAuthFixture.ingress()
+        async let work: Void = coordinator.receiveCallback(warmCancelIngress); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback(); await ports.provider.releaseExchange(); _ = await work
         let snapshot = await coordinator.snapshot(); let generation = await coordinator.currentGeneration(); let effects = await coordinator.drainPresentationEffects(for: generation)
         XCTAssertEqual(snapshot.state, .authenticated); XCTAssertEqual(snapshot.hasSessionCandidate, .present); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
         XCTAssertEqual(snapshot.fixedOutcomeCategory, .canceled); XCTAssertTrue(effects.isEmpty)
@@ -242,8 +254,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
         for now in [UInt64(499), 500, 501] {
             let ports = ScriptPorts(times: [0, 0, now]); let coordinator = makeCoordinator(ports)
             await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true)
-            await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-            async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback()
+            await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+            let boundaryIngress = SyntheticAuthFixture.ingress()
+            async let work: Void = coordinator.receiveCallback(boundaryIngress); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback()
             let afterCancel = await coordinator.snapshot()
             if now < 500 { XCTAssertEqual(afterCancel.state, .callbackPending); await coordinator.signOut() }
             else { XCTAssertEqual(afterCancel.fixedOutcomeCategory, .canceled) }
@@ -263,8 +276,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
             for kind in [AuthTimeoutKind.providerOrApiStep, .totalActionable] {
                 let times: [UInt64] = warm ? [0, 0, kind.milliseconds] : [0, kind.milliseconds]; let ports = ScriptPorts(times: times); let coordinator = makeCoordinator(ports)
                 if warm { await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true) }
-                await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-                async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.scheduleTimeout(kind); _ = await work
+                await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+                let timeoutIngress = SyntheticAuthFixture.ingress()
+                async let work: Void = coordinator.receiveCallback(timeoutIngress); await ports.provider.waitExchangeStarted(); await coordinator.scheduleTimeout(kind); _ = await work
                 let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, .safeTerminalError); XCTAssertEqual(snapshot.hasSessionCandidate, warm ? .present : .absent); XCTAssertEqual(snapshot.hasVerifiedOwnerState, warm); XCTAssertEqual(snapshot.safeDestinationId, warm ? .internalFoundationHome : .signedOut); XCTAssertEqual(snapshot.fixedOutcomeCategory, .timedOut)
                 let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.compactMap { $0.payload.announcement }, [.callbackPending, .safeTerminalError]); let trace = await coordinator.normalizedTrace(); XCTAssertTrue(trace.contains(.staleRejected))
             }
@@ -274,18 +288,21 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func verifyRefreshContextExits() async throws {
         for (kind, expectedState) in [(AuthTimeoutKind.providerOrApiStep, AuthRuntimeState.offlineSessionCandidate), (.totalActionable, .safeTerminalError)] {
             let ports = ScriptPorts(times: [0, 0, kind.milliseconds]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.provider.setSuspendRefresh(true)
-            async let work: Void = coordinator.handle401(candidate()); await ports.provider.waitRefreshStarted(); await coordinator.scheduleTimeout(kind); _ = await work
+            let timeoutCandidate = SyntheticAuthFixture.candidate()
+            async let work: Void = coordinator.handle401(timeoutCandidate); await ports.provider.waitRefreshStarted(); await coordinator.scheduleTimeout(kind); _ = await work
             let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, expectedState); XCTAssertEqual(snapshot.hasSessionCandidate, .present); XCTAssertTrue(snapshot.hasVerifiedOwnerState); XCTAssertEqual(snapshot.fixedOutcomeCategory, .timedOut)
         }
         let ports = ScriptPorts(times: [0, 0, 500]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.provider.setSuspendRefresh(true)
-        async let work: Void = coordinator.handle401(candidate()); await ports.provider.waitRefreshStarted(); await coordinator.cancelRefresh(); _ = await work
+        let cancelCandidate = SyntheticAuthFixture.candidate()
+        async let work: Void = coordinator.handle401(cancelCandidate); await ports.provider.waitRefreshStarted(); await coordinator.cancelRefresh(); _ = await work
         let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, .offlineSessionCandidate); XCTAssertEqual(snapshot.fixedOutcomeCategory, .canceled)
     }
 
     private func verifyRefreshTimerBoundaries() async throws {
         for elapsed in [UInt64(499), 500, 501] {
             let ports = ScriptPorts(times: [0, 0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.clock.setDelayedElapsed(elapsed); await ports.provider.setSuspendRefresh(true)
-            async let work: Void = coordinator.handle401(candidate()); await ports.provider.waitRefreshStarted()
+            let timerCandidate = SyntheticAuthFixture.candidate()
+            async let work: Void = coordinator.handle401(timerCandidate); await ports.provider.waitRefreshStarted()
             let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.count, elapsed < 500 ? 0 : 1)
             if let effect = history.first { XCTAssertEqual(effect.originatingState, .refreshPending); XCTAssertEqual(effect.payload.focus, .heading); XCTAssertEqual(effect.payload.announcement, .refreshPending); XCTAssertEqual(effect.payload.priority, .polite); XCTAssertNil(effect.payload.navigation) }
             await ports.provider.releaseRefresh(); _ = await work
@@ -295,9 +312,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
 
     private func verifyMutationBoundaries() async throws {
         for result in [ConditionalMutationResult.failed, .staleGeneration] {
-            let vaultPorts = ScriptPorts(times: [0]); let vaultCoordinator = makeCoordinator(vaultPorts); await vaultPorts.vault.setReadCandidate(false); await vaultCoordinator.initialize(online: true); await vaultPorts.callback.setResult(.consumed(candidate())); await vaultPorts.vault.setReplaceResult(result); await vaultCoordinator.receiveCallback(ingress())
+            let vaultPorts = ScriptPorts(times: [0]); let vaultCoordinator = makeCoordinator(vaultPorts); await vaultPorts.vault.setReadCandidate(false); await vaultCoordinator.initialize(online: true); await vaultPorts.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await vaultPorts.vault.setReplaceResult(result); await vaultCoordinator.receiveCallback(SyntheticAuthFixture.ingress())
             let vaultSnapshot = await vaultCoordinator.snapshot(); let vaultWipe = await vaultPorts.wipeSummary(); XCTAssertEqual(vaultSnapshot.state, .safeTerminalError); XCTAssertEqual(vaultSnapshot.hasSessionCandidate, .absent); XCTAssertEqual(vaultWipe, "callback_headers_vault_owner_confirm")
-            let ownerPorts = ScriptPorts(times: [0]); let ownerCoordinator = makeCoordinator(ownerPorts); await ownerPorts.vault.setReadCandidate(false); await ownerCoordinator.initialize(online: true); await ownerPorts.callback.setResult(.consumed(candidate())); await ownerPorts.owner.setBindResult(result); await ownerCoordinator.receiveCallback(ingress())
+            let ownerPorts = ScriptPorts(times: [0]); let ownerCoordinator = makeCoordinator(ownerPorts); await ownerPorts.vault.setReadCandidate(false); await ownerCoordinator.initialize(online: true); await ownerPorts.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ownerPorts.owner.setBindResult(result); await ownerCoordinator.receiveCallback(SyntheticAuthFixture.ingress())
             let ownerSnapshot = await ownerCoordinator.snapshot(); let ownerWipe = await ownerPorts.wipeSummary(); XCTAssertEqual(ownerSnapshot.state, .safeTerminalError); XCTAssertFalse(ownerSnapshot.hasVerifiedOwnerState); XCTAssertEqual(ownerWipe, "callback_headers_vault_owner_confirm")
         }
     }
@@ -305,12 +322,14 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func verifySwitchFencesInFlight() async throws {
         func assertSwitched(_ coordinator: AuthRuntimeCoordinator) async { let snapshot = await coordinator.snapshot(); let trace = await coordinator.normalizedTrace(); XCTAssertEqual(snapshot.state, .accountSwitching); XCTAssertTrue(trace.contains(.staleRejected)) }
         do {
-            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setResult(.consumed(candidate())); await ports.provider.setSuspendExchange(true)
-            async let work: Void = coordinator.receiveCallback(ingress()); await ports.provider.waitExchangeStarted(); await coordinator.switchAccount(); await ports.provider.releaseExchange(); _ = await work; await assertSwitched(coordinator)
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
+            let switchExchangeIngress = SyntheticAuthFixture.ingress()
+            async let work: Void = coordinator.receiveCallback(switchExchangeIngress); await ports.provider.waitExchangeStarted(); await coordinator.switchAccount(); await ports.provider.releaseExchange(); _ = await work; await assertSwitched(coordinator)
         }
         do {
-            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setResult(.consumed(candidate())); await ports.vault.setSuspendReplace(true)
-            async let work: Void = coordinator.receiveCallback(ingress()); await ports.vault.waitReplaceStarted(); await coordinator.switchAccount(); await ports.vault.releaseReplace(); _ = await work; await assertSwitched(coordinator); let staleWrites = await ports.vault.staleWriteCount(); XCTAssertEqual(staleWrites, 1)
+            let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.vault.setSuspendReplace(true)
+            let switchReplaceIngress = SyntheticAuthFixture.ingress()
+            async let work: Void = coordinator.receiveCallback(switchReplaceIngress); await ports.vault.waitReplaceStarted(); await coordinator.switchAccount(); await ports.vault.releaseReplace(); _ = await work; await assertSwitched(coordinator); let staleWrites = await ports.vault.staleWriteCount(); XCTAssertEqual(staleWrites, 1)
         }
         do {
             let ports = ScriptPorts(times: [0, 15_000]); let coordinator = makeCoordinator(ports); await ports.clock.setSuspendSleep(true)
@@ -335,15 +354,16 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func verifyCallbackValidationCancellationPrecedesPurge() async throws {
         let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
         await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setSuspendValidation(true)
-        async let work: Void = coordinator.receiveCallback(ingress()); await ports.callback.waitValidationStarted(); await coordinator.signOut(); _ = await work
+        let validationIngress = SyntheticAuthFixture.ingress()
+        async let work: Void = coordinator.receiveCallback(validationIngress); await ports.callback.waitValidationStarted(); await coordinator.signOut(); _ = await work
         let canceled = await ports.callback.validationCancellationDidComplete(), purgeAfter = await ports.callback.purgeObservedCancellation(); XCTAssertTrue(canceled); XCTAssertTrue(purgeAfter)
     }
 
     private func verifyCleanupReservationLiveness() async throws {
         let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
         await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await coordinator.signOut()
-        await ports.callback.setResult(.duplicate); await coordinator.receiveCallback(ingress())
-        await ports.provider.setRefreshResult(.transientFailure); await coordinator.handle401(candidate())
+        await ports.callback.setResult(.duplicate); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
+        await ports.provider.setRefreshResult(.transientFailure); await coordinator.handle401(SyntheticAuthFixture.candidate())
         let trace = await coordinator.normalizedTrace(), refreshes = await ports.provider.refreshCallCount(); XCTAssertTrue(trace.contains(.callbackReserved)); XCTAssertEqual(refreshes, 1)
     }
 
@@ -359,7 +379,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
         do {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
             await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setResult(.malformed); await ports.callback.setSuspendActivation(true)
-            let work = Task { await coordinator.receiveCallback(ingress()) }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
+            let activationIngress = SyntheticAuthFixture.ingress()
+            let work = Task { await coordinator.receiveCallback(activationIngress) }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
             let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), history = await coordinator.presentationEffectHistory(), activationCanceled = await ports.callback.activationWasCancelled()
             XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
             XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(history.count, 1); XCTAssertFalse(activationCanceled)
@@ -368,12 +389,12 @@ final class AuthRuntimeKernelTests: XCTestCase {
 
     private func verifyCallbackStoreFailure() async throws {
         let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true)
-        await ports.callback.setResult(.failed); await coordinator.receiveCallback(ingress())
+        await ports.callback.setResult(.failed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
         let snapshot = await coordinator.snapshot(); let audit = await ports.audit.values(); let terminal = await coordinator.isTerminalFenced()
         XCTAssertEqual(snapshot.fixedOutcomeCategory, .transientFailure); XCTAssertEqual(audit, ["callback", "callback_confirm"]); XCTAssertFalse(terminal)
         for confirmFailure in [false, true] {
             let failing = ScriptPorts(times: [0]); let fenced = makeCoordinator(failing); await failing.vault.setReadCandidate(false); await fenced.initialize(online: true); await failing.callback.setResult(.failed)
-            if confirmFailure { await failing.callback.setConfirm(false) } else { await failing.callback.setPurgeResult(.failed) }; await fenced.receiveCallback(ingress())
+            if confirmFailure { await failing.callback.setConfirm(false) } else { await failing.callback.setPurgeResult(.failed) }; await fenced.receiveCallback(SyntheticAuthFixture.ingress())
             let isTerminal = await fenced.isTerminalFenced(); let failedSnapshot = await fenced.snapshot(); let failedAudit = await failing.audit.values()
             XCTAssertTrue(isTerminal); XCTAssertEqual(failedSnapshot.fixedOutcomeCategory, .transientFailure); XCTAssertEqual(failedAudit, confirmFailure ? ["callback", "callback_confirm"] : ["callback"])
         }
@@ -388,7 +409,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
 
     private func exerciseTerminalEntryPoints(_ coordinator: AuthRuntimeCoordinator) async {
-        await coordinator.initialize(online: true); await coordinator.receiveCallback(ingress()); await coordinator.cancelCallback(); await coordinator.handle401(candidate()); await coordinator.handle403(); await coordinator.scheduleTimeout(.providerOrApiStep); await coordinator.scheduleDelayedAnnouncement(.safeTerminalError, priority: .assertive); await coordinator.signOut(); await coordinator.switchAccount()
+        await coordinator.initialize(online: true); await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); await coordinator.cancelCallback(); await coordinator.handle401(SyntheticAuthFixture.candidate()); await coordinator.handle403(); await coordinator.scheduleTimeout(.providerOrApiStep); await coordinator.scheduleDelayedAnnouncement(.safeTerminalError, priority: .assertive); await coordinator.signOut(); await coordinator.switchAccount()
     }
 
     private func makeCoordinator(_ ports: ScriptPorts, generation: UInt64 = 1) -> AuthRuntimeCoordinator { .init(provider: ports.provider, vault: ports.vault, callbackStore: ports.callback, clock: ports.clock, ownerStore: ports.owner, telemetry: TrapTelemetry(), initialGeneration: generation) }
@@ -442,9 +463,6 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let payload = "aggregate:\(effect.payload.focus?.rawValue ?? "none"):\(effect.payload.announcement?.rawValue ?? "none"):\(effect.payload.priority?.rawValue ?? "none"):\(effect.payload.navigation?.rawValue ?? "none")"
         return "\(effect.generation):\(effect.sequence):\(effect.originatingState.rawValue):\(payload)"
     }
-    private func candidate() -> OpaqueSessionCandidate { .init("synthetic") }
-    private func ingress() -> OpaqueCallbackIngress { .init("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected") }
-
     private func loadCorpus() throws -> [Vector] {
         var root = URL(fileURLWithPath: #filePath); for _ in 0..<4 { root.deleteLastPathComponent() }
         let data = try Data(contentsOf: root.appendingPathComponent("contracts/mobile/auth-runtime-synthetic/v1/vectors.tsv")); XCTAssertFalse(data.starts(with: [0xef, 0xbb, 0xbf]))

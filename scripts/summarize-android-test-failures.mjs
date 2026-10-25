@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { githubWorkflowErrorAnnotation } from "./github-workflow-annotation.mjs";
 
+const diagnosticProducer = "typed_trace_v2";
 const authCorpusIds = new Set([
   "cold_start_without_candidate",
   "cold_start_with_candidate",
@@ -74,11 +75,11 @@ const readBoundedDiagnostic = (file) => {
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 512) return null;
   const raw = fs.readFileSync(file, "utf8");
   if (raw.includes("\r")) return null;
-  const envelope = raw.match(/^corpus=([a-z0-9_]+)\nmarker=([^\n]+)\n$/);
-  if (!envelope || !authCorpusIds.has(envelope[1])) return null;
-  const marker = parseBoundedMarker(envelope[2]);
-  if (!marker || (Array.isArray(marker) && marker[1] !== envelope[1])) return null;
-  return Object.freeze({ corpusId: envelope[1], marker });
+  const envelope = raw.match(/^producer=(typed_trace_v2)\ncorpus=([a-z0-9_]+)\nmarker=([^\n]+)\n$/);
+  if (!envelope || !authCorpusIds.has(envelope[2])) return null;
+  const marker = parseBoundedMarker(envelope[3]);
+  if (!marker || (Array.isArray(marker) && marker[1] !== envelope[2])) return null;
+  return Object.freeze({ producer: envelope[1], corpusId: envelope[2], marker });
 };
 const normalizeBoundedDiagnostic = (diagnostic, corpusId) =>
   diagnostic === unavailableDiagnostic
@@ -259,6 +260,7 @@ const runtimeCategories = (body) => {
 };
 
 const failures = [];
+const annotationProvenance = new WeakMap();
 for (const file of xmlFiles.sort()) {
   const xml = fs.readFileSync(file, "utf8");
   for (const match of xml.matchAll(/<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g)) {
@@ -279,30 +281,51 @@ for (const file of xmlFiles.sort()) {
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
     const inlineDiagnosticSource = `${rawAttribute(failureTag[2], "message")}\n${body}`;
-    const inlineFallbackMatch = inlineDiagnosticSource.match(diagnosticFallbackPattern);
-    const inlineAuthDiagnostic = authKernel
-      ? (inlineDiagnosticSource.match(authDiagnosticPattern) ??
-        (authCorpusId && inlineFallbackMatch
-          ? Object.freeze({
-              fallback: true,
-              stage: inlineFallbackMatch[1],
-              mismatch: inlineFallbackMatch[2],
-            })
-          : authCorpusId && diagnosticUnavailablePattern.test(inlineDiagnosticSource)
-            ? unavailableDiagnostic
-            : null))
+    const inlineDetailedMatch = authKernel
+      ? inlineDiagnosticSource.match(authDiagnosticPattern)
       : null;
-    const matchingSidecar =
-      sidecarDiagnostic?.corpusId === authCorpusId ? sidecarDiagnostic.marker : null;
-    const authDiagnosticMatch = inlineAuthDiagnostic ?? matchingSidecar;
-    const authDiagnostic =
-      authDiagnosticMatch &&
-      (authDiagnosticMatch === unavailableDiagnostic ||
-        authDiagnosticMatch.fallback === true ||
-        (authCorpusIds.has(authDiagnosticMatch[1]) && authDiagnosticMatch[1] === authCorpusId))
-        ? authDiagnosticMatch
+    const inlineDetailed =
+      inlineDetailedMatch &&
+      authCorpusId &&
+      authCorpusIds.has(inlineDetailedMatch[1]) &&
+      inlineDetailedMatch[1] === authCorpusId
+        ? inlineDetailedMatch
         : null;
-    failures.push({
+    const inlineFallbackMatch = inlineDiagnosticSource.match(diagnosticFallbackPattern);
+    const inlineGeneric =
+      authKernel && authCorpusId && inlineFallbackMatch
+        ? Object.freeze({
+            fallback: true,
+            stage: inlineFallbackMatch[1],
+            mismatch: inlineFallbackMatch[2],
+          })
+        : authKernel && authCorpusId && diagnosticUnavailablePattern.test(inlineDiagnosticSource)
+          ? unavailableDiagnostic
+          : null;
+    const matchingSidecar = sidecarDiagnostic?.corpusId === authCorpusId ? sidecarDiagnostic : null;
+    const sameDetailedSidecar =
+      inlineDetailed &&
+      matchingSidecar &&
+      Array.isArray(matchingSidecar.marker) &&
+      matchingSidecar.marker[0] === inlineDetailed[0];
+    const selectedDiagnostic = inlineDetailed
+      ? {
+          marker: inlineDetailed,
+          provenance: {
+            origin: "inline",
+            ...(sameDetailedSidecar ? { producer: matchingSidecar.producer } : {}),
+          },
+        }
+      : matchingSidecar
+        ? {
+            marker: matchingSidecar.marker,
+            provenance: { origin: "sidecar", producer: matchingSidecar.producer },
+          }
+        : inlineGeneric
+          ? { marker: inlineGeneric, provenance: { origin: "inline" } }
+          : null;
+    const authDiagnostic = selectedDiagnostic?.marker ?? null;
+    const failure = {
       className: authKernel ? "auth_kernel" : className,
       testName:
         authKernel && authCorpusId
@@ -322,7 +345,9 @@ for (const file of xmlFiles.sort()) {
             authDiagnostic: normalizeBoundedDiagnostic(authDiagnostic, authCorpusId),
           }
         : {}),
-    });
+    };
+    failures.push(failure);
+    if (authDiagnostic) annotationProvenance.set(failure, selectedDiagnostic.provenance);
   }
 }
 
@@ -338,6 +363,11 @@ if (githubAnnotation) {
     (candidate) => candidate.className === "auth_kernel" && candidate.authDiagnostic,
   );
   const fields = [`phase=${phase}`, `category=${failure?.category ?? summary.diagnostic.category}`];
+  const provenance = failure
+    ? annotationProvenance.get(failure)
+    : sidecarDiagnostic
+      ? { origin: "sidecar", producer: sidecarDiagnostic.producer }
+      : null;
   const diagnostic =
     failure?.authDiagnostic ??
     (sidecarDiagnostic
@@ -358,6 +388,12 @@ if (githubAnnotation) {
     if (diagnostic.index !== undefined) fields.push(`index=${diagnostic.index}`);
     if (diagnostic.expected !== undefined) {
       fields.push(`expected=${diagnostic.expected}`, `actual=${diagnostic.actual}`);
+    }
+    if (provenance) {
+      fields.push(`origin=${provenance.origin}`);
+      if (provenance.producer === diagnosticProducer) {
+        fields.push(`producer=${diagnosticProducer}`);
+      }
     }
   }
   process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
