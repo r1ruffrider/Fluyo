@@ -182,6 +182,53 @@ const normalizeBoundedDiagnostic = (diagnostic, corpusId) =>
                   }),
         };
 
+const classifyGradleFailure = (file) => {
+  if (!file || !fs.existsSync(file)) return "unknown";
+  try {
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 8 * 1024 * 1024) return "unknown";
+    const raw = fs.readFileSync(file, "utf8");
+    if (
+      /gradle build daemon disappeared|daemon (?:stopped|terminated) unexpectedly|outofmemoryerror|unable to create native thread|no space left on device|could not reserve enough space/i.test(
+        raw,
+      )
+    ) {
+      return "daemon/resource";
+    }
+    if (
+      /could not resolve all (?:files|dependencies)|could not resolve [^\r\n]+|could not find [^\r\n]+|could not download [^\r\n]+/i.test(
+        raw,
+      )
+    ) {
+      return "dependency_resolution";
+    }
+    if (
+      /deprecated gradle features were used|warning[-_ ]mode(?:=|\s+)fail|warnings? found and -werror/i.test(
+        raw,
+      )
+    ) {
+      return "deprecation/warning_mode";
+    }
+    if (
+      /a problem occurred configuring|could not create task|plugin [^\r\n]+ (?:was not found|could not be applied)|sdk location not found|failed to apply plugin/i.test(
+        raw,
+      )
+    ) {
+      return "configuration";
+    }
+    if (
+      /compilation (?:error|failed)|execution failed for task ['"][^'"\r\n]*compile[^'"\r\n]*['"]|(?:^|\n)e: [^\r\n]*\.(?:kt|java):/i.test(
+        raw,
+      )
+    ) {
+      return "compile";
+    }
+  } catch {
+    return "unknown";
+  }
+  return "unknown";
+};
+
 const args = process.argv.slice(2);
 const phaseIndex = args.indexOf("--phase");
 const allowedPhases = new Set([
@@ -206,6 +253,18 @@ if (diagnosticIndex !== -1) {
   const diagnosticFile = args[diagnosticIndex + 1] ?? null;
   args.splice(diagnosticIndex, 2);
   sidecarDiagnostic = readBoundedDiagnostic(diagnosticFile);
+}
+let rawLogRequested = false;
+let gradleCategory = "unknown";
+const rawLogIndex = args.indexOf("--raw-log");
+if (rawLogIndex !== -1) {
+  const rawLogFile = args[rawLogIndex + 1] ?? null;
+  args.splice(rawLogIndex, 2);
+  if (!rawLogFile || rawLogFile.startsWith("--") || args.includes("--raw-log") || !phase) {
+    throw new Error("The bounded Gradle classifier requires one raw-log file.");
+  }
+  rawLogRequested = true;
+  gradleCategory = classifyGradleFailure(rawLogFile);
 }
 const githubAnnotationIndex = args.indexOf("--github-annotation");
 const githubAnnotation = githubAnnotationIndex !== -1;
@@ -472,10 +531,29 @@ for (const file of xmlFiles.sort()) {
 }
 
 const summary = { structuredReports: xmlFiles.length, failures };
+const mappedFailures = failures
+  .map((candidate) => boundedAuthFailureIdentities.get(candidate))
+  .filter(Boolean);
+const authTestAliases = new Set([
+  "auth_kernel",
+  "auth_diagnostic_sidecar",
+  "auth_suppressed_stale_lifecycle",
+]);
+const reportState =
+  xmlFiles.length === 0
+    ? "no_reports"
+    : failures.length === 0
+      ? "no_failure_nodes"
+      : mappedFailures.some((candidate) => authTestAliases.has(candidate.testClass))
+        ? "mapped_auth_failure"
+        : mappedFailures.length > 0
+          ? "mapped_foundation_failure"
+          : "unmapped_test_failure";
 if (phase) {
   summary.diagnostic = {
     phase,
     category: xmlFiles.length === 0 ? "pre_report_failure" : "structured_test_failure",
+    ...(rawLogRequested ? { report_state: reportState, gradle_category: gradleCategory } : {}),
   };
 }
 if (githubAnnotation) {
@@ -495,6 +573,9 @@ if (githubAnnotation) {
     `phase=${phase}`,
     `category=${failure || lifecycleDiagnostic || boundedAuthFailure ? "auth_contract" : summary.diagnostic.category}`,
   ];
+  if (rawLogRequested) {
+    fields.push(`report_state=${reportState}`, `gradle_category=${gradleCategory}`);
+  }
   const provenance = failure
     ? annotationProvenance.get(failure)
     : sidecarDiagnostic

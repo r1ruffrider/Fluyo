@@ -208,6 +208,7 @@ jobs:
                 apps/android/app/build/test-results/testStagingDebugUnitTest \
                 apps/android/app/build/outputs/androidTest-results/managedDevice \
                 --phase "$phase" \
+                --raw-log "$RAW_LOG" \
                 --diagnostic-file "$AUTH_DIAGNOSTIC_FILE" \
                 --github-annotation
               echo "Android matrix leg failed; raw output was discarded"

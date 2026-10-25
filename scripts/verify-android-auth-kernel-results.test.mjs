@@ -741,6 +741,65 @@ try {
     `{"structuredReports":1,"failures":[{"className":"auth_kernel","testName":"auth_corpus_cold_start_without_candidate","kind":"failure","category":"auth_contract","frameworkFailureCategory":"assertion","runtimeCategories":["assertion"],"sourceLine":null,"authDiagnostic":{"corpusId":"cold_start_without_candidate","stage":"snapshot","mismatch":"state"}}]}\n`,
   );
 
+  const rawLog = join(root, "android-raw.log");
+  const emptySummaryDir = join(root, "empty-summary");
+  mkdirSync(emptySummaryDir);
+  writeFileSync(rawLog, "opaque learner@example.test C:\\private\\path");
+  const reportStateCases = [
+    ["no_reports", emptySummaryDir, null],
+    ["no_failure_nodes", summaryDir, "<testsuite></testsuite>"],
+    [
+      "mapped_auth_failure",
+      summaryDir,
+      `<testsuite><testcase classname="com.fluyo.app.AuthRuntimeKernelTest" name="canonicalScenarioOrInvariant[0:cold_start_without_candidate@${digest}]"><failure message="opaque">AuthRuntimeKernelTest.kt:447 learner@example.test</failure></testcase></testsuite>`,
+    ],
+    [
+      "mapped_foundation_failure",
+      summaryDir,
+      '<testsuite><testcase classname="com.fluyo.app.AppConfigurationTest" name="unknownEnvironmentFailsClosed"><failure message="opaque">AppConfigurationTest.kt:25 learner@example.test</failure></testcase></testsuite>',
+    ],
+    [
+      "unmapped_test_failure",
+      summaryDir,
+      '<testsuite><testcase classname="com.fluyo.app.AppConfigurationTestPrivate" name="unknownEnvironmentFailsClosed"><failure message="learner@example.test">C:\\private\\path</failure></testcase></testsuite>',
+    ],
+  ];
+  for (const [reportState, results, reportXml] of reportStateCases) {
+    if (reportXml !== null) writeFileSync(summaryFile, reportXml);
+    const annotation = summarizeAnnotation(results, "--phase", "unit_test", "--raw-log", rawLog);
+    assert.match(
+      annotation,
+      new RegExp(`(?:^|; )report_state=${reportState}; gradle_category=unknown(?:;|\\n)`),
+    );
+    assert.equal(annotation.match(/\n/g)?.length, 1);
+    assert.doesNotMatch(annotation, /example\.test|private|opaque/i);
+  }
+
+  const gradleCategoryCases = [
+    ["compile", "Execution failed for task ':app:compileDebugKotlin'. Compilation error"],
+    ["dependency_resolution", "Could not resolve all files for configuration ':classpath'."],
+    ["deprecation/warning_mode", "Deprecated Gradle features were used with warning-mode fail."],
+    ["daemon/resource", "Gradle build daemon disappeared unexpectedly."],
+    ["configuration", "A problem occurred configuring project ':app'."],
+    ["unknown", "opaque failure with learner@example.test C:\\private\\path"],
+  ];
+  for (const [category, raw] of gradleCategoryCases) {
+    writeFileSync(rawLog, `${raw}\n::error title=owned::private`);
+    const annotation = summarizeAnnotation(
+      emptySummaryDir,
+      "--phase",
+      "unit_test",
+      "--raw-log",
+      rawLog,
+    );
+    assert.match(
+      annotation,
+      new RegExp(`report_state=no_reports; gradle_category=${category.replace("/", "\\/")}`),
+    );
+    assert.equal(annotation.match(/\n/g)?.length, 1);
+    assert.doesNotMatch(annotation, /example\.test|owned|private|compileDebugKotlin|classpath/i);
+  }
+
   const outsideActions = spawnSync(
     process.execPath,
     [

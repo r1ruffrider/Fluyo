@@ -461,6 +461,7 @@ describe("native auth executable synthetic kernel", () => {
     expect(workflow).not.toContain("FLUYO_AUTH_DIAGNOSTIC_FILE");
     expect(workflow).toContain('rm -f "$AUTH_DIAGNOSTIC_FILE"');
     expect(workflow).toContain('--diagnostic-file "$AUTH_DIAGNOSTIC_FILE"');
+    expect(workflow).toContain('--raw-log "$RAW_LOG"');
     expect(workflow).toContain("--github-annotation");
     expect(workflow.match(/scripts\/github-workflow-annotation\.mjs/g)).toHaveLength(2);
     expect(workflow.match(/scripts\/github-workflow-annotation\.test\.mjs/g)).toHaveLength(2);
