@@ -1,7 +1,15 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("androidx.baselineprofile")
+}
+
+tasks.withType<Test>().configureEach {
+    val authDiagnosticFile = layout.buildDirectory.file("auth-runtime-diagnostic.txt")
+    systemProperty("fluyo.authDiagnosticFile", authDiagnosticFile.get().asFile.absolutePath)
+    doFirst { authDiagnosticFile.get().asFile.delete() }
 }
 
 android {

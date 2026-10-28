@@ -150,7 +150,11 @@ run_xcodebuild() {
   local log_name="$1"
   shift
   if ! xcodebuild "$@" "${COMMON_SETTINGS[@]}" >"$LOG_DIR/$log_name.log" 2>&1; then
-    sed -E       -e 's#/Users/[^/[:space:]]+#/Users/<redacted>#g'       -e 's/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}/<device-id>/g'       "$LOG_DIR/$log_name.log" | tail -n 200 >&2
+    local summary_args=("$LOG_DIR/$log_name.log" --phase "${log_name//-/_}")
+    if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+      summary_args+=(--github-annotation)
+    fi
+    node "$ROOT_DIR/scripts/summarize-ios-test-failures.mjs" "${summary_args[@]}"
     return 1
   fi
   echo "$log_name passed"
@@ -254,6 +258,10 @@ REQUIRED_TEST_NAMES=(
   testAccessibleNamesAndReadingOrderAreStable
   testLoadingAndErrorRemainUsableInLandscape
   testDarkAppearanceKeepsStateAndActionVisible
+  testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups
+  testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation
+  testCleanupFailureIsFencedAndDelayedEffectsAreGenerationBoundOneShot
+  testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed
 )
 for test_name in "${REQUIRED_TEST_NAMES[@]}"; do
   if ! grep -ERq "$test_name.*passed" "$LOG_DIR"; then
@@ -261,6 +269,12 @@ for test_name in "${REQUIRED_TEST_NAMES[@]}"; do
     exit 1
   fi
 done
+if [[ "$LEG" == "minimum" ]]; then
+  AUTH_KERNEL_TEST_LOG="$LOG_DIR/test-minimum.log"
+else
+  AUTH_KERNEL_TEST_LOG="$LOG_DIR/test-current.log"
+fi
+node "$ROOT_DIR/scripts/verify-android-auth-kernel-results.mjs" --ios-log "$AUTH_KERNEL_TEST_LOG"
 
 BUILD_SCAN="$WORK_ROOT/all-build-strings.txt"
 if [[ "$LEG" == "minimum" ]]; then

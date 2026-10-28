@@ -1,6 +1,234 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { githubWorkflowErrorAnnotation } from "./github-workflow-annotation.mjs";
+
+const diagnosticProducer = "typed_trace_v2";
+const suppressedStaleLifecycleClass = "com.fluyo.app.AuthRuntimeSuppressedStaleLifecycleTest";
+const suppressedStaleLifecycleAssertions = new Map([
+  [
+    "suppressingNoLatePathEmitsNoStale",
+    new Set(["suppressed_no_late_fence_count", "suppressed_no_late_stale_absent"]),
+  ],
+  [
+    "failedTerminalPathClearsSuppressionWithoutStale",
+    new Set(["suppressed_failed_terminal_fenced", "suppressed_failed_terminal_stale_absent"]),
+  ],
+]);
+const diagnosticSidecarMethods = new Set([
+  "preservesFirstMarkerUntilTaskCleanup",
+  "diagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
+]);
+const knownJvmUnitTests = new Map([
+  [
+    "com.fluyo.app.AuthRuntimeKernelTest",
+    Object.freeze({ alias: "auth_kernel", source: "AuthRuntimeKernelTest.kt", maxLine: 2000 }),
+  ],
+  [
+    "com.fluyo.app.AuthDiagnosticSidecarTest",
+    Object.freeze({
+      alias: "auth_diagnostic_sidecar",
+      source: "AuthRuntimeKernelTest.kt",
+      maxLine: 2000,
+      methods: diagnosticSidecarMethods,
+    }),
+  ],
+  [
+    suppressedStaleLifecycleClass,
+    Object.freeze({
+      alias: "auth_suppressed_stale_lifecycle",
+      source: "AuthRuntimeKernelTest.kt",
+      maxLine: 2000,
+      methods: new Set(suppressedStaleLifecycleAssertions.keys()),
+    }),
+  ],
+  [
+    "com.fluyo.app.AppConfigurationTest",
+    Object.freeze({
+      alias: "app_configuration",
+      source: "AppConfigurationTest.kt",
+      maxLine: 500,
+      methods: new Set([
+        "developmentAndStagingAcceptOnlyPublicTestConfiguration",
+        "productionIsInertAndDoesNotAcceptInheritedValues",
+        "unknownEnvironmentFailsClosed",
+      ]),
+    }),
+  ],
+  [
+    "com.fluyo.app.FoundationShellModelTest",
+    Object.freeze({
+      alias: "foundation_shell_model",
+      source: "FoundationShellModelTest.kt",
+      maxLine: 500,
+      methods: new Set([
+        "validInternalConfigurationResolvesToSignedOut",
+        "invalidOrProductionConfigurationResolvesToFailure",
+        "retryCancelsThePriorTransitionAndSettlesOnce",
+      ]),
+    }),
+  ],
+  [
+    "com.fluyo.app.FoundationTelemetryTest",
+    Object.freeze({
+      alias: "foundation_telemetry",
+      source: "FoundationTelemetryTest.kt",
+      maxLine: 500,
+      methods: new Set(["noOpSinkAcceptsOnlyTheTypedRecordAndRetainsNothing"]),
+    }),
+  ],
+]);
+const authCorpusIds = new Set([
+  "cold_start_without_candidate",
+  "cold_start_with_candidate",
+  "warm_callback_success",
+  "cold_callback_success",
+  "callback_cancel",
+  "callback_malformed",
+  "callback_expired",
+  "callback_replay",
+  "callback_duplicate_delivery",
+  "callback_unsupported",
+  "callback_overlap_rejected",
+  "refresh_success",
+  "refresh_explicit_revocation",
+  "refresh_transient_failure_preserves_candidate",
+  "refresh_repeated_401_clears",
+  "forbidden_403_preserves_session",
+  "offline_startup_preserves_verified_display_only",
+  "background_foreground",
+  "termination_relaunch_without_transaction",
+  "account_switch_cleanup",
+  "stale_response_discarded",
+  "stale_storage_write_discarded",
+  "vault_corruption_cleanup",
+  "clock_skew",
+  "owner_subject_mismatch",
+  "zero_telemetry_launch",
+  "zero_telemetry_resume",
+  "zero_telemetry_error",
+  "public_state_is_secret_free",
+  "callback_transaction_is_purpose_environment_host_path_and_expiry_bound",
+  "callback_transaction_consumes_once_and_wipes",
+  "valid_verified_session_survives_bad_link",
+  "generation_change_cancels_work_and_blocks_stale_writes",
+  "owner_data_waits_for_private_subject_confirmation",
+  "transient_refresh_failure_preserves_candidate",
+  "explicit_invalidation_and_repeated_401_clear",
+  "403_never_refreshes_or_signs_out",
+  "offline_never_confirms_new_owner_or_expands_access",
+  "cleanup_precedes_signed_out_or_new_owner_exposure",
+  "no_op_telemetry_has_zero_retention_and_zero_transport",
+  "evidence_is_closed_and_mutation_safe",
+]);
+const traceValuePattern =
+  "(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)";
+const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
+const traceIndexPattern = "(?:[0-9]|[1-5][0-9]|6[0-3])";
+const authDiagnosticPattern = new RegExp(
+  `\\[auth_corpus_([a-z0-9_]+)_stage_(?:snapshot_(count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:(sequence_unavailable)|count_expected_(${traceCountPattern})_actual_(${traceCountPattern})|sequence_index_(${traceIndexPattern})_expected_(${traceValuePattern})_actual_(${traceValuePattern})))\\]`,
+);
+const exactAuthDiagnosticPattern = new RegExp(`^${authDiagnosticPattern.source}$`);
+const diagnosticFallbackPattern =
+  /\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\](?![A-Za-z0-9_])/;
+const exactDiagnosticFallbackPattern =
+  /^\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\]$/;
+const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
+const exactDiagnosticUnavailablePattern = /^\[auth_corpus_diagnostic_unavailable\]$/;
+const unavailableDiagnostic = Object.freeze({ unavailable: true });
+const parseBoundedMarker = (marker) => {
+  const match = marker.match(exactAuthDiagnosticPattern);
+  if (match && authCorpusIds.has(match[1])) return match;
+  const fallback = marker.match(exactDiagnosticFallbackPattern);
+  if (fallback) return Object.freeze({ fallback: true, stage: fallback[1], mismatch: fallback[2] });
+  return exactDiagnosticUnavailablePattern.test(marker) ? unavailableDiagnostic : null;
+};
+const readBoundedDiagnostic = (file) => {
+  if (!file || !fs.existsSync(file)) return null;
+  const stat = fs.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 512) return null;
+  const raw = fs.readFileSync(file, "utf8");
+  if (raw.includes("\r")) return null;
+  const envelope = raw.match(/^producer=(typed_trace_v2)\ncorpus=([a-z0-9_]+)\nmarker=([^\n]+)\n$/);
+  if (!envelope || !authCorpusIds.has(envelope[2])) return null;
+  const marker = parseBoundedMarker(envelope[3]);
+  if (!marker || (Array.isArray(marker) && marker[1] !== envelope[2])) return null;
+  return Object.freeze({ producer: envelope[1], corpusId: envelope[2], marker });
+};
+const normalizeBoundedDiagnostic = (diagnostic, corpusId) =>
+  diagnostic === unavailableDiagnostic
+    ? { corpusId, stage: "diagnostic", mismatch: "unavailable" }
+    : diagnostic.fallback === true
+      ? { corpusId, stage: diagnostic.stage, mismatch: diagnostic.mismatch }
+      : {
+          corpusId: diagnostic[1],
+          ...(diagnostic[2]
+            ? { stage: "snapshot", mismatch: diagnostic[2] }
+            : diagnostic[3]
+              ? { stage: "trace", mismatch: "sequence_unavailable" }
+              : diagnostic[4]
+                ? {
+                    stage: "trace",
+                    mismatch: "count",
+                    expectedCount: diagnostic[4],
+                    actualCount: diagnostic[5],
+                  }
+                : {
+                    stage: "trace",
+                    mismatch: "sequence",
+                    index: Number(diagnostic[6]),
+                    expected: diagnostic[7],
+                    actual: diagnostic[8],
+                  }),
+        };
+
+const classifyGradleFailure = (file) => {
+  if (!file || !fs.existsSync(file)) return "unknown";
+  try {
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 8 * 1024 * 1024) return "unknown";
+    const raw = fs.readFileSync(file, "utf8");
+    if (
+      /gradle build daemon disappeared|daemon (?:stopped|terminated) unexpectedly|outofmemoryerror|unable to create native thread|no space left on device|could not reserve enough space/i.test(
+        raw,
+      )
+    ) {
+      return "daemon/resource";
+    }
+    if (
+      /could not resolve all (?:files|dependencies)|could not resolve [^\r\n]+|could not find [^\r\n]+|could not download [^\r\n]+/i.test(
+        raw,
+      )
+    ) {
+      return "dependency_resolution";
+    }
+    if (
+      /deprecated gradle features were used|warning[-_ ]mode(?:=|\s+)fail|warnings? found and -werror/i.test(
+        raw,
+      )
+    ) {
+      return "deprecation/warning_mode";
+    }
+    if (
+      /a problem occurred configuring|could not create task|plugin [^\r\n]+ (?:was not found|could not be applied)|sdk location not found|failed to apply plugin/i.test(
+        raw,
+      )
+    ) {
+      return "configuration";
+    }
+    if (
+      /compilation (?:error|failed)|execution failed for task ['"][^'"\r\n]*compile[^'"\r\n]*['"]|(?:^|\n)e: [^\r\n]*\.(?:kt|java):/i.test(
+        raw,
+      )
+    ) {
+      return "compile";
+    }
+  } catch {
+    return "unknown";
+  }
+  return "unknown";
+};
+
 const args = process.argv.slice(2);
 const phaseIndex = args.indexOf("--phase");
 const allowedPhases = new Set([
@@ -18,6 +246,35 @@ if (phaseIndex !== -1) {
   phase = args[phaseIndex + 1] ?? null;
   args.splice(phaseIndex, 2);
   if (!allowedPhases.has(phase)) throw new Error("Unsupported bounded Android failure phase.");
+}
+let sidecarDiagnostic = null;
+const diagnosticIndex = args.indexOf("--diagnostic-file");
+if (diagnosticIndex !== -1) {
+  const diagnosticFile = args[diagnosticIndex + 1] ?? null;
+  args.splice(diagnosticIndex, 2);
+  sidecarDiagnostic = readBoundedDiagnostic(diagnosticFile);
+}
+let rawLogRequested = false;
+let gradleCategory = "unknown";
+const rawLogIndex = args.indexOf("--raw-log");
+if (rawLogIndex !== -1) {
+  const rawLogFile = args[rawLogIndex + 1] ?? null;
+  args.splice(rawLogIndex, 2);
+  if (!rawLogFile || rawLogFile.startsWith("--") || args.includes("--raw-log") || !phase) {
+    throw new Error("The bounded Gradle classifier requires one raw-log file.");
+  }
+  rawLogRequested = true;
+  gradleCategory = classifyGradleFailure(rawLogFile);
+}
+const githubAnnotationIndex = args.indexOf("--github-annotation");
+const githubAnnotation = githubAnnotationIndex !== -1;
+if (githubAnnotation) {
+  args.splice(githubAnnotationIndex, 1);
+  if (args.includes("--github-annotation") || process.env.GITHUB_ACTIONS !== "true" || !phase) {
+    throw new Error(
+      "GitHub annotation mode requires one flag, GitHub Actions, and a bounded phase.",
+    );
+  }
 }
 const roots = args;
 if (roots.length === 0) {
@@ -47,6 +304,35 @@ const attribute = (tag, name) => {
 const rawAttribute = (tag, name) => {
   const match = tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
   return match?.[1] ?? "";
+};
+const suppressedStaleLifecycleDiagnostic = (className, testName, failureTag) => {
+  if (className !== suppressedStaleLifecycleClass) return null;
+  const allowedAssertions = suppressedStaleLifecycleAssertions.get(testName);
+  if (!allowedAssertions) return null;
+  const message = rawAttribute(failureTag, "message");
+  const assertion = [...allowedAssertions].find(
+    (candidate) => message === candidate || message.startsWith(`${candidate} expected:&lt;`),
+  );
+  return assertion ? Object.freeze({ test: testName, assertion }) : null;
+};
+const boundedAuthFailureIdentity = (className, testName, authCorpusId, body) => {
+  const knownTest = knownJvmUnitTests.get(className);
+  if (!knownTest) return null;
+  let test = null;
+  if (className === "com.fluyo.app.AuthRuntimeKernelTest" && authCorpusId) {
+    test = `auth_corpus_${authCorpusId}`;
+  } else if (knownTest.methods?.has(testName)) {
+    test = testName;
+  } else {
+    return null;
+  }
+  const escapedSource = knownTest.source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const lineMatch = body.match(
+    new RegExp(`(?:^|[(/\\\\\\s])${escapedSource}:([1-9][0-9]{0,3})(?![0-9])`),
+  );
+  const parsedLine = lineMatch ? Number(lineMatch[1]) : null;
+  const sourceLine = parsedLine !== null && parsedLine <= knownTest.maxLine ? parsedLine : null;
+  return Object.freeze({ testClass: knownTest.alias, test, sourceLine });
 };
 const frameworkFailureCategory = (tag) => {
   const match = tag.match(/(?:^|\s)type="([^"]*)"/);
@@ -136,6 +422,9 @@ const runtimeCategories = (body) => {
 };
 
 const failures = [];
+const annotationProvenance = new WeakMap();
+const suppressedStaleLifecycleDiagnostics = new WeakMap();
+const boundedAuthFailureIdentities = new WeakMap();
 for (const file of xmlFiles.sort()) {
   const xml = fs.readFileSync(file, "utf8");
   for (const match of xml.matchAll(/<testcase\b([^>]*)>([\s\S]*?)<\/testcase>/g)) {
@@ -144,27 +433,194 @@ for (const file of xmlFiles.sort()) {
     const kind = failureTag?.[1] ?? null;
     if (!kind) continue;
     const className = attribute(attributes, "classname");
+    const authKernel = className === "com.fluyo.app.AuthRuntimeKernelTest";
+    const rawTestName = rawAttribute(attributes, "name");
+    const authNameMatch = rawTestName.match(
+      /^canonicalScenarioOrInvariant\[(?:[0-9]|[1-3][0-9]|40):([a-z0-9_]+)@[0-9a-f]{64}\]$/,
+    );
+    const authCorpusId =
+      authNameMatch && authCorpusIds.has(authNameMatch[1]) ? authNameMatch[1] : null;
     const sourceName = className.split(".").at(-1)?.split("$")[0] ?? "unknown";
     const escapedSourceName = sourceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const sourceLineMatch = body.match(new RegExp(`${escapedSourceName}\\.kt:(\\d{1,5})`));
     const sourceLine = sourceLineMatch ? Number(sourceLineMatch[1]) : null;
-    failures.push({
+    const inlineDiagnosticSource = `${rawAttribute(failureTag[2], "message")}\n${body}`;
+    const inlineDetailedMatch = authKernel
+      ? inlineDiagnosticSource.match(authDiagnosticPattern)
+      : null;
+    const inlineDetailed =
+      inlineDetailedMatch &&
+      authCorpusId &&
+      authCorpusIds.has(inlineDetailedMatch[1]) &&
+      inlineDetailedMatch[1] === authCorpusId
+        ? inlineDetailedMatch
+        : null;
+    const inlineFallbackMatch = inlineDiagnosticSource.match(diagnosticFallbackPattern);
+    const inlineGeneric =
+      authKernel && authCorpusId && inlineFallbackMatch
+        ? Object.freeze({
+            fallback: true,
+            stage: inlineFallbackMatch[1],
+            mismatch: inlineFallbackMatch[2],
+          })
+        : authKernel && authCorpusId && diagnosticUnavailablePattern.test(inlineDiagnosticSource)
+          ? unavailableDiagnostic
+          : null;
+    const matchingSidecar = sidecarDiagnostic?.corpusId === authCorpusId ? sidecarDiagnostic : null;
+    const sameDetailedSidecar =
+      inlineDetailed &&
+      matchingSidecar &&
+      Array.isArray(matchingSidecar.marker) &&
+      matchingSidecar.marker[0] === inlineDetailed[0];
+    const selectedDiagnostic = inlineDetailed
+      ? {
+          marker: inlineDetailed,
+          provenance: {
+            origin: "inline",
+            ...(sameDetailedSidecar ? { producer: matchingSidecar.producer } : {}),
+          },
+        }
+      : matchingSidecar
+        ? {
+            marker: matchingSidecar.marker,
+            provenance: { origin: "sidecar", producer: matchingSidecar.producer },
+          }
+        : inlineGeneric
+          ? { marker: inlineGeneric, provenance: { origin: "inline" } }
+          : null;
+    const authDiagnostic = selectedDiagnostic?.marker ?? null;
+    const lifecycleDiagnostic = suppressedStaleLifecycleDiagnostic(
       className,
-      testName: attribute(attributes, "name"),
+      rawTestName,
+      failureTag[2],
+    );
+    const boundedAuthFailure = boundedAuthFailureIdentity(
+      className,
+      rawTestName,
+      authCorpusId,
+      body,
+    );
+    const failure = {
+      className: authKernel ? "auth_kernel" : className,
+      testName:
+        authKernel && authCorpusId
+          ? `auth_corpus_${authCorpusId}`
+          : authKernel
+            ? "auth_vector_unknown"
+            : attribute(attributes, "name"),
       kind,
-      category: boundedStageCategory(failureTag[2], body) ?? failureCategory(failureTag[2]),
+      category:
+        boundedStageCategory(failureTag[2], body) ??
+        (authKernel ? "auth_contract" : failureCategory(failureTag[2])),
       frameworkFailureCategory: frameworkFailureCategory(failureTag[2]),
       runtimeCategories: runtimeCategories(body),
       sourceLine,
-    });
+      ...(authDiagnostic
+        ? {
+            authDiagnostic: normalizeBoundedDiagnostic(authDiagnostic, authCorpusId),
+          }
+        : {}),
+    };
+    failures.push(failure);
+    if (authDiagnostic) annotationProvenance.set(failure, selectedDiagnostic.provenance);
+    if (lifecycleDiagnostic) {
+      suppressedStaleLifecycleDiagnostics.set(failure, lifecycleDiagnostic);
+    }
+    if (boundedAuthFailure) boundedAuthFailureIdentities.set(failure, boundedAuthFailure);
   }
 }
 
 const summary = { structuredReports: xmlFiles.length, failures };
+const mappedFailures = failures
+  .map((candidate) => boundedAuthFailureIdentities.get(candidate))
+  .filter(Boolean);
+const authTestAliases = new Set([
+  "auth_kernel",
+  "auth_diagnostic_sidecar",
+  "auth_suppressed_stale_lifecycle",
+]);
+const reportState =
+  xmlFiles.length === 0
+    ? "no_reports"
+    : failures.length === 0
+      ? "no_failure_nodes"
+      : mappedFailures.some((candidate) => authTestAliases.has(candidate.testClass))
+        ? "mapped_auth_failure"
+        : mappedFailures.length > 0
+          ? "mapped_foundation_failure"
+          : "unmapped_test_failure";
 if (phase) {
   summary.diagnostic = {
     phase,
     category: xmlFiles.length === 0 ? "pre_report_failure" : "structured_test_failure",
+    ...(rawLogRequested ? { report_state: reportState, gradle_category: gradleCategory } : {}),
   };
 }
-process.stdout.write(`${JSON.stringify(summary)}\n`);
+if (githubAnnotation) {
+  const failure = failures.find(
+    (candidate) => candidate.className === "auth_kernel" && candidate.authDiagnostic,
+  );
+  const lifecycleFailure = failures.find((candidate) =>
+    suppressedStaleLifecycleDiagnostics.has(candidate),
+  );
+  const lifecycleDiagnostic = lifecycleFailure
+    ? suppressedStaleLifecycleDiagnostics.get(lifecycleFailure)
+    : null;
+  const boundedAuthFailure = failures
+    .map((candidate) => boundedAuthFailureIdentities.get(candidate))
+    .find(Boolean);
+  const fields = [
+    `phase=${phase}`,
+    `category=${failure || lifecycleDiagnostic || boundedAuthFailure ? "auth_contract" : summary.diagnostic.category}`,
+  ];
+  if (rawLogRequested) {
+    fields.push(`report_state=${reportState}`, `gradle_category=${gradleCategory}`);
+  }
+  const provenance = failure
+    ? annotationProvenance.get(failure)
+    : sidecarDiagnostic
+      ? { origin: "sidecar", producer: sidecarDiagnostic.producer }
+      : null;
+  const diagnostic =
+    failure?.authDiagnostic ??
+    (sidecarDiagnostic
+      ? normalizeBoundedDiagnostic(sidecarDiagnostic.marker, sidecarDiagnostic.corpusId)
+      : null);
+  if (diagnostic) {
+    fields.push(
+      `corpus=${diagnostic.corpusId}`,
+      `stage=${diagnostic.stage}`,
+      `mismatch=${diagnostic.mismatch}`,
+    );
+    if (diagnostic.expectedCount !== undefined) {
+      fields.push(
+        `expected_count=${diagnostic.expectedCount}`,
+        `actual_count=${diagnostic.actualCount}`,
+      );
+    }
+    if (diagnostic.index !== undefined) fields.push(`index=${diagnostic.index}`);
+    if (diagnostic.expected !== undefined) {
+      fields.push(`expected=${diagnostic.expected}`, `actual=${diagnostic.actual}`);
+    }
+    if (provenance) {
+      fields.push(`origin=${provenance.origin}`);
+      if (provenance.producer === diagnosticProducer) {
+        fields.push(`producer=${diagnosticProducer}`);
+      }
+    }
+  } else if (lifecycleDiagnostic) {
+    fields.push(`test=${lifecycleDiagnostic.test}`, `assertion=${lifecycleDiagnostic.assertion}`);
+  } else if (boundedAuthFailure) {
+    fields.push(
+      `test_class=${boundedAuthFailure.testClass}`,
+      `test=${boundedAuthFailure.test}`,
+      "outcome=known_test_unclassified",
+    );
+    if (boundedAuthFailure.sourceLine !== null) {
+      fields.push(`source_line=${boundedAuthFailure.sourceLine}`);
+    }
+  }
+  process.stdout.write(githubWorkflowErrorAnnotation(fields.join("; ")));
+} else {
+  process.stdout.write(`${JSON.stringify(summary)}\n`);
+}

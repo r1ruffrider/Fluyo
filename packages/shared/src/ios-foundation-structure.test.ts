@@ -14,6 +14,7 @@ const expectedIosFiles = [
   "Fluyo.xcodeproj/project.pbxproj",
   "Fluyo.xcodeproj/xcshareddata/xcschemes/Fluyo.xcscheme",
   "Fluyo/AppConfiguration.swift",
+  "Fluyo/AuthRuntimeKernel.swift",
   "Fluyo/FluyoApp.swift",
   "Fluyo/FoundationShellModel.swift",
   "Fluyo/FoundationShellView.swift",
@@ -23,6 +24,7 @@ const expectedIosFiles = [
   "Fluyo/Localizable.xcstrings",
   "Fluyo/PrivacyInfo.xcprivacy",
   "FluyoTests/AppConfigurationTests.swift",
+  "FluyoTests/AuthRuntimeKernelTests.swift",
   "FluyoTests/FoundationShellModelTests.swift",
   "FluyoTests/FoundationTelemetryTests.swift",
   "FluyoTests/FoundationDesignTokensTests.swift",
@@ -181,9 +183,59 @@ describe("iOS unsigned foundation structure", () => {
     }
   });
 
+  it("keeps async completion checks outside Boolean autoclosures", () => {
+    const kernelTests = read("apps/ios/FluyoTests/AuthRuntimeKernelTests.swift");
+    expect(kernelTests).not.toMatch(/(?:&&|\|\|)[^;\n{}]*\bawait\b/);
+    expect(kernelTests).toContain("let sleepSuspended = suspendSleep");
+    expect(kernelTests).toContain("if sleepSuspended { pendingCommands = false }");
+    expect(kernelTests).toContain("else { pendingCommands = await completions.hasCommands() }");
+    expect(kernelTests).toContain(
+      "let shouldSuspend = sleepSuspended || pendingCommands || milliseconds == 500",
+    );
+    expect(kernelTests).toContain("setSuspendSleep");
+    expect(kernelTests).toContain('completions.take(["timer_fired"])');
+    expect(kernelTests).toContain("setDelayedElapsed");
+  });
+
+  it("keeps synthetic values out of XCTestCase concurrency captures", () => {
+    const kernelTests = read("apps/ios/FluyoTests/AuthRuntimeKernelTests.swift");
+    const fixtureIndex = kernelTests.indexOf("private enum SyntheticAuthFixture");
+    const testCaseIndex = kernelTests.indexOf("final class AuthRuntimeKernelTests: XCTestCase");
+    expect(fixtureIndex).toBeGreaterThan(-1);
+    expect(fixtureIndex).toBeLessThan(testCaseIndex);
+    const testCaseBody = kernelTests.slice(testCaseIndex);
+    expect(testCaseBody).not.toContain("private func candidate()");
+    expect(testCaseBody).not.toContain("private func ingress()");
+    expect(
+      testCaseBody
+        .replaceAll("SyntheticAuthFixture.candidate()", "")
+        .replaceAll("SyntheticAuthFixture.ingress()", ""),
+    ).not.toMatch(/\b(?:candidate|ingress)\(\)/);
+    expect(
+      testCaseBody.match(
+        /let \w+(?:Ingress|Candidate) = SyntheticAuthFixture\.(?:ingress|candidate)\(\)\r?\n\s*(?:async let \w+: Void =|let \w+ = Task \{)/g,
+      ),
+    ).toHaveLength(16);
+    for (const start of testCaseBody.match(/(?:async let[^\n]*|Task\s*\{[^{}]*\})/g) ?? []) {
+      expect(start).not.toMatch(/SyntheticAuthFixture\.(?:candidate|ingress)\(\)/);
+    }
+    expect(testCaseBody).toContain("let callback = p.callback, generations = p.generations");
+    const detachedBodies = [...testCaseBody.matchAll(/Task\.detached\s*\{([^{}]*)\}/g)].map(
+      (match) => match[1],
+    );
+    expect(detachedBodies).toHaveLength(3);
+    expect(detachedBodies.join("\n")).not.toMatch(/\bp\./);
+    expect(detachedBodies).toEqual([
+      " await callback.purge(generation: 1) ",
+      " generations.waitComparisonStarted() ",
+      " generations.activate(2) ",
+    ]);
+  });
+
   it("pins exact-source split-runtime evidence and uploads only a sanitized union", () => {
     const workflow = read(".github/workflows/ios.yml");
     const script = read("scripts/ios-ci.sh");
+    const failureSummarizer = read("scripts/summarize-ios-test-failures.mjs");
     const evidence = read("scripts/ios-evidence.mjs");
     const scanner = read("scripts/scan-ios-evidence.mjs");
     expect(workflow).toContain("runs-on: macos-14");
@@ -195,6 +247,8 @@ describe("iOS unsigned foundation structure", () => {
     expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
     expect(workflow).toContain("if: success()");
     expect(workflow).toContain("retention-days: 7");
+    expect(workflow.match(/scripts\/github-workflow-annotation\.mjs/g)).toHaveLength(2);
+    expect(workflow.match(/scripts\/github-workflow-annotation\.test\.mjs/g)).toHaveLength(2);
     expect(script).toContain("/Applications/Xcode_16.2.app/Contents/Developer");
     expect(script).toContain("/Applications/Xcode_26.6.app/Contents/Developer");
     expect(script).toContain('ACTUAL_SHA="$(git -C "$ROOT_DIR" rev-parse HEAD)"');
@@ -211,6 +265,30 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain('"runtimeIdentifier"');
     expect(script).toContain("CODE_SIGNING_ALLOWED=NO");
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
+    expect(script).toContain('if [[ "${GITHUB_ACTIONS:-}" == "true" ]]');
+    expect(script).toContain("summary_args+=(--github-annotation)");
+    expect(failureSummarizer).toContain(
+      'new Set(["AuthRuntimeKernel.swift", "AuthRuntimeKernelTests.swift"])',
+    );
+    expect(failureSummarizer).toContain("compilerErrorPattern.exec(raw)");
+    expect(failureSummarizer).toContain("number <= 65_535");
+    for (const reason of [
+      "task_transfer",
+      "sendability",
+      "actor_isolation",
+      "type_inference",
+      "type_mismatch",
+      "missing_member",
+      "syntax",
+      "other",
+    ]) {
+      expect(failureSummarizer).toContain(`return "${reason}"`);
+    }
+    expect(failureSummarizer).toContain("source: compilerSources.has(compilerErrorMatch[1])");
+    expect(failureSummarizer).toContain('if (category === "compile" && compilerDiagnostic)');
+    expect(script).toMatch(
+      /node "\$ROOT_DIR\/scripts\/summarize-ios-test-failures\.mjs" "\$\{summary_args\[@\]\}"\s+return 1/,
+    );
     expect(script).toContain("validate_app_configuration");
     expect(script).toContain("testNaturalDebugLaunchRendersAnInternalMarker");
     expect(script).toContain("testUnapprovedPublicHostIsRejectedFromInternalConfiguration");
