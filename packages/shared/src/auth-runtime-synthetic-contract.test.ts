@@ -465,7 +465,12 @@ describe("native auth executable synthetic kernel", () => {
     expect(workflow).toContain("--github-annotation");
     expect(workflow.match(/scripts\/github-workflow-annotation\.mjs/g)).toHaveLength(2);
     expect(workflow.match(/scripts\/github-workflow-annotation\.test\.mjs/g)).toHaveLength(2);
-    expect(build).toContain('layout.buildDirectory.file("auth-runtime-diagnostic.txt")');
+    expect(build).toContain(
+      'tasks.withType<Test>().configureEach {\n    val authDiagnosticFile = layout.buildDirectory.file("auth-runtime-diagnostic.txt")',
+    );
+    expect(build).not.toContain(
+      'val authDiagnosticFile = layout.buildDirectory.file("auth-runtime-diagnostic.txt")\n\ntasks.withType<Test>().configureEach',
+    );
     expect(build).toContain('systemProperty("fluyo.authDiagnosticFile"');
     expect(build).toContain("doFirst { authDiagnosticFile.get().asFile.delete() }");
     const diagnosticCorpusSet = kernelTest.match(

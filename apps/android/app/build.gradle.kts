@@ -6,9 +6,8 @@ plugins {
     id("androidx.baselineprofile")
 }
 
-val authDiagnosticFile = layout.buildDirectory.file("auth-runtime-diagnostic.txt")
-
 tasks.withType<Test>().configureEach {
+    val authDiagnosticFile = layout.buildDirectory.file("auth-runtime-diagnostic.txt")
     systemProperty("fluyo.authDiagnosticFile", authDiagnosticFile.get().asFile.absolutePath)
     doFirst { authDiagnosticFile.get().asFile.delete() }
 }
