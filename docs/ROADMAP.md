@@ -125,7 +125,15 @@ Completion evidence (2026-10-18): PRs #26–#32 delivered the accepted contract,
 
 Goal: establish installable authenticated iOS and Android applications after ADR 0004 is accepted.
 
-Planning contract: [SPRINT_5_PLAN.md](SPRINT_5_PLAN.md). Active prerequisite and evidence register: [SPRINT_5_DECISION_REGISTER.md](SPRINT_5_DECISION_REGISTER.md). Status: the implementation plan is accepted and Increment 1 records unresolved decisions; no native implementation or external account action has started.
+Planning contract: [SPRINT_5_PLAN.md](SPRINT_5_PLAN.md). Active prerequisite and evidence register: [SPRINT_5_DECISION_REGISTER.md](SPRINT_5_DECISION_REGISTER.md). Status: the native planning, contract inventory, iOS foundation, Android foundation, provider-neutral auth-state contract, live-auth readiness governance, and credential-free synthetic auth kernel are implemented and audited. Live authentication is not implemented: 14 material decisions remain open, live runtime evidence is zero, and all 24 mirrored live-auth rows remain unattempted. No store, signing, production, credential, domain, dashboard, or external-account action is authorized by this status.
+
+Synthetic-kernel completion evidence (2026-10-28): PR #54 merged as
+`a5658045cd7d780665cf11cedfb5daccc2c6fc82` after Catalina, Renata, Natalia, and Elana passed the unchanged
+review head `9eaaf29e59bcb29e76461b8ff702a5f5025ec0da`. Elana counted 634 conducted tests: 634 passed and zero
+failed. All 15 pull-request checks passed, and post-main protected CI `40769872899`, Android foundation
+`40769872908`, iOS foundation `40769872904`, and approval history `40769872676` all succeeded. The safe claim
+is limited to a credential-free, repository-only, non-production synthetic kernel. Increment 5 live auth remains
+gated by five proposed and nine blocked material decisions; safe evidence and specification work continues.
 
 - Create SwiftUI and Kotlin/Compose projects with development, staging, and production configurations.
 - Implement Supabase PKCE, secure token storage, universal/App Links, API clients, design tokens, localization, accessibility, telemetry, feature flags, and CI-signed internal builds.
