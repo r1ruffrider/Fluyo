@@ -24,6 +24,28 @@ spending, destructive, external-account, credential actions, and material produc
 Adriana verifies post-main workflows and starts the next documented increment automatically. An external
 approval system rejection pauses only the rejected merge and must be reported.
 
+## Sprint 5 Increment 5 native-auth decision brief checkpoint — 2026-10-29
+
+PR #56 merged the proposal-only
+[native-auth decision brief](NATIVE_AUTH_DECISION_BRIEF_2026-10-29.md) as
+`b8919d2fc5cfd530bace711c51aba3726daf763e`. Elana's independent audit passed 159 of 159 conducted
+checks on the unchanged review head `da468ee1d5f324cff232bcf1389ef07e2e25d39f`. Catalina's architecture
+and contract review passed 34 of 34 checks, and Natalia's security review passed 153 of 153 checks on that
+same exact head. All nine pull-request gates passed. After merge, protected CI run `40893241156` and Auth
+approval history run `40893240963` completed successfully on merged `main`.
+
+The brief organizes recommendations and tradeoffs; it does not accept or authorize any material choice. All
+14 native-auth decisions remain unaccepted: five are `PROPOSED` and nine are `BLOCKED`. Live native runtime
+evidence remains zero conducted, zero passed, zero failed, and 24 unattempted. No SDK, runtime adapter,
+credential, domain, callback registration, dashboard value, external account, production, signing, store,
+spending, destructive action, or completion claim is authorized by this checkpoint.
+
+Marlon has been notified to approve the recommended native-auth bundle or list deviations and to name a backup
+non-production custodian. While that material decision boundary remains open, the safe fallback continues:
+credential-free repository contracts, specifications, validators, and synthetic evidence only. Any accepted
+decision must be recorded through the existing content-addressed approval-history process before implementation
+or external action can rely on it.
+
 ## Sprint 5 Increment 5 synthetic native-auth kernel completion — 2026-10-29
 
 PR #54 merged the credential-free, repository-only provider-neutral native-auth synthetic kernel as
