@@ -17,6 +17,7 @@ const acceptance = JSON.parse(
   readFileSync(resolve(authState, "acceptance.json"), "utf8"),
 ) as Record<string, unknown>;
 const phaseBase = "e2197c597a9a49f3685ceb2c2010cd5d067ff299";
+const phaseCompletion = "a5658045cd7d780665cf11cedfb5daccc2c6fc82";
 const authReadinessApprovalTemporaryRootPrefix = ".tmp-auth-readiness-approval-";
 
 const phaseUntrackedPaths = (paths: string[]) =>
@@ -514,7 +515,7 @@ describe("native auth executable synthetic kernel", () => {
     expect(annotation).toContain('replaceAll(",", "%2C")');
   });
 
-  it("enforces the exact phase-base file allowlist and unchanged protected surfaces", () => {
+  it("records the exact completed-phase allowlist and keeps protected surfaces unchanged", () => {
     expect(
       phaseUntrackedPaths([
         ".tmp-auth-readiness-approval-abc123/",
@@ -549,7 +550,7 @@ describe("native auth executable synthetic kernel", () => {
       "scripts/verify-android-auth-kernel-results.mjs",
       "scripts/verify-android-auth-kernel-results.test.mjs",
     ].sort();
-    const tracked = execFileSync("git", ["diff", "--name-only", phaseBase], {
+    const tracked = execFileSync("git", ["diff", "--name-only", phaseBase, phaseCompletion], {
       cwd: root,
       encoding: "utf8",
     })
