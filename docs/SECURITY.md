@@ -193,6 +193,51 @@ Do not open a public issue containing a vulnerability, exploit, credential, or c
 
 ## Native-auth approval-history security boundary
 
+### Material-decision ledger v2 bootstrap
+
+The `fluyo-native-auth-material-decisions-v2` ledger is isolated from the v1 phase-approval ledger
+and anchors v1 by exact immutable digests. Its bootstrap contains only a canonical 14-ID selection
+manifest and genesis record; it contains no Marlon selection event. A later selection must append all
+14 decisions atomically against the merged trusted base. Seven exact selections initially fold to
+`OWNER_SELECTED_EVIDENCE_PENDING`, never `ACCEPTED`, while the other seven remain
+`DEFERRED_OPEN`. Only a latest-pointer evidence-closure event can produce `ACCEPTED`; runtime is
+required to consume accepted values only. Supersession, revocation, duplicate IDs, unknown IDs,
+partial bundles, stale pointers, value drift, record/index tampering, and unauthorized cross-ledger
+references fail closed.
+
+The manifest keeps credentials, live adapters, native runtime, dependency selection/installation,
+production, signing, store/release, physical devices, spend, publication, destructive/data actions,
+domains, and external accounts/dashboards explicitly unauthorized. iOS permits only credential-free
+evaluation of `supabase-swift` 2.55.5 with Xcode 16.3 or newer; selection, installation, and live use
+remain false. Android remains `WAIT_FOR_ELIGIBLE_STABLE_FIXED_RELEASE`, rejects 3.8.0, has no
+coordinate or version, and does not accept a beta.
+
+The v2 `pull_request_target` workflow has read-only permissions and executes the exact base-controlled
+validator against candidate data. It cannot protect its own bootstrap pull request because it is not
+yet present on the base branch; the later selection-record pull request is its first base-controlled
+material-record validation. Bootstrap therefore relies on local validation, existing protected CI,
+specialist gates, and Elana's final exact-head audit. Branch-protection configuration is a separate
+external action and is not authorized by this repository change.
+
+Evidence closure is bound to the unchanged indexed decision manifest and selected-value digest. It
+requires every exact evidence key from the immutable v1 decision policy, durable Git references whose
+bytes remain in the closure subject, and distinct exact-head PASS attestations for architecture,
+security, infrastructure, protected CI, Elana, and each applicable domain specialist. Repository
+paths, commits, evidence bytes, and attestations fail closed on mismatch. Every closed attestation
+must name the exact reviewer fixed for its gate; `ELANA_EXACT_HEAD` accepts only Elana Castillo.
+`AUTH-REVOCATION` also requires Camila's UX/accessibility, Daniela's visual/mobile/motion, and
+Isabella's claims attestations. An arbitrary nonempty string, wrong reviewer, or incomplete specialist
+inventory cannot authorize `ACCEPTED`. Closed review ordinals are unique and gap-free, and Elana's
+exact-head QA ordinal must be greatest and final.
+
+Initial and superseding decision manifests use a closed selected-value shape for each of the 14
+decision IDs. Recursive validation rejects secret-bearing keys, secret-like values, and any nested
+attempt to enable a forbidden runtime or dependency capability even when the top-level authorization
+flags remain false. Real Git fixtures cover the frozen-subject `T` to append `L` flow and its squash
+head; stale concurrent bases, prior index-prefix mutation, and unindexed record files fail closed. An
+appended record's provenance source must already be an ancestor of the exact PR base so squash cannot
+erase a candidate-created frozen subject.
+
 The append-only approval ledger stores only canonical repository paths, SHA-256 digests, public governance declarations, gate names, and bounded authority. It stores no credentials, secrets, tokens, private account identifiers, customer data, or PII. Paths are sorted, unique repository-relative regular blobs; traversal, symlinks, absolute paths, unindexed records, stale prefixes, and unknown authority fields fail closed. Natalia reviews the exact frozen subject bundle before any delegated phase approval. Production, credentials, signing, store/release, spend, destructive/data, external account/dashboard/domain, physical-device, and publication actions remain outside the delegation. Material-decision approval and supersession events are denied in ledger v1. The records prove repository integrity and declared authority after recording, not cryptographic human nonrepudiation.
 
 The direct-Marlon `DEPENDENCY_LOCK_REMEDIATION_OPTION_A` authorization is limited to the exact atomic Vitest 4.1.11 → 4.1.12 development-tool bundle recorded from historical provenance `a886b75af125b5a69e2ee3f42471ceb2700eeec1`. The current `0b5032b0e05539f31ad7efe1b8806ec55f5f91a2` bundle is neither the authorized base nor target and the authorization is dormant. It satisfies no native evidence and authorizes no runtime, product, or external action.

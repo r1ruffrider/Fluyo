@@ -1,0 +1,19 @@
+{
+  "decisionValues": [
+    {
+      "digest": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+      "path": "contracts/mobile/auth-readiness/v2/decision-values/cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf.json"
+    }
+  ],
+  "ledgerId": "fluyo-native-auth-material-decisions-v2",
+  "policySha256": "8199ec2ec95f1a5b23235645676e75c015a230267f2e2910f73dcad01ecd7bca",
+  "records": [
+    {
+      "digest": "f9db948e9d41cc8959fc9b4c3d4ef2c67814832eb513c4592388a2a984e6dc71",
+      "path": "contracts/mobile/auth-readiness/v2/material-decision-history/records/f9db948e9d41cc8959fc9b4c3d4ef2c67814832eb513c4592388a2a984e6dc71.json",
+      "sequence": 1
+    }
+  ],
+  "schemaSha256": "5812a4d80d5446399312b20fe9b317fee9b6fd7afeba9a9bcd44412692160693",
+  "schemaVersion": "2.0.0"
+}
