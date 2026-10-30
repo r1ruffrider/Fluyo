@@ -52,10 +52,13 @@ records, or research domain. Each attestation has a closed `reviewer` field that
 trusted gate-to-reviewer map; Elana Castillo is the only accepted reviewer for `ELANA_EXACT_HEAD`.
 `AUTH-REVOCATION` specifically requires Camila's UX/accessibility, Daniela's visual/mobile/motion,
 and Isabella's claims gates in addition to the fixed gates. Arbitrary strings, wrong reviewers, and
-incomplete gate sets cannot produce `ACCEPTED`.
+incomplete gate sets cannot produce `ACCEPTED`. Review ordinals are unique, gap-free, and fixed by
+the required gate order; Elana's ordinal must be greatest and final.
 
 Branch-protection configuration is an external repository action and is not authorized by this
 bootstrap. It must be handled separately under the repository's external-action approval process.
 The validator's append fixtures exercise the full frozen-subject `T` to ledger append `L` path and
 the equivalent squash head, and reject stale concurrent bases, historical index-prefix edits, and
-unindexed content-addressed records.
+unindexed content-addressed records. Every appended record's frozen subject commit must already be
+an ancestor of the exact pull-request base, so a candidate-created subject cannot disappear during
+squash merge.

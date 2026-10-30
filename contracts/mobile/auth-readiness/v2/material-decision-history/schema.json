@@ -93,6 +93,10 @@
             "RENATA_INFRASTRUCTURE"
           ]
         },
+        "reviewOrdinal": {
+          "minimum": 1,
+          "type": "integer"
+        },
         "reviewedHead": {
           "pattern": "^[0-9a-f]{40}$",
           "type": "string"
@@ -120,6 +124,7 @@
         "decisionManifestSha256",
         "decisionValueSha256",
         "gate",
+        "reviewOrdinal",
         "reviewedHead",
         "reviewer",
         "status"

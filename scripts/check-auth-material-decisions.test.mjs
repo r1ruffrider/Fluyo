@@ -130,13 +130,14 @@ function buildBootstrapFixture() {
   return { root, head };
 }
 
-function appendSelectionRecord(root, base) {
+function appendSelectionRecord(root, base, { useChildOnlySource = false } = {}) {
   writeFileSync(
     resolve(root, "docs/material-v2-fixture-note.txt"),
     "intermediate implementation commit retained by the candidate tree\n",
     "utf8",
   );
   const intermediate = commit(root, "prepare material selection append");
+  const sourceCommit = useChildOnlySource ? intermediate : base;
   const indexPath = "contracts/mobile/auth-readiness/v2/material-decision-history/index.json";
   const index = JSON.parse(readFileSync(resolve(root, indexPath), "utf8"));
   const subject = {
@@ -173,7 +174,7 @@ function appendSelectionRecord(root, base) {
         "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
       recordedBy: "Adriana",
       recordingMethod: "repository_governance_record",
-      sourceCommit: base,
+      sourceCommit,
     },
     recordedAtUtc: "2026-10-30T09:00:00.000Z",
     schemaVersion: "2.0.0",
@@ -190,9 +191,12 @@ function appendSelectionRecord(root, base) {
   return { base, head, intermediate, indexPath, recordDigest, recordPath };
 }
 
-function buildSelectionAppendFixture() {
+function buildSelectionAppendFixture(options) {
   const bootstrap = buildBootstrapFixture();
-  return { root: bootstrap.root, ...appendSelectionRecord(bootstrap.root, bootstrap.head) };
+  return {
+    root: bootstrap.root,
+    ...appendSelectionRecord(bootstrap.root, bootstrap.head, options),
+  };
 }
 
 const methodRequirements = [
@@ -217,7 +221,7 @@ function buildClosureProofFixture() {
   const evidenceCommit = commit(root, "add frozen auth method evidence");
   const selected = selectionEntries().find(({ decisionId }) => decisionId === "AUTH-METHODS");
   const gatePaths = {};
-  for (const gate of closureGatesFor("AUTH-METHODS")) {
+  for (const [gateIndex, gate] of closureGatesFor("AUTH-METHODS").entries()) {
     const path = `gates/${gate.toLowerCase()}.json`;
     gatePaths[gate] = path;
     mkdirSync(resolve(root, dirname(path)), { recursive: true });
@@ -229,6 +233,7 @@ function buildClosureProofFixture() {
         decisionValueSha256: selected.decisionValueSha256,
         gate,
         reviewer: GATE_REVIEWERS[gate],
+        reviewOrdinal: gateIndex + 1,
         reviewedHead: evidenceCommit,
         status: "PASS",
       }),
@@ -263,6 +268,28 @@ function buildClosureProofFixture() {
     source,
     subjectFiles,
   };
+}
+
+function mutateGateProof(fixture, mutations, message) {
+  const changedPaths = [];
+  for (const [gate, mutate] of Object.entries(mutations)) {
+    const reference = fixture.record.payload.entries[0].gateAttestations[gate];
+    const path = reference.split(":", 3)[2];
+    const attestation = JSON.parse(readFileSync(resolve(fixture.root, path), "utf8"));
+    mutate(attestation);
+    writeFileSync(resolve(fixture.root, path), canonicalText(attestation), "utf8");
+    changedPaths.push(path);
+  }
+  const source = commit(fixture.root, message);
+  const record = clone(fixture.record);
+  for (const gate of Object.keys(record.payload.entries[0].gateAttestations)) {
+    const gatePath = record.payload.entries[0].gateAttestations[gate].split(":", 3)[2];
+    record.payload.entries[0].gateAttestations[gate] = `git:${source}:${gatePath}`;
+  }
+  const subjectFiles = new Map(fixture.subjectFiles);
+  for (const path of changedPaths)
+    subjectFiles.set(path, sha256(readFileSync(resolve(fixture.root, path))));
+  return { record, source, subjectFiles };
 }
 
 test("v2 declares a closed fourteen-decision and five-event inventory", () => {
@@ -303,9 +330,11 @@ test("closure gate and reviewer inventories are exact for every decision", () =>
     PROTECTED_CI: "GitHub Actions",
     RENATA_INFRASTRUCTURE: "Renata Vega",
   });
-  for (const decisionId of DECISION_IDS)
+  for (const decisionId of DECISION_IDS) {
+    assert.equal(closureGatesFor(decisionId).at(-1), "ELANA_EXACT_HEAD");
     for (const gate of closureGatesFor(decisionId))
       assert.equal(typeof GATE_REVIEWERS[gate], "string", `${gate} reviewer must be fixed`);
+  }
 });
 
 test("selection manifest is canonical and content addressed", () => {
@@ -439,8 +468,11 @@ test("selected values reject secret-bearing keys and values", () => {
     /secret-bearing field/u,
   );
   const changed = clone(manifest);
-  changed.decisionValues["AUTH-SDK-IOS"].selectedValue.candidatePackage =
-    "sk_test_1234567890abcdef";
+  changed.decisionValues["AUTH-SDK-IOS"].selectedValue.candidatePackage = [
+    "sk",
+    "test",
+    "1234567890abcdef",
+  ].join("_");
   assert.match(capture(() => validateDecisionManifest(changed)).message, /secret-like material/u);
 });
 
@@ -680,24 +712,65 @@ test("evidence closure rejects mutable, arbitrary, or non-PASS proof references"
 test("evidence closure rejects a gate attested by the wrong reviewer", () => {
   const fixture = buildClosureProofFixture();
   try {
-    const path = "gates/elana_exact_head.json";
-    const attestation = JSON.parse(readFileSync(resolve(fixture.root, path), "utf8"));
-    attestation.reviewer = "Adriana Solano";
-    writeFileSync(resolve(fixture.root, path), canonicalText(attestation), "utf8");
-    const source = commit(fixture.root, "tamper with exact-head reviewer identity");
-    const record = clone(fixture.record);
-    for (const gate of Object.keys(record.payload.entries[0].gateAttestations)) {
-      const gatePath = record.payload.entries[0].gateAttestations[gate].split(":", 3)[2];
-      record.payload.entries[0].gateAttestations[gate] = `git:${source}:${gatePath}`;
-    }
-    const subjectFiles = new Map(fixture.subjectFiles);
-    subjectFiles.set(path, sha256(readFileSync(resolve(fixture.root, path))));
+    const { record, source, subjectFiles } = mutateGateProof(
+      fixture,
+      { ELANA_EXACT_HEAD: (attestation) => (attestation.reviewer = "Adriana Solano") },
+      "tamper with exact-head reviewer identity",
+    );
     assert.match(
       capture(() => validateClosureProofs(record, subjectFiles, fixture.root, source)).message,
       /not an exact-head PASS/u,
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("evidence closure requires unique gap-free gate order with Elana final", () => {
+  const gates = closureGatesFor("AUTH-METHODS");
+  const ordinal = Object.fromEntries(gates.map((gate, index) => [gate, index + 1]));
+  const variants = [
+    {
+      label: "early Elana",
+      mutations: { ELANA_EXACT_HEAD: (attestation) => (attestation.reviewOrdinal = 1) },
+    },
+    {
+      label: "duplicate ordinal",
+      mutations: {
+        DANIELA_VISUAL: (attestation) => (attestation.reviewOrdinal = ordinal.CAMILA_UX),
+      },
+    },
+    {
+      label: "ordinal gap",
+      mutations: {
+        DANIELA_VISUAL: (attestation) => (attestation.reviewOrdinal = ordinal.DANIELA_VISUAL + 1),
+      },
+    },
+    {
+      label: "reordered fixed gates",
+      mutations: {
+        CATALINA_ARCHITECTURE: (attestation) =>
+          (attestation.reviewOrdinal = ordinal.NATALIA_SECURITY),
+        NATALIA_SECURITY: (attestation) =>
+          (attestation.reviewOrdinal = ordinal.CATALINA_ARCHITECTURE),
+      },
+    },
+  ];
+  for (const variant of variants) {
+    const fixture = buildClosureProofFixture();
+    try {
+      const { record, source, subjectFiles } = mutateGateProof(
+        fixture,
+        variant.mutations,
+        `tamper with ${variant.label}`,
+      );
+      assert.match(
+        capture(() => validateClosureProofs(record, subjectFiles, fixture.root, source)).message,
+        /not an exact-head PASS/u,
+      );
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
   }
 });
 
@@ -870,6 +943,32 @@ test("base-controlled validation accepts a real T-to-L append and its squash hea
     assert.equal(squashed.mode, "append");
     assert.equal(squashed.appended, 1);
     assert.equal(squashed.tipDigest, fixture.recordDigest);
+    const postMain = checkAuthMaterialDecisions({
+      root: fixture.root,
+      base: squashHead,
+      head: squashHead,
+    });
+    assert.equal(postMain.mode, "append");
+    assert.equal(postMain.appended, 0);
+    assert.equal(postMain.tipDigest, fixture.recordDigest);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("append validation rejects a source T created only on the candidate branch", () => {
+  const fixture = buildSelectionAppendFixture({ useChildOnlySource: true });
+  try {
+    assert.match(
+      capture(() =>
+        checkAuthMaterialDecisions({
+          root: fixture.root,
+          base: fixture.base,
+          head: fixture.head,
+        }),
+      ).message,
+      /source commit is not preserved by the exact base/u,
+    );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
   }

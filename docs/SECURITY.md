@@ -227,13 +227,16 @@ paths, commits, evidence bytes, and attestations fail closed on mismatch. Every 
 must name the exact reviewer fixed for its gate; `ELANA_EXACT_HEAD` accepts only Elana Castillo.
 `AUTH-REVOCATION` also requires Camila's UX/accessibility, Daniela's visual/mobile/motion, and
 Isabella's claims attestations. An arbitrary nonempty string, wrong reviewer, or incomplete specialist
-inventory cannot authorize `ACCEPTED`.
+inventory cannot authorize `ACCEPTED`. Closed review ordinals are unique and gap-free, and Elana's
+exact-head QA ordinal must be greatest and final.
 
 Initial and superseding decision manifests use a closed selected-value shape for each of the 14
 decision IDs. Recursive validation rejects secret-bearing keys, secret-like values, and any nested
 attempt to enable a forbidden runtime or dependency capability even when the top-level authorization
 flags remain false. Real Git fixtures cover the frozen-subject `T` to append `L` flow and its squash
-head; stale concurrent bases, prior index-prefix mutation, and unindexed record files fail closed.
+head; stale concurrent bases, prior index-prefix mutation, and unindexed record files fail closed. An
+appended record's provenance source must already be an ancestor of the exact PR base so squash cannot
+erase a candidate-created frozen subject.
 
 The append-only approval ledger stores only canonical repository paths, SHA-256 digests, public governance declarations, gate names, and bounded authority. It stores no credentials, secrets, tokens, private account identifiers, customer data, or PII. Paths are sorted, unique repository-relative regular blobs; traversal, symlinks, absolute paths, unindexed records, stale prefixes, and unknown authority fields fail closed. Natalia reviews the exact frozen subject bundle before any delegated phase approval. Production, credentials, signing, store/release, spend, destructive/data, external account/dashboard/domain, physical-device, and publication actions remain outside the delegation. Material-decision approval and supersession events are denied in ledger v1. The records prove repository integrity and declared authority after recording, not cryptographic human nonrepudiation.
 

@@ -98,8 +98,9 @@ export const DECISION_DOMAIN_GATES = Object.freeze({
   "AUTH-SUPABASE-ALLOWLIST": [],
 });
 export const closureGatesFor = (decisionId) => [
-  ...REQUIRED_CLOSURE_GATES,
+  ...REQUIRED_CLOSURE_GATES.filter((gate) => gate !== "ELANA_EXACT_HEAD"),
   ...(DECISION_DOMAIN_GATES[decisionId] ?? []),
+  "ELANA_EXACT_HEAD",
 ];
 
 const DIGEST = /^[0-9a-f]{64}$/;
@@ -903,7 +904,7 @@ export const validateClosureProofs = (record, subjectFiles, root, source) => {
     if (!exactKeys(gates, requiredGates))
       throw new Error(`closure ${closure.decisionId} gate inventory mismatch`);
     const gatePaths = [];
-    for (const gate of requiredGates) {
+    for (const [gateIndex, gate] of requiredGates.entries()) {
       const path = requireSubjectReference(
         gates[gate],
         source,
@@ -923,6 +924,7 @@ export const validateClosureProofs = (record, subjectFiles, root, source) => {
           "decisionValueSha256",
           "gate",
           "reviewer",
+          "reviewOrdinal",
           "reviewedHead",
           "status",
         ]) ||
@@ -931,6 +933,7 @@ export const validateClosureProofs = (record, subjectFiles, root, source) => {
         attestation.decisionValueSha256 !== closure.decisionValueSha256 ||
         attestation.gate !== gate ||
         attestation.reviewer !== GATE_REVIEWERS[gate] ||
+        attestation.reviewOrdinal !== gateIndex + 1 ||
         attestation.reviewedHead !== closure.evidenceCommit ||
         attestation.status !== "PASS"
       )
@@ -1242,6 +1245,9 @@ export function validateAppendOnly(root, base, head, ledger) {
       if (!readAt(root, head, entry.path).equals(readAt(root, base, entry.path)))
         throw new Error(`historical material ${field} bytes changed`);
   }
+  for (const { record } of ledger.records.slice(baseIndex.records.length))
+    if (!isAncestor(root, record.provenance.sourceCommit, base))
+      throw new Error("appended material record source commit is not preserved by the exact base");
   return { mode: "append", appended: ledger.records.length - baseIndex.records.length };
 }
 

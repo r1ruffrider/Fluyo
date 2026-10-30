@@ -30,13 +30,16 @@ Castillo alone for the final exact-head QA gate, and the named UX, visual, claim
 specialist for each applicable domain gate. The per-decision gate inventory is closed. In particular,
 `AUTH-REVOCATION` requires Camila Reyes, Daniela Vargas, and Isabella Navarro because its frozen
 evidence covers UX/accessibility, visual/mobile/motion, and claims concerns. A missing gate or wrong
-reviewer fails closed.
+reviewer fails closed. Gate review ordinals must be unique and gap-free, with Elana's exact-head
+review greatest and final.
 
 All initial and superseding values are checked against decision-specific closed shapes plus a
 recursive secret/capability boundary; a false top-level boundary cannot hide a nested runtime,
 dependency-installation, credential, or token authorization. The PR-B fixture validates an actual
 frozen subject `T`, append commit `L`, and squash-equivalent head, and fails stale concurrent bases,
-historical index-prefix changes, and unindexed record files.
+historical index-prefix changes, and unindexed record files. The record's frozen subject commit must
+already be an ancestor of the exact PR base; candidate-only provenance is rejected before squash can
+discard it.
 
 ## Engineering execution and test-account governance — 2026-10-18
 
