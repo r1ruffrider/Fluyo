@@ -1,0 +1,142 @@
+{
+  "boundaries": {
+    "credentialFreeDependencyEvaluation": true,
+    "credentialFreeRepositoryWork": true,
+    "credentialsOrSecrets": false,
+    "destructiveOrData": false,
+    "domains": false,
+    "externalAccountsOrDashboards": false,
+    "liveAdapters": false,
+    "nativeRuntime": false,
+    "physicalDevices": false,
+    "productDependencyInstallation": false,
+    "productDependencySelection": false,
+    "production": false,
+    "publication": false,
+    "signing": false,
+    "spend": false,
+    "storeOrRelease": false,
+    "toolchainRebaseline": true
+  },
+  "decisionValues": {
+    "AUTH-AASA": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    },
+    "AUTH-ACCOUNT-DELETION": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    },
+    "AUTH-ASSETLINKS": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    },
+    "AUTH-CALLBACK-DOMAINS": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    },
+    "AUTH-METHODS": {
+      "selectedValue": {
+        "enabled": [
+          "email_password_sign_up",
+          "email_confirmation",
+          "email_password_sign_in",
+          "password_recovery"
+        ],
+        "excluded": [
+          "social_oauth",
+          "phone_otp",
+          "passkeys",
+          "magic_link_sign_in"
+        ],
+        "ownerVerificationAuthority": "GET_/api/v1/auth/me",
+        "recoveryControlGate": "AUTH-RECOVERY-DELIVERY",
+        "unsupportedControlPolicy": "ABSENT"
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-NONPROD-CUSTODY": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    },
+    "AUTH-RECOVERY-DELIVERY": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    },
+    "AUTH-REVOCATION": {
+      "selectedValue": {
+        "issuedJwtDisclosure": "MAY_REMAIN_VALID_UNTIL_EXPIRY",
+        "localCleanupDependsOnRemote": false,
+        "remoteRevocation": "SEPARATELY_PROVEN_BEST_EFFORT",
+        "runtimeProofRequired": true
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-SDK-ANDROID": {
+      "selectedValue": {
+        "betaAccepted": false,
+        "coordinate": null,
+        "direction": "WAIT_FOR_ELIGIBLE_STABLE_FIXED_RELEASE",
+        "nativeRuntimeAuthorized": false,
+        "productDependencyInstallationAuthorized": false,
+        "productDependencySelected": false,
+        "rejectedStableVersion": "3.8.0",
+        "version": null
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-SDK-IOS": {
+      "selectedValue": {
+        "candidatePackage": "supabase-swift",
+        "candidateVersion": "2.55.5",
+        "credentialFreeGraphEvaluationAuthorized": true,
+        "minimumToolchain": "XCODE_16_3_OR_NEWER",
+        "nativeRuntimeAuthorized": false,
+        "productDependencyInstallationAuthorized": false,
+        "productDependencySelected": false,
+        "toolchainRebaselineAuthorized": true
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-SIGNOUT-SCOPE": {
+      "selectedValue": {
+        "cleanupFailure": "BLOCK_SUCCESS_AND_REPLACEMENT_OWNER_UI",
+        "guarantee": "LOCAL_DEVICE_CLEANUP_ONLY",
+        "issuedJwt": "MAY_REMAIN_VALID_UNTIL_EXPIRY",
+        "remoteRevocation": "SEPARATELY_PROVEN_BEST_EFFORT"
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-STORAGE-ANDROID": {
+      "selectedValue": {
+        "accountSwitch": "ORDERED_WIPE_BEFORE_SUCCESS",
+        "adapter": "ANDROID_KEYSTORE_AES_256_GCM",
+        "backupAllowed": false,
+        "envelope": "VERSIONED_FAIL_CLOSED",
+        "hardwareBacked": "PREFERRED_NOT_UNIVERSAL",
+        "ivBits": 96,
+        "keyScope": "PER_INSTALL",
+        "uniqueIvRequired": true
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-STORAGE-IOS": {
+      "selectedValue": {
+        "accessibility": "kSecAttrAccessibleWhenUnlockedThisDeviceOnly",
+        "accountSwitch": "ORDERED_WIPE_BEFORE_SUCCESS",
+        "adapter": "KEYCHAIN",
+        "backupRestoreMigration": false,
+        "envelope": "VERSIONED_FAIL_CLOSED",
+        "synchronizable": false
+      },
+      "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+    },
+    "AUTH-SUPABASE-ALLOWLIST": {
+      "selectedValue": null,
+      "selectionState": "DEFERRED_OPEN"
+    }
+  },
+  "schemaVersion": "2.0.0",
+  "selectionLabel": "Approve recommended bundle",
+  "sourceDecisionBriefSha256": "e7d55724bddefb384d9e60134dae4beb4c194eb6908c45fc9c09dc8852e36c17"
+}

@@ -7,3 +7,6 @@ package-lock.json
 landing/
 docs/BUSINESS_PLAN.md
 docs/~$*
+contracts/mobile/auth-readiness/v2/decision-values/*.json
+contracts/mobile/auth-readiness/v2/material-decision-history/records/*.json
+contracts/mobile/auth-readiness/v2/material-decision-history/schema.json

@@ -1,0 +1,63 @@
+{
+  "actor": "Adriana",
+  "authority": {
+    "grantedBy": "Marlon",
+    "kind": "governance_installation",
+    "referenceRecordDigests": [
+      "7ba81df658a221c77dbe83f57057aceae2e166af73751afcf94f540c00a3cd75"
+    ]
+  },
+  "eventType": "MATERIAL_DECISION_LEDGER_INITIALIZATION",
+  "ledgerId": "fluyo-native-auth-material-decisions-v2",
+  "payload": {
+    "anchorCommit": "6af78d83f6144cb7d89b01d7f1c748d2d3155637",
+    "bootstrapContainsSelectionRecord": false,
+    "decisionManifestPath": "contracts/mobile/auth-readiness/v2/decision-values/cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf.json",
+    "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+    "materialSelectionMayBeRecordedAfterBootstrapMerge": true,
+    "v1HistoricalSnapshotImmutable": true,
+    "v1LedgerId": "fluyo-native-auth-approval-history-v1",
+    "v1TipDigestAtAnchor": "cd6e350fe979c25cfbb6e659930137b681424904680b952bc10b996584d037cb",
+    "v1TipSequenceAtAnchor": 5
+  },
+  "previousRecordDigest": null,
+  "provenance": {
+    "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
+    "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+    "recordedBy": "Adriana",
+    "recordingMethod": "repository_governance_record",
+    "sourceCommit": "6af78d83f6144cb7d89b01d7f1c748d2d3155637"
+  },
+  "recordedAtUtc": "2026-10-30T08:47:46.627Z",
+  "schemaVersion": "2.0.0",
+  "sequence": 1,
+  "subject": {
+    "bundleSha256": "e0b2a662f63099a6528a36852e938f9d3493b40a77afdb8a5121f07d392f1cef",
+    "files": [
+      {
+        "path": "contracts/mobile/auth-readiness/v1/approval-history/index.json",
+        "sha256": "041085ec7d6fdef6ee924f0a64d74bcd98ef2e37912945f6932e48cdd70386a9"
+      },
+      {
+        "path": "contracts/mobile/auth-readiness/v1/approval-history/policy.json",
+        "sha256": "50ff36d460e75c3a4d56f9f46583086b7025458548ffe139c94563931f724bce"
+      },
+      {
+        "path": "contracts/mobile/auth-readiness/v1/approval-history/schema.json",
+        "sha256": "8ebacdee02a2acd87248b8b26fdc5b34d88c331bfc9d7fbe02667de5678c80e3"
+      },
+      {
+        "path": "contracts/mobile/auth-readiness/v1/decision-policy.json",
+        "sha256": "3e2aa6dabb4e9fe28b1b80e10f705f3df3968f85ed0e4e18ca8a0eb97ff9d696"
+      },
+      {
+        "path": "contracts/mobile/auth-readiness/v1/evidence/index.json",
+        "sha256": "162c0a25f5a4779b8e60abda00c9a9bf452a85cd7ea0a6b30cfe69d911ce96de"
+      },
+      {
+        "path": "docs/NATIVE_AUTH_DECISION_BRIEF_2026-10-29.md",
+        "sha256": "e7d55724bddefb384d9e60134dae4beb4c194eb6908c45fc9c09dc8852e36c17"
+      }
+    ]
+  }
+}
