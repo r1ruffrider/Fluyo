@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,6 +39,8 @@ import {
 } from "./check-auth-material-decisions.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const BOOTSTRAP_COMMIT = "80563fee339a07bd2ab9706b8186ed772a3b9a1a";
+const SELECTION_RECORD_DIGEST = "e3a9efb3651d990fd2c3f2cea0e6bcd2456ed7107f6fefc8fe09f92909f9cae1";
 const manifestPath = resolve(repoRoot, VALUES_RELATIVE, `${MANIFEST_DIGEST}.json`);
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 const digest = (character) => character.repeat(64);
@@ -86,7 +88,7 @@ const commit = (root, message) => {
   return git(root, "rev-parse", "HEAD");
 };
 
-function initializeFixtureRoot(prefix) {
+function initializeFixtureRoot(prefix, startRef = ANCHOR_COMMIT) {
   const root = mkdtempSync(resolve(tmpdir(), prefix));
   git(root, "init", "--quiet");
   const commonGitDir = git(repoRoot, "rev-parse", "--git-common-dir");
@@ -104,30 +106,13 @@ function initializeFixtureRoot(prefix) {
   git(root, "config", "core.autocrlf", "false");
   git(root, "config", "core.longpaths", "true");
   git(root, "config", "commit.gpgsign", "false");
-  git(root, "checkout", "--quiet", ANCHOR_COMMIT);
+  git(root, "checkout", "--quiet", startRef);
   return root;
 }
 
 function buildBootstrapFixture() {
-  const root = initializeFixtureRoot("fluyo-material-v2-");
-  mkdirSync(resolve(root, "contracts/mobile/auth-readiness/v2"), { recursive: true });
-  cpSync(
-    resolve(repoRoot, "contracts/mobile/auth-readiness/v2"),
-    resolve(root, "contracts/mobile/auth-readiness/v2"),
-    { recursive: true },
-  );
-  mkdirSync(resolve(root, "scripts"), { recursive: true });
-  cpSync(
-    resolve(repoRoot, "scripts/check-auth-material-decisions.mjs"),
-    resolve(root, "scripts/check-auth-material-decisions.mjs"),
-  );
-  mkdirSync(resolve(root, ".github/workflows"), { recursive: true });
-  cpSync(
-    resolve(repoRoot, ".github/workflows/auth-material-decisions.yml"),
-    resolve(root, ".github/workflows/auth-material-decisions.yml"),
-  );
-  const head = commit(root, "bootstrap material decision ledger v2");
-  return { root, head };
+  const root = initializeFixtureRoot("fluyo-material-v2-", BOOTSTRAP_COMMIT);
+  return { root, head: BOOTSTRAP_COMMIT };
 }
 
 function appendSelectionRecord(root, base, { useChildOnlySource = false } = {}) {
@@ -496,6 +481,59 @@ test("atomic selection folds to seven evidence-pending and seven deferred", () =
     [...state.values()].some(({ status }) => status === "ACCEPTED"),
     false,
   );
+});
+
+test("repository records the exact atomic selection without acceptance", () => {
+  const ledgerRoot = resolve(
+    repoRoot,
+    "contracts/mobile/auth-readiness/v2/material-decision-history",
+  );
+  const index = parseCanonical(readFileSync(resolve(ledgerRoot, "index.json")), "material index");
+  assert.equal(index.records.length, 2);
+  assert.deepEqual(index.records[1], {
+    digest: SELECTION_RECORD_DIGEST,
+    path: `contracts/mobile/auth-readiness/v2/material-decision-history/records/${SELECTION_RECORD_DIGEST}.json`,
+    sequence: 2,
+  });
+
+  const genesis = parseCanonical(
+    readFileSync(resolve(ledgerRoot, "records", `${index.records[0].digest}.json`)),
+    "genesis record",
+  );
+  const selected = parseCanonical(
+    readFileSync(resolve(ledgerRoot, "records", `${SELECTION_RECORD_DIGEST}.json`)),
+    "selection record",
+  );
+  assert.equal(sha256(Buffer.from(canonicalText(selected))), SELECTION_RECORD_DIGEST);
+  assert.equal(selected.provenance.sourceCommit, BOOTSTRAP_COMMIT);
+  assert.deepEqual(
+    selected.subject.files.map(({ path }) => path),
+    [`${VALUES_RELATIVE}/${MANIFEST_DIGEST}.json`, "docs/NATIVE_AUTH_DECISION_BRIEF_2026-10-29.md"],
+  );
+  assert.equal(selected.payload.selectionChoiceCode, "APPROVE_RECOMMENDED_BUNDLE");
+  assert.equal(selected.payload.selectionChoiceLabel, "Approve recommended bundle");
+  assert.equal(selected.payload.selectionRecordedDate, "2026-10-30");
+
+  const state = foldRecords(
+    [
+      { digest: index.records[0].digest, record: genesis },
+      { digest: SELECTION_RECORD_DIGEST, record: selected },
+    ],
+    new Map([[MANIFEST_DIGEST, manifest]]),
+  );
+  assert.equal(
+    [...state.values()].filter(({ status }) => status === "OWNER_SELECTED_EVIDENCE_PENDING").length,
+    7,
+  );
+  assert.equal([...state.values()].filter(({ status }) => status === "DEFERRED_OPEN").length, 7);
+  assert.equal([...state.values()].filter(({ status }) => status === "ACCEPTED").length, 0);
+
+  const readme = readFileSync(resolve(ledgerRoot, "..", "README.md"), "utf8");
+  assert.match(
+    readme,
+    /Live native-runtime executions remain 0; all 24 native\s+scenarios remain unattempted\./u,
+  );
+  assert.doesNotMatch(readme, /0 of 24 attempted/u);
 });
 
 test("initial selection rejects a partial bundle", () => {

@@ -12,6 +12,11 @@
       "digest": "f9db948e9d41cc8959fc9b4c3d4ef2c67814832eb513c4592388a2a984e6dc71",
       "path": "contracts/mobile/auth-readiness/v2/material-decision-history/records/f9db948e9d41cc8959fc9b4c3d4ef2c67814832eb513c4592388a2a984e6dc71.json",
       "sequence": 1
+    },
+    {
+      "digest": "e3a9efb3651d990fd2c3f2cea0e6bcd2456ed7107f6fefc8fe09f92909f9cae1",
+      "path": "contracts/mobile/auth-readiness/v2/material-decision-history/records/e3a9efb3651d990fd2c3f2cea0e6bcd2456ed7107f6fefc8fe09f92909f9cae1.json",
+      "sequence": 2
     }
   ],
   "schemaSha256": "5812a4d80d5446399312b20fe9b317fee9b6fd7afeba9a9bcd44412692160693",
