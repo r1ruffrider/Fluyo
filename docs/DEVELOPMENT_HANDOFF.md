@@ -1,5 +1,29 @@
 # Development and billing verification handoff
 
+## Sprint 5 Increment 5 material-decision v2 control-plane bootstrap — 2026-10-30
+
+This branch installs a separate `fluyo-native-auth-material-decisions-v2` control plane, a canonical
+14-ID decision-value manifest, and a genesis record anchored to `main`
+`6af78d83f6144cb7d89b01d7f1c748d2d3155637`. It does not append Marlon's selection record and
+does not modify the v1 ledger, decision policy, or evidence snapshot.
+
+Marlon directly selected “Approve recommended bundle” in Codex on 2026-10-30 against the merged
+decision brief. The exact selection is intentionally recorded only in a later pull request after the
+trusted v2 validator is merged. That future record must atomically preserve seven
+`OWNER_SELECTED_EVIDENCE_PENDING` values and seven `DEFERRED_OPEN` values; backup custody maps to
+deferred `AUTH-NONPROD-CUSTODY` with no inferred custodian. Selection is not acceptance. Only a
+separate evidence-closure record can produce `ACCEPTED`, and runtime may consume only `ACCEPTED`.
+
+All excluded authorization flags remain false. Native runtime evidence remains 0 conducted, 0
+passed, 0 failed, and 24 unattempted. This branch authorizes no credentials, live adapter, native
+runtime, dependency selection or installation, production, signing, store/release, device, spend,
+publication, destructive/data, domain, or external-account/dashboard action. The new
+`pull_request_target` workflow becomes base-controlled only after bootstrap merge and therefore
+cannot protect this bootstrap pull request. Branch-protection configuration remains a separate,
+unauthorized external action. The later selection-record pull request is the first pull request that
+can receive base-controlled v2 record validation. This bootstrap relies on local validation, existing
+protected CI, applicable specialist gates, and Elana's final exact-head audit.
+
 ## Engineering execution and test-account governance — 2026-10-18
 
 Authenticated development checks use role-specific, non-production accounts under

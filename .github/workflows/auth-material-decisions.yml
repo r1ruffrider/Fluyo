@@ -1,0 +1,51 @@
+name: Auth material decisions
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  material-decisions:
+    name: Auth material decisions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FLUYO_MATERIAL_DECISIONS_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      FLUYO_MATERIAL_DECISIONS_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      FLUYO_MATERIAL_DECISIONS_ROOT: ${{ github.workspace }}/candidate
+      FLUYO_MATERIAL_DECISIONS_TRUSTED_HEAD: ${{ github.event.pull_request.base.sha || github.sha }}
+      FLUYO_MATERIAL_DECISIONS_TRUSTED_ROOT: ${{ github.workspace }}/trusted
+    steps:
+      - name: Checkout exact trusted control plane
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
+          path: trusted
+          persist-credentials: false
+
+      - name: Materialize exact candidate as untrusted data
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Verify immutable endpoints and trusted control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C trusted rev-parse HEAD)" = "${FLUYO_MATERIAL_DECISIONS_TRUSTED_HEAD}"
+          test "$(git -C candidate rev-parse HEAD)" = "${FLUYO_MATERIAL_DECISIONS_HEAD}"
+          git -C candidate cat-file -e "${FLUYO_MATERIAL_DECISIONS_BASE}^{commit}"
+          git -C candidate merge-base --is-ancestor "${FLUYO_MATERIAL_DECISIONS_BASE}" "${FLUYO_MATERIAL_DECISIONS_HEAD}"
+
+      - name: Validate candidate data with base-controlled validator
+        run: node trusted/scripts/check-auth-material-decisions.mjs

@@ -1,0 +1,581 @@
+{
+  "$defs": {
+    "closureEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "decisionId": {
+          "$ref": "#/$defs/decisionId"
+        },
+        "decisionManifestSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "decisionValueSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "evidenceByRequirement": {
+          "additionalProperties": {
+            "pattern": "^git:[0-9a-f]{40}:[A-Za-z0-9._/-]+$",
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "evidenceCommit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "gateAttestations": {
+          "additionalProperties": {
+            "pattern": "^git:[0-9a-f]{40}:[A-Za-z0-9._/-]+$",
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "latestRecordDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "decisionId",
+        "decisionManifestSha256",
+        "decisionValueSha256",
+        "evidenceByRequirement",
+        "evidenceCommit",
+        "gateAttestations",
+        "latestRecordDigest"
+      ],
+      "type": "object"
+    },
+    "decisionId": {
+      "enum": [
+        "AUTH-SDK-IOS",
+        "AUTH-SDK-ANDROID",
+        "AUTH-METHODS",
+        "AUTH-SIGNOUT-SCOPE",
+        "AUTH-CALLBACK-DOMAINS",
+        "AUTH-AASA",
+        "AUTH-ASSETLINKS",
+        "AUTH-SUPABASE-ALLOWLIST",
+        "AUTH-STORAGE-IOS",
+        "AUTH-STORAGE-ANDROID",
+        "AUTH-NONPROD-CUSTODY",
+        "AUTH-RECOVERY-DELIVERY",
+        "AUTH-REVOCATION",
+        "AUTH-ACCOUNT-DELETION"
+      ]
+    },
+    "digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "revocationEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "decisionId": {
+          "$ref": "#/$defs/decisionId"
+        },
+        "latestRecordDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "reason": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": ["decisionId", "latestRecordDigest", "reason"],
+      "type": "object"
+    },
+    "supersessionEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "decisionId": {
+          "$ref": "#/$defs/decisionId"
+        },
+        "decisionManifestSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "decisionValueSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "latestRecordDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "selectionState": {
+          "enum": ["DEFERRED_OPEN", "OWNER_SELECTED_EVIDENCE_PENDING"]
+        }
+      },
+      "required": [
+        "decisionId",
+        "decisionManifestSha256",
+        "decisionValueSha256",
+        "latestRecordDigest",
+        "selectionState"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://fluyo.invalid/contracts/mobile/auth-readiness/v2/material-decision-history/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "MATERIAL_DECISION_LEDGER_INITIALIZATION"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Adriana"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "governance_installation"
+              }
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "anchorCommit": {
+                "const": "6af78d83f6144cb7d89b01d7f1c748d2d3155637"
+              },
+              "bootstrapContainsSelectionRecord": {
+                "const": false
+              },
+              "decisionManifestPath": {
+                "const": "contracts/mobile/auth-readiness/v2/decision-values/cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf.json"
+              },
+              "decisionManifestSha256": {
+                "const": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf"
+              },
+              "materialSelectionMayBeRecordedAfterBootstrapMerge": {
+                "const": true
+              },
+              "v1HistoricalSnapshotImmutable": {
+                "const": true
+              },
+              "v1LedgerId": {
+                "const": "fluyo-native-auth-approval-history-v1"
+              },
+              "v1TipDigestAtAnchor": {
+                "const": "cd6e350fe979c25cfbb6e659930137b681424904680b952bc10b996584d037cb"
+              },
+              "v1TipSequenceAtAnchor": {
+                "const": 5
+              }
+            },
+            "required": [
+              "anchorCommit",
+              "bootstrapContainsSelectionRecord",
+              "decisionManifestPath",
+              "decisionManifestSha256",
+              "materialSelectionMayBeRecordedAfterBootstrapMerge",
+              "v1HistoricalSnapshotImmutable",
+              "v1LedgerId",
+              "v1TipDigestAtAnchor",
+              "v1TipSequenceAtAnchor"
+            ],
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "MATERIAL_DECISION_SELECTION"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            }
+          },
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "entries": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "decisionId": {
+                      "enum": [
+                        "AUTH-SDK-IOS",
+                        "AUTH-SDK-ANDROID",
+                        "AUTH-METHODS",
+                        "AUTH-SIGNOUT-SCOPE",
+                        "AUTH-CALLBACK-DOMAINS",
+                        "AUTH-AASA",
+                        "AUTH-ASSETLINKS",
+                        "AUTH-SUPABASE-ALLOWLIST",
+                        "AUTH-STORAGE-IOS",
+                        "AUTH-STORAGE-ANDROID",
+                        "AUTH-NONPROD-CUSTODY",
+                        "AUTH-RECOVERY-DELIVERY",
+                        "AUTH-REVOCATION",
+                        "AUTH-ACCOUNT-DELETION"
+                      ]
+                    },
+                    "decisionManifestSha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "decisionValueSha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "selectionState": {
+                      "enum": [
+                        "DEFERRED_OPEN",
+                        "OWNER_SELECTED_EVIDENCE_PENDING"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "decisionId",
+                    "decisionManifestSha256",
+                    "decisionValueSha256",
+                    "selectionState"
+                  ],
+                  "type": "object"
+                },
+                "minItems": 14,
+                "type": "array"
+              },
+              "selectionChoiceCode": {
+                "const": "APPROVE_RECOMMENDED_BUNDLE"
+              },
+              "selectionChoiceLabel": {
+                "const": "Approve recommended bundle"
+              },
+              "selectionRecordedDate": {
+                "const": "2026-10-30"
+              },
+              "selectionSource": {
+                "const": "Marlon directly selected “Approve recommended bundle” in Codex on 2026-10-30 against the merged decision brief"
+              }
+            },
+            "required": [
+              "entries",
+              "selectionChoiceCode",
+              "selectionChoiceLabel",
+              "selectionRecordedDate",
+              "selectionSource"
+            ],
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "enum": [
+              "MATERIAL_DECISION_EVIDENCE_CLOSURE",
+              "MATERIAL_DECISION_REVOCATION"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "entries": {
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": ["entries"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "MATERIAL_DECISION_EVIDENCE_CLOSURE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Adriana"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "delegated_evidence_closure"
+              }
+            }
+          },
+          "payload": {
+            "properties": {
+              "entries": {
+                "items": {
+                  "$ref": "#/$defs/closureEntry"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "MATERIAL_DECISION_REVOCATION"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "properties": {
+              "entries": {
+                "items": {
+                  "$ref": "#/$defs/revocationEntry"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "enum": [
+              "MATERIAL_DECISION_REVOCATION",
+              "MATERIAL_DECISION_SUPERSESSION"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "actor": {
+            "const": "Marlon"
+          },
+          "authority": {
+            "properties": {
+              "kind": {
+                "const": "direct_material_owner_authority"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "MATERIAL_DECISION_SUPERSESSION"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "additionalProperties": false,
+            "properties": {
+              "entries": {
+                "items": {
+                  "$ref": "#/$defs/supersessionEntry"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "selectionChoiceCode": {
+                "pattern": "^[A-Z][A-Z0-9_]*$",
+                "type": "string"
+              },
+              "selectionChoiceLabel": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "selectionRecordedDate": {
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                "type": "string"
+              },
+              "selectionSource": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "entries",
+              "selectionChoiceCode",
+              "selectionChoiceLabel",
+              "selectionRecordedDate",
+              "selectionSource"
+            ],
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "actor": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "grantedBy": {
+          "const": "Marlon"
+        },
+        "kind": {
+          "enum": [
+            "delegated_evidence_closure",
+            "direct_material_owner_authority",
+            "governance_installation"
+          ]
+        },
+        "referenceRecordDigests": {
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": ["grantedBy", "kind", "referenceRecordDigests"],
+      "type": "object"
+    },
+    "eventType": {
+      "enum": [
+        "MATERIAL_DECISION_LEDGER_INITIALIZATION",
+        "MATERIAL_DECISION_SELECTION",
+        "MATERIAL_DECISION_SUPERSESSION",
+        "MATERIAL_DECISION_EVIDENCE_CLOSURE",
+        "MATERIAL_DECISION_REVOCATION"
+      ]
+    },
+    "ledgerId": {
+      "const": "fluyo-native-auth-material-decisions-v2"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "previousRecordDigest": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "integrityScope": {
+          "const": "canonical_record_bytes_and_declared_subject_bytes"
+        },
+        "nonRepudiationLimitation": {
+          "const": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation"
+        },
+        "recordedBy": {
+          "const": "Adriana"
+        },
+        "recordingMethod": {
+          "const": "repository_governance_record"
+        },
+        "sourceCommit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "integrityScope",
+        "nonRepudiationLimitation",
+        "recordedBy",
+        "recordingMethod",
+        "sourceCommit"
+      ],
+      "type": "object"
+    },
+    "recordedAtUtc": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "subject": {
+      "additionalProperties": false,
+      "properties": {
+        "bundleSha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": ["path", "sha256"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": ["files", "bundleSha256"],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "ledgerId",
+    "sequence",
+    "previousRecordDigest",
+    "recordedAtUtc",
+    "eventType",
+    "actor",
+    "authority",
+    "subject",
+    "payload",
+    "provenance"
+  ],
+  "type": "object"
+}
