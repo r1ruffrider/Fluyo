@@ -24,6 +24,20 @@ unauthorized external action. The later selection-record pull request is the fir
 can receive base-controlled v2 record validation. This bootstrap relies on local validation, existing
 protected CI, applicable specialist gates, and Elana's final exact-head audit.
 
+Evidence closure fixes the reviewer identity for every gate: Catalina Moreno for architecture,
+Natalia Ortega for security, Renata Vega for infrastructure, GitHub Actions for protected CI, Elana
+Castillo alone for the final exact-head QA gate, and the named UX, visual, claims, records, or research
+specialist for each applicable domain gate. The per-decision gate inventory is closed. In particular,
+`AUTH-REVOCATION` requires Camila Reyes, Daniela Vargas, and Isabella Navarro because its frozen
+evidence covers UX/accessibility, visual/mobile/motion, and claims concerns. A missing gate or wrong
+reviewer fails closed.
+
+All initial and superseding values are checked against decision-specific closed shapes plus a
+recursive secret/capability boundary; a false top-level boundary cannot hide a nested runtime,
+dependency-installation, credential, or token authorization. The PR-B fixture validates an actual
+frozen subject `T`, append commit `L`, and squash-equivalent head, and fails stale concurrent bases,
+historical index-prefix changes, and unindexed record files.
+
 ## Engineering execution and test-account governance — 2026-10-18
 
 Authenticated development checks use role-specific, non-production accounts under

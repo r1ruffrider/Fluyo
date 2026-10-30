@@ -32,6 +32,10 @@ adapters, native runtime, product dependency selection or installation, producti
 store/release work, physical-device work, spend, publication, destructive/data actions, domains,
 or external-account/dashboard changes. Live native-runtime evidence remains 0 of 24 attempted.
 
+Every selected value, including a future superseding manifest, must match its decision-specific
+closed shape. Recursive validation rejects forbidden capability enablement, secret-bearing fields,
+and secret-like values even when the manifest's top-level boundaries remain false.
+
 ## Trust and rollout limits
 
 The workflow uses `pull_request_target` only after this control plane is present on the base branch.
@@ -44,7 +48,14 @@ workflow.
 Evidence closure must retain the unchanged selected value, satisfy every exact requirement from the
 frozen v1 decision policy through durable Git references, and carry exact-head PASS attestations for
 architecture, security, infrastructure, protected CI, Elana, and each applicable UX, visual, claims,
-records, or research domain. Arbitrary strings and incomplete gate sets cannot produce `ACCEPTED`.
+records, or research domain. Each attestation has a closed `reviewer` field that must match the
+trusted gate-to-reviewer map; Elana Castillo is the only accepted reviewer for `ELANA_EXACT_HEAD`.
+`AUTH-REVOCATION` specifically requires Camila's UX/accessibility, Daniela's visual/mobile/motion,
+and Isabella's claims gates in addition to the fixed gates. Arbitrary strings, wrong reviewers, and
+incomplete gate sets cannot produce `ACCEPTED`.
 
 Branch-protection configuration is an external repository action and is not authorized by this
 bootstrap. It must be handled separately under the repository's external-action approval process.
+The validator's append fixtures exercise the full frozen-subject `T` to ledger append `L` path and
+the equivalent squash head, and reject stale concurrent bases, historical index-prefix edits, and
+unindexed content-addressed records.

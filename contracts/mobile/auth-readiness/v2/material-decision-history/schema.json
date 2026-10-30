@@ -67,6 +67,65 @@
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
+    "gateAttestation": {
+      "additionalProperties": false,
+      "properties": {
+        "decisionId": {
+          "$ref": "#/$defs/decisionId"
+        },
+        "decisionManifestSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "decisionValueSha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "gate": {
+          "enum": [
+            "BIANCA_RECORDS",
+            "CAMILA_UX",
+            "CATALINA_ARCHITECTURE",
+            "DANIELA_VISUAL",
+            "ELANA_EXACT_HEAD",
+            "GABRIELA_RESEARCH",
+            "ISABELLA_CLAIMS",
+            "NATALIA_SECURITY",
+            "PROTECTED_CI",
+            "RENATA_INFRASTRUCTURE"
+          ]
+        },
+        "reviewedHead": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "reviewer": {
+          "enum": [
+            "Bianca Morales",
+            "Camila Reyes",
+            "Catalina Moreno",
+            "Daniela Vargas",
+            "Elana Castillo",
+            "Gabriela Mendoza",
+            "GitHub Actions",
+            "Isabella Navarro",
+            "Natalia Ortega",
+            "Renata Vega"
+          ]
+        },
+        "status": {
+          "const": "PASS"
+        }
+      },
+      "required": [
+        "decisionId",
+        "decisionManifestSha256",
+        "decisionValueSha256",
+        "gate",
+        "reviewedHead",
+        "reviewer",
+        "status"
+      ],
+      "type": "object"
+    },
     "revocationEntry": {
       "additionalProperties": false,
       "properties": {

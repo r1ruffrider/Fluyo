@@ -8,11 +8,13 @@ import test from "node:test";
 
 import {
   ANCHOR_COMMIT,
+  DECISION_DOMAIN_GATES,
   DECISION_IDS,
   DEFERRED_IDS,
   EVENT_TYPES,
   FORBIDDEN_FLAGS,
   GENESIS_FOREIGN_REFERENCE,
+  GATE_REVIEWERS,
   LEDGER_ID,
   MANIFEST_DIGEST,
   SELECTED_IDS,
@@ -33,6 +35,7 @@ import {
   validateManifest,
   validatePayload,
   validateRepositoryPath,
+  validateSelectedValueSafety,
 } from "./check-auth-material-decisions.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -127,6 +130,71 @@ function buildBootstrapFixture() {
   return { root, head };
 }
 
+function appendSelectionRecord(root, base) {
+  writeFileSync(
+    resolve(root, "docs/material-v2-fixture-note.txt"),
+    "intermediate implementation commit retained by the candidate tree\n",
+    "utf8",
+  );
+  const intermediate = commit(root, "prepare material selection append");
+  const indexPath = "contracts/mobile/auth-readiness/v2/material-decision-history/index.json";
+  const index = JSON.parse(readFileSync(resolve(root, indexPath), "utf8"));
+  const subject = {
+    bundleSha256: "",
+    files: [
+      {
+        path: `${VALUES_RELATIVE}/${MANIFEST_DIGEST}.json`,
+        sha256: MANIFEST_DIGEST,
+      },
+    ],
+  };
+  subject.bundleSha256 = subjectDigest(subject.files);
+  const record = {
+    actor: "Marlon",
+    authority: {
+      grantedBy: "Marlon",
+      kind: "direct_material_owner_authority",
+      referenceRecordDigests: [],
+    },
+    eventType: "MATERIAL_DECISION_SELECTION",
+    ledgerId: LEDGER_ID,
+    payload: {
+      entries: selectionEntries(),
+      selectionChoiceCode: "APPROVE_RECOMMENDED_BUNDLE",
+      selectionChoiceLabel: "Approve recommended bundle",
+      selectionRecordedDate: "2026-10-30",
+      selectionSource:
+        "Marlon directly selected “Approve recommended bundle” in Codex on 2026-10-30 against the merged decision brief",
+    },
+    previousRecordDigest: index.records.at(-1).digest,
+    provenance: {
+      integrityScope: "canonical_record_bytes_and_declared_subject_bytes",
+      nonRepudiationLimitation:
+        "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+      recordedBy: "Adriana",
+      recordingMethod: "repository_governance_record",
+      sourceCommit: base,
+    },
+    recordedAtUtc: "2026-10-30T09:00:00.000Z",
+    schemaVersion: "2.0.0",
+    sequence: 2,
+    subject,
+  };
+  const bytes = Buffer.from(canonicalText(record));
+  const recordDigest = sha256(bytes);
+  const recordPath = `contracts/mobile/auth-readiness/v2/material-decision-history/records/${recordDigest}.json`;
+  writeFileSync(resolve(root, recordPath), bytes);
+  index.records.push({ digest: recordDigest, path: recordPath, sequence: 2 });
+  writeFileSync(resolve(root, indexPath), canonicalText(index), "utf8");
+  const head = commit(root, "append atomic material selection record");
+  return { base, head, intermediate, indexPath, recordDigest, recordPath };
+}
+
+function buildSelectionAppendFixture() {
+  const bootstrap = buildBootstrapFixture();
+  return { root: bootstrap.root, ...appendSelectionRecord(bootstrap.root, bootstrap.head) };
+}
+
 const methodRequirements = [
   "exact_enabled_method_list",
   "unsupported_flow_list",
@@ -160,6 +228,7 @@ function buildClosureProofFixture() {
         decisionManifestSha256: selected.decisionManifestSha256,
         decisionValueSha256: selected.decisionValueSha256,
         gate,
+        reviewer: GATE_REVIEWERS[gate],
         reviewedHead: evidenceCommit,
         status: "PASS",
       }),
@@ -203,6 +272,40 @@ test("v2 declares a closed fourteen-decision and five-event inventory", () => {
   assert.equal(DEFERRED_IDS.length, 7);
   assert.equal(EVENT_TYPES.length, 5);
   assert.equal(LEDGER_ID, "fluyo-native-auth-material-decisions-v2");
+});
+
+test("closure gate and reviewer inventories are exact for every decision", () => {
+  assert.deepEqual(DECISION_DOMAIN_GATES, {
+    "AUTH-AASA": [],
+    "AUTH-ACCOUNT-DELETION": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
+    "AUTH-ASSETLINKS": [],
+    "AUTH-CALLBACK-DOMAINS": ["CAMILA_UX", "DANIELA_VISUAL"],
+    "AUTH-METHODS": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
+    "AUTH-NONPROD-CUSTODY": ["BIANCA_RECORDS"],
+    "AUTH-RECOVERY-DELIVERY": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
+    "AUTH-REVOCATION": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
+    "AUTH-SDK-ANDROID": ["GABRIELA_RESEARCH"],
+    "AUTH-SDK-IOS": ["GABRIELA_RESEARCH"],
+    "AUTH-SIGNOUT-SCOPE": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
+    "AUTH-STORAGE-ANDROID": [],
+    "AUTH-STORAGE-IOS": [],
+    "AUTH-SUPABASE-ALLOWLIST": [],
+  });
+  assert.deepEqual(GATE_REVIEWERS, {
+    BIANCA_RECORDS: "Bianca Morales",
+    CAMILA_UX: "Camila Reyes",
+    CATALINA_ARCHITECTURE: "Catalina Moreno",
+    DANIELA_VISUAL: "Daniela Vargas",
+    ELANA_EXACT_HEAD: "Elana Castillo",
+    GABRIELA_RESEARCH: "Gabriela Mendoza",
+    ISABELLA_CLAIMS: "Isabella Navarro",
+    NATALIA_SECURITY: "Natalia Ortega",
+    PROTECTED_CI: "GitHub Actions",
+    RENATA_INFRASTRUCTURE: "Renata Vega",
+  });
+  for (const decisionId of DECISION_IDS)
+    for (const gate of closureGatesFor(decisionId))
+      assert.equal(typeof GATE_REVIEWERS[gate], "string", `${gate} reviewer must be fixed`);
 });
 
 test("selection manifest is canonical and content addressed", () => {
@@ -282,7 +385,10 @@ test("manifest rejects iOS dependency installation or runtime authorization", ()
   ]) {
     const candidate = clone(manifest);
     candidate.decisionValues["AUTH-SDK-IOS"].selectedValue[key] = true;
-    assert.match(capture(() => validateManifest(candidate)).message, /iOS selection/u);
+    assert.match(
+      capture(() => validateManifest(candidate)).message,
+      /iOS selection|forbidden capability/u,
+    );
   }
 });
 
@@ -295,8 +401,47 @@ test("manifest rejects Android beta, coordinate, or runtime authorization", () =
   for (const [key, value] of candidates) {
     const candidate = clone(manifest);
     candidate.decisionValues["AUTH-SDK-ANDROID"].selectedValue[key] = value;
-    assert.match(capture(() => validateManifest(candidate)).message, /Android selection/u);
+    assert.match(
+      capture(() => validateManifest(candidate)).message,
+      /Android selection|forbidden capability/u,
+    );
   }
+});
+
+test("all selected values use closed per-decision schemas", () => {
+  const changed = clone(manifest);
+  changed.decisionValues["AUTH-SDK-IOS"].selectedValue.unreviewedField = false;
+  assert.match(capture(() => validateDecisionManifest(changed)).message, /keys mismatch/u);
+});
+
+test("selected values cannot recursively enable forbidden capabilities", () => {
+  for (const key of ["nativeRuntimeAuthorized", "productDependencyInstallationAuthorized"]) {
+    const changed = clone(manifest);
+    changed.decisionValues["AUTH-SDK-IOS"].selectedValue[key] = true;
+    assert.match(
+      capture(() => validateDecisionManifest(changed)).message,
+      /enables a forbidden capability/u,
+    );
+  }
+  assert.match(
+    capture(() =>
+      validateSelectedValueSafety({ nested: { nativeRuntime: true } }, "dangerous value"),
+    ).message,
+    /enables a forbidden capability/u,
+  );
+});
+
+test("selected values reject secret-bearing keys and values", () => {
+  assert.match(
+    capture(() =>
+      validateSelectedValueSafety({ nested: { credentialCanary: "not-a-secret" } }, "canary"),
+    ).message,
+    /secret-bearing field/u,
+  );
+  const changed = clone(manifest);
+  changed.decisionValues["AUTH-SDK-IOS"].selectedValue.candidatePackage =
+    "sk_test_1234567890abcdef";
+  assert.match(capture(() => validateDecisionManifest(changed)).message, /secret-like material/u);
 });
 
 test("genesis alone folds to fourteen open decisions", () => {
@@ -532,6 +677,30 @@ test("evidence closure rejects mutable, arbitrary, or non-PASS proof references"
   }
 });
 
+test("evidence closure rejects a gate attested by the wrong reviewer", () => {
+  const fixture = buildClosureProofFixture();
+  try {
+    const path = "gates/elana_exact_head.json";
+    const attestation = JSON.parse(readFileSync(resolve(fixture.root, path), "utf8"));
+    attestation.reviewer = "Adriana Solano";
+    writeFileSync(resolve(fixture.root, path), canonicalText(attestation), "utf8");
+    const source = commit(fixture.root, "tamper with exact-head reviewer identity");
+    const record = clone(fixture.record);
+    for (const gate of Object.keys(record.payload.entries[0].gateAttestations)) {
+      const gatePath = record.payload.entries[0].gateAttestations[gate].split(":", 3)[2];
+      record.payload.entries[0].gateAttestations[gate] = `git:${source}:${gatePath}`;
+    }
+    const subjectFiles = new Map(fixture.subjectFiles);
+    subjectFiles.set(path, sha256(readFileSync(resolve(fixture.root, path))));
+    assert.match(
+      capture(() => validateClosureProofs(record, subjectFiles, fixture.root, source)).message,
+      /not an exact-head PASS/u,
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test("revocation returns a decision to open without resurrecting prior state", () => {
   const revoke = {
     digest: digest("3"),
@@ -663,6 +832,108 @@ test("v2 bootstrap validates the fixed genesis and no selection record", () => {
     assert.equal(result.records, 1);
     assert.equal(result.appended, 1);
     assert.equal(result.counts.OPEN, 14);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("base-controlled validation accepts a real T-to-L append and its squash head", () => {
+  const fixture = buildSelectionAppendFixture();
+  try {
+    const appended = checkAuthMaterialDecisions({
+      root: fixture.root,
+      base: fixture.base,
+      head: fixture.head,
+    });
+    assert.equal(appended.mode, "append");
+    assert.equal(appended.appended, 1);
+    assert.equal(appended.records, 2);
+    assert.equal(appended.counts.OWNER_SELECTED_EVIDENCE_PENDING, 7);
+    assert.equal(appended.counts.DEFERRED_OPEN, 7);
+
+    const tree = git(fixture.root, "rev-parse", `${fixture.head}^{tree}`);
+    const squashHead = git(
+      fixture.root,
+      "commit-tree",
+      tree,
+      "-p",
+      fixture.base,
+      "-m",
+      "squash material selection append",
+    );
+    assert.notEqual(squashHead, fixture.head);
+    const squashed = checkAuthMaterialDecisions({
+      root: fixture.root,
+      base: fixture.base,
+      head: squashHead,
+    });
+    assert.equal(squashed.mode, "append");
+    assert.equal(squashed.appended, 1);
+    assert.equal(squashed.tipDigest, fixture.recordDigest);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("append validation rejects a stale candidate after a concurrent base update", () => {
+  const fixture = buildSelectionAppendFixture();
+  try {
+    const baseTree = git(fixture.root, "rev-parse", `${fixture.base}^{tree}`);
+    const concurrentBase = git(
+      fixture.root,
+      "commit-tree",
+      baseTree,
+      "-p",
+      fixture.base,
+      "-m",
+      "concurrent base update",
+    );
+    assert.match(
+      capture(() =>
+        checkAuthMaterialDecisions({
+          root: fixture.root,
+          base: concurrentBase,
+          head: fixture.head,
+        }),
+      ).message,
+      /base\/head must exist with base ancestor/u,
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("append validation rejects index-prefix tampering", () => {
+  const fixture = buildSelectionAppendFixture();
+  try {
+    const index = JSON.parse(readFileSync(resolve(fixture.root, fixture.indexPath), "utf8"));
+    index.records[0].sequence = 2;
+    writeFileSync(resolve(fixture.root, fixture.indexPath), canonicalText(index), "utf8");
+    const tampered = commit(fixture.root, "tamper with material record index prefix");
+    assert.match(
+      capture(() =>
+        checkAuthMaterialDecisions({ root: fixture.root, base: fixture.base, head: tampered }),
+      ).message,
+      /record index binding mismatch/u,
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("append validation rejects an unindexed content-addressed record", () => {
+  const fixture = buildSelectionAppendFixture();
+  try {
+    const bytes = Buffer.from(canonicalText({ unindexed: true }));
+    const path = `contracts/mobile/auth-readiness/v2/material-decision-history/records/${sha256(bytes)}.json`;
+    writeFileSync(resolve(fixture.root, path), bytes);
+    const tampered = commit(fixture.root, "add unindexed material decision record");
+    assert.match(
+      capture(() =>
+        checkAuthMaterialDecisions({ root: fixture.root, base: fixture.base, head: tampered }),
+      ).message,
+      /unindexed material decision record exists/u,
+    );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
   }

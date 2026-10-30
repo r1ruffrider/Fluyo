@@ -69,7 +69,19 @@ export const REQUIRED_CLOSURE_GATES = [
   "PROTECTED_CI",
   "ELANA_EXACT_HEAD",
 ];
-const DECISION_DOMAIN_GATES = {
+export const GATE_REVIEWERS = Object.freeze({
+  BIANCA_RECORDS: "Bianca Morales",
+  CAMILA_UX: "Camila Reyes",
+  CATALINA_ARCHITECTURE: "Catalina Moreno",
+  DANIELA_VISUAL: "Daniela Vargas",
+  ELANA_EXACT_HEAD: "Elana Castillo",
+  GABRIELA_RESEARCH: "Gabriela Mendoza",
+  ISABELLA_CLAIMS: "Isabella Navarro",
+  NATALIA_SECURITY: "Natalia Ortega",
+  PROTECTED_CI: "GitHub Actions",
+  RENATA_INFRASTRUCTURE: "Renata Vega",
+});
+export const DECISION_DOMAIN_GATES = Object.freeze({
   "AUTH-AASA": [],
   "AUTH-ACCOUNT-DELETION": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
   "AUTH-ASSETLINKS": [],
@@ -77,14 +89,14 @@ const DECISION_DOMAIN_GATES = {
   "AUTH-METHODS": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
   "AUTH-NONPROD-CUSTODY": ["BIANCA_RECORDS"],
   "AUTH-RECOVERY-DELIVERY": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
-  "AUTH-REVOCATION": ["ISABELLA_CLAIMS"],
+  "AUTH-REVOCATION": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
   "AUTH-SDK-ANDROID": ["GABRIELA_RESEARCH"],
   "AUTH-SDK-IOS": ["GABRIELA_RESEARCH"],
   "AUTH-SIGNOUT-SCOPE": ["CAMILA_UX", "DANIELA_VISUAL", "ISABELLA_CLAIMS"],
   "AUTH-STORAGE-ANDROID": [],
   "AUTH-STORAGE-IOS": [],
   "AUTH-SUPABASE-ALLOWLIST": [],
-};
+});
 export const closureGatesFor = (decisionId) => [
   ...REQUIRED_CLOSURE_GATES,
   ...(DECISION_DOMAIN_GATES[decisionId] ?? []),
@@ -255,6 +267,302 @@ const validateBoundaries = (boundaries) => {
       throw new Error(`decision manifest forbidden flag ${flag} must be false`);
 };
 
+const requireClosedValue = (value, keys, label) => {
+  asObject(value, label);
+  if (!exactKeys(value, keys)) throw new Error(`${label} keys mismatch`);
+};
+const requireString = (value, label) => {
+  if (typeof value !== "string" || value.length === 0) throw new Error(`${label} must be a string`);
+};
+const requireBoolean = (value, label) => {
+  if (typeof value !== "boolean") throw new Error(`${label} must be a boolean`);
+};
+const requireStringList = (value, label) => {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    new Set(value).size !== value.length ||
+    value.some((item) => typeof item !== "string" || item.length === 0)
+  )
+    throw new Error(`${label} must be a nonempty unique string list`);
+};
+const forbiddenCapabilityKeys = new Set(
+  [...FORBIDDEN_FLAGS, "productDependencySelected"].map((key) => key.toLowerCase()),
+);
+const secretKey =
+  /(credential(?!free)|secret|password|privatekey|apikey|clientsecret|accesstoken|refreshtoken)/iu;
+const secretValue =
+  /(?:sk_(?:live|test)_|sbp_|-----BEGIN [A-Z ]*PRIVATE KEY-----|bearer\s+[A-Za-z0-9._~-]{8,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.)/iu;
+export const validateSelectedValueSafety = (value, label = "selected value") => {
+  const visit = (current, path) => {
+    if (typeof current === "string") {
+      if (secretValue.test(current)) throw new Error(`${path} contains secret-like material`);
+      return;
+    }
+    if (Array.isArray(current)) {
+      current.forEach((item, index) => visit(item, `${path}[${index}]`));
+      return;
+    }
+    if (current === null || typeof current !== "object") return;
+    for (const [key, nested] of Object.entries(current)) {
+      const normalized = key.replaceAll(/[^A-Za-z0-9]/gu, "").toLowerCase();
+      if (secretKey.test(normalized)) throw new Error(`${path}.${key} is a secret-bearing field`);
+      if (
+        nested === true &&
+        [...forbiddenCapabilityKeys].some(
+          (capability) =>
+            normalized === capability ||
+            normalized === `${capability}authorized` ||
+            normalized === `${capability}enabled`,
+        )
+      )
+        throw new Error(`${path}.${key} enables a forbidden capability`);
+      visit(nested, `${path}.${key}`);
+    }
+  };
+  visit(value, label);
+};
+
+const selectedValueValidators = {
+  "AUTH-AASA": (value, label) => {
+    requireClosedValue(value, ["appIdentifier", "contentSha256", "hostingOwner", "path"], label);
+    requireString(value.appIdentifier, `${label}.appIdentifier`);
+    if (!DIGEST.test(value.contentSha256)) throw new Error(`${label}.contentSha256 is invalid`);
+    requireString(value.hostingOwner, `${label}.hostingOwner`);
+    validateRepositoryPath(value.path, `${label}.path`);
+  },
+  "AUTH-ACCOUNT-DELETION": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "apiRoute",
+        "auditBehavior",
+        "idempotencyKeyScope",
+        "owner",
+        "partialFailureRecovery",
+        "recentReauthenticationRequired",
+      ],
+      label,
+    );
+    for (const key of [
+      "apiRoute",
+      "auditBehavior",
+      "idempotencyKeyScope",
+      "owner",
+      "partialFailureRecovery",
+    ])
+      requireString(value[key], `${label}.${key}`);
+    requireBoolean(value.recentReauthenticationRequired, `${label}.recentReauthenticationRequired`);
+  },
+  "AUTH-ASSETLINKS": (value, label) => {
+    requireClosedValue(
+      value,
+      ["certificateSha256", "contentSha256", "hostingOwner", "packageName", "path"],
+      label,
+    );
+    if (!DIGEST.test(value.certificateSha256) || !DIGEST.test(value.contentSha256))
+      throw new Error(`${label} digest is invalid`);
+    requireString(value.hostingOwner, `${label}.hostingOwner`);
+    requireString(value.packageName, `${label}.packageName`);
+    validateRepositoryPath(value.path, `${label}.path`);
+  },
+  "AUTH-CALLBACK-DOMAINS": (value, label) => {
+    requireClosedValue(
+      value,
+      ["confirmationRoute", "custodian", "developmentHosts", "recoveryRoute", "stagingHosts"],
+      label,
+    );
+    requireString(value.confirmationRoute, `${label}.confirmationRoute`);
+    requireString(value.custodian, `${label}.custodian`);
+    requireStringList(value.developmentHosts, `${label}.developmentHosts`);
+    requireString(value.recoveryRoute, `${label}.recoveryRoute`);
+    requireStringList(value.stagingHosts, `${label}.stagingHosts`);
+  },
+  "AUTH-METHODS": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "enabled",
+        "excluded",
+        "ownerVerificationAuthority",
+        "recoveryControlGate",
+        "unsupportedControlPolicy",
+      ],
+      label,
+    );
+    requireStringList(value.enabled, `${label}.enabled`);
+    requireStringList(value.excluded, `${label}.excluded`);
+    requireString(value.ownerVerificationAuthority, `${label}.ownerVerificationAuthority`);
+    requireString(value.recoveryControlGate, `${label}.recoveryControlGate`);
+    requireString(value.unsupportedControlPolicy, `${label}.unsupportedControlPolicy`);
+  },
+  "AUTH-NONPROD-CUSTODY": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "backupCustodian",
+        "incidentHandoff",
+        "primaryCustodian",
+        "projectReference",
+        "rotationHandoff",
+      ],
+      label,
+    );
+    for (const key of Object.keys(value)) requireString(value[key], `${label}.${key}`);
+  },
+  "AUTH-RECOVERY-DELIVERY": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "custodian",
+        "expirySeconds",
+        "failureBehavior",
+        "sender",
+        "supportOwner",
+        "templateSha256",
+        "throttlePolicy",
+      ],
+      label,
+    );
+    for (const key of ["custodian", "failureBehavior", "sender", "supportOwner", "throttlePolicy"])
+      requireString(value[key], `${label}.${key}`);
+    if (!Number.isSafeInteger(value.expirySeconds) || value.expirySeconds <= 0)
+      throw new Error(`${label}.expirySeconds is invalid`);
+    if (!DIGEST.test(value.templateSha256)) throw new Error(`${label}.templateSha256 is invalid`);
+  },
+  "AUTH-REVOCATION": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "issuedJwtDisclosure",
+        "localCleanupDependsOnRemote",
+        "remoteRevocation",
+        "runtimeProofRequired",
+      ],
+      label,
+    );
+    requireString(value.issuedJwtDisclosure, `${label}.issuedJwtDisclosure`);
+    requireBoolean(value.localCleanupDependsOnRemote, `${label}.localCleanupDependsOnRemote`);
+    requireString(value.remoteRevocation, `${label}.remoteRevocation`);
+    requireBoolean(value.runtimeProofRequired, `${label}.runtimeProofRequired`);
+  },
+  "AUTH-SDK-ANDROID": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "betaAccepted",
+        "coordinate",
+        "direction",
+        "nativeRuntimeAuthorized",
+        "productDependencyInstallationAuthorized",
+        "productDependencySelected",
+        "rejectedStableVersion",
+        "version",
+      ],
+      label,
+    );
+    for (const key of [
+      "betaAccepted",
+      "nativeRuntimeAuthorized",
+      "productDependencyInstallationAuthorized",
+      "productDependencySelected",
+    ])
+      requireBoolean(value[key], `${label}.${key}`);
+    if (value.coordinate !== null) requireString(value.coordinate, `${label}.coordinate`);
+    requireString(value.direction, `${label}.direction`);
+    requireString(value.rejectedStableVersion, `${label}.rejectedStableVersion`);
+    if (value.version !== null) requireString(value.version, `${label}.version`);
+  },
+  "AUTH-SDK-IOS": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "candidatePackage",
+        "candidateVersion",
+        "credentialFreeGraphEvaluationAuthorized",
+        "minimumToolchain",
+        "nativeRuntimeAuthorized",
+        "productDependencyInstallationAuthorized",
+        "productDependencySelected",
+        "toolchainRebaselineAuthorized",
+      ],
+      label,
+    );
+    requireString(value.candidatePackage, `${label}.candidatePackage`);
+    requireString(value.candidateVersion, `${label}.candidateVersion`);
+    requireString(value.minimumToolchain, `${label}.minimumToolchain`);
+    for (const key of [
+      "credentialFreeGraphEvaluationAuthorized",
+      "nativeRuntimeAuthorized",
+      "productDependencyInstallationAuthorized",
+      "productDependencySelected",
+      "toolchainRebaselineAuthorized",
+    ])
+      requireBoolean(value[key], `${label}.${key}`);
+  },
+  "AUTH-SIGNOUT-SCOPE": (value, label) => {
+    requireClosedValue(
+      value,
+      ["cleanupFailure", "guarantee", "issuedJwt", "remoteRevocation"],
+      label,
+    );
+    for (const key of Object.keys(value)) requireString(value[key], `${label}.${key}`);
+  },
+  "AUTH-STORAGE-ANDROID": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "accountSwitch",
+        "adapter",
+        "backupAllowed",
+        "envelope",
+        "hardwareBacked",
+        "ivBits",
+        "keyScope",
+        "uniqueIvRequired",
+      ],
+      label,
+    );
+    for (const key of ["accountSwitch", "adapter", "envelope", "hardwareBacked", "keyScope"])
+      requireString(value[key], `${label}.${key}`);
+    requireBoolean(value.backupAllowed, `${label}.backupAllowed`);
+    if (!Number.isSafeInteger(value.ivBits) || value.ivBits <= 0)
+      throw new Error(`${label}.ivBits is invalid`);
+    requireBoolean(value.uniqueIvRequired, `${label}.uniqueIvRequired`);
+  },
+  "AUTH-STORAGE-IOS": (value, label) => {
+    requireClosedValue(
+      value,
+      [
+        "accessibility",
+        "accountSwitch",
+        "adapter",
+        "backupRestoreMigration",
+        "envelope",
+        "synchronizable",
+      ],
+      label,
+    );
+    for (const key of ["accessibility", "accountSwitch", "adapter", "envelope"])
+      requireString(value[key], `${label}.${key}`);
+    requireBoolean(value.backupRestoreMigration, `${label}.backupRestoreMigration`);
+    requireBoolean(value.synchronizable, `${label}.synchronizable`);
+  },
+  "AUTH-SUPABASE-ALLOWLIST": (value, label) => {
+    requireClosedValue(value, ["custodian", "redirectUrls"], label);
+    requireString(value.custodian, `${label}.custodian`);
+    requireStringList(value.redirectUrls, `${label}.redirectUrls`);
+  },
+};
+
+export const validateSelectedValue = (decisionId, value) => {
+  const label = `decision manifest ${decisionId} selected value`;
+  const validator = selectedValueValidators[decisionId];
+  if (!validator) throw new Error(`${label} has no closed schema`);
+  validator(value, label);
+  validateSelectedValueSafety(value, label);
+};
+
 export function validateDecisionManifest(manifest) {
   if (
     !exactKeys(manifest, [
@@ -282,6 +590,7 @@ export function validateDecisionManifest(manifest) {
     if (entry.selectionState === "OWNER_SELECTED_EVIDENCE_PENDING") {
       if (entry.selectedValue === null || typeof entry.selectedValue !== "object")
         throw new Error(`decision manifest ${id} selected value is missing`);
+      validateSelectedValue(id, entry.selectedValue);
     } else if (entry.selectionState !== "DEFERRED_OPEN" || entry.selectedValue !== null) {
       throw new Error(`decision manifest ${id} state/value mismatch`);
     }
@@ -613,6 +922,7 @@ export const validateClosureProofs = (record, subjectFiles, root, source) => {
           "decisionManifestSha256",
           "decisionValueSha256",
           "gate",
+          "reviewer",
           "reviewedHead",
           "status",
         ]) ||
@@ -620,6 +930,7 @@ export const validateClosureProofs = (record, subjectFiles, root, source) => {
         attestation.decisionManifestSha256 !== closure.decisionManifestSha256 ||
         attestation.decisionValueSha256 !== closure.decisionValueSha256 ||
         attestation.gate !== gate ||
+        attestation.reviewer !== GATE_REVIEWERS[gate] ||
         attestation.reviewedHead !== closure.evidenceCommit ||
         attestation.status !== "PASS"
       )
