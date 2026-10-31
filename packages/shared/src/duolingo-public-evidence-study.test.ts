@@ -385,7 +385,22 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       viewports: Array<{ id: string; widthCssPx: number; heightCssPx: number }>;
       themes: string[];
       locales: string[];
+      textScales: Array<{
+        id: string;
+        mechanism: string;
+        browserZoomPercent: number;
+        cssZoomPercent: number;
+        rootTextScalePercent: number;
+        osTextScalePercent: number;
+      }>;
+      breakUiFixtures: string[];
+      evidenceCellIdentity: {
+        manifestFields: string[];
+        artifactPathFields: string[];
+        filenameFields: string[];
+      };
       browserAtProfile: {
+        id: string;
         os: string;
         browser: string;
         assistiveTechnology: string;
@@ -431,7 +446,72 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     });
     expect(visualContract.themes).toEqual(["light", "dark"]);
     expect(visualContract.locales).toEqual(["en", "en-XA", "ar-XB"]);
+    expect(visualContract.textScales).toEqual([
+      {
+        id: "browser_zoom_100",
+        mechanism: "chromium_browser_zoom",
+        browserZoomPercent: 100,
+        cssZoomPercent: 100,
+        rootTextScalePercent: 100,
+        osTextScalePercent: 100,
+      },
+      {
+        id: "browser_zoom_200",
+        mechanism: "chromium_browser_zoom",
+        browserZoomPercent: 200,
+        cssZoomPercent: 100,
+        rootTextScalePercent: 100,
+        osTextScalePercent: 100,
+      },
+    ]);
+
+    const fixtureIds = closedJsonArrayAfter("The Break-UI fixture ID order is closed:");
+    expect(visualContract.breakUiFixtures).toEqual(fixtureIds);
+    expect(visualContract.breakUiFixtures).toHaveLength(15);
+    expect(new Set(visualContract.breakUiFixtures).size).toBe(15);
+    expect(
+      visualContract.breakUiFixtures.every(
+        (fixtureId) => /^[A-Za-z0-9._-]+$/.test(fixtureId) && !fixtureId.includes("__"),
+      ),
+    ).toBe(true);
+
+    expect(visualContract.evidenceCellIdentity).toEqual({
+      manifestFields: ["stateId", "viewportId", "themeId", "localeId", "textScaleId", "fixtureId"],
+      artifactPathFields: [
+        "buildSha",
+        "stateId",
+        "viewportId",
+        "themeId",
+        "localeId",
+        "textScaleId",
+        "fixtureId",
+        "browserAtProfileId",
+      ],
+      filenameFields: [
+        "stateId",
+        "viewportId",
+        "themeId",
+        "localeId",
+        "textScaleId",
+        "fixtureId",
+        "browserId",
+        "browserVersion",
+        "atId",
+        "atVersion",
+        "artifactId",
+      ],
+    });
+
+    const fixtureCellKeys = visualContract.breakUiFixtures.flatMap((fixtureId) =>
+      visualContract.textScales.map(({ id: textScaleId }) =>
+        ["ACTIVE", "reference_390x844", "dark", "ar-XB", textScaleId, fixtureId].join("/"),
+      ),
+    );
+    expect(fixtureCellKeys).toHaveLength(30);
+    expect(new Set(fixtureCellKeys).size).toBe(30);
+
     expect(visualContract.browserAtProfile).toEqual({
+      id: "windows_chromium_nvda",
       os: "Windows",
       browser: "Chromium",
       assistiveTechnology: "NVDA",
@@ -548,9 +628,14 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     ]);
 
     for (const protocol of [
-      "every closed experience-state ID × every viewport in the visual-regression contract × every theme × every locale",
-      "device scale factor 1, 100% browser zoom",
-      "record the build SHA, fixture ID, OS version, Chromium version, NVDA version, and UTC capture time",
+      "every closed experience-state ID × every viewport in the visual-regression contract × every theme × every locale × every text-scale ID × every Break-UI fixture ID",
+      "Chromium browser zoom set to exactly 200% after configuring the named viewport",
+      "It is not a CSS transform, root-font override, screenshot upscale, or OS magnifier",
+      "`stateId`, `viewportId`, `themeId`, `localeId`, `textScaleId`, and `fixtureId`",
+      "text-scale ID and browser zoom percent, fixture ID and fixture-data digest",
+      "visual-qa/<build-sha>/<state>/<viewport>/<theme>/<locale>/<text-scale>/<fixture>/windows_chromium_nvda/",
+      "<state>__<viewport>__<theme>__<locale>__<text-scale>__<fixture>__chromium-<browser-version>__nvda-<at-version>__<artifact-id>",
+      "the path plus filename identity is unique for each of the 15 fixtures at both text scales",
       "actual.png`, the approved `baseline.png`, and `diff.png` use identical crop and pixel dimensions",
       "document and named-region client/scroll dimensions",
       "computed foreground/background RGBA values, measured ratio, required ratio, semantic-pair ID",

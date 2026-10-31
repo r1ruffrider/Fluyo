@@ -1137,7 +1137,69 @@ The measurable Conversation Canvas visual-regression contract is closed:
   ],
   "themes": ["light", "dark"],
   "locales": ["en", "en-XA", "ar-XB"],
+  "textScales": [
+    {
+      "id": "browser_zoom_100",
+      "mechanism": "chromium_browser_zoom",
+      "browserZoomPercent": 100,
+      "cssZoomPercent": 100,
+      "rootTextScalePercent": 100,
+      "osTextScalePercent": 100
+    },
+    {
+      "id": "browser_zoom_200",
+      "mechanism": "chromium_browser_zoom",
+      "browserZoomPercent": 200,
+      "cssZoomPercent": 100,
+      "rootTextScalePercent": 100,
+      "osTextScalePercent": 100
+    }
+  ],
+  "breakUiFixtures": [
+    "long_localized_prompt_and_choices",
+    "rtl_mixed_script_activity",
+    "large_text_compact_landscape",
+    "one_character_and_multiline_answers",
+    "empty_activity_catalog",
+    "network_loss_during_submit",
+    "duplicate_submit",
+    "stale_content_version",
+    "late_confirmation_after_exit",
+    "authentication_expired",
+    "entitlement_blocked",
+    "offline_saved_material",
+    "corrupt_cache_recovery",
+    "protected_mode_unknown_cohort",
+    "missing_optional_explanation"
+  ],
+  "evidenceCellIdentity": {
+    "manifestFields": ["stateId", "viewportId", "themeId", "localeId", "textScaleId", "fixtureId"],
+    "artifactPathFields": [
+      "buildSha",
+      "stateId",
+      "viewportId",
+      "themeId",
+      "localeId",
+      "textScaleId",
+      "fixtureId",
+      "browserAtProfileId"
+    ],
+    "filenameFields": [
+      "stateId",
+      "viewportId",
+      "themeId",
+      "localeId",
+      "textScaleId",
+      "fixtureId",
+      "browserId",
+      "browserVersion",
+      "atId",
+      "atVersion",
+      "artifactId"
+    ]
+  },
   "browserAtProfile": {
+    "id": "windows_chromium_nvda",
     "os": "Windows",
     "browser": "Chromium",
     "assistiveTechnology": "NVDA",
@@ -1240,7 +1302,13 @@ Contrast acceptance uses computed rendered colors, including alpha compositing, 
 
 Required viewport evidence: 320×568, 390×844, 430px phone, compact landscape, 768px, and at least 1200px; each relevant state also covers 200% text, English pseudolocale expansion, `ar-XB`, keyboard, light/dark, and the 15 Break-UI fixtures listed in the evidence report.
 
-Visual QA is a reproducible Cartesian matrix, not a sample: every closed experience-state ID × every viewport in the visual-regression contract × every theme × every locale is captured with the recorded browser/AT profile. Before capture, use the same production build, deterministic fixture, fonts, device scale factor 1, 100% browser zoom, color profile, and cleared storage; record the build SHA, fixture ID, OS version, Chromium version, NVDA version, and UTC capture time in `manifest.json`. `en-XA` provides expanded English and `ar-XB` runs with RTL direction. A baseline is comparable only when every condition except the candidate build SHA matches; otherwise the cell is unattempted rather than passed.
+Visual QA is a reproducible Cartesian matrix, not a sample: every closed experience-state ID × every viewport in the visual-regression contract × every theme × every locale × every text-scale ID × every Break-UI fixture ID is captured with the recorded browser/AT profile. The 15 fixture IDs are literal dimension values: none may be omitted, shortened, mapped to a default, or share an evidence cell with another fixture.
+
+The 200% condition means Chromium browser zoom set to exactly 200% after configuring the named viewport, with CSS `zoom`, root text scaling, OS text scaling, and device scale factor left at 100%, 100%, 100%, and 1 respectively. It is not a CSS transform, root-font override, screenshot upscale, or OS magnifier. The 100% control uses the same mechanism at exactly 100%. Record both the configured viewport dimensions and the observed `window.innerWidth`/`window.innerHeight` after zoom so the effective layout is reproducible.
+
+Before capture, use the same production build, deterministic fixture, fonts, color profile, and cleared storage. `manifest.json` records the six exact evidence-cell identity fields in their closed order—`stateId`, `viewportId`, `themeId`, `localeId`, `textScaleId`, and `fixtureId`—plus build SHA, browser/AT profile ID, configured and observed viewport dimensions, browser zoom percent, device scale factor, OS version, Chromium version, NVDA version, fixture-data digest, font digest, color profile, and UTC capture time. `en-XA` provides expanded English and `ar-XB` runs with RTL direction. Identity fields cannot be null, inferred from a path, or replaced by an unlabeled default.
+
+A baseline is comparable only when state ID, viewport ID and configured dimensions, theme ID, locale ID and direction, text-scale ID and browser zoom percent, fixture ID and fixture-data digest, browser/AT profile and exact versions, device scale factor, fonts, and color profile match; only the candidate build SHA and capture time may differ. Otherwise the cell is unattempted rather than passed.
 
 The visual-QA artifact ID order is closed:
 
@@ -1257,7 +1325,7 @@ The visual-QA artifact ID order is closed:
 ]
 ```
 
-Artifacts live under `visual-qa/<build-sha>/<state>/<viewport>/<theme>/<locale>/chromium-nvda/`. Each filename is `<state>__<viewport>__<theme>__<locale>__chromium-<browser-version>__nvda-<at-version>__<artifact-id>` after replacing characters outside `[A-Za-z0-9._-]` with `-`. `actual.png`, the approved `baseline.png`, and `diff.png` use identical crop and pixel dimensions. `overflow.json` records document and named-region client/scroll dimensions, bounding rectangles, clipping/overlap results, and primary-action reachability; horizontal page overflow, clipped required content, or an unreachable action fails the cell. `contrast.json` records the computed foreground/background RGBA values, measured ratio, required ratio, semantic-pair ID, and pass/fail result. `focus.json` records the ordered keyboard sequence, accessible name, active element, viewport visibility, and applied focus-ring ID for every stop. `announcements.txt` records the NVDA transcript and ordered live-region event/count so one-time and deduplicated announcements are reviewable. `reduced-motion.json` records `prefers-reduced-motion: reduce` as matched, the same state outcome, computed animation/transition values, and proof that movement is removed in favor of the specified static equivalent. Missing, stale, incomparable, or manually reconstructed artifacts are unattempted, not passing evidence.
+Artifacts live under `visual-qa/<build-sha>/<state>/<viewport>/<theme>/<locale>/<text-scale>/<fixture>/windows_chromium_nvda/`. Each filename is `<state>__<viewport>__<theme>__<locale>__<text-scale>__<fixture>__chromium-<browser-version>__nvda-<at-version>__<artifact-id>` after replacing characters outside `[A-Za-z0-9._-]` with `-`. All closed IDs already satisfy that character set and contain no `__`, so sanitization cannot collapse two cells; the path plus filename identity is unique for each of the 15 fixtures at both text scales. `actual.png`, the approved `baseline.png`, and `diff.png` use identical crop and pixel dimensions. `overflow.json` records document and named-region client/scroll dimensions, bounding rectangles, clipping/overlap results, and primary-action reachability; horizontal page overflow, clipped required content, or an unreachable action fails the cell. `contrast.json` records the computed foreground/background RGBA values, measured ratio, required ratio, semantic-pair ID, and pass/fail result. `focus.json` records the ordered keyboard sequence, accessible name, active element, viewport visibility, and applied focus-ring ID for every stop. `announcements.txt` records the NVDA transcript and ordered live-region event/count so one-time and deduplicated announcements are reviewable. `reduced-motion.json` records `prefers-reduced-motion: reduce` as matched, the same state outcome, computed animation/transition values, and proof that movement is removed in favor of the specified static equivalent. Missing, stale, incomparable, or manually reconstructed artifacts are unattempted, not passing evidence.
 
 This visual contract adds no runtime, dependency, route, fixture switch, telemetry, schema, or authority. It does not change the canonical transition manifest or its `7cef0f307e365ec4f2ee0e8c83a2b8f0bb56401e6d8ccabafdf4008cea3631e9` digest.
 
