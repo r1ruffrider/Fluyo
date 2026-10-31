@@ -15,6 +15,10 @@ const plan = read(planPath);
 const adr = read(adrPath);
 const roadmap = read("docs/ROADMAP.md");
 const handoff = read("docs/DEVELOPMENT_HANDOFF.md");
+const testAccountGovernance = read("docs/TEST_ACCOUNT_GOVERNANCE.md");
+
+const standingApprovalPresentationSop =
+  "Whenever Marlon must approve an action or make a material decision, Adriana presents mutually exclusive choices as app-native clickable selection buttons. The Recommended choice appears first and each choice states its consequence or tradeoff. The exact selected button is the approval or decision record. No secret value appears in a button or prompt. If app-native controls are unavailable, Adriana says so explicitly and uses concise numbered choice codes.";
 
 const closedJsonAfter = <T>(marker: string): T => {
   const afterMarker = plan.split(marker)[1] ?? "";
@@ -551,6 +555,17 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     expect(plan).toContain(phaseLock);
     expect(adr).toContain(phaseLock);
+  });
+
+  it("records ADR 0007 acceptance and the standing clickable approval process", () => {
+    expect(adr).toContain("- Status: accepted");
+    expect(adr).toContain("- Accepted by: Marlon on 2026-10-31");
+    expect(adr).toContain("496518f9c0fc340ac2bc1152076c35381adb9aca");
+    expect(adr).toContain("78c84f2307f57216ecb8d4ddf8bbdf898bbe2ae1");
+    expect(roadmap).toContain("and accepted [ADR 0007]");
+    expect(handoff).toContain("and accepted [ADR 0007]");
+    expect(handoff).toContain(standingApprovalPresentationSop);
+    expect(testAccountGovernance).toContain(standingApprovalPresentationSop);
   });
 
   it("locks the exact learner flow, state inventory, and Break-UI fixtures in order", () => {
