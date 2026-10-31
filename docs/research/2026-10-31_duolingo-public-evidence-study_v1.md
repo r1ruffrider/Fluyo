@@ -134,18 +134,19 @@ The future Break-UI catalog contains these 15 fixtures:
 
 Julieta independently reviewed the following `COMPANY-REPORTED` figures as non-transferable historical claims. The transferability verdict for every row is `DO NOT USE AS FLUYO TARGET/FORECAST`.
 
-| Source  | Reported figure                 | Correct reading                                                          | Why Fluyo cannot reuse it                                      |
-| ------- | ------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| SRC-023 | `2.4×`                          | 140% higher relative, not percentage points                              | Baseline, cohort, confidence, and transferability are missing. |
-| SRC-023 | `>40%` streak change            | Direction, denominator, and comparison window are ambiguous/rounded      | Company reporting is not a Fluyo forecast.                     |
-| SRC-023 | `+3.3%` D14                     | Relative unless the source explicitly says points                        | Baseline is required.                                          |
-| SRC-006 | `5.6×`                          | 460% higher relative                                                     | Self-selection and denominator prevent causal transfer.        |
-| SRC-009 | `2×` beginner result            | 100% relative risk                                                       | Baseline, assignment, and confidence are required.             |
-| SRC-024 | `+1.1M` and `+1.8M` minutes/day | Absolute totals with no user denominator                                 | They cannot be combined into a sequential `+64%` claim.        |
-| SRC-024 | TSLW weight `0.5`               | Proprietary proxy setting                                                | Do not copy the metric or weight.                              |
-| SRC-024 | `15 minutes/day`                | A reported standard, not a universal learning rule                       | It is not a Fluyo default or efficacy target.                  |
-| SRC-019 | `39% → 8%`                      | −31 percentage points; about 79.5% relative reduction                    | Limited to the described entry-level Android work.             |
-| SRC-019 | `91% → 94.7%`                   | +3.7 points; about 4.1% relative increase; failure reduction about 41.1% | Limited to the described entry-level Android work.             |
+| Source  | Reported figure                 | Correct reading                                                            | Why Fluyo cannot reuse it                                                                   |
+| ------- | ------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| SRC-018 | `70%`                           | `COMPANY-REPORTED` workflow result; methodology and baseline are `UNKNOWN` | `DO NOT USE AS FLUYO TARGET/FORECAST`; not a Fluyo quality, coverage, or efficiency target. |
+| SRC-023 | `2.4×`                          | 140% higher relative, not percentage points                                | Baseline, cohort, confidence, and transferability are missing.                              |
+| SRC-023 | `>40%` streak change            | Direction, denominator, and comparison window are ambiguous/rounded        | Company reporting is not a Fluyo forecast.                                                  |
+| SRC-023 | `+3.3%` D14                     | Relative unless the source explicitly says points                          | Baseline is required.                                                                       |
+| SRC-006 | `5.6×`                          | 460% higher relative                                                       | Self-selection and denominator prevent causal transfer.                                     |
+| SRC-009 | `2×` beginner result            | 100% relative risk                                                         | Baseline, assignment, and confidence are required.                                          |
+| SRC-024 | `+1.1M` and `+1.8M` minutes/day | Absolute totals with no user denominator                                   | They cannot be combined into a sequential `+64%` claim.                                     |
+| SRC-024 | TSLW weight `0.5`               | Proprietary proxy setting                                                  | Do not copy the metric or weight.                                                           |
+| SRC-024 | `15 minutes/day`                | A reported standard, not a universal learning rule                         | It is not a Fluyo default or efficacy target.                                               |
+| SRC-019 | `39% → 8%`                      | −31 percentage points; about 79.5% relative reduction                      | Limited to the described entry-level Android work.                                          |
+| SRC-019 | `91% → 94.7%`                   | +3.7 points; about 4.1% relative increase; failure reduction about 41.1%   | Limited to the described entry-level Android work.                                          |
 
 The existing ADR 0005 range of 1–20 completed activities per day is an accepted repository rule, not evidence from this study and not an efficacy claim.
 

@@ -16,12 +16,14 @@ const adr = read(adrPath);
 const roadmap = read("docs/ROADMAP.md");
 const handoff = read("docs/DEVELOPMENT_HANDOFF.md");
 
-const closedJsonArrayAfter = (marker: string): string[] => {
+const closedJsonAfter = <T>(marker: string): T => {
   const afterMarker = plan.split(marker)[1] ?? "";
   const block = afterMarker.match(/```json\s*([\s\S]*?)```/);
-  if (!block?.[1]) throw new Error(`missing closed JSON array after ${marker}`);
-  return JSON.parse(block[1]) as string[];
+  if (!block?.[1]) throw new Error(`missing closed JSON value after ${marker}`);
+  return JSON.parse(block[1]) as T;
 };
+
+const closedJsonArrayAfter = (marker: string): string[] => closedJsonAfter<string[]>(marker);
 
 describe("Sprint 6 R0 public-evidence boundary", () => {
   it("retains the exact official/public source ledger and honest date unknowns", () => {
@@ -47,6 +49,16 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(report).toContain("`COMPANY-REPORTED`");
     expect(report).toContain("`DO NOT USE AS FLUYO TARGET/FORECAST`");
     expect(plan).toContain("Engagement cannot be presented as learning efficacy");
+  });
+
+  it("registers SRC-018's company-reported 70% workflow result as non-transferable", () => {
+    const numericalClaims =
+      report.split("## Numerical claim register")[1]?.split("## Safe claim language")[0] ?? "";
+    const src018Rows = numericalClaims.split("\n").filter((line) => line.startsWith("| SRC-018 |"));
+
+    expect(src018Rows).toEqual([
+      "| SRC-018 | `70%`                           | `COMPANY-REPORTED` workflow result; methodology and baseline are `UNKNOWN` | `DO NOT USE AS FLUYO TARGET/FORECAST`; not a Fluyo quality, coverage, or efficiency target. |",
+    ]);
   });
 
   it("locks the lawful no-copy and originality boundary", () => {
@@ -366,6 +378,196 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     ]) {
       expect(plan).toContain(boundary);
     }
+  });
+
+  it("locks measurable contrast, the visual-QA matrix, motion, and focus treatments", () => {
+    const visualContract = closedJsonAfter<{
+      viewports: Array<{ id: string; widthCssPx: number; heightCssPx: number }>;
+      themes: string[];
+      locales: string[];
+      browserAtProfile: {
+        os: string;
+        browser: string;
+        assistiveTechnology: string;
+        versionPolicy: string;
+      };
+      contrast: {
+        normalTextMinRatio: number;
+        largeTextMinRatio: number;
+        largeTextDefinition: { regularMinCssPx: number; boldMinCssPx: number };
+        meaningfulNonTextMinRatio: number;
+        focusBoundaryMinRatio: number;
+        semanticPairs: Array<{
+          id: string;
+          foregroundToken: string;
+          backgroundToken: string;
+          kind: string;
+          minimumRatio: number;
+        }>;
+      };
+      motion: Array<{ id: string; durationMs: number }>;
+      focusRings: Array<{
+        id: string;
+        theme: string;
+        treatment: string;
+        colorToken: string;
+        adjacentSurfaceToken: string;
+        minimumBoundaryRatio: number;
+      }>;
+    }>("The measurable Conversation Canvas visual-regression contract is closed:");
+
+    expect(visualContract.viewports).toEqual([
+      { id: "phone_320x568", widthCssPx: 320, heightCssPx: 568 },
+      { id: "reference_390x844", widthCssPx: 390, heightCssPx: 844 },
+      { id: "phone_430x932", widthCssPx: 430, heightCssPx: 932 },
+      { id: "compact_landscape_844x390", widthCssPx: 844, heightCssPx: 390 },
+      { id: "tablet_768x1024", widthCssPx: 768, heightCssPx: 1024 },
+      { id: "desktop_1200x900", widthCssPx: 1200, heightCssPx: 900 },
+    ]);
+    expect(visualContract.viewports).toContainEqual({
+      id: "reference_390x844",
+      widthCssPx: 390,
+      heightCssPx: 844,
+    });
+    expect(visualContract.themes).toEqual(["light", "dark"]);
+    expect(visualContract.locales).toEqual(["en", "en-XA", "ar-XB"]);
+    expect(visualContract.browserAtProfile).toEqual({
+      os: "Windows",
+      browser: "Chromium",
+      assistiveTechnology: "NVDA",
+      versionPolicy: "record exact OS, browser, and AT versions",
+    });
+
+    expect(visualContract.contrast).toEqual({
+      normalTextMinRatio: 4.5,
+      largeTextMinRatio: 3,
+      largeTextDefinition: { regularMinCssPx: 24, boldMinCssPx: 18.66 },
+      meaningfulNonTextMinRatio: 3,
+      focusBoundaryMinRatio: 3,
+      semanticPairs: [
+        {
+          id: "light_primary_text",
+          foregroundToken: "ink",
+          backgroundToken: "paper",
+          kind: "normal_text",
+          minimumRatio: 4.5,
+        },
+        {
+          id: "dark_primary_text",
+          foregroundToken: "paper",
+          backgroundToken: "ink",
+          kind: "normal_text",
+          minimumRatio: 4.5,
+        },
+        {
+          id: "light_large_accent_text",
+          foregroundToken: "cobalt",
+          backgroundToken: "paper",
+          kind: "large_text",
+          minimumRatio: 3,
+        },
+        {
+          id: "dark_large_accent_text",
+          foregroundToken: "sun",
+          backgroundToken: "ink",
+          kind: "large_text",
+          minimumRatio: 3,
+        },
+        {
+          id: "light_meaningful_state_boundary",
+          foregroundToken: "coral",
+          backgroundToken: "paper",
+          kind: "meaningful_non_text",
+          minimumRatio: 3,
+        },
+        {
+          id: "dark_meaningful_state_boundary",
+          foregroundToken: "mint",
+          backgroundToken: "ink",
+          kind: "meaningful_non_text",
+          minimumRatio: 3,
+        },
+        {
+          id: "light_focus_boundary",
+          foregroundToken: "cobalt",
+          backgroundToken: "paper",
+          kind: "focus_boundary",
+          minimumRatio: 3,
+        },
+        {
+          id: "dark_focus_boundary",
+          foregroundToken: "sun",
+          backgroundToken: "ink",
+          kind: "focus_boundary",
+          minimumRatio: 3,
+        },
+      ],
+    });
+
+    expect(visualContract.motion).toEqual([
+      { id: "press", durationMs: 120 },
+      { id: "selection", durationMs: 140 },
+      { id: "entry", durationMs: 180 },
+      { id: "confirmed_transition", durationMs: 220 },
+      { id: "progress", durationMs: 240 },
+    ]);
+    const motionDurations = visualContract.motion.map(({ durationMs }) => durationMs);
+    expect(Math.min(...motionDurations)).toBe(120);
+    expect(Math.max(...motionDurations)).toBe(240);
+
+    expect(visualContract.focusRings).toEqual([
+      {
+        id: "light_cobalt",
+        theme: "light",
+        treatment: "3px cobalt ring plus offset",
+        colorToken: "cobalt",
+        adjacentSurfaceToken: "paper",
+        minimumBoundaryRatio: 3,
+      },
+      {
+        id: "dark_sun",
+        theme: "dark",
+        treatment: "3px sun ring plus offset",
+        colorToken: "sun",
+        adjacentSurfaceToken: "ink",
+        minimumBoundaryRatio: 3,
+      },
+    ]);
+  });
+
+  it("locks reproducible browser/AT visual-QA artifacts without changing scope or digest", () => {
+    expect(closedJsonArrayAfter("The visual-QA artifact ID order is closed:")).toEqual([
+      "actual.png",
+      "baseline.png",
+      "diff.png",
+      "overflow.json",
+      "contrast.json",
+      "focus.json",
+      "announcements.txt",
+      "reduced-motion.json",
+    ]);
+
+    for (const protocol of [
+      "every closed experience-state ID × every viewport in the visual-regression contract × every theme × every locale",
+      "device scale factor 1, 100% browser zoom",
+      "record the build SHA, fixture ID, OS version, Chromium version, NVDA version, and UTC capture time",
+      "actual.png`, the approved `baseline.png`, and `diff.png` use identical crop and pixel dimensions",
+      "document and named-region client/scroll dimensions",
+      "computed foreground/background RGBA values, measured ratio, required ratio, semantic-pair ID",
+      "ordered keyboard sequence, accessible name, active element, viewport visibility, and applied focus-ring ID",
+      "NVDA transcript and ordered live-region event/count",
+      "`prefers-reduced-motion: reduce` as matched",
+      "Missing, stale, incomparable, or manually reconstructed artifacts are unattempted",
+    ]) {
+      expect(plan).toContain(protocol);
+    }
+
+    expect(plan).toContain(
+      "This visual contract adds no runtime, dependency, route, fixture switch, telemetry, schema, or authority",
+    );
+    expect(plan).toContain(
+      "It does not change the canonical transition manifest or its `7cef0f307e365ec4f2ee0e8c83a2b8f0bb56401e6d8ccabafdf4008cea3631e9` digest",
+    );
   });
 
   it("locks the canonical 48-row transition manifest, digest, and recovery invariants", () => {

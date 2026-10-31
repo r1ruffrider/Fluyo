@@ -1123,7 +1123,143 @@ Placement is omitted. One scroll surface contains the top bar, textual progress,
 
 The original visual direction is **Conversation Canvas**, using Fluyo paper/ink/cobalt/coral/sun/mint tokens and a clipped lower-start corner. Focus is a 3px cobalt ring plus offset on light surfaces and a 3px sun ring plus offset on dark surfaces. Motion is state-bound and interruptible: 120ms press, 140ms selection, 180ms entry, 220ms confirmed transition, and 240ms progress, each with a static reduced-motion equivalent. No infinite animation, shimmer, floating loop, pulsing call to action, confetti, mascot, shake, or celebration before confirmation is allowed.
 
+The measurable Conversation Canvas visual-regression contract is closed:
+
+```json
+{
+  "viewports": [
+    { "id": "phone_320x568", "widthCssPx": 320, "heightCssPx": 568 },
+    { "id": "reference_390x844", "widthCssPx": 390, "heightCssPx": 844 },
+    { "id": "phone_430x932", "widthCssPx": 430, "heightCssPx": 932 },
+    { "id": "compact_landscape_844x390", "widthCssPx": 844, "heightCssPx": 390 },
+    { "id": "tablet_768x1024", "widthCssPx": 768, "heightCssPx": 1024 },
+    { "id": "desktop_1200x900", "widthCssPx": 1200, "heightCssPx": 900 }
+  ],
+  "themes": ["light", "dark"],
+  "locales": ["en", "en-XA", "ar-XB"],
+  "browserAtProfile": {
+    "os": "Windows",
+    "browser": "Chromium",
+    "assistiveTechnology": "NVDA",
+    "versionPolicy": "record exact OS, browser, and AT versions"
+  },
+  "contrast": {
+    "normalTextMinRatio": 4.5,
+    "largeTextMinRatio": 3,
+    "largeTextDefinition": { "regularMinCssPx": 24, "boldMinCssPx": 18.66 },
+    "meaningfulNonTextMinRatio": 3,
+    "focusBoundaryMinRatio": 3,
+    "semanticPairs": [
+      {
+        "id": "light_primary_text",
+        "foregroundToken": "ink",
+        "backgroundToken": "paper",
+        "kind": "normal_text",
+        "minimumRatio": 4.5
+      },
+      {
+        "id": "dark_primary_text",
+        "foregroundToken": "paper",
+        "backgroundToken": "ink",
+        "kind": "normal_text",
+        "minimumRatio": 4.5
+      },
+      {
+        "id": "light_large_accent_text",
+        "foregroundToken": "cobalt",
+        "backgroundToken": "paper",
+        "kind": "large_text",
+        "minimumRatio": 3
+      },
+      {
+        "id": "dark_large_accent_text",
+        "foregroundToken": "sun",
+        "backgroundToken": "ink",
+        "kind": "large_text",
+        "minimumRatio": 3
+      },
+      {
+        "id": "light_meaningful_state_boundary",
+        "foregroundToken": "coral",
+        "backgroundToken": "paper",
+        "kind": "meaningful_non_text",
+        "minimumRatio": 3
+      },
+      {
+        "id": "dark_meaningful_state_boundary",
+        "foregroundToken": "mint",
+        "backgroundToken": "ink",
+        "kind": "meaningful_non_text",
+        "minimumRatio": 3
+      },
+      {
+        "id": "light_focus_boundary",
+        "foregroundToken": "cobalt",
+        "backgroundToken": "paper",
+        "kind": "focus_boundary",
+        "minimumRatio": 3
+      },
+      {
+        "id": "dark_focus_boundary",
+        "foregroundToken": "sun",
+        "backgroundToken": "ink",
+        "kind": "focus_boundary",
+        "minimumRatio": 3
+      }
+    ]
+  },
+  "motion": [
+    { "id": "press", "durationMs": 120 },
+    { "id": "selection", "durationMs": 140 },
+    { "id": "entry", "durationMs": 180 },
+    { "id": "confirmed_transition", "durationMs": 220 },
+    { "id": "progress", "durationMs": 240 }
+  ],
+  "focusRings": [
+    {
+      "id": "light_cobalt",
+      "theme": "light",
+      "treatment": "3px cobalt ring plus offset",
+      "colorToken": "cobalt",
+      "adjacentSurfaceToken": "paper",
+      "minimumBoundaryRatio": 3
+    },
+    {
+      "id": "dark_sun",
+      "theme": "dark",
+      "treatment": "3px sun ring plus offset",
+      "colorToken": "sun",
+      "adjacentSurfaceToken": "ink",
+      "minimumBoundaryRatio": 3
+    }
+  ]
+}
+```
+
+Contrast acceptance uses computed rendered colors, including alpha compositing, rather than token names or visual judgment. Normal text passes only at **4.5:1** or greater. Large text passes only at **3:1** or greater and is large only at 24 CSS px regular or 18.66 CSS px bold and above. Meaningful component/state boundaries, icons that convey information, and the visible focus boundary pass only at **3:1** or greater against the adjacent rendered color. Each semantic pair above must be measured in its named theme; any unlisted foreground/background pair introduced by R4 must be added with its semantic use and applicable threshold before it can pass.
+
 Required viewport evidence: 320×568, 390×844, 430px phone, compact landscape, 768px, and at least 1200px; each relevant state also covers 200% text, English pseudolocale expansion, `ar-XB`, keyboard, light/dark, and the 15 Break-UI fixtures listed in the evidence report.
+
+Visual QA is a reproducible Cartesian matrix, not a sample: every closed experience-state ID × every viewport in the visual-regression contract × every theme × every locale is captured with the recorded browser/AT profile. Before capture, use the same production build, deterministic fixture, fonts, device scale factor 1, 100% browser zoom, color profile, and cleared storage; record the build SHA, fixture ID, OS version, Chromium version, NVDA version, and UTC capture time in `manifest.json`. `en-XA` provides expanded English and `ar-XB` runs with RTL direction. A baseline is comparable only when every condition except the candidate build SHA matches; otherwise the cell is unattempted rather than passed.
+
+The visual-QA artifact ID order is closed:
+
+```json
+[
+  "actual.png",
+  "baseline.png",
+  "diff.png",
+  "overflow.json",
+  "contrast.json",
+  "focus.json",
+  "announcements.txt",
+  "reduced-motion.json"
+]
+```
+
+Artifacts live under `visual-qa/<build-sha>/<state>/<viewport>/<theme>/<locale>/chromium-nvda/`. Each filename is `<state>__<viewport>__<theme>__<locale>__chromium-<browser-version>__nvda-<at-version>__<artifact-id>` after replacing characters outside `[A-Za-z0-9._-]` with `-`. `actual.png`, the approved `baseline.png`, and `diff.png` use identical crop and pixel dimensions. `overflow.json` records document and named-region client/scroll dimensions, bounding rectangles, clipping/overlap results, and primary-action reachability; horizontal page overflow, clipped required content, or an unreachable action fails the cell. `contrast.json` records the computed foreground/background RGBA values, measured ratio, required ratio, semantic-pair ID, and pass/fail result. `focus.json` records the ordered keyboard sequence, accessible name, active element, viewport visibility, and applied focus-ring ID for every stop. `announcements.txt` records the NVDA transcript and ordered live-region event/count so one-time and deduplicated announcements are reviewable. `reduced-motion.json` records `prefers-reduced-motion: reduce` as matched, the same state outcome, computed animation/transition values, and proof that movement is removed in favor of the specified static equivalent. Missing, stale, incomparable, or manually reconstructed artifacts are unattempted, not passing evidence.
+
+This visual contract adds no runtime, dependency, route, fixture switch, telemetry, schema, or authority. It does not change the canonical transition manifest or its `7cef0f307e365ec4f2ee0e8c83a2b8f0bb56401e6d8ccabafdf4008cea3631e9` digest.
 
 The Break-UI fixture ID order is closed:
 
