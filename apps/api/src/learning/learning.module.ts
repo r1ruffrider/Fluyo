@@ -18,6 +18,7 @@ import { LearningSettingsService } from "./learning-settings.service";
 import { LearningDataLifecycleService } from "./learning-data-lifecycle.service";
 import { LearningDashboardController } from "./learning-dashboard.controller";
 import { LearningDashboardService } from "./learning-dashboard.service";
+import { LearningSessionPlannerService } from "./learning-session-planner.service";
 import {
   LEARNING_TELEMETRY_SINK,
   LearningTelemetryService,
@@ -43,6 +44,7 @@ import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-repl
     ActivityAttemptService,
     LearningDataLifecycleService,
     LearningDashboardService,
+    LearningSessionPlannerService,
     LoggerLearningTelemetrySink,
     {
       provide: LEARNING_TELEMETRY_SINK,
