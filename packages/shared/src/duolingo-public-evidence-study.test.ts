@@ -78,6 +78,144 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(plan).toContain("Every phase uses a separate small branch and pull request");
   });
 
+  it("locks Catalina's exact R1 file map, prohibited paths, and dependency edges", () => {
+    const exactR1Files = [
+      "packages/shared/src/learning-session-plan.ts",
+      "packages/shared/src/learning-session-plan.test.ts",
+      "packages/shared/src/learning-operational-policy.ts",
+      "packages/shared/src/learning-operational-policy.test.ts",
+      "packages/shared/src/index.ts",
+    ];
+    const prohibitedPaths = [
+      "apps/api/",
+      "apps/web/",
+      "apps/ios/",
+      "apps/android/",
+      "apps/api/prisma/",
+      ".github/",
+      "contracts/",
+      "package.json",
+      "package-lock.json",
+    ];
+
+    for (const path of [...exactR1Files, ...prohibitedPaths]) {
+      expect(plan).toContain(path);
+    }
+
+    for (const boundary of [
+      "R1 changes only these five files",
+      "R1 adds no dependency, environment variable, workflow, Prisma/OpenAPI artifact, API route, UI, SDK, hosted integration, database object, fixture toggle, or runtime consumer",
+      "index.ts\n  ├─ exports learning-session-plan.ts",
+      "learning-session-plan.test.ts\n  └─ imports learning-session-plan.ts",
+      "learning-operational-policy.test.ts\n  └─ imports learning-operational-policy.ts",
+      "no project import, I/O, clock, network, storage, or environment access",
+      "no project import, I/O, network, storage, environment-variable access",
+      "no R1 dependency edge to either new module",
+      "Neither edge exists in R1",
+    ]) {
+      expect(plan).toContain(boundary);
+    }
+  });
+
+  it("locks the closed LearningSessionPlanV1 contract and validation rules", () => {
+    for (const declaration of [
+      "LEARNING_SESSION_PLAN_SCHEMA_VERSION = 1 as const",
+      'LEARNING_SESSION_REASONS = ["next"] as const',
+      "export interface LearningSessionPlanItemV1",
+      "activityId: string",
+      "contentVersion: number",
+      'reason: "next"',
+      "export interface LearningSessionPlanV1",
+      "schemaVersion: 1",
+      "item: LearningSessionPlanItemV1 | null",
+      "export type LearningSessionPlanParseResult",
+      '{ ok: false; reason: "invalid_shape" }',
+      "parseLearningSessionPlanV1(input: unknown): LearningSessionPlanParseResult",
+    ]) {
+      expect(plan).toContain(declaration);
+    }
+
+    for (const rule of [
+      "root keys are exactly `schemaVersion` and `item`",
+      "`item: null` is the only zero-result representation",
+      "exactly `activityId`, `contentVersion`, and `reason`",
+      "canonical lowercase RFC 4122 UUID v4",
+      "positive JavaScript safe integer",
+      "Unknown, missing, inherited, duplicate-after-decoding, or incorrectly typed fields",
+      "never partially accepted or normalized",
+      "no prompt, answer, feedback, owner, email, entitlement, progress, reward, economy, analytics, URL, endpoint, or arbitrary metadata",
+      "preserves the existing dashboard behavior",
+      "dependency-free and side-effect-free",
+      "throws no user-data-bearing diagnostic",
+      "uppercase/non-v4/malformed UUIDs",
+      "input immutability",
+    ]) {
+      expect(plan).toContain(rule);
+    }
+  });
+
+  it("locks the closed LearningOperationalPolicyV1 contract, bounds, and injected context", () => {
+    for (const declaration of [
+      "LEARNING_OPERATIONAL_POLICY_SCHEMA_VERSION = 1 as const",
+      "LEARNING_POLICY_ENVIRONMENTS",
+      "export interface LearningOperationalPolicyV1",
+      'policyId: "learning_operational_policy"',
+      'environment: "development" | "staging" | "production"',
+      "sourceDigest: `sha256:${string}`",
+      "issuedAtUtc: string",
+      "expiresAtUtc: string",
+      "LEARNING_SESSION_PLAN_ENABLED: boolean",
+      "export type LearningOperationalPolicyFailure",
+      '"missing"',
+      '"oversize"',
+      '"invalid_shape"',
+      '"unsupported_schema"',
+      '"environment_mismatch"',
+      '"source_mismatch"',
+      '"not_yet_valid"',
+      '"expired"',
+      '"lifetime_exceeded"',
+      '"production_enabled"',
+      "export type LearningOperationalPolicyEvaluation",
+      "evaluateLearningOperationalPolicyV1(",
+      "utf8ByteLength: number",
+      "expectedEnvironment:",
+      "expectedSourceDigest: `sha256:${string}`",
+      "nowUtc: string",
+    ]) {
+      expect(plan).toContain(declaration);
+    }
+
+    for (const rule of [
+      "1,024 bytes",
+      "Root keys are exactly `schemaVersion`, `policyId`, `environment`, `sourceDigest`, `issuedAtUtc`, `expiresAtUtc`, and `switches`",
+      "exactly 64 lowercase hexadecimal characters",
+      "explicitly injected expected digest",
+      "canonical round-trip UTC whole-second strings",
+      "604,800 seconds (7 days)",
+      "`issuedAtUtc <= nowUtc < expiresAtUtc`",
+      "reads no process environment or global clock",
+      "Maximum switch-entry count is **1**",
+      "evaluates fail-closed to `false`",
+      "fails as `production_enabled`",
+      "R1 has no runtime consumer and enables nothing",
+      "Unknown fields at any depth fail",
+      "exact 1,024/1,025-byte boundary",
+      "injected-clock determinism",
+      "bounded failure reasons",
+    ]) {
+      expect(plan).toContain(rule);
+    }
+  });
+
+  it("locks the exact R1 phase sentence in the plan and ADR", () => {
+    const phaseLock =
+      "R1 may begin only after R0 merges, all post-main checks pass, and ADR 0007 is recorded as accepted at an exact head reviewed by the required specialists and Elana. R1 implements only the shared files and closed contracts named above.";
+
+    expect(plan).toContain(phaseLock);
+    expect(adr).toContain(phaseLock);
+  });
+
   it("keeps offline read-only and optional controls default-disabled and fail-closed", () => {
     expect(report).toContain("R0–R4 stays read-only offline");
     expect(adr).toContain("Offline starts read-only");

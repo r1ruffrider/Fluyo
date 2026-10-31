@@ -71,28 +71,185 @@ Only `CONFIRMED` may reflect a canonical progress change already committed by th
 | R4-A  | Dated UX/visual specification and Break-UI catalog                                             | No UI implementation                                                                                 | Camila flow/accessibility and Daniela originality/tokens/motion accepted                                         |
 | R4-B  | Web-only Conversation Canvas behind the approved boundary                                      | No native, audio, reminder, social, competition, commerce, public campaign, or offline-write claim   | Full states; 390px and desktop; 200% text; RTL; keyboard/screen reader; runtime/build/start evidence; Elana PASS |
 
-R1 begins only after R0 merges and its post-main checks pass. Every phase uses a separate small branch and pull request.
+R1 may begin only after R0 merges, all post-main checks pass, and ADR 0007 is recorded as accepted at an exact head reviewed by the required specialists and Elana. R1 implements only the shared files and closed contracts named above. R1 begins only after R0 merges under this exact phase lock. Every phase uses a separate small branch and pull request.
 
 ## R1 contract requirements
 
-`LearningSessionPlanV1`:
+### Exact five-file map and dependency edges
 
-- returns zero or one item;
-- permits only `reason: "next"`;
-- references an existing server-derived activity and immutable content version;
-- carries no prompt, answer, owner, email, entitlement, economy, or analytics payload beyond what the accepted shared contract requires;
-- cannot mutate progress; and
-- falls back to the current dashboard when absent, disabled, invalid, or failed.
+R1 changes only these five files:
 
-`LearningOperationalPolicyV1`:
+```text
+packages/shared/src/learning-session-plan.ts
+packages/shared/src/learning-session-plan.test.ts
+packages/shared/src/learning-operational-policy.ts
+packages/shared/src/learning-operational-policy.test.ts
+packages/shared/src/index.ts
+```
 
-- is closed, versioned, source-bound, environment-bound, size-bounded, and default-disabled;
-- initially recognizes only `LEARNING_SESSION_PLAN_ENABLED`;
-- cannot be enabled by a client or an unavailable/malformed policy;
-- contains no remote expression, executable content, arbitrary component tree, endpoint, secret, or stable identity; and
-- has an injected local clock only at its expiry boundary.
+No R1 change is permitted under:
 
+```text
+apps/api/
+apps/web/
+apps/ios/
+apps/android/
+apps/api/prisma/
+.github/
+contracts/
+package.json
+package-lock.json
+```
+
+R1 adds no dependency, environment variable, workflow, Prisma/OpenAPI artifact, API route, UI, SDK, hosted integration, database object, fixture toggle, or runtime consumer.
 No Prisma, OpenAPI, workspace dependency, environment variable, UI, workflow, or hosted integration changes are allowed in R1.
+
+```text
+packages/shared/src/index.ts
+  ├─ exports learning-session-plan.ts
+  └─ exports learning-operational-policy.ts
+
+learning-session-plan.test.ts
+  └─ imports learning-session-plan.ts
+
+learning-operational-policy.test.ts
+  └─ imports learning-operational-policy.ts
+
+learning-session-plan.ts
+  └─ no project import, I/O, clock, network, storage, or environment access
+
+learning-operational-policy.ts
+  └─ no project import, I/O, network, storage, environment-variable access,
+     or global clock; validation receives expected environment, expected
+     source digest, and current time as explicit inputs
+
+apps/api and apps/web
+  └─ no R1 dependency edge to either new module
+```
+
+R2 may later add a server-side planner adapter. R3 may later add a policy consumer. Neither edge exists in R1.
+
+### `LearningSessionPlanV1`
+
+The plan cannot mutate progress; a null, invalid, absent, or later disabled plan preserves the existing dashboard behavior.
+
+```ts
+export const LEARNING_SESSION_PLAN_SCHEMA_VERSION = 1 as const;
+export const LEARNING_SESSION_REASONS = ["next"] as const;
+
+export interface LearningSessionPlanItemV1 {
+  activityId: string;
+  contentVersion: number;
+  reason: "next";
+}
+
+export interface LearningSessionPlanV1 {
+  schemaVersion: 1;
+  item: LearningSessionPlanItemV1 | null;
+}
+
+export type LearningSessionPlanParseResult =
+  { ok: true; value: LearningSessionPlanV1 } | { ok: false; reason: "invalid_shape" };
+
+export function parseLearningSessionPlanV1(input: unknown): LearningSessionPlanParseResult;
+```
+
+Closed validation rules:
+
+1. The root keys are exactly `schemaVersion` and `item`.
+2. `schemaVersion` is exactly numeric literal `1`.
+3. `item: null` is the only zero-result representation.
+4. A non-null `item` has exactly `activityId`, `contentVersion`, and `reason`.
+5. `activityId` is a canonical lowercase RFC 4122 UUID v4.
+6. `contentVersion` is a positive JavaScript safe integer.
+7. `reason` is exactly `"next"`.
+8. Unknown, missing, inherited, duplicate-after-decoding, or incorrectly typed fields fail with `invalid_shape`.
+9. Invalid input is never partially accepted or normalized into a plan.
+10. A valid plan is read-only. It contains no prompt, answer, feedback, owner, email, entitlement, progress, reward, economy, analytics, URL, endpoint, or arbitrary metadata.
+11. `item: null` or an invalid/absent plan preserves the existing dashboard behavior.
+12. Parsing is dependency-free and side-effect-free. It accepts `unknown` and returns `LearningSessionPlanParseResult`; it throws no user-data-bearing diagnostic.
+
+Required tests cover valid null, valid item, uppercase/non-v4/malformed UUIDs, zero/negative/fractional/unsafe versions, wrong reason, wrong schema version, every missing key, every extra key at both levels, arrays, primitives, inherited properties, and input immutability.
+
+### `LearningOperationalPolicyV1`
+
+The policy is default-disabled and cannot be enabled by a client. Invalid or unavailable input remains fail-closed.
+
+```ts
+export const LEARNING_OPERATIONAL_POLICY_SCHEMA_VERSION = 1 as const;
+
+export const LEARNING_POLICY_ENVIRONMENTS = ["development", "staging", "production"] as const;
+
+export interface LearningOperationalPolicyV1 {
+  schemaVersion: 1;
+  policyId: "learning_operational_policy";
+  environment: "development" | "staging" | "production";
+  sourceDigest: `sha256:${string}`;
+  issuedAtUtc: string;
+  expiresAtUtc: string;
+  switches: {
+    LEARNING_SESSION_PLAN_ENABLED: boolean;
+  };
+}
+
+export type LearningOperationalPolicyFailure =
+  | "missing"
+  | "oversize"
+  | "invalid_shape"
+  | "unsupported_schema"
+  | "environment_mismatch"
+  | "source_mismatch"
+  | "not_yet_valid"
+  | "expired"
+  | "lifetime_exceeded"
+  | "production_enabled";
+
+export type LearningOperationalPolicyEvaluation =
+  | {
+      ok: true;
+      value: LearningOperationalPolicyV1;
+      effective: { LEARNING_SESSION_PLAN_ENABLED: boolean };
+    }
+  | {
+      ok: false;
+      reason: LearningOperationalPolicyFailure;
+      effective: { LEARNING_SESSION_PLAN_ENABLED: false };
+    };
+
+export function evaluateLearningOperationalPolicyV1(
+  input: unknown,
+  context: {
+    utf8ByteLength: number;
+    expectedEnvironment: "development" | "staging" | "production";
+    expectedSourceDigest: `sha256:${string}`;
+    nowUtc: string;
+  },
+): LearningOperationalPolicyEvaluation;
+```
+
+Closed envelope and bound rules:
+
+1. UTF-8 input is at most **1,024 bytes**.
+2. Root keys are exactly `schemaVersion`, `policyId`, `environment`, `sourceDigest`, `issuedAtUtc`, `expiresAtUtc`, and `switches`.
+3. `schemaVersion` is exactly `1`.
+4. `policyId` is exactly `"learning_operational_policy"`.
+5. `environment` is exactly one allowed literal.
+6. `sourceDigest` matches `sha256:` followed by exactly 64 lowercase hexadecimal characters.
+7. The validator compares `sourceDigest` with the explicitly injected expected digest; it does not read Git or hash files.
+8. `issuedAtUtc` and `expiresAtUtc` are canonical round-trip UTC whole-second strings, `YYYY-MM-DDTHH:mm:ssZ`.
+9. `issuedAtUtc < expiresAtUtc`.
+10. Maximum lifetime is **604,800 seconds (7 days)**.
+11. Validity is half-open: `issuedAtUtc <= nowUtc < expiresAtUtc`.
+12. The caller injects `expectedEnvironment`, `expectedSourceDigest`, and `nowUtc`; the module reads no process environment or global clock.
+13. `switches` contains exactly one entry: `LEARNING_SESSION_PLAN_ENABLED`.
+14. Maximum switch-entry count is **1**.
+15. Missing, malformed, oversized, unsupported, environment-mismatched, source-mismatched, future-issued, expired, or over-lifetime policy evaluates fail-closed to `false`.
+16. A production policy with `LEARNING_SESSION_PLAN_ENABLED: true` fails as `production_enabled` and evaluates to `false`.
+17. A valid development or staging policy may preserve its boolean value in `effective`, but R1 has no runtime consumer and enables nothing.
+18. Unknown fields at any depth fail. Values are not coerced.
+19. Evaluation returns only the bounded reason enum and never raw input, paths, stack traces, identifiers, or policy contents.
+
+Required tests cover every valid environment, default false, valid non-production true, production true rejection, exact 1,024/1,025-byte boundary, zero/extra switch entries, upper/lowercase and malformed digests, source/environment mismatch, issue/expiry exact boundaries, invalid dates, maximum lifetime and +1 second, unsupported schema, every missing/extra field, nested extras, coercion attempts, injected-clock determinism, no mutation, and bounded failure reasons.
 
 ## Security and privacy acceptance
 

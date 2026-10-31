@@ -79,7 +79,7 @@ The later web implementation must satisfy one-scroll reading order, 44px minimum
 - **R4-A:** accepted UX/visual/Break-UI design specification.
 - **R4-B:** web-only original Conversation Canvas implementation with runtime evidence.
 
-Every phase uses a separate small pull request. R1 starts only after R0 merges and post-main checks pass.
+Every phase uses a separate small pull request. R1 may begin only after R0 merges, all post-main checks pass, and ADR 0007 is recorded as accepted at an exact head reviewed by the required specialists and Elana. R1 implements only the shared files and closed contracts named above.
 
 ## Alternatives considered
 
