@@ -25,6 +25,13 @@ const closedJsonAfter = <T>(marker: string): T => {
 
 const closedJsonArrayAfter = (marker: string): string[] => closedJsonAfter<string[]>(marker);
 
+const closedReportJsonArrayAfter = (marker: string): string[] => {
+  const afterMarker = report.split(marker)[1] ?? "";
+  const block = afterMarker.match(/```json\s*([\s\S]*?)```/);
+  if (!block?.[1]) throw new Error(`missing closed report JSON array after ${marker}`);
+  return JSON.parse(block[1]) as string[];
+};
+
 describe("Sprint 6 R0 public-evidence boundary", () => {
   it("retains the exact official/public source ledger and honest date unknowns", () => {
     const sourceLedger = report.split("## Source ledger")[1]?.split("## Observation")[0] ?? "";
@@ -36,9 +43,56 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       Array.from({ length: 24 }, (_, index) => `SRC-${String(index + 1).padStart(3, "0")}`),
     );
     expect(report).toContain("not shown in retrieved page (UNKNOWN)");
-    expect(report).toContain("updated 2026-09-08");
     expect(report).toContain("filed 2026-02-27");
     expect(report).not.toContain("Pending exact recheck");
+
+    const src013 = sourceLedger.split("\n").find((line) => line.startsWith("| SRC-013 |"));
+    const src014 = sourceLedger.split("\n").find((line) => line.startsWith("| SRC-014 |"));
+    expect(src013).toContain("Apple App Store, “Duolingo: Learn Languages”");
+    expect(src013).toContain(
+      "US title captured 2026-10-31; recheck title and OS metadata before reuse",
+    );
+    expect(src014).toContain("hl=en&gl=US");
+    expect(src014).toContain("dynamic listing update date (UNKNOWN)");
+    expect(src014).toContain("displayed Oct 26, 2026");
+    expect(src014).toContain("dynamic/region-dependent and not a canonical update date");
+    expect(report).not.toContain("updated 2026-09-08");
+  });
+
+  it("marks the session-local replay unavailable and keeps exactly nine canonical limitations", () => {
+    const replayId = "ev_929eebe1b1d987c31030811d071ab83ac3563182a8c93c99853f193fce9359af";
+    const limitations = closedReportJsonArrayAfter(
+      "The repository-canonical study limitation order is closed:",
+    );
+
+    expect(limitations).toEqual([
+      "Official public pages only; no private or authenticated source.",
+      "No IPA, APK, executable, native dossier, or REA evidence bundle was retained.",
+      "No native artifact or proprietary source was decompiled.",
+      "No DRM, authentication, access control, rate limit, or platform protection was bypassed.",
+      "No private account was used and no account was automated.",
+      "No authenticated traffic or private API was inspected.",
+      "No lesson text, screenshots, code, characters, media, animation, or trade dress was extracted or reused.",
+      "No native, backend, security, ranking, experimentation, or release-threshold behavior was established.",
+      "Public store metadata does not establish current cross-region, cross-platform, or all-device parity.",
+    ]);
+    expect(limitations).toHaveLength(9);
+    expect(new Set(limitations).size).toBe(9);
+
+    for (const source of [report, handoff]) {
+      expect(source).toContain(replayId);
+      expect(source).toContain("UNAVAILABLE/UNKNOWN");
+      expect(source).toContain("session-local evidence");
+      expect(source).toContain("not independently auditable");
+      expect(source).toContain("no matching");
+      expect(source).not.toContain(`${replayId}\` proves`);
+      expect(source).not.toContain("proves only one public web record");
+    }
+
+    expect(report).toContain("no native dossier or evidence bundle was retained");
+    expect(report).toContain("does not fabricate, reconstruct, or export the missing evidence");
+    expect(handoff).toContain("supports no repository claim");
+    expect(handoff).toContain("canonical update date remains `UNKNOWN`");
   });
 
   it("separates observations, inferences, unknowns, and company-reported numbers", () => {
