@@ -1,5 +1,25 @@
 # Development and billing verification handoff
 
+## Sprint 5 Increment 5 material-decision selection append — 2026-10-30
+
+This credential-free append records Marlon's exact “Approve recommended bundle” selection against
+merged PR-A commit `80563fee339a07bd2ab9706b8186ed772a3b9a1a`. The atomic 14-ID record folds to
+seven `OWNER_SELECTED_EVIDENCE_PENDING`, seven `DEFERRED_OPEN`, and zero `ACCEPTED`. Selection is
+not evidence closure: runtime evidence remains 0 and all 24 native scenarios remain unattempted.
+
+The append changes only the v2 record/index, governance documentation, and the post-bootstrap
+regression fixture that now starts from the actual merged PR-A commit. V1 and the frozen v2 policy,
+schema, validator, workflow, genesis record, and decision manifest remain byte-identical. No SDK or
+dependency is selected or installed, no native runtime is authorized, and no credential,
+provider/dashboard, domain, signing, device, production, store, spending, publication, or destructive
+action is performed.
+
+The base-controlled `Auth material decisions` workflow validates this first append. Configuring
+that check as required branch protection remains a separately gated external repository-setting
+action. Until that setting is authorized, applied, and verified, the record is not authoritative
+repository governance and cannot unlock runtime. Independent credential-free work may continue,
+but the append stays fail-closed at that external-control boundary.
+
 ## Sprint 5 Increment 5 material-decision v2 control-plane bootstrap — 2026-10-30
 
 This branch installs a separate `fluyo-native-auth-material-decisions-v2` control plane, a canonical
