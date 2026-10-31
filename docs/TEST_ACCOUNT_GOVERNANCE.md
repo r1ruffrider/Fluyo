@@ -85,7 +85,25 @@ At the start of every current and future phase, Adriana reconciles the complete 
 
 Elana PASS on the current exact head is the execution trigger. Adriana immediately reconciles every remaining protected, specialist, and platform gate plus GitHub mergeability. If all standing exact-head conditions pass, Adriana marks the pull request ready, merges under the standing authorization, verifies every post-main workflow, updates the handoff and status, and starts the next authorized phase, pull request, or build-plan step without waiting for another user instruction. If another gate fails, engineering repairs it and obtains a fresh Elana exact-head PASS. If the next step crosses an undelegated approval boundary, Adriana notifies Marlon immediately and continues every independent safe workstream.
 
-Adriana and the roster reconcile every authorized completed-PR handoff and next-phase start immediately and resume or dispatch safe work without avoidable delay. A 12-hour idle period is a hard process breach, not a permitted wait, polling interval, or grace period. App or email notification is escalation only and never substitutes for required approval. Elana remains the sole independent exact-head QA and code-review gate.
+Adriana and the roster reconcile every authorized completed-PR handoff and next-phase start immediately and resume or dispatch safe work without avoidable delay. A 1-hour idle period is a hard process breach, not a permitted wait, polling interval, or grace period. App or email notification is escalation only and never substitutes for required approval. Elana remains the sole independent exact-head QA and code-review gate.
+
+## Clickable approval and decision requests — 2026-10-30
+
+Whenever Marlon must approve an action or choose a material product, security, release, store, signing, spending,
+credential, external-account, or destructive-work decision, the request must be presented through the Codex app's
+native clickable selection controls. The request must:
+
+1. present mutually exclusive choices whenever possible;
+2. put the recommended choice first and label it `Recommended`;
+3. state the consequence or tradeoff of every choice;
+4. keep the exact requested authority bounded to the affected phase or action; and
+5. use the exact button selection as the approval or decision record.
+
+Explanatory prose may precede the choices, but it cannot be the only actionable approval path. Secrets,
+credentials, tokens, signing material, and private account identifiers must never appear in a button label or
+prompt. If app-native controls are unavailable, the request must say so explicitly and use concise numbered
+choice codes as the fallback. Routine status updates and work already covered by standing delegation do not need
+selection controls.
 
 ## Append-only native-auth phase authority
 
