@@ -80,6 +80,8 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
   it("locks Catalina's exact R1 file map, prohibited paths, and dependency edges", () => {
     const exactR1Files = [
+      "packages/shared/src/learning-contract-json.ts",
+      "packages/shared/src/learning-contract-json.test.ts",
       "packages/shared/src/learning-session-plan.ts",
       "packages/shared/src/learning-session-plan.test.ts",
       "packages/shared/src/learning-operational-policy.ts",
@@ -103,18 +105,64 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     }
 
     for (const boundary of [
-      "R1 changes only these five files",
+      "R1 changes only these seven files",
       "R1 adds no dependency, environment variable, workflow, Prisma/OpenAPI artifact, API route, UI, SDK, hosted integration, database object, fixture toggle, or runtime consumer",
-      "index.ts\n  ├─ exports learning-session-plan.ts",
+      "learning-session-plan.ts ───────┐",
+      "learning-operational-policy.ts ─┘",
+      "learning-contract-json.ts\n  └─ no project import, I/O, network, storage, process environment",
+      "index.ts\n  ├─ exports learning-session-plan.ts public types/functions",
       "learning-session-plan.test.ts\n  └─ imports learning-session-plan.ts",
       "learning-operational-policy.test.ts\n  └─ imports learning-operational-policy.ts",
-      "no project import, I/O, clock, network, storage, or environment access",
-      "no project import, I/O, network, storage, environment-variable access",
+      "package-internal and is not re-exported from `index.ts`",
       "no R1 dependency edge to either new module",
       "Neither edge exists in R1",
     ]) {
       expect(plan).toContain(boundary);
     }
+  });
+
+  it("locks the shared duplicate-aware raw JSON decoder boundary", () => {
+    for (const declaration of [
+      "LEARNING_CONTRACT_JSON_MAX_BYTES = 1_024 as const",
+      "export type LearningContractJsonFailure",
+      '"missing"',
+      '"oversize"',
+      '"invalid_utf8"',
+      '"invalid_json"',
+      '"duplicate_key"',
+      "export type LearningContractJsonDecodeResult",
+      "decodeLearningContractJson(",
+      "rawUtf8Json: Uint8Array",
+    ]) {
+      expect(plan).toContain(declaration);
+    }
+
+    for (const rule of [
+      "immediately copies the exact `Uint8Array` view",
+      "that immutable snapshot",
+      "Zero bytes return `missing`",
+      "more than 1,024 bytes return `oversize`",
+      "Fatal UTF-8 validation",
+      "invalid, truncated, or overlong encodings",
+      "UTF-8 BOM",
+      "trailing non-whitespace content",
+      "invalid escape",
+      "unpaired surrogate",
+      "dependency-free and duplicate-aware",
+      "does not use `JSON.parse` or a reviver",
+      '`"a"` plus `"\\u0061"`',
+      "Duplicate detection is scoped per object",
+      "without invoking `__proto__`, setters, or inherited properties",
+      "never returns input text, key names, offsets, paths, stacks, or partial objects",
+      "caller\'s byte array is not mutated",
+      "exact 1,024-byte valid input and 1,025-byte rejection",
+      "fixed non-disclosing failures",
+    ]) {
+      expect(plan).toContain(rule);
+    }
+
+    expect(adr).toContain("package-internal `learning-contract-json.ts` decoder");
+    expect(adr).toContain("Both public contracts accept raw `Uint8Array` JSON");
   });
 
   it("locks the closed LearningSessionPlanV1 contract and validation rules", () => {
@@ -128,9 +176,12 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "export interface LearningSessionPlanV1",
       "schemaVersion: 1",
       "item: LearningSessionPlanItemV1 | null",
+      "export type LearningSessionPlanFailure",
+      'LearningContractJsonFailure | "invalid_shape"',
       "export type LearningSessionPlanParseResult",
-      '{ ok: false; reason: "invalid_shape" }',
-      "parseLearningSessionPlanV1(input: unknown): LearningSessionPlanParseResult",
+      "{ ok: false; reason: LearningSessionPlanFailure }",
+      "parseLearningSessionPlanV1(",
+      "rawUtf8Json: Uint8Array",
     ]) {
       expect(plan).toContain(declaration);
     }
@@ -141,17 +192,23 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "exactly `activityId`, `contentVersion`, and `reason`",
       "canonical lowercase RFC 4122 UUID v4",
       "positive JavaScript safe integer",
-      "Unknown, missing, inherited, duplicate-after-decoding, or incorrectly typed fields",
+      "Snapshot and decode through `decodeLearningContractJson`",
+      "Propagate only its fixed failure reason",
+      "Unknown, missing, inherited, or incorrectly typed fields",
+      "duplicate rejection already occurred at the raw JSON boundary",
       "never partially accepted or normalized",
       "no prompt, answer, feedback, owner, email, entitlement, progress, reward, economy, analytics, URL, endpoint, or arbitrary metadata",
       "preserves the existing dashboard behavior",
       "dependency-free and side-effect-free",
       "throws no user-data-bearing diagnostic",
+      "every decoder failure",
       "uppercase/non-v4/malformed UUIDs",
       "input immutability",
     ]) {
       expect(plan).toContain(rule);
     }
+
+    expect(plan).not.toContain("duplicate-after-decoding");
   });
 
   it("locks the closed LearningOperationalPolicyV1 contract, bounds, and injected context", () => {
@@ -166,8 +223,8 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "expiresAtUtc: string",
       "LEARNING_SESSION_PLAN_ENABLED: boolean",
       "export type LearningOperationalPolicyFailure",
-      '"missing"',
-      '"oversize"',
+      "LearningContractJsonFailure",
+      '"invalid_context"',
       '"invalid_shape"',
       '"unsupported_schema"',
       '"environment_mismatch"',
@@ -178,7 +235,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       '"production_enabled"',
       "export type LearningOperationalPolicyEvaluation",
       "evaluateLearningOperationalPolicyV1(",
-      "utf8ByteLength: number",
+      "rawUtf8Json: Uint8Array",
       "expectedEnvironment:",
       "expectedSourceDigest: `sha256:${string}`",
       "nowUtc: string",
@@ -188,10 +245,21 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     for (const rule of [
       "1,024 bytes",
+      "computes length internally from the same immutable byte snapshot",
+      "Context is validated before policy decoding",
       "Root keys are exactly `schemaVersion`, `policyId`, `environment`, `sourceDigest`, `issuedAtUtc`, `expiresAtUtc`, and `switches`",
       "exactly 64 lowercase hexadecimal characters",
       "explicitly injected expected digest",
       "canonical round-trip UTC whole-second strings",
+      "Offsets, fractional seconds, impossible calendar dates, lowercase `z`, missing `Z`, surrounding whitespace, non-string values",
+      "`invalid_context` always evaluates `LEARNING_SESSION_PLAN_ENABLED` to `false`",
+      "validate runtime context",
+      "snapshot raw bytes",
+      "fatal UTF-8 decode",
+      "duplicate-aware JSON parse",
+      "canonical issued/expires validation",
+      "environment/source comparison",
+      "production-enable rejection",
       "604,800 seconds (7 days)",
       "`issuedAtUtc <= nowUtc < expiresAtUtc`",
       "reads no process environment or global clock",
@@ -201,11 +269,25 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "R1 has no runtime consumer and enables nothing",
       "Unknown fields at any depth fail",
       "exact 1,024/1,025-byte boundary",
+      "duplicate root and nested policy keys",
+      "`nowUtc === issuedAtUtc` success",
+      "`nowUtc === expiresAtUtc` expiry",
+      "absence of caller-controlled negative, fractional, `NaN`, or false-small byte lengths",
+      "same measured and parsed immutable byte snapshot",
+      "fail-closed invalid context",
       "injected-clock determinism",
-      "bounded failure reasons",
+      "bounded non-disclosing reasons",
     ]) {
       expect(plan).toContain(rule);
     }
+
+    const signature =
+      plan
+        .split("export function evaluateLearningOperationalPolicyV1(")[1]
+        ?.split("): LearningOperationalPolicyEvaluation;")[0] ?? "";
+    expect(signature).not.toContain("utf8ByteLength");
+    expect(adr).toContain("validates its injected expected environment, source digest");
+    expect(adr).toContain("reads no global clock or process environment");
   });
 
   it("locks the exact R1 phase sentence in the plan and ADR", () => {

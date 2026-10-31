@@ -75,11 +75,13 @@ R1 may begin only after R0 merges, all post-main checks pass, and ADR 0007 is re
 
 ## R1 contract requirements
 
-### Exact five-file map and dependency edges
+### Exact seven-file map and dependency edges
 
-R1 changes only these five files:
+R1 changes only these seven files:
 
 ```text
+packages/shared/src/learning-contract-json.ts
+packages/shared/src/learning-contract-json.test.ts
 packages/shared/src/learning-session-plan.ts
 packages/shared/src/learning-session-plan.test.ts
 packages/shared/src/learning-operational-policy.ts
@@ -105,9 +107,17 @@ R1 adds no dependency, environment variable, workflow, Prisma/OpenAPI artifact, 
 No Prisma, OpenAPI, workspace dependency, environment variable, UI, workflow, or hosted integration changes are allowed in R1.
 
 ```text
+learning-session-plan.ts ───────┐
+                                ├─ imports learning-contract-json.ts
+learning-operational-policy.ts ─┘
+
+learning-contract-json.ts
+  └─ no project import, I/O, network, storage, process environment,
+     global clock, or third-party dependency
+
 packages/shared/src/index.ts
-  ├─ exports learning-session-plan.ts
-  └─ exports learning-operational-policy.ts
+  ├─ exports learning-session-plan.ts public types/functions
+  └─ exports learning-operational-policy.ts public types/functions
 
 learning-session-plan.test.ts
   └─ imports learning-session-plan.ts
@@ -115,19 +125,44 @@ learning-session-plan.test.ts
 learning-operational-policy.test.ts
   └─ imports learning-operational-policy.ts
 
-learning-session-plan.ts
-  └─ no project import, I/O, clock, network, storage, or environment access
-
-learning-operational-policy.ts
-  └─ no project import, I/O, network, storage, environment-variable access,
-     or global clock; validation receives expected environment, expected
-     source digest, and current time as explicit inputs
-
 apps/api and apps/web
   └─ no R1 dependency edge to either new module
 ```
 
+`learning-contract-json.ts` is package-internal and is not re-exported from `index.ts`.
+
 R2 may later add a server-side planner adapter. R3 may later add a policy consumer. Neither edge exists in R1.
+
+### Shared raw JSON boundary
+
+```ts
+export const LEARNING_CONTRACT_JSON_MAX_BYTES = 1_024 as const;
+
+export type LearningContractJsonFailure =
+  "missing" | "oversize" | "invalid_utf8" | "invalid_json" | "duplicate_key";
+
+export type LearningContractJsonDecodeResult =
+  { ok: true; value: unknown } | { ok: false; reason: LearningContractJsonFailure };
+
+export function decodeLearningContractJson(
+  rawUtf8Json: Uint8Array,
+): LearningContractJsonDecodeResult;
+```
+
+Closed decoder behavior:
+
+1. The function immediately copies the exact `Uint8Array` view. Length, decoding, duplicate detection, and parsing all use that immutable snapshot.
+2. Zero bytes return `missing`; more than 1,024 bytes return `oversize`.
+3. Fatal UTF-8 validation maps invalid, truncated, or overlong encodings to `invalid_utf8`.
+4. A UTF-8 BOM, trailing non-whitespace content, malformed JSON grammar, invalid escape, or unpaired surrogate returns `invalid_json`.
+5. Parsing is dependency-free and duplicate-aware. It does not use `JSON.parse` or a reviver for duplicate detection.
+6. Object keys are compared after JSON escape decoding, so `"a"` plus `"\u0061"` in the same object returns `duplicate_key`.
+7. Duplicate detection is scoped per object. The same key in distinct nested objects is allowed.
+8. Objects are constructed without invoking `__proto__`, setters, or inherited properties. Contract validators subsequently reject all unknown keys.
+9. The result contains only a value or fixed reason. It never returns input text, key names, offsets, paths, stacks, or partial objects.
+10. The caller's byte array is not mutated.
+
+Required decoder tests cover valid object, array, primitive, and surrounding JSON whitespace; empty input; exact 1,024-byte valid input and 1,025-byte rejection; invalid, truncated, and overlong UTF-8; BOM and trailing-document rejection; root and nested duplicate keys; escaped-equivalent duplicate keys; the same key in separate objects; malformed escapes and unpaired surrogates; `__proto__`, `constructor`, and inherited-property safety; input immutability; and fixed non-disclosing failures.
 
 ### `LearningSessionPlanV1`
 
@@ -148,11 +183,21 @@ export interface LearningSessionPlanV1 {
   item: LearningSessionPlanItemV1 | null;
 }
 
-export type LearningSessionPlanParseResult =
-  { ok: true; value: LearningSessionPlanV1 } | { ok: false; reason: "invalid_shape" };
+export type LearningSessionPlanFailure = LearningContractJsonFailure | "invalid_shape";
 
-export function parseLearningSessionPlanV1(input: unknown): LearningSessionPlanParseResult;
+export type LearningSessionPlanParseResult =
+  { ok: true; value: LearningSessionPlanV1 } | { ok: false; reason: LearningSessionPlanFailure };
+
+export function parseLearningSessionPlanV1(rawUtf8Json: Uint8Array): LearningSessionPlanParseResult;
 ```
+
+Atomic parser flow:
+
+1. Snapshot and decode through `decodeLearningContractJson`.
+2. Propagate only its fixed failure reason.
+3. Validate the decoded value against the exact closed `LearningSessionPlanV1` shape.
+4. Reject missing, unknown, inherited, or incorrectly typed fields as `invalid_shape`.
+5. Return no partial plan and perform no normalization.
 
 Closed validation rules:
 
@@ -163,13 +208,13 @@ Closed validation rules:
 5. `activityId` is a canonical lowercase RFC 4122 UUID v4.
 6. `contentVersion` is a positive JavaScript safe integer.
 7. `reason` is exactly `"next"`.
-8. Unknown, missing, inherited, duplicate-after-decoding, or incorrectly typed fields fail with `invalid_shape`.
+8. Unknown, missing, inherited, or incorrectly typed fields fail with `invalid_shape`; duplicate rejection already occurred at the raw JSON boundary before object construction.
 9. Invalid input is never partially accepted or normalized into a plan.
 10. A valid plan is read-only. It contains no prompt, answer, feedback, owner, email, entitlement, progress, reward, economy, analytics, URL, endpoint, or arbitrary metadata.
 11. `item: null` or an invalid/absent plan preserves the existing dashboard behavior.
-12. Parsing is dependency-free and side-effect-free. It accepts `unknown` and returns `LearningSessionPlanParseResult`; it throws no user-data-bearing diagnostic.
+12. Parsing is dependency-free and side-effect-free. It accepts raw `Uint8Array` JSON and returns `LearningSessionPlanParseResult`; it throws no user-data-bearing diagnostic.
 
-Required tests cover valid null, valid item, uppercase/non-v4/malformed UUIDs, zero/negative/fractional/unsafe versions, wrong reason, wrong schema version, every missing key, every extra key at both levels, arrays, primitives, inherited properties, and input immutability.
+Required tests cover every decoder failure; valid null and item; uppercase/non-v4/malformed UUIDs; zero/negative/fractional/unsafe versions; wrong reason and schema; every missing/extra root and nested key; arrays; primitives; inherited properties; and input immutability.
 
 ### `LearningOperationalPolicyV1`
 
@@ -193,8 +238,8 @@ export interface LearningOperationalPolicyV1 {
 }
 
 export type LearningOperationalPolicyFailure =
-  | "missing"
-  | "oversize"
+  | LearningContractJsonFailure
+  | "invalid_context"
   | "invalid_shape"
   | "unsupported_schema"
   | "environment_mismatch"
@@ -217,14 +262,39 @@ export type LearningOperationalPolicyEvaluation =
     };
 
 export function evaluateLearningOperationalPolicyV1(
-  input: unknown,
+  rawUtf8Json: Uint8Array,
   context: {
-    utf8ByteLength: number;
     expectedEnvironment: "development" | "staging" | "production";
     expectedSourceDigest: `sha256:${string}`;
     nowUtc: string;
   },
 ): LearningOperationalPolicyEvaluation;
+```
+
+`utf8ByteLength` is not caller-controlled. The evaluator computes length internally from the same immutable byte snapshot that it decodes and validates.
+
+Context is validated before policy decoding, so it has deterministic precedence over document failures:
+
+1. `expectedEnvironment` is exactly one allowed environment.
+2. `expectedSourceDigest` is `sha256:` followed by exactly 64 lowercase hexadecimal characters.
+3. `nowUtc` matches `YYYY-MM-DDTHH:mm:ssZ` and parses and round-trips to the identical whole-second UTC string.
+4. Offsets, fractional seconds, impossible calendar dates, lowercase `z`, missing `Z`, surrounding whitespace, non-string values, and invalid dates return `invalid_context`.
+5. `invalid_context` always evaluates `LEARNING_SESSION_PLAN_ENABLED` to `false`.
+
+Atomic evaluation order is exact:
+
+```text
+validate runtime context
+  → snapshot raw bytes
+  → enforce 1,024-byte limit
+  → fatal UTF-8 decode
+  → duplicate-aware JSON parse
+  → exact closed policy-shape validation
+  → canonical issued/expires validation
+  → environment/source comparison
+  → lifetime and half-open time evaluation
+  → production-enable rejection
+  → bounded success or fail-closed result
 ```
 
 Closed envelope and bound rules:
@@ -240,7 +310,7 @@ Closed envelope and bound rules:
 9. `issuedAtUtc < expiresAtUtc`.
 10. Maximum lifetime is **604,800 seconds (7 days)**.
 11. Validity is half-open: `issuedAtUtc <= nowUtc < expiresAtUtc`.
-12. The caller injects `expectedEnvironment`, `expectedSourceDigest`, and `nowUtc`; the module reads no process environment or global clock.
+12. The caller injects validated `expectedEnvironment`, `expectedSourceDigest`, and `nowUtc`; the module reads no process environment or global clock.
 13. `switches` contains exactly one entry: `LEARNING_SESSION_PLAN_ENABLED`.
 14. Maximum switch-entry count is **1**.
 15. Missing, malformed, oversized, unsupported, environment-mismatched, source-mismatched, future-issued, expired, or over-lifetime policy evaluates fail-closed to `false`.
@@ -249,7 +319,7 @@ Closed envelope and bound rules:
 18. Unknown fields at any depth fail. Values are not coerced.
 19. Evaluation returns only the bounded reason enum and never raw input, paths, stack traces, identifiers, or policy contents.
 
-Required tests cover every valid environment, default false, valid non-production true, production true rejection, exact 1,024/1,025-byte boundary, zero/extra switch entries, upper/lowercase and malformed digests, source/environment mismatch, issue/expiry exact boundaries, invalid dates, maximum lifetime and +1 second, unsupported schema, every missing/extra field, nested extras, coercion attempts, injected-clock determinism, no mutation, and bounded failure reasons.
+Required tests cover every valid environment; default false; valid non-production true; production true rejection; exact 1,024/1,025-byte boundary; zero/extra switch entries; upper/lowercase and malformed digests; source/environment mismatch; duplicate root and nested policy keys; issue/expiry exact boundaries; `nowUtc === issuedAtUtc` success; `nowUtc === expiresAtUtc` expiry; offsets; fractional seconds; impossible dates; lowercase or missing `Z`; surrounding whitespace; non-string `nowUtc`; invalid expected environment; malformed expected digest; maximum lifetime and +1 second; unsupported schema; every missing/extra field; nested extras; coercion attempts; injected-clock determinism; input immutability; the same measured and parsed immutable byte snapshot; absence of caller-controlled negative, fractional, `NaN`, or false-small byte lengths; fail-closed invalid context; and bounded non-disclosing reasons.
 
 ## Security and privacy acceptance
 

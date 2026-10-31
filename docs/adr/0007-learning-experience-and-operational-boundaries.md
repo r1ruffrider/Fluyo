@@ -26,6 +26,12 @@ Adopt an additive, dependency-safe experience boundary:
 7. **Notification intent is delivery-independent.** Existing preferences do not imply a delivery channel. R0–R4 add no notification delivery.
 8. **Optional failures cannot break core learning.** Planner, projection, policy, and sink failures preserve the existing Learning Core and safe fallback.
 
+## R1 raw contract boundary
+
+R1 is restricted to the seven shared files named in the dated Sprint 6 build plan. The package-internal `learning-contract-json.ts` decoder is not re-exported. Both public contracts accept raw `Uint8Array` JSON and share one immutable-snapshot boundary that measures the 1,024-byte limit, performs fatal UTF-8 decoding, rejects malformed or trailing JSON and duplicate keys after escape decoding, and constructs objects without invoking prototypes, setters, or inherited properties. Fixed failure enums disclose no input, key, offset, path, stack, identifier, or partial object.
+
+The operational-policy evaluator validates its injected expected environment, source digest, and canonical whole-second UTC `nowUtc` before decoding the policy. It reads no global clock or process environment. The exact evaluation order and all closed types, prohibited paths, dependency edges, bounds, production rejection, and tests are specified in the dated plan; R1 adds no runtime consumer.
+
 ## State model
 
 The experience state machine is closed:
