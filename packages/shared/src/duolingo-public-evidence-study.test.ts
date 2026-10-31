@@ -769,6 +769,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_VALID",
         guards: [
+          "SIGN_IN_RETURN_RESULT_VALID",
           "AUTH_IDENTITY_CONFIRMED",
           "AUTH_SAME_OWNER",
           "SERVER_AUTHORIZED",
@@ -786,7 +787,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T31",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["AUTH_OWNER_CHANGED"],
+        guards: ["SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
         effects: [
           "DISCARD_OWNER_NEUTRAL_ROUTE",
           "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
@@ -800,7 +801,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T32",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SERVER_AUTHORIZATION_DENIED"],
+        guards: ["SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -810,7 +811,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T33",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SERVER_ENTITLEMENT_DENIED"],
+        guards: ["SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -820,7 +821,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T34",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["CONTENT_VERSION_STALE"],
+        guards: ["SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -830,7 +831,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T35",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["ACTIVITY_UNAVAILABLE"],
+        guards: ["SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -944,7 +945,12 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
           "NETWORK_ONLINE",
           "OFFLINE_ORIGIN_ACTIVE",
           "CURRENT_AUTH_GENERATION",
+          "RECONNECT_RESULT_VALID",
+          "AUTH_SAME_OWNER",
+          "SERVER_AUTHORIZED",
+          "SERVER_ENTITLED",
           "CONTENT_VERSION_CURRENT",
+          "ACTIVITY_AVAILABLE",
         ],
         effects: ["RESTORE_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
         target: "ACTIVE",
@@ -955,7 +961,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T45",
         source: "OFFLINE_READ_ONLY",
         event: "RECONNECT_REJECTED",
-        guards: ["AUTH_OWNER_CHANGED"],
+        guards: ["RECONNECT_RESULT_OWNER_CHANGED"],
         effects: [
           "CLEAR_EPHEMERAL_ANSWER",
           "CLEAR_OFFLINE_CONTEXT",
@@ -970,7 +976,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T46",
         source: "OFFLINE_READ_ONLY",
         event: "RECONNECT_REJECTED",
-        guards: ["CONTENT_VERSION_STALE"],
+        guards: ["RECONNECT_RESULT_REVALIDATE"],
         effects: ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
         target: "PREPARING",
         externalDestination: null,
@@ -1010,7 +1016,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     const canonical = JSON.stringify(manifest);
     const digest = createHash("sha256").update(canonical, "utf8").digest("hex");
-    const expectedDigest = "b31f5dc20645c28eebaa636c22976fe6318f505f6569575085c4b50891f72ec3";
+    const expectedDigest = "a326000567fad95dc74fc096f96be90b6228e935cfa5986a029b63f111e060f0";
     expect(manifest).toEqual(expectedManifest);
     expect(manifest).toHaveLength(48);
     expect(manifest.map(({ id }) => id)).toEqual(
@@ -1092,6 +1098,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(manifest[13]?.target).toBe("RETRYABLE_ERROR");
 
     expect(manifest[29]?.guards).toEqual([
+      "SIGN_IN_RETURN_RESULT_VALID",
       "AUTH_IDENTITY_CONFIRMED",
       "AUTH_SAME_OWNER",
       "SERVER_AUTHORIZED",
@@ -1101,11 +1108,11 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "ROUTE_IS_LEARNING_SESSION_ENTRY",
     ]);
     expect(manifest.slice(30, 35).map(({ guards }) => guards)).toEqual([
-      ["AUTH_OWNER_CHANGED"],
-      ["SERVER_AUTHORIZATION_DENIED"],
-      ["SERVER_ENTITLEMENT_DENIED"],
-      ["CONTENT_VERSION_STALE"],
-      ["ACTIVITY_UNAVAILABLE"],
+      ["SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
+      ["SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
+      ["SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
+      ["SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
+      ["SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
     ]);
     expect(
       manifest
@@ -1150,10 +1157,25 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     }
 
     expect(plan).toContain("The learning module stores no owner ID");
-    expect(plan).toContain("Every transient field is memory-only, unlogged, unpersisted");
+    expect(plan).toContain(
+      "Every transient field and normalization snapshot/result is memory-only, unlogged, unpersisted",
+    );
     expect(plan).toContain("A submit retry reuses the same opaque submission idempotency key");
     expect(plan).toContain("A prepare retry has no submission idempotency key");
     expect(plan).toContain("T13 is the sole durable-effect row");
+    expect(manifest[43]?.guards).toEqual([
+      "NETWORK_ONLINE",
+      "OFFLINE_ORIGIN_ACTIVE",
+      "CURRENT_AUTH_GENERATION",
+      "RECONNECT_RESULT_VALID",
+      "AUTH_SAME_OWNER",
+      "SERVER_AUTHORIZED",
+      "SERVER_ENTITLED",
+      "CONTENT_VERSION_CURRENT",
+      "ACTIVITY_AVAILABLE",
+    ]);
+    expect(manifest[44]?.guards).toEqual(["RECONNECT_RESULT_OWNER_CHANGED"]);
+    expect(manifest[45]?.guards).toEqual(["RECONNECT_RESULT_REVALIDATE"]);
 
     const mutations: Array<(value: typeof expectedManifest) => void> = [
       (value) => {
@@ -1203,6 +1225,285 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(plan).toContain("Nothing to review right now");
     expect(plan).toContain("one deduplicated message");
     expect(plan).toContain("No activity completion, goal change, or manufactured review progress");
+  });
+
+  it("locks closed sign-in-return and reconnect normalization truth tables", () => {
+    type SignInReturnResult =
+      | "VALID"
+      | "OWNER_CHANGED"
+      | "AUTHORIZATION_DENIED"
+      | "ENTITLEMENT_DENIED"
+      | "CONTENT_STALE"
+      | "ACTIVITY_UNAVAILABLE"
+      | "INVALID";
+    type ReconnectResult = "VALID" | "OWNER_CHANGED" | "REVALIDATE" | "INVALID";
+    type SignInSnapshot = {
+      complete: boolean;
+      identityConfirmed: boolean;
+      ownerChanged: boolean;
+      sameOwner: boolean;
+      authorized: boolean;
+      entitled: boolean;
+      contentCurrent: boolean;
+      activityAvailable: boolean;
+      routeValid: boolean;
+    };
+    type ReconnectSnapshot = {
+      networkOnline: boolean;
+      currentGeneration: boolean;
+      freshEvidence: boolean;
+      ownerChanged: boolean;
+      sameOwner: boolean;
+      authorized: boolean;
+      entitled: boolean;
+      contentCurrent: boolean;
+      activityAvailable: boolean;
+    };
+
+    const normalizeSignIn = (snapshot: SignInSnapshot): SignInReturnResult => {
+      if (!snapshot.complete) return "INVALID";
+      if (snapshot.ownerChanged) return "OWNER_CHANGED";
+      if (!snapshot.identityConfirmed || !snapshot.sameOwner || !snapshot.routeValid)
+        return "INVALID";
+      if (!snapshot.authorized) return "AUTHORIZATION_DENIED";
+      if (!snapshot.entitled) return "ENTITLEMENT_DENIED";
+      if (!snapshot.contentCurrent) return "CONTENT_STALE";
+      if (!snapshot.activityAvailable) return "ACTIVITY_UNAVAILABLE";
+      return "VALID";
+    };
+    const normalizeReconnect = (snapshot: ReconnectSnapshot): ReconnectResult => {
+      if (!snapshot.networkOnline || !snapshot.currentGeneration || !snapshot.freshEvidence) {
+        return "INVALID";
+      }
+      if (snapshot.ownerChanged) return "OWNER_CHANGED";
+      if (!snapshot.sameOwner) return "INVALID";
+      if (
+        !snapshot.authorized ||
+        !snapshot.entitled ||
+        !snapshot.contentCurrent ||
+        !snapshot.activityAvailable
+      ) {
+        return "REVALIDATE";
+      }
+      return "VALID";
+    };
+
+    const signInEvent = (result: SignInReturnResult) => {
+      const eventByResult: Record<Exclude<SignInReturnResult, "INVALID">, string> = {
+        VALID: "T30",
+        OWNER_CHANGED: "T31",
+        AUTHORIZATION_DENIED: "T32",
+        ENTITLEMENT_DENIED: "T33",
+        CONTENT_STALE: "T34",
+        ACTIVITY_UNAVAILABLE: "T35",
+      };
+      return result === "INVALID" ? [] : [eventByResult[result]];
+    };
+    const reconnectEvent = (result: ReconnectResult) => {
+      const eventByResult: Record<Exclude<ReconnectResult, "INVALID">, string> = {
+        VALID: "T44",
+        OWNER_CHANGED: "T45",
+        REVALIDATE: "T46",
+      };
+      return result === "INVALID" ? [] : [eventByResult[result]];
+    };
+
+    const signInKeys: Array<keyof SignInSnapshot> = [
+      "complete",
+      "identityConfirmed",
+      "ownerChanged",
+      "sameOwner",
+      "authorized",
+      "entitled",
+      "contentCurrent",
+      "activityAvailable",
+      "routeValid",
+    ];
+    for (let mask = 0; mask < 2 ** signInKeys.length; mask += 1) {
+      const snapshot = Object.fromEntries(
+        signInKeys.map((key, bit) => [key, Boolean(mask & (1 << bit))]),
+      ) as SignInSnapshot;
+      const expected: SignInReturnResult = !snapshot.complete
+        ? "INVALID"
+        : snapshot.ownerChanged
+          ? "OWNER_CHANGED"
+          : !snapshot.identityConfirmed || !snapshot.sameOwner || !snapshot.routeValid
+            ? "INVALID"
+            : !snapshot.authorized
+              ? "AUTHORIZATION_DENIED"
+              : !snapshot.entitled
+                ? "ENTITLEMENT_DENIED"
+                : !snapshot.contentCurrent
+                  ? "CONTENT_STALE"
+                  : !snapshot.activityAvailable
+                    ? "ACTIVITY_UNAVAILABLE"
+                    : "VALID";
+      const result = normalizeSignIn(snapshot);
+      expect(result).toBe(expected);
+      expect(signInEvent(result).length).toBeLessThanOrEqual(1);
+    }
+
+    const reconnectKeys: Array<keyof ReconnectSnapshot> = [
+      "networkOnline",
+      "currentGeneration",
+      "freshEvidence",
+      "ownerChanged",
+      "sameOwner",
+      "authorized",
+      "entitled",
+      "contentCurrent",
+      "activityAvailable",
+    ];
+    for (let mask = 0; mask < 2 ** reconnectKeys.length; mask += 1) {
+      const snapshot = Object.fromEntries(
+        reconnectKeys.map((key, bit) => [key, Boolean(mask & (1 << bit))]),
+      ) as ReconnectSnapshot;
+      const expected: ReconnectResult =
+        !snapshot.networkOnline || !snapshot.currentGeneration || !snapshot.freshEvidence
+          ? "INVALID"
+          : snapshot.ownerChanged
+            ? "OWNER_CHANGED"
+            : !snapshot.sameOwner
+              ? "INVALID"
+              : !snapshot.authorized ||
+                  !snapshot.entitled ||
+                  !snapshot.contentCurrent ||
+                  !snapshot.activityAvailable
+                ? "REVALIDATE"
+                : "VALID";
+      const result = normalizeReconnect(snapshot);
+      expect(result).toBe(expected);
+      expect(reconnectEvent(result).length).toBeLessThanOrEqual(1);
+    }
+
+    const validSignIn: SignInSnapshot = {
+      complete: true,
+      identityConfirmed: true,
+      ownerChanged: false,
+      sameOwner: true,
+      authorized: true,
+      entitled: true,
+      contentCurrent: true,
+      activityAvailable: true,
+      routeValid: true,
+    };
+    expect(signInEvent(normalizeSignIn(validSignIn))).toEqual(["T30"]);
+    expect(normalizeSignIn({ ...validSignIn, authorized: false })).toBe("AUTHORIZATION_DENIED");
+    expect(normalizeSignIn({ ...validSignIn, entitled: false })).toBe("ENTITLEMENT_DENIED");
+    expect(normalizeSignIn({ ...validSignIn, contentCurrent: false })).toBe("CONTENT_STALE");
+    expect(normalizeSignIn({ ...validSignIn, activityAvailable: false })).toBe(
+      "ACTIVITY_UNAVAILABLE",
+    );
+    expect(signInEvent(normalizeSignIn({ ...validSignIn, complete: false }))).toEqual([]);
+    expect(signInEvent(normalizeSignIn({ ...validSignIn, routeValid: false }))).toEqual([]);
+
+    const allSignInFailures = {
+      ...validSignIn,
+      ownerChanged: true,
+      sameOwner: false,
+      authorized: false,
+      entitled: false,
+      contentCurrent: false,
+      activityAvailable: false,
+    };
+    expect(signInEvent(normalizeSignIn(allSignInFailures))).toEqual(["T31"]);
+
+    const signInFailurePriority = [
+      ["authorized", "AUTHORIZATION_DENIED"],
+      ["entitled", "ENTITLEMENT_DENIED"],
+      ["contentCurrent", "CONTENT_STALE"],
+      ["activityAvailable", "ACTIVITY_UNAVAILABLE"],
+    ] as const;
+    for (let first = 0; first < signInFailurePriority.length; first += 1) {
+      for (let second = first + 1; second < signInFailurePriority.length; second += 1) {
+        const snapshot = { ...validSignIn };
+        snapshot[signInFailurePriority[first]![0]] = false;
+        snapshot[signInFailurePriority[second]![0]] = false;
+        expect(normalizeSignIn(snapshot)).toBe(signInFailurePriority[first]![1]);
+      }
+    }
+
+    const validReconnect: ReconnectSnapshot = {
+      networkOnline: true,
+      currentGeneration: true,
+      freshEvidence: true,
+      ownerChanged: false,
+      sameOwner: true,
+      authorized: true,
+      entitled: true,
+      contentCurrent: true,
+      activityAvailable: true,
+    };
+    expect(reconnectEvent(normalizeReconnect(validReconnect))).toEqual(["T44"]);
+    expect(reconnectEvent(normalizeReconnect({ ...validReconnect, freshEvidence: false }))).toEqual(
+      [],
+    );
+    expect(
+      reconnectEvent(normalizeReconnect({ ...validReconnect, currentGeneration: false })),
+    ).toEqual([]);
+    expect(reconnectEvent(normalizeReconnect({ ...validReconnect, networkOnline: false }))).toEqual(
+      [],
+    );
+    expect(reconnectEvent(normalizeReconnect({ ...validReconnect, authorized: false }))).toEqual([
+      "T46",
+    ]);
+    const allReconnectFailures = {
+      ...validReconnect,
+      ownerChanged: true,
+      sameOwner: false,
+      authorized: false,
+      entitled: false,
+      contentCurrent: false,
+      activityAvailable: false,
+    };
+    expect(reconnectEvent(normalizeReconnect(allReconnectFailures))).toEqual(["T45"]);
+    const reconnectFailureKeys = [
+      "authorized",
+      "entitled",
+      "contentCurrent",
+      "activityAvailable",
+    ] as const;
+    for (let first = 0; first < reconnectFailureKeys.length; first += 1) {
+      for (let second = first + 1; second < reconnectFailureKeys.length; second += 1) {
+        const snapshot = { ...validReconnect };
+        snapshot[reconnectFailureKeys[first]!] = false;
+        snapshot[reconnectFailureKeys[second]!] = false;
+        expect(normalizeReconnect(snapshot)).toBe("REVALIDATE");
+        expect(reconnectEvent(normalizeReconnect(snapshot))).toEqual(["T46"]);
+      }
+    }
+
+    const manifestBlock = plan
+      .split("### Canonical ordered learning transition manifest")[1]
+      ?.match(/```json\s*([\s\S]*?)```/);
+    if (!manifestBlock?.[1]) throw new Error("missing canonical transition manifest");
+    const manifest = JSON.parse(manifestBlock[1]) as Array<{
+      id: string;
+      effects: string[];
+      durableEffect: string;
+    }>;
+    const t31 = manifest.find(({ id }) => id === "T31");
+    const t45 = manifest.find(({ id }) => id === "T45");
+    for (const row of [t31, t45]) {
+      expect(row?.effects).toContain("CLEAR_PREVIOUS_OWNER_CLIENT_STATE");
+      expect(row?.effects).not.toContain("REFLECT_SERVER_CONFIRMED_PROGRESS");
+      expect(row?.durableEffect).toBe("NONE");
+    }
+    expect(
+      manifest.filter(({ durableEffect }) => durableEffect !== "NONE").map(({ id }) => id),
+    ).toEqual(["T13"]);
+
+    for (const phrase of [
+      "SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID",
+      "one immutable validation snapshot",
+      "INVALID` emits no graph event, remains in `SESSION_ENDED`",
+      "ReconnectResult` is exactly `VALID | OWNER_CHANGED | REVALIDATE | INVALID",
+      "fresh post-reconnect server authorization, entitlement, content-version, and activity-availability evidence",
+      "Cached evidence, stale-generation evidence, or missing fresh evidence yields `INVALID`",
+      "Exactly one normalized result and at most one graph event may be produced",
+    ]) {
+      expect(plan).toContain(phrase);
+    }
   });
 
   it("locks Camila's authoritative terminal and recovery state contracts", () => {

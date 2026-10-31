@@ -50,7 +50,7 @@ Optional modules cannot award progress, expand access, or make Learning Core una
 
 ### Canonical ordered learning transition manifest
 
-This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `b31f5dc20645c28eebaa636c22976fe6318f505f6569575085c4b50891f72ec3`.
+This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `a326000567fad95dc74fc096f96be90b6228e935cfa5986a029b63f111e060f0`.
 
 ```json
 [
@@ -439,6 +439,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_VALID",
     "guards": [
+      "SIGN_IN_RETURN_RESULT_VALID",
       "AUTH_IDENTITY_CONFIRMED",
       "AUTH_SAME_OWNER",
       "SERVER_AUTHORIZED",
@@ -456,7 +457,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T31",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["AUTH_OWNER_CHANGED"],
+    "guards": ["SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
     "effects": [
       "DISCARD_OWNER_NEUTRAL_ROUTE",
       "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
@@ -470,7 +471,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T32",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SERVER_AUTHORIZATION_DENIED"],
+    "guards": ["SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -480,7 +481,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T33",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SERVER_ENTITLEMENT_DENIED"],
+    "guards": ["SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -490,7 +491,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T34",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["CONTENT_VERSION_STALE"],
+    "guards": ["SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -500,7 +501,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T35",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["ACTIVITY_UNAVAILABLE"],
+    "guards": ["SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -614,7 +615,12 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
       "NETWORK_ONLINE",
       "OFFLINE_ORIGIN_ACTIVE",
       "CURRENT_AUTH_GENERATION",
-      "CONTENT_VERSION_CURRENT"
+      "RECONNECT_RESULT_VALID",
+      "AUTH_SAME_OWNER",
+      "SERVER_AUTHORIZED",
+      "SERVER_ENTITLED",
+      "CONTENT_VERSION_CURRENT",
+      "ACTIVITY_AVAILABLE"
     ],
     "effects": ["RESTORE_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
     "target": "ACTIVE",
@@ -625,7 +631,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T45",
     "source": "OFFLINE_READ_ONLY",
     "event": "RECONNECT_REJECTED",
-    "guards": ["AUTH_OWNER_CHANGED"],
+    "guards": ["RECONNECT_RESULT_OWNER_CHANGED"],
     "effects": [
       "CLEAR_EPHEMERAL_ANSWER",
       "CLEAR_OFFLINE_CONTEXT",
@@ -640,7 +646,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T46",
     "source": "OFFLINE_READ_ONLY",
     "event": "RECONNECT_REJECTED",
-    "guards": ["CONTENT_VERSION_STALE"],
+    "guards": ["RECONNECT_RESULT_REVALIDATE"],
     "effects": ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
     "target": "PREPARING",
     "externalDestination": null,
@@ -679,7 +685,13 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
 ]
 ```
 
-The closed transient context is `RetryOrigin = prepare | submit | null`, `OfflineOrigin = prepare | active | null`, and `OwnerNeutralReturnRoute = learning_session_entry | null`. Every transient field is memory-only, unlogged, unpersisted, and excluded from telemetry and retained evidence. `OwnerNeutralReturnRoute` accepts only the literal `learning_session_entry`; it cannot contain a path, query, fragment, activity ID, content ID, owner ID, URL, or arbitrary string. The learning module stores no owner ID. The authentication coordinator supplies only the closed `same-owner` or `owner-changed` determination.
+### Closed sign-in-return and reconnect normalization
+
+`SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID`. It is computed once from one immutable validation snapshot. Its priority is owner change, then same-owner authorization denial, entitlement denial, stale content, unavailable activity, and finally fully valid. `INVALID` emits no graph event, remains in `SESSION_ENDED`, and retains no owner-neutral route. Exactly one normalized result and at most one graph event may be produced.
+
+`ReconnectResult` is exactly `VALID | OWNER_CHANGED | REVALIDATE | INVALID`. It is computed only after network restoration and current-generation validation, using fresh post-reconnect server authorization, entitlement, content-version, and activity-availability evidence. Its priority is owner change, then any same-owner authorization denial, entitlement denial, stale content, or unavailable activity as `REVALIDATE`, and finally fully valid. Cached evidence, stale-generation evidence, or missing fresh evidence yields `INVALID`, emits no graph event, and never restores an answer. Exactly one normalized result and at most one graph event may be produced.
+
+The closed transient context is `RetryOrigin = prepare | submit | null`, `OfflineOrigin = prepare | active | null`, and `OwnerNeutralReturnRoute = learning_session_entry | null`. Every transient field and normalization snapshot/result is memory-only, unlogged, unpersisted, and excluded from telemetry and retained evidence. `OwnerNeutralReturnRoute` accepts only the literal `learning_session_entry`; it cannot contain a path, query, fragment, activity ID, content ID, owner ID, URL, or arbitrary string. The learning module stores no owner ID. The authentication coordinator supplies the normalized sign-in-return or reconnect result; the learning module never infers owner identity.
 
 A submit retry reuses the same opaque submission idempotency key. A prepare retry has no submission idempotency key. `SUBMITTING|SUBMIT_FAILED` is the network-failure path; submitting never transitions to offline read-only. Only a server-confirmed attempt may be reflected as progress, and T13 is the sole durable-effect row. Repeated source/event pairs are allowed only where the manifest shows mutually exclusive guards. Every entry to `SESSION_ENDED` preserves only the literal owner-neutral `learning_session_entry` route, never an activity, owner, URL, path, query, fragment, or content value. A sign-in return reaches T30 only after identity, same-owner, authorization, entitlement, content-version, activity-availability, and exact route validation; T31–T35 discard the route and go to learning home.
 
