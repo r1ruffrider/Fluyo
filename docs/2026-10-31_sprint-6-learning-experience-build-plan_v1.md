@@ -50,7 +50,7 @@ Optional modules cannot award progress, expand access, or make Learning Core una
 
 ### Canonical ordered learning transition manifest
 
-This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `330d8ca1bb398ee81aa4f4850d2cc0ebc9793a929c50d4cb3910bfb9165e50d6`.
+This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `7cef0f307e365ec4f2ee0e8c83a2b8f0bb56401e6d8ccabafdf4008cea3631e9`.
 
 ```json
 [
@@ -60,6 +60,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "event": "PLAN_READY",
     "guards": [
       "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
       "SERVER_AUTHORIZED",
       "SERVER_ENTITLED",
       "CONTENT_VERSION_CURRENT",
@@ -74,7 +75,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T02",
     "source": "PREPARING",
     "event": "REVIEW_EMPTY",
-    "guards": ["CURRENT_AUTH_GENERATION", "SERVER_REVIEW_EMPTY"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SERVER_REVIEW_EMPTY"],
     "effects": ["CLEAR_RETRY_CONTEXT"],
     "target": "EMPTY_REVIEW",
     "externalDestination": null,
@@ -84,7 +85,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T03",
     "source": "PREPARING",
     "event": "ACCESS_DENIED",
-    "guards": ["SERVER_ACCESS_DENIED"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SERVER_ACCESS_DENIED"],
     "effects": ["STOP_ATTEMPT", "CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": "ACCESS_BLOCKED",
     "externalDestination": null,
@@ -94,7 +95,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T04",
     "source": "PREPARING",
     "event": "PREPARE_FAILED",
-    "guards": ["CURRENT_AUTH_GENERATION", "RETRYABLE_PREPARATION_FAILURE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "RETRYABLE_PREPARATION_FAILURE"
+    ],
     "effects": ["SET_RETRY_ORIGIN_PREPARE", "CLEAR_SUBMISSION_CONTEXT"],
     "target": "RETRYABLE_ERROR",
     "externalDestination": null,
@@ -104,7 +109,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T05",
     "source": "PREPARING",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -124,7 +129,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T06",
     "source": "PREPARING",
     "event": "NETWORK_OFFLINE",
-    "guards": ["NETWORK_OFFLINE"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "NETWORK_OFFLINE"],
     "effects": ["SET_OFFLINE_ORIGIN_PREPARE", "CLEAR_UNCONFIRMED_ANSWER"],
     "target": "OFFLINE_READ_ONLY",
     "externalDestination": null,
@@ -154,7 +159,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T09",
     "source": "ACTIVE",
     "event": "ACCESS_DENIED",
-    "guards": ["SERVER_ACCESS_DENIED"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SERVER_ACCESS_DENIED"],
     "effects": ["STOP_ATTEMPT", "CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": "ACCESS_BLOCKED",
     "externalDestination": null,
@@ -164,7 +169,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T10",
     "source": "ACTIVE",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -184,7 +189,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T11",
     "source": "ACTIVE",
     "event": "NETWORK_OFFLINE",
-    "guards": ["NETWORK_OFFLINE"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "NETWORK_OFFLINE"],
     "effects": ["SET_OFFLINE_ORIGIN_ACTIVE", "PRESERVE_EPHEMERAL_ANSWER_IN_MEMORY"],
     "target": "OFFLINE_READ_ONLY",
     "externalDestination": null,
@@ -211,6 +216,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "event": "ATTEMPT_CONFIRMED",
     "guards": [
       "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
       "SERVER_CONFIRMATION_MATCHES_IDEMPOTENCY_KEY",
       "CONTENT_VERSION_CURRENT"
     ],
@@ -227,7 +233,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T14",
     "source": "SUBMITTING",
     "event": "SUBMIT_FAILED",
-    "guards": ["CURRENT_AUTH_GENERATION", "RETRYABLE_TRANSPORT_OR_SERVER_FAILURE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "RETRYABLE_TRANSPORT_OR_SERVER_FAILURE"
+    ],
     "effects": ["SET_RETRY_ORIGIN_SUBMIT", "PRESERVE_SUBMISSION_IDEMPOTENCY_KEY"],
     "target": "RETRYABLE_ERROR",
     "externalDestination": null,
@@ -237,7 +247,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T15",
     "source": "SUBMITTING",
     "event": "CONTENT_STALE",
-    "guards": ["SERVER_CONTENT_VERSION_CONFLICT"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SERVER_CONTENT_VERSION_CONFLICT"
+    ],
     "effects": ["FENCE_LATE_RESULTS", "CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER"],
     "target": "STALE_CONTENT",
     "externalDestination": null,
@@ -247,7 +261,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T16",
     "source": "SUBMITTING",
     "event": "ACCESS_DENIED",
-    "guards": ["SERVER_ACCESS_DENIED"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SERVER_ACCESS_DENIED"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "STOP_ATTEMPT",
@@ -263,7 +277,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T17",
     "source": "SUBMITTING",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -298,7 +312,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T19",
     "source": "CONFIRMED",
     "event": "CONTINUE",
-    "guards": ["SERVER_SELECTED_NEXT_AVAILABLE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SERVER_SELECTED_NEXT_AVAILABLE"
+    ],
     "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT"],
     "target": "ACTIVE",
     "externalDestination": null,
@@ -308,7 +326,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T20",
     "source": "CONFIRMED",
     "event": "REVIEW_EMPTY",
-    "guards": ["SERVER_REVIEW_EMPTY"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SERVER_REVIEW_EMPTY"],
     "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT"],
     "target": "EMPTY_REVIEW",
     "externalDestination": null,
@@ -353,7 +371,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T24",
     "source": "RETRYABLE_ERROR",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -398,7 +416,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T27",
     "source": "STALE_CONTENT",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -440,6 +458,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "event": "SIGN_IN_RETURN_VALID",
     "guards": [
       "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
       "SIGN_IN_RETURN_RESULT_VALID",
       "AUTH_IDENTITY_CONFIRMED",
       "AUTH_SAME_OWNER",
@@ -458,7 +477,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T31",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SIGN_IN_RETURN_RESULT_OWNER_CHANGED"
+    ],
     "effects": [
       "DISCARD_OWNER_NEUTRAL_ROUTE",
       "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
@@ -472,7 +495,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T32",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"
+    ],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -482,7 +509,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T33",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"
+    ],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -492,7 +523,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T34",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SIGN_IN_RETURN_RESULT_CONTENT_STALE"
+    ],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -502,7 +537,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T35",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"
+    ],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -532,7 +571,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T38",
     "source": "ACCESS_BLOCKED",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -552,7 +591,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T39",
     "source": "EMPTY_REVIEW",
     "event": "CONTINUE_LEARNING",
-    "guards": ["SERVER_SELECTED_NEXT_AVAILABLE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "SERVER_SELECTED_NEXT_AVAILABLE"
+    ],
     "effects": ["REQUEST_SERVER_SELECTED_ACTIVITY", "CLEAR_REVIEW_CONTEXT"],
     "target": "PREPARING",
     "externalDestination": null,
@@ -562,7 +605,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T40",
     "source": "EMPTY_REVIEW",
     "event": "CONTINUE_LEARNING",
-    "guards": ["NO_SERVER_SELECTED_ACTIVITY"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "NO_SERVER_SELECTED_ACTIVITY"],
     "effects": ["CLEAR_REVIEW_CONTEXT"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -572,7 +615,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T41",
     "source": "EMPTY_REVIEW",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -592,7 +635,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T42",
     "source": "EMPTY_REVIEW",
     "event": "NETWORK_OFFLINE",
-    "guards": ["NETWORK_OFFLINE"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "NETWORK_OFFLINE"],
     "effects": ["SET_OFFLINE_ORIGIN_PREPARE", "PRESERVE_SAFE_DISPLAY_PREFERENCES"],
     "target": "OFFLINE_READ_ONLY",
     "externalDestination": null,
@@ -602,7 +645,12 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T43",
     "source": "OFFLINE_READ_ONLY",
     "event": "RECONNECT",
-    "guards": ["NETWORK_ONLINE", "OFFLINE_ORIGIN_PREPARE"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "NETWORK_ONLINE",
+      "OFFLINE_ORIGIN_PREPARE"
+    ],
     "effects": ["CLEAR_OFFLINE_CONTEXT"],
     "target": "PREPARING",
     "externalDestination": null,
@@ -613,9 +661,10 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "source": "OFFLINE_READ_ONLY",
     "event": "RECONNECT",
     "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
       "NETWORK_ONLINE",
       "OFFLINE_ORIGIN_ACTIVE",
-      "CURRENT_AUTH_GENERATION",
       "RECONNECT_RESULT_VALID",
       "AUTH_SAME_OWNER",
       "SERVER_AUTHORIZED",
@@ -632,7 +681,11 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T45",
     "source": "OFFLINE_READ_ONLY",
     "event": "RECONNECT_REJECTED",
-    "guards": ["RECONNECT_RESULT_OWNER_CHANGED"],
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "CURRENT_ASYNC_OPERATION",
+      "RECONNECT_RESULT_OWNER_CHANGED"
+    ],
     "effects": [
       "CLEAR_EPHEMERAL_ANSWER",
       "CLEAR_OFFLINE_CONTEXT",
@@ -647,7 +700,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T46",
     "source": "OFFLINE_READ_ONLY",
     "event": "RECONNECT_REJECTED",
-    "guards": ["RECONNECT_RESULT_REVALIDATE"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "RECONNECT_RESULT_REVALIDATE"],
     "effects": ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
     "target": "PREPARING",
     "externalDestination": null,
@@ -657,7 +710,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T47",
     "source": "OFFLINE_READ_ONLY",
     "event": "SESSION_INVALID",
-    "guards": ["SESSION_INVALID"],
+    "guards": ["CURRENT_AUTH_GENERATION", "CURRENT_ASYNC_OPERATION", "SESSION_INVALID"],
     "effects": [
       "FENCE_LATE_RESULTS",
       "PRESERVE_CONFIRMED_SERVER_PROGRESS",
@@ -686,11 +739,60 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
 ]
 ```
 
+### Closed asynchronous result fence
+
+`LearningAsyncSource` is exactly `PREPARING | ACTIVE | SUBMITTING | CONFIRMED | RETRYABLE_ERROR | STALE_CONTENT | SESSION_ENDED | ACCESS_BLOCKED | EMPTY_REVIEW | OFFLINE_READ_ONLY`. `LearningAsyncResult` is exactly `PLAN_READY | REVIEW_EMPTY | ACCESS_DENIED | PREPARE_FAILED | SESSION_INVALID | NETWORK_OFFLINE | ATTEMPT_CONFIRMED | SUBMIT_FAILED | CONTENT_STALE | NEXT_AVAILABLE | NO_NEXT_AVAILABLE | SIGN_IN_VALID | SIGN_IN_OWNER_CHANGED | SIGN_IN_AUTHORIZATION_DENIED | SIGN_IN_ENTITLEMENT_DENIED | SIGN_IN_CONTENT_STALE | SIGN_IN_ACTIVITY_UNAVAILABLE | RECONNECT_PREPARE | RECONNECT_VALID | RECONNECT_OWNER_CHANGED | RECONNECT_REVALIDATE`. `LearningAsyncEvent` is exactly `PLAN_READY | REVIEW_EMPTY | ACCESS_DENIED | PREPARE_FAILED | SESSION_INVALID | NETWORK_OFFLINE | ATTEMPT_CONFIRMED | SUBMIT_FAILED | CONTENT_STALE | CONTINUE | SIGN_IN_RETURN_VALID | SIGN_IN_RETURN_REJECTED | CONTINUE_LEARNING | RECONNECT | RECONNECT_REJECTED`.
+
+`LearningAsyncResultEnvelopeV1` has exactly the keys `{ schemaVersion: 1; source: LearningAsyncSource; event: LearningAsyncEvent; result: LearningAsyncResult; authGeneration: AuthGenerationToken; operationGeneration: AsyncOperationToken }`. `AuthGenerationToken` and `AsyncOperationToken` are opaque in-memory identity tokens: they are not strings, numbers, serializable values, public exports, diagnostics, logs, persisted state, network values, telemetry, or evidence. The envelope and its tokens are discarded after settlement. Validated result data stays operation-owned until the fence and row guards pass.
+
+The normalizer accepts exactly these 34 source/result/event/row tuples:
+
+| Source              | Result                         | Event                     | Row   |
+| ------------------- | ------------------------------ | ------------------------- | ----- |
+| `PREPARING`         | `PLAN_READY`                   | `PLAN_READY`              | `T01` |
+| `PREPARING`         | `REVIEW_EMPTY`                 | `REVIEW_EMPTY`            | `T02` |
+| `PREPARING`         | `ACCESS_DENIED`                | `ACCESS_DENIED`           | `T03` |
+| `PREPARING`         | `PREPARE_FAILED`               | `PREPARE_FAILED`          | `T04` |
+| `PREPARING`         | `SESSION_INVALID`              | `SESSION_INVALID`         | `T05` |
+| `PREPARING`         | `NETWORK_OFFLINE`              | `NETWORK_OFFLINE`         | `T06` |
+| `ACTIVE`            | `ACCESS_DENIED`                | `ACCESS_DENIED`           | `T09` |
+| `ACTIVE`            | `SESSION_INVALID`              | `SESSION_INVALID`         | `T10` |
+| `ACTIVE`            | `NETWORK_OFFLINE`              | `NETWORK_OFFLINE`         | `T11` |
+| `SUBMITTING`        | `ATTEMPT_CONFIRMED`            | `ATTEMPT_CONFIRMED`       | `T13` |
+| `SUBMITTING`        | `SUBMIT_FAILED`                | `SUBMIT_FAILED`           | `T14` |
+| `SUBMITTING`        | `CONTENT_STALE`                | `CONTENT_STALE`           | `T15` |
+| `SUBMITTING`        | `ACCESS_DENIED`                | `ACCESS_DENIED`           | `T16` |
+| `SUBMITTING`        | `SESSION_INVALID`              | `SESSION_INVALID`         | `T17` |
+| `CONFIRMED`         | `NEXT_AVAILABLE`               | `CONTINUE`                | `T19` |
+| `CONFIRMED`         | `REVIEW_EMPTY`                 | `REVIEW_EMPTY`            | `T20` |
+| `RETRYABLE_ERROR`   | `SESSION_INVALID`              | `SESSION_INVALID`         | `T24` |
+| `STALE_CONTENT`     | `SESSION_INVALID`              | `SESSION_INVALID`         | `T27` |
+| `SESSION_ENDED`     | `SIGN_IN_VALID`                | `SIGN_IN_RETURN_VALID`    | `T30` |
+| `SESSION_ENDED`     | `SIGN_IN_OWNER_CHANGED`        | `SIGN_IN_RETURN_REJECTED` | `T31` |
+| `SESSION_ENDED`     | `SIGN_IN_AUTHORIZATION_DENIED` | `SIGN_IN_RETURN_REJECTED` | `T32` |
+| `SESSION_ENDED`     | `SIGN_IN_ENTITLEMENT_DENIED`   | `SIGN_IN_RETURN_REJECTED` | `T33` |
+| `SESSION_ENDED`     | `SIGN_IN_CONTENT_STALE`        | `SIGN_IN_RETURN_REJECTED` | `T34` |
+| `SESSION_ENDED`     | `SIGN_IN_ACTIVITY_UNAVAILABLE` | `SIGN_IN_RETURN_REJECTED` | `T35` |
+| `ACCESS_BLOCKED`    | `SESSION_INVALID`              | `SESSION_INVALID`         | `T38` |
+| `EMPTY_REVIEW`      | `NEXT_AVAILABLE`               | `CONTINUE_LEARNING`       | `T39` |
+| `EMPTY_REVIEW`      | `NO_NEXT_AVAILABLE`            | `CONTINUE_LEARNING`       | `T40` |
+| `EMPTY_REVIEW`      | `SESSION_INVALID`              | `SESSION_INVALID`         | `T41` |
+| `EMPTY_REVIEW`      | `NETWORK_OFFLINE`              | `NETWORK_OFFLINE`         | `T42` |
+| `OFFLINE_READ_ONLY` | `RECONNECT_PREPARE`            | `RECONNECT`               | `T43` |
+| `OFFLINE_READ_ONLY` | `RECONNECT_VALID`              | `RECONNECT`               | `T44` |
+| `OFFLINE_READ_ONLY` | `RECONNECT_OWNER_CHANGED`      | `RECONNECT_REJECTED`      | `T45` |
+| `OFFLINE_READ_ONLY` | `RECONNECT_REVALIDATE`         | `RECONNECT_REJECTED`      | `T46` |
+| `OFFLINE_READ_ONLY` | `SESSION_INVALID`              | `SESSION_INVALID`         | `T47` |
+
+Settlement is atomic and ordered: validate the exact six-key schema and closed enums; compare the auth-generation token by identity; compare the operation-generation token by identity; require `source` to equal the current state; require exact table membership; run sign-in/reconnect classification and the selected row guards against the same immutable snapshot; atomically compare-and-consume the operation token; return exactly one row; only then release operation-owned data and execute effects. Replay returns no row. Direct dispatch of an asynchronous event without a normalized envelope is rejected.
+
+An authentication change invalidates every operation. Starting or restarting asynchronous work rotates the source-state operation token. Leaving the state, `EXIT`, cancellation, `FENCE_LATE_RESULTS`, or accepted settlement invalidates or consumes the operation token. Leave and re-enter of the same state creates a new token, so the prior result is stale. A stale auth or operation token yields zero event, effect, navigation, external destination, cleanup, write, route use or discard, answer mutation, submission mutation, activity request, and progress mutation; it does not consume the current operation token. All 34 asynchronous rows begin with `CURRENT_AUTH_GENERATION`, `CURRENT_ASYNC_OPERATION`. The synchronous/initiation complement is exactly `T07`, `T08`, `T12`, `T18`, `T21`, `T22`, `T23`, `T25`, `T26`, `T28`, `T29`, `T36`, `T37`, `T48`; none gains `CURRENT_ASYNC_OPERATION`. `T08` and `T23` remain current-auth-generation initiators.
+
 ### Closed sign-in-return and reconnect normalization
 
-`SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID`. It is computed once from one immutable validation snapshot that includes required `currentGeneration: boolean`. The first normalization rule is `if (!snapshot.complete || !snapshot.currentGeneration) return INVALID`, before any other classification. Its remaining priority is owner change, then same-owner authorization denial, entitlement denial, stale content, unavailable activity, and finally fully valid. `INVALID` emits no graph event and remains in `SESSION_ENDED`. A stale-generation result executes no T30–T35 effect: it does not use or discard the owner-neutral route, request an activity, navigate, clear or write owner state, replace or preserve a session, or reflect progress; current state and data remain unchanged. Exactly one normalized result and at most one graph event may be produced.
+`SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID`. It is computed once from one immutable validation snapshot that includes required `currentGeneration: boolean`, after the outer asynchronous fence passes. The first normalization rule is `if (!snapshot.complete || !snapshot.currentGeneration) return INVALID`, before any other classification. Its remaining priority is owner change, then same-owner authorization denial, entitlement denial, stale content, unavailable activity, and finally fully valid. `INVALID` emits no graph event and remains in `SESSION_ENDED`. A stale-generation result executes no T30–T35 effect: it does not use or discard the owner-neutral route, request an activity, navigate, clear or write owner state, replace or preserve a session, or reflect progress; current state and data remain unchanged. The exhaustive regression covers all `2^10` sign-in snapshots after that fence. Exactly one normalized result and at most one graph event may be produced.
 
-`ReconnectResult` is exactly `VALID | OWNER_CHANGED | REVALIDATE | INVALID`. It is computed only after network restoration and current-generation validation, using fresh post-reconnect server authorization, entitlement, content-version, and activity-availability evidence. Its priority is owner change, then any same-owner authorization denial, entitlement denial, stale content, or unavailable activity as `REVALIDATE`, and finally fully valid. Cached evidence, stale-generation evidence, or missing fresh evidence yields `INVALID`, emits no graph event, and never restores an answer. Exactly one normalized result and at most one graph event may be produced.
+`ReconnectResult` is exactly `VALID | OWNER_CHANGED | REVALIDATE | INVALID`. It is computed only after the outer asynchronous fence, network restoration, and current-generation validation, using fresh post-reconnect server authorization, entitlement, content-version, and activity-availability evidence. Its priority is owner change, then any same-owner authorization denial, entitlement denial, stale content, or unavailable activity as `REVALIDATE`, and finally fully valid. Cached evidence, stale-generation evidence, or missing fresh evidence yields `INVALID`, emits no graph event, and never restores an answer. The exhaustive regression covers all `2^9` reconnect snapshots after that fence. Exactly one normalized result and at most one graph event may be produced.
 
 The closed transient context is `RetryOrigin = prepare | submit | null`, `OfflineOrigin = prepare | active | null`, and `OwnerNeutralReturnRoute = learning_session_entry | null`. Every transient field and normalization snapshot/result is memory-only, unlogged, unpersisted, and excluded from telemetry and retained evidence. `OwnerNeutralReturnRoute` accepts only the literal `learning_session_entry`; it cannot contain a path, query, fragment, activity ID, content ID, owner ID, URL, or arbitrary string. The learning module stores no owner ID. The authentication coordinator supplies the normalized sign-in-return or reconnect result; the learning module never infers owner identity.
 
