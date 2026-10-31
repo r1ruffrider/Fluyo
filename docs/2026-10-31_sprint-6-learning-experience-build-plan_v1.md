@@ -48,18 +48,640 @@ Optional modules cannot award progress, expand access, or make Learning Core una
 
 ## State and authority contract
 
-| State               | Allowed transition                                                                          | Durable effect                                 |
-| ------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `PREPARING`         | `ACTIVE`, `RETRYABLE_ERROR`, `SESSION_ENDED`                                                | None                                           |
-| `ACTIVE`            | `SUBMITTING`, `SESSION_ENDED`                                                               | None                                           |
-| `SUBMITTING`        | `CONFIRMED`, `RETRYABLE_ERROR`, `STALE_CONTENT`, `SESSION_ENDED`                            | None until authoritative response              |
-| `CONFIRMED`         | `ACTIVE` or finish                                                                          | Existing ADR 0005 transaction is authoritative |
-| `RETRYABLE_ERROR`   | Retry with the same idempotency key or exit                                                 | None                                           |
-| `STALE_CONTENT`     | Refresh or safe exit                                                                        | None                                           |
-| `SESSION_ENDED`     | Internal sign-in, then only an allowlisted learning destination after identity confirmation | None                                           |
-| `ACCESS_BLOCKED`    | Learning home or curriculum filtered to server-available activities                         | None                                           |
-| `EMPTY_REVIEW`      | Server-selected next available activity; otherwise learning home                            | None                                           |
-| `OFFLINE_READ_ONLY` | Reconnect or safe exit                                                                      | None; no queue in R0–R4                        |
+### Canonical ordered learning transition manifest
+
+This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `b31f5dc20645c28eebaa636c22976fe6318f505f6569575085c4b50891f72ec3`.
+
+```json
+[
+  {
+    "id": "T01",
+    "source": "PREPARING",
+    "event": "PLAN_READY",
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "SERVER_AUTHORIZED",
+      "SERVER_ENTITLED",
+      "CONTENT_VERSION_CURRENT",
+      "ITEM_AVAILABLE"
+    ],
+    "effects": ["CLEAR_RETRY_CONTEXT", "CLEAR_OFFLINE_CONTEXT"],
+    "target": "ACTIVE",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T02",
+    "source": "PREPARING",
+    "event": "REVIEW_EMPTY",
+    "guards": ["CURRENT_AUTH_GENERATION", "SERVER_REVIEW_EMPTY"],
+    "effects": ["CLEAR_RETRY_CONTEXT"],
+    "target": "EMPTY_REVIEW",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T03",
+    "source": "PREPARING",
+    "event": "ACCESS_DENIED",
+    "guards": ["SERVER_ACCESS_DENIED"],
+    "effects": ["STOP_ATTEMPT", "CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": "ACCESS_BLOCKED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T04",
+    "source": "PREPARING",
+    "event": "PREPARE_FAILED",
+    "guards": ["CURRENT_AUTH_GENERATION", "RETRYABLE_PREPARATION_FAILURE"],
+    "effects": ["SET_RETRY_ORIGIN_PREPARE", "CLEAR_SUBMISSION_CONTEXT"],
+    "target": "RETRYABLE_ERROR",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T05",
+    "source": "PREPARING",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T06",
+    "source": "PREPARING",
+    "event": "NETWORK_OFFLINE",
+    "guards": ["NETWORK_OFFLINE"],
+    "effects": ["SET_OFFLINE_ORIGIN_PREPARE", "CLEAR_UNCONFIRMED_ANSWER"],
+    "target": "OFFLINE_READ_ONLY",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T07",
+    "source": "PREPARING",
+    "event": "EXIT",
+    "guards": ["ALWAYS"],
+    "effects": ["CLEAR_RETRY_CONTEXT", "CLEAR_OFFLINE_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T08",
+    "source": "ACTIVE",
+    "event": "SUBMIT_REQUESTED",
+    "guards": ["CURRENT_AUTH_GENERATION", "CONTENT_VERSION_CURRENT", "ANSWER_READY"],
+    "effects": ["CREATE_OR_REUSE_SUBMISSION_IDEMPOTENCY_KEY"],
+    "target": "SUBMITTING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T09",
+    "source": "ACTIVE",
+    "event": "ACCESS_DENIED",
+    "guards": ["SERVER_ACCESS_DENIED"],
+    "effects": ["STOP_ATTEMPT", "CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": "ACCESS_BLOCKED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T10",
+    "source": "ACTIVE",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T11",
+    "source": "ACTIVE",
+    "event": "NETWORK_OFFLINE",
+    "guards": ["NETWORK_OFFLINE"],
+    "effects": ["SET_OFFLINE_ORIGIN_ACTIVE", "PRESERVE_EPHEMERAL_ANSWER_IN_MEMORY"],
+    "target": "OFFLINE_READ_ONLY",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T12",
+    "source": "ACTIVE",
+    "event": "EXIT",
+    "guards": ["NO_UNCONFIRMED_ANSWER_OR_DISCARD_CONFIRMED"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T13",
+    "source": "SUBMITTING",
+    "event": "ATTEMPT_CONFIRMED",
+    "guards": [
+      "CURRENT_AUTH_GENERATION",
+      "SERVER_CONFIRMATION_MATCHES_IDEMPOTENCY_KEY",
+      "CONTENT_VERSION_CURRENT"
+    ],
+    "effects": [
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "REFLECT_SERVER_CONFIRMED_PROGRESS"
+    ],
+    "target": "CONFIRMED",
+    "externalDestination": null,
+    "durableEffect": "REFLECT_SERVER_CONFIRMED_PROGRESS"
+  },
+  {
+    "id": "T14",
+    "source": "SUBMITTING",
+    "event": "SUBMIT_FAILED",
+    "guards": ["CURRENT_AUTH_GENERATION", "RETRYABLE_TRANSPORT_OR_SERVER_FAILURE"],
+    "effects": ["SET_RETRY_ORIGIN_SUBMIT", "PRESERVE_SUBMISSION_IDEMPOTENCY_KEY"],
+    "target": "RETRYABLE_ERROR",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T15",
+    "source": "SUBMITTING",
+    "event": "CONTENT_STALE",
+    "guards": ["SERVER_CONTENT_VERSION_CONFLICT"],
+    "effects": ["FENCE_LATE_RESULTS", "CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER"],
+    "target": "STALE_CONTENT",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T16",
+    "source": "SUBMITTING",
+    "event": "ACCESS_DENIED",
+    "guards": ["SERVER_ACCESS_DENIED"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "STOP_ATTEMPT",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "PRESERVE_AUTHENTICATED_SESSION"
+    ],
+    "target": "ACCESS_BLOCKED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T17",
+    "source": "SUBMITTING",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T18",
+    "source": "SUBMITTING",
+    "event": "EXIT",
+    "guards": ["USER_CONFIRMED_DISCARD"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_RETRY_CONTEXT"
+    ],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T19",
+    "source": "CONFIRMED",
+    "event": "CONTINUE",
+    "guards": ["SERVER_SELECTED_NEXT_AVAILABLE"],
+    "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT"],
+    "target": "ACTIVE",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T20",
+    "source": "CONFIRMED",
+    "event": "REVIEW_EMPTY",
+    "guards": ["SERVER_REVIEW_EMPTY"],
+    "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT"],
+    "target": "EMPTY_REVIEW",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T21",
+    "source": "CONFIRMED",
+    "event": "FINISH",
+    "guards": ["ALWAYS"],
+    "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT", "CLEAR_OFFLINE_CONTEXT"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T22",
+    "source": "RETRYABLE_ERROR",
+    "event": "RETRY_REQUESTED",
+    "guards": ["RETRY_ORIGIN_PREPARE", "NO_SUBMISSION_IDEMPOTENCY_KEY"],
+    "effects": ["CLEAR_RETRY_CONTEXT"],
+    "target": "PREPARING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T23",
+    "source": "RETRYABLE_ERROR",
+    "event": "RETRY_REQUESTED",
+    "guards": [
+      "RETRY_ORIGIN_SUBMIT",
+      "SAME_SUBMISSION_IDEMPOTENCY_KEY_PRESENT",
+      "CURRENT_AUTH_GENERATION",
+      "CONTENT_VERSION_CURRENT"
+    ],
+    "effects": ["PRESERVE_SUBMISSION_IDEMPOTENCY_KEY", "CLEAR_RETRY_ORIGIN"],
+    "target": "SUBMITTING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T24",
+    "source": "RETRYABLE_ERROR",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T25",
+    "source": "RETRYABLE_ERROR",
+    "event": "EXIT",
+    "guards": ["ALWAYS"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_UNCONFIRMED_ANSWER"
+    ],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T26",
+    "source": "STALE_CONTENT",
+    "event": "REFRESH",
+    "guards": ["ALWAYS"],
+    "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER", "CLEAR_RETRY_CONTEXT"],
+    "target": "PREPARING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T27",
+    "source": "STALE_CONTENT",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T28",
+    "source": "STALE_CONTENT",
+    "event": "EXIT",
+    "guards": ["ALWAYS"],
+    "effects": ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER", "CLEAR_RETRY_CONTEXT"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T29",
+    "source": "SESSION_ENDED",
+    "event": "BEGIN_SIGN_IN",
+    "guards": ["OWNER_NEUTRAL_ROUTE_PRESENT"],
+    "effects": ["START_INTERNAL_SIGN_IN"],
+    "target": "SESSION_ENDED",
+    "externalDestination": "INTERNAL_SIGN_IN",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T30",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_RETURN_VALID",
+    "guards": [
+      "AUTH_IDENTITY_CONFIRMED",
+      "AUTH_SAME_OWNER",
+      "SERVER_AUTHORIZED",
+      "SERVER_ENTITLED",
+      "CONTENT_VERSION_CURRENT",
+      "ACTIVITY_AVAILABLE",
+      "ROUTE_IS_LEARNING_SESSION_ENTRY"
+    ],
+    "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "REQUEST_SERVER_SELECTED_ACTIVITY"],
+    "target": "PREPARING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T31",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_RETURN_REJECTED",
+    "guards": ["AUTH_OWNER_CHANGED"],
+    "effects": [
+      "DISCARD_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
+      "PRESERVE_CURRENT_AUTHENTICATED_SESSION"
+    ],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T32",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_RETURN_REJECTED",
+    "guards": ["SERVER_AUTHORIZATION_DENIED"],
+    "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T33",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_RETURN_REJECTED",
+    "guards": ["SERVER_ENTITLEMENT_DENIED"],
+    "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T34",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_RETURN_REJECTED",
+    "guards": ["CONTENT_VERSION_STALE"],
+    "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T35",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_RETURN_REJECTED",
+    "guards": ["ACTIVITY_UNAVAILABLE"],
+    "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T36",
+    "source": "SESSION_ENDED",
+    "event": "SIGN_IN_CANCELED",
+    "guards": ["ALWAYS"],
+    "effects": ["STOP_INTERNAL_SIGN_IN"],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T37",
+    "source": "ACCESS_BLOCKED",
+    "event": "RETURN_TO_LEARNING",
+    "guards": ["ALWAYS"],
+    "effects": ["CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T38",
+    "source": "ACCESS_BLOCKED",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T39",
+    "source": "EMPTY_REVIEW",
+    "event": "CONTINUE_LEARNING",
+    "guards": ["SERVER_SELECTED_NEXT_AVAILABLE"],
+    "effects": ["REQUEST_SERVER_SELECTED_ACTIVITY", "CLEAR_REVIEW_CONTEXT"],
+    "target": "PREPARING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T40",
+    "source": "EMPTY_REVIEW",
+    "event": "CONTINUE_LEARNING",
+    "guards": ["NO_SERVER_SELECTED_ACTIVITY"],
+    "effects": ["CLEAR_REVIEW_CONTEXT"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T41",
+    "source": "EMPTY_REVIEW",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T42",
+    "source": "EMPTY_REVIEW",
+    "event": "NETWORK_OFFLINE",
+    "guards": ["NETWORK_OFFLINE"],
+    "effects": ["SET_OFFLINE_ORIGIN_PREPARE", "PRESERVE_SAFE_DISPLAY_PREFERENCES"],
+    "target": "OFFLINE_READ_ONLY",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T43",
+    "source": "OFFLINE_READ_ONLY",
+    "event": "RECONNECT",
+    "guards": ["NETWORK_ONLINE", "OFFLINE_ORIGIN_PREPARE"],
+    "effects": ["CLEAR_OFFLINE_CONTEXT"],
+    "target": "PREPARING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T44",
+    "source": "OFFLINE_READ_ONLY",
+    "event": "RECONNECT",
+    "guards": [
+      "NETWORK_ONLINE",
+      "OFFLINE_ORIGIN_ACTIVE",
+      "CURRENT_AUTH_GENERATION",
+      "CONTENT_VERSION_CURRENT"
+    ],
+    "effects": ["RESTORE_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
+    "target": "ACTIVE",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T45",
+    "source": "OFFLINE_READ_ONLY",
+    "event": "RECONNECT_REJECTED",
+    "guards": ["AUTH_OWNER_CHANGED"],
+    "effects": [
+      "CLEAR_EPHEMERAL_ANSWER",
+      "CLEAR_OFFLINE_CONTEXT",
+      "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
+      "PRESERVE_CURRENT_AUTHENTICATED_SESSION"
+    ],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T46",
+    "source": "OFFLINE_READ_ONLY",
+    "event": "RECONNECT_REJECTED",
+    "guards": ["CONTENT_VERSION_STALE"],
+    "effects": ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
+    "target": "PREPARING",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T47",
+    "source": "OFFLINE_READ_ONLY",
+    "event": "SESSION_INVALID",
+    "guards": ["SESSION_INVALID"],
+    "effects": [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT"
+    ],
+    "target": "SESSION_ENDED",
+    "externalDestination": null,
+    "durableEffect": "NONE"
+  },
+  {
+    "id": "T48",
+    "source": "OFFLINE_READ_ONLY",
+    "event": "EXIT",
+    "guards": ["ALWAYS"],
+    "effects": ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
+    "target": null,
+    "externalDestination": "LEARNING_HOME",
+    "durableEffect": "NONE"
+  }
+]
+```
+
+The closed transient context is `RetryOrigin = prepare | submit | null`, `OfflineOrigin = prepare | active | null`, and `OwnerNeutralReturnRoute = learning_session_entry | null`. Every transient field is memory-only, unlogged, unpersisted, and excluded from telemetry and retained evidence. `OwnerNeutralReturnRoute` accepts only the literal `learning_session_entry`; it cannot contain a path, query, fragment, activity ID, content ID, owner ID, URL, or arbitrary string. The learning module stores no owner ID. The authentication coordinator supplies only the closed `same-owner` or `owner-changed` determination.
+
+A submit retry reuses the same opaque submission idempotency key. A prepare retry has no submission idempotency key. `SUBMITTING|SUBMIT_FAILED` is the network-failure path; submitting never transitions to offline read-only. Only a server-confirmed attempt may be reflected as progress, and T13 is the sole durable-effect row. Repeated source/event pairs are allowed only where the manifest shows mutually exclusive guards. Every entry to `SESSION_ENDED` preserves only the literal owner-neutral `learning_session_entry` route, never an activity, owner, URL, path, query, fragment, or content value. A sign-in return reaches T30 only after identity, same-owner, authorization, entitlement, content-version, activity-availability, and exact route validation; T31–T35 discard the route and go to learning home.
 
 Only `CONFIRMED` may reflect a canonical progress change already committed by the server. Late results after exit, authentication-generation change, or content-version change are discarded.
 

@@ -34,22 +34,9 @@ The operational-policy evaluator validates its injected expected environment, so
 
 ## State model
 
-The experience state machine is closed:
+The dated Sprint 6 plan section [Canonical ordered learning transition manifest](../2026-10-31_sprint-6-learning-experience-build-plan_v1.md#canonical-ordered-learning-transition-manifest) is the single authoritative transition graph. Its exact canonical digest is `b31f5dc20645c28eebaa636c22976fe6318f505f6569575085c4b50891f72ec3`. This ADR intentionally keeps no second transition list.
 
-```text
-PREPARING → ACTIVE | EMPTY_REVIEW | ACCESS_BLOCKED | RETRYABLE_ERROR | SESSION_ENDED | OFFLINE_READ_ONLY
-ACTIVE → SUBMITTING | ACCESS_BLOCKED | SESSION_ENDED | OFFLINE_READ_ONLY
-SUBMITTING → CONFIRMED | RETRYABLE_ERROR | STALE_CONTENT | ACCESS_BLOCKED | SESSION_ENDED | OFFLINE_READ_ONLY
-CONFIRMED → ACTIVE | EMPTY_REVIEW | finished
-RETRYABLE_ERROR → SUBMITTING | safe exit
-STALE_CONTENT → PREPARING | safe exit
-SESSION_ENDED → internal sign-in → allowlisted learning destination after identity confirmation
-ACCESS_BLOCKED → learning home or server-filtered curriculum
-EMPTY_REVIEW → server-selected next available activity | learning home
-OFFLINE_READ_ONLY → PREPARING | safe exit
-```
-
-Only `CONFIRMED` may display a progress change that the server has already committed. A retry uses the same idempotency key. Duplicate submission is blocked. Late responses after exit, authentication-generation change, or content-version change are discarded.
+Only `CONFIRMED` may display a progress change that the server has already committed. Prepare retry has no submission idempotency key; submit retry reuses the same opaque key. Duplicate submission is blocked. Late responses after exit, authentication-generation change, or content-version change are discarded. Transient retry, offline-origin, owner-neutral return, answer, and submission context is memory-only, unlogged, unpersisted, and excluded from telemetry and retained evidence. The learning module stores no owner ID; owner equality is supplied by the authentication coordinator. Session recovery stores only the literal owner-neutral `learning_session_entry` route, which must be revalidated with identity, same-owner, authorization, entitlement, content-version, and activity-availability checks before use.
 
 `SESSION_ENDED`, `ACCESS_BLOCKED`, and `EMPTY_REVIEW` use the exact user copy, primary actions, preservation, safe destinations, focus, one-time announcement, and no-mutation rules in the dated Sprint 6 build plan. Session loss clears or fences auth-bound work and retains no owner-bound client state or unconfirmed answer across the signed-out boundary. Access denial preserves authentication. Empty review never fabricates a review item or completion. Entering, displaying, acting on, or leaving any of these states cannot award or mutate progress.
 

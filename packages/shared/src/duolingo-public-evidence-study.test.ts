@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -365,6 +366,843 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     ]) {
       expect(plan).toContain(boundary);
     }
+  });
+
+  it("locks the canonical 48-row transition manifest, digest, and recovery invariants", () => {
+    const block = plan
+      .split("### Canonical ordered learning transition manifest")[1]
+      ?.match(/```json\s*([\s\S]*?)```/);
+    if (!block?.[1]) throw new Error("missing canonical transition manifest");
+    const manifest = JSON.parse(block[1]) as Array<{
+      id: string;
+      source: string;
+      event: string;
+      guards: string[];
+      effects: string[];
+      target: string | null;
+      externalDestination: string | null;
+      durableEffect: string;
+    }>;
+    const expectedManifest = [
+      {
+        id: "T01",
+        source: "PREPARING",
+        event: "PLAN_READY",
+        guards: [
+          "CURRENT_AUTH_GENERATION",
+          "SERVER_AUTHORIZED",
+          "SERVER_ENTITLED",
+          "CONTENT_VERSION_CURRENT",
+          "ITEM_AVAILABLE",
+        ],
+        effects: ["CLEAR_RETRY_CONTEXT", "CLEAR_OFFLINE_CONTEXT"],
+        target: "ACTIVE",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T02",
+        source: "PREPARING",
+        event: "REVIEW_EMPTY",
+        guards: ["CURRENT_AUTH_GENERATION", "SERVER_REVIEW_EMPTY"],
+        effects: ["CLEAR_RETRY_CONTEXT"],
+        target: "EMPTY_REVIEW",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T03",
+        source: "PREPARING",
+        event: "ACCESS_DENIED",
+        guards: ["SERVER_ACCESS_DENIED"],
+        effects: ["STOP_ATTEMPT", "CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: "ACCESS_BLOCKED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T04",
+        source: "PREPARING",
+        event: "PREPARE_FAILED",
+        guards: ["CURRENT_AUTH_GENERATION", "RETRYABLE_PREPARATION_FAILURE"],
+        effects: ["SET_RETRY_ORIGIN_PREPARE", "CLEAR_SUBMISSION_CONTEXT"],
+        target: "RETRYABLE_ERROR",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T05",
+        source: "PREPARING",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T06",
+        source: "PREPARING",
+        event: "NETWORK_OFFLINE",
+        guards: ["NETWORK_OFFLINE"],
+        effects: ["SET_OFFLINE_ORIGIN_PREPARE", "CLEAR_UNCONFIRMED_ANSWER"],
+        target: "OFFLINE_READ_ONLY",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T07",
+        source: "PREPARING",
+        event: "EXIT",
+        guards: ["ALWAYS"],
+        effects: ["CLEAR_RETRY_CONTEXT", "CLEAR_OFFLINE_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T08",
+        source: "ACTIVE",
+        event: "SUBMIT_REQUESTED",
+        guards: ["CURRENT_AUTH_GENERATION", "CONTENT_VERSION_CURRENT", "ANSWER_READY"],
+        effects: ["CREATE_OR_REUSE_SUBMISSION_IDEMPOTENCY_KEY"],
+        target: "SUBMITTING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T09",
+        source: "ACTIVE",
+        event: "ACCESS_DENIED",
+        guards: ["SERVER_ACCESS_DENIED"],
+        effects: ["STOP_ATTEMPT", "CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: "ACCESS_BLOCKED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T10",
+        source: "ACTIVE",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T11",
+        source: "ACTIVE",
+        event: "NETWORK_OFFLINE",
+        guards: ["NETWORK_OFFLINE"],
+        effects: ["SET_OFFLINE_ORIGIN_ACTIVE", "PRESERVE_EPHEMERAL_ANSWER_IN_MEMORY"],
+        target: "OFFLINE_READ_ONLY",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T12",
+        source: "ACTIVE",
+        event: "EXIT",
+        guards: ["NO_UNCONFIRMED_ANSWER_OR_DISCARD_CONFIRMED"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T13",
+        source: "SUBMITTING",
+        event: "ATTEMPT_CONFIRMED",
+        guards: [
+          "CURRENT_AUTH_GENERATION",
+          "SERVER_CONFIRMATION_MATCHES_IDEMPOTENCY_KEY",
+          "CONTENT_VERSION_CURRENT",
+        ],
+        effects: [
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "REFLECT_SERVER_CONFIRMED_PROGRESS",
+        ],
+        target: "CONFIRMED",
+        externalDestination: null,
+        durableEffect: "REFLECT_SERVER_CONFIRMED_PROGRESS",
+      },
+      {
+        id: "T14",
+        source: "SUBMITTING",
+        event: "SUBMIT_FAILED",
+        guards: ["CURRENT_AUTH_GENERATION", "RETRYABLE_TRANSPORT_OR_SERVER_FAILURE"],
+        effects: ["SET_RETRY_ORIGIN_SUBMIT", "PRESERVE_SUBMISSION_IDEMPOTENCY_KEY"],
+        target: "RETRYABLE_ERROR",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T15",
+        source: "SUBMITTING",
+        event: "CONTENT_STALE",
+        guards: ["SERVER_CONTENT_VERSION_CONFLICT"],
+        effects: ["FENCE_LATE_RESULTS", "CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER"],
+        target: "STALE_CONTENT",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T16",
+        source: "SUBMITTING",
+        event: "ACCESS_DENIED",
+        guards: ["SERVER_ACCESS_DENIED"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "STOP_ATTEMPT",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "PRESERVE_AUTHENTICATED_SESSION",
+        ],
+        target: "ACCESS_BLOCKED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T17",
+        source: "SUBMITTING",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T18",
+        source: "SUBMITTING",
+        event: "EXIT",
+        guards: ["USER_CONFIRMED_DISCARD"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_RETRY_CONTEXT",
+        ],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T19",
+        source: "CONFIRMED",
+        event: "CONTINUE",
+        guards: ["SERVER_SELECTED_NEXT_AVAILABLE"],
+        effects: ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT"],
+        target: "ACTIVE",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T20",
+        source: "CONFIRMED",
+        event: "REVIEW_EMPTY",
+        guards: ["SERVER_REVIEW_EMPTY"],
+        effects: ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT"],
+        target: "EMPTY_REVIEW",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T21",
+        source: "CONFIRMED",
+        event: "FINISH",
+        guards: ["ALWAYS"],
+        effects: ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_RETRY_CONTEXT", "CLEAR_OFFLINE_CONTEXT"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T22",
+        source: "RETRYABLE_ERROR",
+        event: "RETRY_REQUESTED",
+        guards: ["RETRY_ORIGIN_PREPARE", "NO_SUBMISSION_IDEMPOTENCY_KEY"],
+        effects: ["CLEAR_RETRY_CONTEXT"],
+        target: "PREPARING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T23",
+        source: "RETRYABLE_ERROR",
+        event: "RETRY_REQUESTED",
+        guards: [
+          "RETRY_ORIGIN_SUBMIT",
+          "SAME_SUBMISSION_IDEMPOTENCY_KEY_PRESENT",
+          "CURRENT_AUTH_GENERATION",
+          "CONTENT_VERSION_CURRENT",
+        ],
+        effects: ["PRESERVE_SUBMISSION_IDEMPOTENCY_KEY", "CLEAR_RETRY_ORIGIN"],
+        target: "SUBMITTING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T24",
+        source: "RETRYABLE_ERROR",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T25",
+        source: "RETRYABLE_ERROR",
+        event: "EXIT",
+        guards: ["ALWAYS"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_UNCONFIRMED_ANSWER",
+        ],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T26",
+        source: "STALE_CONTENT",
+        event: "REFRESH",
+        guards: ["ALWAYS"],
+        effects: ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER", "CLEAR_RETRY_CONTEXT"],
+        target: "PREPARING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T27",
+        source: "STALE_CONTENT",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T28",
+        source: "STALE_CONTENT",
+        event: "EXIT",
+        guards: ["ALWAYS"],
+        effects: ["CLEAR_SUBMISSION_CONTEXT", "CLEAR_UNCONFIRMED_ANSWER", "CLEAR_RETRY_CONTEXT"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T29",
+        source: "SESSION_ENDED",
+        event: "BEGIN_SIGN_IN",
+        guards: ["OWNER_NEUTRAL_ROUTE_PRESENT"],
+        effects: ["START_INTERNAL_SIGN_IN"],
+        target: "SESSION_ENDED",
+        externalDestination: "INTERNAL_SIGN_IN",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T30",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_RETURN_VALID",
+        guards: [
+          "AUTH_IDENTITY_CONFIRMED",
+          "AUTH_SAME_OWNER",
+          "SERVER_AUTHORIZED",
+          "SERVER_ENTITLED",
+          "CONTENT_VERSION_CURRENT",
+          "ACTIVITY_AVAILABLE",
+          "ROUTE_IS_LEARNING_SESSION_ENTRY",
+        ],
+        effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "REQUEST_SERVER_SELECTED_ACTIVITY"],
+        target: "PREPARING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T31",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_RETURN_REJECTED",
+        guards: ["AUTH_OWNER_CHANGED"],
+        effects: [
+          "DISCARD_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
+          "PRESERVE_CURRENT_AUTHENTICATED_SESSION",
+        ],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T32",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_RETURN_REJECTED",
+        guards: ["SERVER_AUTHORIZATION_DENIED"],
+        effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T33",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_RETURN_REJECTED",
+        guards: ["SERVER_ENTITLEMENT_DENIED"],
+        effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T34",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_RETURN_REJECTED",
+        guards: ["CONTENT_VERSION_STALE"],
+        effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T35",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_RETURN_REJECTED",
+        guards: ["ACTIVITY_UNAVAILABLE"],
+        effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T36",
+        source: "SESSION_ENDED",
+        event: "SIGN_IN_CANCELED",
+        guards: ["ALWAYS"],
+        effects: ["STOP_INTERNAL_SIGN_IN"],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T37",
+        source: "ACCESS_BLOCKED",
+        event: "RETURN_TO_LEARNING",
+        guards: ["ALWAYS"],
+        effects: ["CLEAR_UNCONFIRMED_ANSWER", "PRESERVE_AUTHENTICATED_SESSION"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T38",
+        source: "ACCESS_BLOCKED",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T39",
+        source: "EMPTY_REVIEW",
+        event: "CONTINUE_LEARNING",
+        guards: ["SERVER_SELECTED_NEXT_AVAILABLE"],
+        effects: ["REQUEST_SERVER_SELECTED_ACTIVITY", "CLEAR_REVIEW_CONTEXT"],
+        target: "PREPARING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T40",
+        source: "EMPTY_REVIEW",
+        event: "CONTINUE_LEARNING",
+        guards: ["NO_SERVER_SELECTED_ACTIVITY"],
+        effects: ["CLEAR_REVIEW_CONTEXT"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T41",
+        source: "EMPTY_REVIEW",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T42",
+        source: "EMPTY_REVIEW",
+        event: "NETWORK_OFFLINE",
+        guards: ["NETWORK_OFFLINE"],
+        effects: ["SET_OFFLINE_ORIGIN_PREPARE", "PRESERVE_SAFE_DISPLAY_PREFERENCES"],
+        target: "OFFLINE_READ_ONLY",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T43",
+        source: "OFFLINE_READ_ONLY",
+        event: "RECONNECT",
+        guards: ["NETWORK_ONLINE", "OFFLINE_ORIGIN_PREPARE"],
+        effects: ["CLEAR_OFFLINE_CONTEXT"],
+        target: "PREPARING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T44",
+        source: "OFFLINE_READ_ONLY",
+        event: "RECONNECT",
+        guards: [
+          "NETWORK_ONLINE",
+          "OFFLINE_ORIGIN_ACTIVE",
+          "CURRENT_AUTH_GENERATION",
+          "CONTENT_VERSION_CURRENT",
+        ],
+        effects: ["RESTORE_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
+        target: "ACTIVE",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T45",
+        source: "OFFLINE_READ_ONLY",
+        event: "RECONNECT_REJECTED",
+        guards: ["AUTH_OWNER_CHANGED"],
+        effects: [
+          "CLEAR_EPHEMERAL_ANSWER",
+          "CLEAR_OFFLINE_CONTEXT",
+          "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
+          "PRESERVE_CURRENT_AUTHENTICATED_SESSION",
+        ],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+      {
+        id: "T46",
+        source: "OFFLINE_READ_ONLY",
+        event: "RECONNECT_REJECTED",
+        guards: ["CONTENT_VERSION_STALE"],
+        effects: ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
+        target: "PREPARING",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T47",
+        source: "OFFLINE_READ_ONLY",
+        event: "SESSION_INVALID",
+        guards: ["SESSION_INVALID"],
+        effects: [
+          "FENCE_LATE_RESULTS",
+          "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+          "PRESERVE_OWNER_NEUTRAL_ROUTE",
+          "CLEAR_AUTH_BOUND_WORK",
+          "CLEAR_OWNER_BOUND_CLIENT_STATE",
+          "CLEAR_UNCONFIRMED_ANSWER",
+          "CLEAR_SUBMISSION_CONTEXT",
+          "CLEAR_RETRY_CONTEXT",
+          "CLEAR_OFFLINE_CONTEXT",
+        ],
+        target: "SESSION_ENDED",
+        externalDestination: null,
+        durableEffect: "NONE",
+      },
+      {
+        id: "T48",
+        source: "OFFLINE_READ_ONLY",
+        event: "EXIT",
+        guards: ["ALWAYS"],
+        effects: ["CLEAR_EPHEMERAL_ANSWER", "CLEAR_OFFLINE_CONTEXT"],
+        target: null,
+        externalDestination: "LEARNING_HOME",
+        durableEffect: "NONE",
+      },
+    ];
+
+    const canonical = JSON.stringify(manifest);
+    const digest = createHash("sha256").update(canonical, "utf8").digest("hex");
+    const expectedDigest = "b31f5dc20645c28eebaa636c22976fe6318f505f6569575085c4b50891f72ec3";
+    expect(manifest).toEqual(expectedManifest);
+    expect(manifest).toHaveLength(48);
+    expect(manifest.map(({ id }) => id)).toEqual(
+      Array.from({ length: 48 }, (_, index) => `T${String(index + 1).padStart(2, "0")}`),
+    );
+    expect(new Set(manifest.map(({ id }) => id)).size).toBe(48);
+    expect(digest).toBe(expectedDigest);
+    expect(plan).toContain(`\`${expectedDigest}\``);
+    expect(adr).toContain(`\`${expectedDigest}\``);
+    expect(adr).toContain(
+      "[Canonical ordered learning transition manifest](../2026-10-31_sprint-6-learning-experience-build-plan_v1.md#canonical-ordered-learning-transition-manifest)",
+    );
+    expect(adr).toContain("This ADR intentionally keeps no second transition list.");
+    expect(adr).not.toContain("PREPARING →");
+
+    const exactKeys = [
+      "id",
+      "source",
+      "event",
+      "guards",
+      "effects",
+      "target",
+      "externalDestination",
+      "durableEffect",
+    ];
+    for (const row of manifest) expect(Object.keys(row)).toEqual(exactKeys);
+
+    const states = [
+      "PREPARING",
+      "ACTIVE",
+      "SUBMITTING",
+      "CONFIRMED",
+      "RETRYABLE_ERROR",
+      "STALE_CONTENT",
+      "SESSION_ENDED",
+      "ACCESS_BLOCKED",
+      "EMPTY_REVIEW",
+      "OFFLINE_READ_ONLY",
+    ];
+    for (const state of states) {
+      expect(manifest.some(({ source }) => source === state)).toBe(true);
+      expect(manifest.some(({ target }) => target === state)).toBe(true);
+    }
+
+    const closed = {
+      sources: new Set(expectedManifest.map(({ source }) => source)),
+      events: new Set(expectedManifest.map(({ event }) => event)),
+      guards: new Set(expectedManifest.flatMap(({ guards }) => guards)),
+      effects: new Set(expectedManifest.flatMap(({ effects }) => effects)),
+      targets: new Set(expectedManifest.map(({ target }) => target)),
+      destinations: new Set(expectedManifest.map(({ externalDestination }) => externalDestination)),
+      durable: new Set(expectedManifest.map(({ durableEffect }) => durableEffect)),
+    };
+    expect(closed.sources.has("UNKNOWN_STATE")).toBe(false);
+    expect(closed.events.has("UNKNOWN_EVENT")).toBe(false);
+    expect(closed.guards.has("UNKNOWN_GUARD")).toBe(false);
+    expect(closed.effects.has("UNKNOWN_EFFECT")).toBe(false);
+    expect(closed.targets.has("UNKNOWN_STATE")).toBe(false);
+    expect(closed.destinations.has("https://example.test")).toBe(false);
+    expect(closed.durable.has("CLIENT_PROGRESS")).toBe(false);
+
+    const t13 = manifest.filter(({ durableEffect }) => durableEffect !== "NONE");
+    expect(t13).toEqual([expectedManifest[12]]);
+    expect(t13[0]?.id).toBe("T13");
+
+    expect(manifest[21]).toEqual(expectedManifest[21]);
+    expect(manifest[21]?.guards).toEqual(["RETRY_ORIGIN_PREPARE", "NO_SUBMISSION_IDEMPOTENCY_KEY"]);
+    expect(manifest[22]?.guards).toEqual([
+      "RETRY_ORIGIN_SUBMIT",
+      "SAME_SUBMISSION_IDEMPOTENCY_KEY_PRESENT",
+      "CURRENT_AUTH_GENERATION",
+      "CONTENT_VERSION_CURRENT",
+    ]);
+    expect(manifest[22]?.effects).toEqual([
+      "PRESERVE_SUBMISSION_IDEMPOTENCY_KEY",
+      "CLEAR_RETRY_ORIGIN",
+    ]);
+    expect(manifest[13]?.event).toBe("SUBMIT_FAILED");
+    expect(manifest[13]?.target).toBe("RETRYABLE_ERROR");
+
+    expect(manifest[29]?.guards).toEqual([
+      "AUTH_IDENTITY_CONFIRMED",
+      "AUTH_SAME_OWNER",
+      "SERVER_AUTHORIZED",
+      "SERVER_ENTITLED",
+      "CONTENT_VERSION_CURRENT",
+      "ACTIVITY_AVAILABLE",
+      "ROUTE_IS_LEARNING_SESSION_ENTRY",
+    ]);
+    expect(manifest.slice(30, 35).map(({ guards }) => guards)).toEqual([
+      ["AUTH_OWNER_CHANGED"],
+      ["SERVER_AUTHORIZATION_DENIED"],
+      ["SERVER_ENTITLEMENT_DENIED"],
+      ["CONTENT_VERSION_STALE"],
+      ["ACTIVITY_UNAVAILABLE"],
+    ]);
+    expect(
+      manifest
+        .slice(30, 35)
+        .every(
+          ({ target, externalDestination, effects }) =>
+            target === null &&
+            externalDestination === "LEARNING_HOME" &&
+            effects[0] === "DISCARD_OWNER_NEUTRAL_ROUTE",
+        ),
+    ).toBe(true);
+
+    const sessionEffects = [
+      "FENCE_LATE_RESULTS",
+      "PRESERVE_CONFIRMED_SERVER_PROGRESS",
+      "PRESERVE_OWNER_NEUTRAL_ROUTE",
+      "CLEAR_AUTH_BOUND_WORK",
+      "CLEAR_OWNER_BOUND_CLIENT_STATE",
+      "CLEAR_UNCONFIRMED_ANSWER",
+      "CLEAR_SUBMISSION_CONTEXT",
+      "CLEAR_RETRY_CONTEXT",
+      "CLEAR_OFFLINE_CONTEXT",
+    ];
+    for (const row of manifest.filter(({ event }) => event === "SESSION_INVALID")) {
+      expect(row.effects).toEqual(sessionEffects);
+    }
+
+    const isOwnerNeutralRoute = (value: unknown) => value === "learning_session_entry";
+    expect(isOwnerNeutralRoute("learning_session_entry")).toBe(true);
+    for (const invalid of [
+      "550e8400-e29b-41d4-a716-446655440000",
+      "activity-123",
+      "/learning",
+      "scheme:value",
+      "learning?next=1",
+      "learning#fragment",
+      "owner_123",
+      "content_123",
+      "anything_else",
+    ]) {
+      expect(isOwnerNeutralRoute(invalid)).toBe(false);
+    }
+
+    expect(plan).toContain("The learning module stores no owner ID");
+    expect(plan).toContain("Every transient field is memory-only, unlogged, unpersisted");
+    expect(plan).toContain("A submit retry reuses the same opaque submission idempotency key");
+    expect(plan).toContain("A prepare retry has no submission idempotency key");
+    expect(plan).toContain("T13 is the sole durable-effect row");
+
+    const mutations: Array<(value: typeof expectedManifest) => void> = [
+      (value) => {
+        value[0]!.id = "T99";
+      },
+      (value) => {
+        value[0]!.source = "ACTIVE";
+      },
+      (value) => {
+        value[0]!.event = "EXIT";
+      },
+      (value) => {
+        value[0]!.guards.reverse();
+      },
+      (value) => {
+        value[0]!.effects.reverse();
+      },
+      (value) => {
+        value[0]!.target = "CONFIRMED";
+      },
+      (value) => {
+        value[0]!.externalDestination = "LEARNING_HOME";
+      },
+      (value) => {
+        value[0]!.durableEffect = "REFLECT_SERVER_CONFIRMED_PROGRESS";
+      },
+      (value) => {
+        [value[0], value[1]] = [value[1]!, value[0]!];
+      },
+    ];
+    for (const mutate of mutations) {
+      const candidate = structuredClone(expectedManifest);
+      mutate(candidate);
+      expect(candidate).not.toEqual(expectedManifest);
+      expect(createHash("sha256").update(JSON.stringify(candidate), "utf8").digest("hex")).not.toBe(
+        expectedDigest,
+      );
+    }
+
+    for (const state of ["SESSION_ENDED", "ACCESS_BLOCKED", "EMPTY_REVIEW"]) {
+      expect(manifest.some(({ source, target }) => source === state || target === state)).toBe(
+        true,
+      );
+    }
+    expect(plan).toContain("Your session ended");
+    expect(plan).toContain("You can’t open this activity");
+    expect(plan).toContain("Nothing to review right now");
+    expect(plan).toContain("one deduplicated message");
+    expect(plan).toContain("No activity completion, goal change, or manufactured review progress");
   });
 
   it("locks Camila's authoritative terminal and recovery state contracts", () => {
