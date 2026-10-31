@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { LearningDashboardService } from "./learning-dashboard.service";
+import { LearningSessionPlannerService } from "./learning-session-planner.service";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const FIRST_ACTIVITY = "22222222-2222-4222-8222-222222222222";
@@ -11,6 +12,7 @@ function activity(id: string) {
   return {
     id,
     kind: "PHRASE_CHOICE",
+    sortOrder: id === FIRST_ACTIVITY ? 1 : 2,
     publishedVersion: 2,
     publishedContent: {
       prompt: "Choose hello",
@@ -19,16 +21,26 @@ function activity(id: string) {
         { id: "adios", label: "Adiós" },
       ],
     },
+    lesson: { sortOrder: 1 },
   };
 }
 
-function fixture() {
+function plan(item: { activityId: string; contentVersion: number; reason: "next" } | null) {
+  return { schemaVersion: 1 as const, item };
+}
+
+function fixture(planner?: { plan: ReturnType<typeof vi.fn> }) {
   const prisma = {
+    $transaction: vi.fn(),
     activity: {
       findMany: vi.fn().mockResolvedValue([activity(FIRST_ACTIVITY), activity(NEXT_ACTIVITY)]),
       findFirst: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
+      update: vi.fn(),
     },
     lessonProgress: {
+      create: vi.fn(),
+      update: vi.fn(),
       findMany: vi
         .fn()
         .mockResolvedValueOnce([{ completedActivityIds: [FIRST_ACTIVITY] }])
@@ -69,9 +81,10 @@ function fixture() {
     prisma as never,
     entitlements as never,
     settings as never,
+    planner as never,
     telemetry as never,
   );
-  return { entitlements, prisma, service, telemetry };
+  return { entitlements, planner, prisma, service, settings, telemetry };
 }
 
 describe("LearningDashboardService", () => {
@@ -213,6 +226,166 @@ describe("LearningDashboardService", () => {
     await expect(service.getDashboard(USER_ID)).rejects.toBe(failure);
     expect(telemetry.recordDashboard).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: "failed" }),
+    );
+  });
+
+  it("passes only the authorized read snapshot to the planner and revalidates its selection", async () => {
+    const planner = {
+      plan: vi
+        .fn()
+        .mockReturnValue(plan({ activityId: NEXT_ACTIVITY, contentVersion: 2, reason: "next" })),
+    };
+    const { prisma, service } = fixture(planner);
+    prisma.lessonProgress.findMany.mockReset();
+    prisma.lessonProgress.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const result = await service.getDashboard(USER_ID);
+
+    expect(planner.plan).toHaveBeenCalledWith([
+      {
+        activityId: FIRST_ACTIVITY,
+        contentVersion: 2,
+        lessonSortOrder: 1,
+        activitySortOrder: 1,
+        completed: false,
+      },
+      {
+        activityId: NEXT_ACTIVITY,
+        contentVersion: 2,
+        lessonSortOrder: 1,
+        activitySortOrder: 2,
+        completed: false,
+      },
+    ]);
+    expect(result.nextActivity?.id).toBe(NEXT_ACTIVITY);
+  });
+
+  it("preserves the exact client response when the optional planner returns no item", async () => {
+    const baseline = fixture();
+    const optional = fixture({ plan: vi.fn().mockReturnValue(plan(null)) });
+
+    expect(await optional.service.getDashboard(USER_ID)).toEqual(
+      await baseline.service.getDashboard(USER_ID),
+    );
+  });
+
+  it("preserves the exact client response when the optional planner throws", async () => {
+    const baseline = fixture();
+    const optional = fixture({
+      plan: vi.fn().mockImplementation(() => {
+        throw new Error("planner unavailable");
+      }),
+    });
+
+    expect(await optional.service.getDashboard(USER_ID)).toEqual(
+      await baseline.service.getDashboard(USER_ID),
+    );
+  });
+
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["primitive", true],
+    ["array", []],
+    ["wrong schema", { schemaVersion: 2, item: null }],
+    ["missing schema", { item: null }],
+    ["missing item", { schemaVersion: 1 }],
+    ["extra root field", { schemaVersion: 1, item: null, ownerId: USER_ID }],
+    [
+      "extra item field",
+      {
+        schemaVersion: 1,
+        item: { activityId: NEXT_ACTIVITY, contentVersion: 2, reason: "next", prompt: "private" },
+      },
+    ],
+    [
+      "invalid UUID",
+      {
+        schemaVersion: 1,
+        item: { activityId: "private", contentVersion: 2, reason: "next" },
+      },
+    ],
+    [
+      "invalid content version",
+      {
+        schemaVersion: 1,
+        item: { activityId: NEXT_ACTIVITY, contentVersion: 0, reason: "next" },
+      },
+    ],
+    [
+      "invalid reason",
+      {
+        schemaVersion: 1,
+        item: { activityId: NEXT_ACTIVITY, contentVersion: 2, reason: "review" },
+      },
+    ],
+  ])("preserves fallback for malformed planner output: %s", async (_name, value) => {
+    const { service } = fixture({ plan: vi.fn().mockReturnValue(value) });
+    expect((await service.getDashboard(USER_ID)).nextActivity?.id).toBe(NEXT_ACTIVITY);
+  });
+
+  it.each([
+    ["unknown", "55555555-5555-4555-8555-555555555555", 2],
+    ["inaccessible", "66666666-6666-4666-8666-666666666666", 2],
+    ["stale", NEXT_ACTIVITY, 1],
+  ])("preserves fallback for a %s planned reference", async (_name, activityId, contentVersion) => {
+    const { service } = fixture({
+      plan: vi.fn().mockReturnValue(plan({ activityId, contentVersion, reason: "next" })),
+    });
+    expect((await service.getDashboard(USER_ID)).nextActivity?.id).toBe(NEXT_ACTIVITY);
+  });
+
+  it("preserves fallback when the planner selects a completed activity", async () => {
+    const { service } = fixture({
+      plan: vi
+        .fn()
+        .mockReturnValue(plan({ activityId: FIRST_ACTIVITY, contentVersion: 2, reason: "next" })),
+    });
+    expect((await service.getDashboard(USER_ID)).nextActivity?.id).toBe(NEXT_ACTIVITY);
+  });
+
+  it("preserves fallback when duplicate authorized candidates make the planner fail closed", async () => {
+    const planner = new LearningSessionPlannerService();
+    const { prisma, service } = fixture(planner as never);
+    prisma.activity.findMany.mockResolvedValue([
+      activity(FIRST_ACTIVITY),
+      activity(FIRST_ACTIVITY),
+      activity(NEXT_ACTIVITY),
+    ]);
+
+    expect((await service.getDashboard(USER_ID)).nextActivity?.id).toBe(NEXT_ACTIVITY);
+  });
+
+  it("never invokes a transaction or write method while planning", async () => {
+    const { prisma, service } = fixture({ plan: vi.fn().mockReturnValue(plan(null)) });
+    await service.getDashboard(USER_ID);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.activity.create).not.toHaveBeenCalled();
+    expect(prisma.activity.update).not.toHaveBeenCalled();
+    expect(prisma.lessonProgress.create).not.toHaveBeenCalled();
+    expect(prisma.lessonProgress.update).not.toHaveBeenCalled();
+  });
+
+  it("does not swallow settings failures when a planner is present", async () => {
+    const { service, settings } = fixture({ plan: vi.fn().mockReturnValue(plan(null)) });
+    const failure = new Error("settings unavailable");
+    settings.getGoal.mockRejectedValue(failure);
+    await expect(service.getDashboard(USER_ID)).rejects.toBe(failure);
+  });
+
+  it("does not swallow invalid authorized content selected after planning", async () => {
+    const { prisma, service } = fixture({
+      plan: vi
+        .fn()
+        .mockReturnValue(plan({ activityId: NEXT_ACTIVITY, contentVersion: 2, reason: "next" })),
+    });
+    prisma.activity.findMany.mockResolvedValue([
+      activity(FIRST_ACTIVITY),
+      { ...activity(NEXT_ACTIVITY), publishedContent: null },
+    ]);
+
+    await expect(service.getDashboard(USER_ID)).rejects.toThrow(
+      "Published activity content is invalid",
     );
   });
 });

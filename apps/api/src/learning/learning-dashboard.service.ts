@@ -5,7 +5,10 @@ import type { Prisma } from "@prisma/client";
 import { EntitlementsService } from "../billing/entitlements.service";
 import { PrismaService } from "../database/prisma.service";
 import { LearningSettingsService } from "./learning-settings.service";
+import { LearningSessionPlannerService } from "./learning-session-planner.service";
 import { LearningTelemetryService } from "./learning-telemetry.service";
+
+const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function entitlementAccess(entitlementKeys: string[]) {
   return {
@@ -39,6 +42,7 @@ export class LearningDashboardService {
     private readonly prisma: PrismaService,
     private readonly entitlements: EntitlementsService,
     private readonly settings: LearningSettingsService,
+    @Optional() private readonly planner?: LearningSessionPlannerService,
     @Optional() private readonly telemetry?: LearningTelemetryService,
   ) {}
 
@@ -68,8 +72,10 @@ export class LearningDashboardService {
           select: {
             id: true,
             kind: true,
+            sortOrder: true,
             publishedVersion: true,
             publishedContent: { select: { prompt: true, choices: true } },
+            lesson: { select: { sortOrder: true } },
           },
         }),
         this.prisma.lessonProgress.findMany({
@@ -106,7 +112,38 @@ export class LearningDashboardService {
       );
       const visibleActivityIds = new Set(activities.map((activity) => activity.id));
       const next = activities.find((activity) => !completedActivityIds.has(activity.id));
-      const nextActivity = next ? this.mapActivity(next) : null;
+      let selectedActivity = next;
+
+      if (this.planner) {
+        let plannedItem: ReturnType<LearningDashboardService["plannedItem"]> = null;
+        try {
+          plannedItem = this.plannedItem(
+            this.planner.plan(
+              activities.map((activity) => ({
+                activityId: activity.id,
+                contentVersion: activity.publishedVersion,
+                lessonSortOrder: activity.lesson.sortOrder,
+                activitySortOrder: activity.sortOrder,
+                completed: completedActivityIds.has(activity.id),
+              })),
+            ),
+          );
+        } catch {
+          plannedItem = null;
+        }
+
+        if (plannedItem) {
+          const plannedActivity = activities.find(
+            (activity) =>
+              activity.id === plannedItem.activityId &&
+              activity.publishedVersion === plannedItem.contentVersion &&
+              !completedActivityIds.has(activity.id),
+          );
+          if (plannedActivity) selectedActivity = plannedActivity;
+        }
+      }
+
+      const nextActivity = selectedActivity ? this.mapActivity(selectedActivity) : null;
       let unavailableReason: LearningDashboardResponse["access"]["unavailableReason"] = null;
 
       if (activities.length === 0) {
@@ -154,6 +191,47 @@ export class LearningDashboardService {
       this.telemetry?.recordDashboard({ outcome: "failed", durationMs: Date.now() - startedAt });
       throw error;
     }
+  }
+
+  private plannedItem(
+    plan: unknown,
+  ): { activityId: string; contentVersion: number; reason: "next" } | null {
+    if (typeof plan !== "object" || plan === null || Array.isArray(plan)) return null;
+    const planRecord = plan as Record<string, unknown>;
+    const planKeys = Object.keys(planRecord);
+    if (
+      planKeys.length !== 2 ||
+      !planKeys.includes("schemaVersion") ||
+      !planKeys.includes("item") ||
+      planRecord.schemaVersion !== 1 ||
+      planRecord.item === null ||
+      typeof planRecord.item !== "object" ||
+      Array.isArray(planRecord.item)
+    ) {
+      return null;
+    }
+
+    const item = planRecord.item as Record<string, unknown>;
+    const keys = Object.keys(item);
+    if (
+      keys.length === 3 &&
+      keys.includes("activityId") &&
+      keys.includes("contentVersion") &&
+      keys.includes("reason") &&
+      typeof item.activityId === "string" &&
+      UUID_V4_PATTERN.test(item.activityId) &&
+      typeof item.contentVersion === "number" &&
+      Number.isSafeInteger(item.contentVersion) &&
+      item.contentVersion > 0 &&
+      item.reason === "next"
+    ) {
+      return {
+        activityId: item.activityId,
+        contentVersion: item.contentVersion,
+        reason: "next",
+      };
+    }
+    return null;
   }
 
   private mapActivity(activity: {
