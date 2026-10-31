@@ -37,16 +37,21 @@ The operational-policy evaluator validates its injected expected environment, so
 The experience state machine is closed:
 
 ```text
-PREPARING → ACTIVE | RETRYABLE_ERROR | SESSION_ENDED
-ACTIVE → SUBMITTING | SESSION_ENDED
-SUBMITTING → CONFIRMED | RETRYABLE_ERROR | STALE_CONTENT | SESSION_ENDED
-CONFIRMED → ACTIVE | finished
+PREPARING → ACTIVE | EMPTY_REVIEW | ACCESS_BLOCKED | RETRYABLE_ERROR | SESSION_ENDED | OFFLINE_READ_ONLY
+ACTIVE → SUBMITTING | ACCESS_BLOCKED | SESSION_ENDED | OFFLINE_READ_ONLY
+SUBMITTING → CONFIRMED | RETRYABLE_ERROR | STALE_CONTENT | ACCESS_BLOCKED | SESSION_ENDED | OFFLINE_READ_ONLY
+CONFIRMED → ACTIVE | EMPTY_REVIEW | finished
 RETRYABLE_ERROR → SUBMITTING | safe exit
 STALE_CONTENT → PREPARING | safe exit
+SESSION_ENDED → internal sign-in → allowlisted learning destination after identity confirmation
+ACCESS_BLOCKED → learning home or server-filtered curriculum
+EMPTY_REVIEW → server-selected next available activity | learning home
 OFFLINE_READ_ONLY → PREPARING | safe exit
 ```
 
 Only `CONFIRMED` may display a progress change that the server has already committed. A retry uses the same idempotency key. Duplicate submission is blocked. Late responses after exit, authentication-generation change, or content-version change are discarded.
+
+`SESSION_ENDED`, `ACCESS_BLOCKED`, and `EMPTY_REVIEW` use the exact user copy, primary actions, preservation, safe destinations, focus, one-time announcement, and no-mutation rules in the dated Sprint 6 build plan. Session loss clears or fences auth-bound work and retains no owner-bound client state or unconfirmed answer across the signed-out boundary. Access denial preserves authentication. Empty review never fabricates a review item or completion. Entering, displaying, acting on, or leaving any of these states cannot award or mutate progress.
 
 ## Security and privacy boundary
 

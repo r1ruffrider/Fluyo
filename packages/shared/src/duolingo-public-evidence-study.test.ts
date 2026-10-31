@@ -15,6 +15,13 @@ const adr = read(adrPath);
 const roadmap = read("docs/ROADMAP.md");
 const handoff = read("docs/DEVELOPMENT_HANDOFF.md");
 
+const closedJsonArrayAfter = (marker: string): string[] => {
+  const afterMarker = plan.split(marker)[1] ?? "";
+  const block = afterMarker.match(/```json\s*([\s\S]*?)```/);
+  if (!block?.[1]) throw new Error(`missing closed JSON array after ${marker}`);
+  return JSON.parse(block[1]) as string[];
+};
+
 describe("Sprint 6 R0 public-evidence boundary", () => {
   it("retains the exact official/public source ledger and honest date unknowns", () => {
     const sourceLedger = report.split("## Source ledger")[1]?.split("## Observation")[0] ?? "";
@@ -296,6 +303,114 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     expect(plan).toContain(phaseLock);
     expect(adr).toContain(phaseLock);
+  });
+
+  it("locks the exact learner flow, state inventory, and Break-UI fixtures in order", () => {
+    const learnerFlow = [
+      "setup",
+      "editable_goal",
+      "start_from_beginning",
+      "prepare",
+      "answer",
+      "check",
+      "confirmed_feedback",
+      "continue_or_finish",
+      "confirmed_progress",
+    ];
+    const states = [
+      "PREPARING",
+      "ACTIVE",
+      "SUBMITTING",
+      "CONFIRMED",
+      "RETRYABLE_ERROR",
+      "STALE_CONTENT",
+      "SESSION_ENDED",
+      "ACCESS_BLOCKED",
+      "EMPTY_REVIEW",
+      "OFFLINE_READ_ONLY",
+    ];
+    const fixtures = [
+      "long_localized_prompt_and_choices",
+      "rtl_mixed_script_activity",
+      "large_text_compact_landscape",
+      "one_character_and_multiline_answers",
+      "empty_activity_catalog",
+      "network_loss_during_submit",
+      "duplicate_submit",
+      "stale_content_version",
+      "late_confirmation_after_exit",
+      "authentication_expired",
+      "entitlement_blocked",
+      "offline_saved_material",
+      "corrupt_cache_recovery",
+      "protected_mode_unknown_cohort",
+      "missing_optional_explanation",
+    ];
+
+    expect(closedJsonArrayAfter("The learner-flow ID order is closed:")).toEqual(learnerFlow);
+    expect(closedJsonArrayAfter("The experience-state ID order is closed:")).toEqual(states);
+    expect(closedJsonArrayAfter("The Break-UI fixture ID order is closed:")).toEqual(fixtures);
+    expect(new Set(learnerFlow).size).toBe(learnerFlow.length);
+    expect(new Set(states).size).toBe(states.length);
+    expect(new Set(fixtures).size).toBe(fixtures.length);
+
+    for (const boundary of [
+      "meaningful headings, names, roles, logical focus order",
+      "one-time announcements",
+      "200% text reflow",
+      "reachable 44px targets",
+      "static reduced-motion equivalent",
+      "Motion remains bounded and interruptible",
+      "placement, audio, notifications, social features, competition, economy, ads, purchases, experiments, child-specific behavior, offline writes, native learning, and downloadable content remain deferred and unavailable",
+    ]) {
+      expect(plan).toContain(boundary);
+    }
+  });
+
+  it("locks Camila's authoritative terminal and recovery state contracts", () => {
+    for (const exactCopy of [
+      "Your session ended",
+      "Sign in again to continue safely. Your confirmed progress hasn’t changed.",
+      "Sign in",
+      "You can’t open this activity",
+      "This activity isn’t available for your account right now. Return to learning to choose something available.",
+      "Return to learning",
+      "Nothing to review right now",
+      "You can continue with your next activity.",
+      "Continue learning",
+    ]) {
+      expect(plan).toContain(exactCopy);
+    }
+
+    for (const rule of [
+      "Preserve confirmed server progress and the allowlisted return destination",
+      "Retain no owner-bound client state",
+      "Never carry an unconfirmed answer across the signed-out boundary",
+      "Internal sign-in, then only the allowlisted learning destination after identity confirmation",
+      "Focus the heading once on session loss",
+      "assertively once as one deduplicated message",
+      "cannot complete an activity or mutate progress or awards",
+      "Preserve confirmed progress and unrelated safe navigation",
+      "Do not submit or retain an unconfirmed answer as progress",
+      "Keep the user signed in",
+      "filtered to activities the server says are available",
+      "without entitlement, subscription, provider, or diagnostic detail",
+      "No activity completion, goal change, review-eligibility change, reward, or progress mutation",
+      "Preserve confirmed progress, curriculum position, and safe display preferences",
+      "Create no synthetic review item or hidden completion",
+      "Server-selected next available activity; fall back to learning home",
+      "On client-side entry, focus the heading once; on direct load, retain normal focus order",
+      "Announce politely once when an existing list becomes empty; do not repeat on reload or recomposition",
+      "No activity completion, goal change, or manufactured review progress",
+    ]) {
+      expect(plan).toContain(rule);
+    }
+
+    for (const state of ["SESSION_ENDED", "ACCESS_BLOCKED", "EMPTY_REVIEW"]) {
+      expect(adr).toContain(state);
+    }
+    expect(adr).toContain("Access denial preserves authentication");
+    expect(adr).toContain("cannot award or mutate progress");
   });
 
   it("keeps offline read-only and optional controls default-disabled and fail-closed", () => {

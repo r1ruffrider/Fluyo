@@ -48,17 +48,28 @@ Optional modules cannot award progress, expand access, or make Learning Core una
 
 ## State and authority contract
 
-| State               | Allowed transition                                               | Durable effect                                 |
-| ------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
-| `PREPARING`         | `ACTIVE`, `RETRYABLE_ERROR`, `SESSION_ENDED`                     | None                                           |
-| `ACTIVE`            | `SUBMITTING`, `SESSION_ENDED`                                    | None                                           |
-| `SUBMITTING`        | `CONFIRMED`, `RETRYABLE_ERROR`, `STALE_CONTENT`, `SESSION_ENDED` | None until authoritative response              |
-| `CONFIRMED`         | `ACTIVE` or finish                                               | Existing ADR 0005 transaction is authoritative |
-| `RETRYABLE_ERROR`   | Retry with the same idempotency key or exit                      | None                                           |
-| `STALE_CONTENT`     | Refresh or safe exit                                             | None                                           |
-| `OFFLINE_READ_ONLY` | Reconnect or safe exit                                           | None; no queue in R0–R4                        |
+| State               | Allowed transition                                                                          | Durable effect                                 |
+| ------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `PREPARING`         | `ACTIVE`, `RETRYABLE_ERROR`, `SESSION_ENDED`                                                | None                                           |
+| `ACTIVE`            | `SUBMITTING`, `SESSION_ENDED`                                                               | None                                           |
+| `SUBMITTING`        | `CONFIRMED`, `RETRYABLE_ERROR`, `STALE_CONTENT`, `SESSION_ENDED`                            | None until authoritative response              |
+| `CONFIRMED`         | `ACTIVE` or finish                                                                          | Existing ADR 0005 transaction is authoritative |
+| `RETRYABLE_ERROR`   | Retry with the same idempotency key or exit                                                 | None                                           |
+| `STALE_CONTENT`     | Refresh or safe exit                                                                        | None                                           |
+| `SESSION_ENDED`     | Internal sign-in, then only an allowlisted learning destination after identity confirmation | None                                           |
+| `ACCESS_BLOCKED`    | Learning home or curriculum filtered to server-available activities                         | None                                           |
+| `EMPTY_REVIEW`      | Server-selected next available activity; otherwise learning home                            | None                                           |
+| `OFFLINE_READ_ONLY` | Reconnect or safe exit                                                                      | None; no queue in R0–R4                        |
 
 Only `CONFIRMED` may reflect a canonical progress change already committed by the server. Late results after exit, authentication-generation change, or content-version change are discarded.
+
+The three terminal and recovery rows are authoritative:
+
+| State            | Exact heading, body, and primary action                                                                                                                                           | Preserve and clear                                                                                                                                                                                               | Safe destination                                                                              | Focus and announcement                                                                                                                                                                         | Mutation boundary                                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `SESSION_ENDED`  | **Your session ended** — “Sign in again to continue safely. Your confirmed progress hasn’t changed.” Primary: **Sign in**.                                                        | Preserve confirmed server progress and the allowlisted return destination. Clear or fence auth-bound work. Retain no owner-bound client state. Never carry an unconfirmed answer across the signed-out boundary. | Internal sign-in, then only the allowlisted learning destination after identity confirmation. | Focus the heading once on session loss. Announce the heading and body assertively once as one deduplicated message; no duplicate focus or live-region output.                                  | Entering, displaying, or leaving this state cannot complete an activity or mutate progress or awards. |
+| `ACCESS_BLOCKED` | **You can’t open this activity** — “This activity isn’t available for your account right now. Return to learning to choose something available.” Primary: **Return to learning**. | Preserve confirmed progress and unrelated safe navigation. Stop the attempt. Do not submit or retain an unconfirmed answer as progress. Keep the user signed in.                                                 | Current learning home or curriculum filtered to activities the server says are available.     | Focus the heading once after the access decision. Announce assertively once without entitlement, subscription, provider, or diagnostic detail.                                                 | No activity completion, goal change, review-eligibility change, reward, or progress mutation.         |
+| `EMPTY_REVIEW`   | **Nothing to review right now** — “You can continue with your next activity.” Primary: **Continue learning**.                                                                     | Preserve confirmed progress, curriculum position, and safe display preferences. Create no synthetic review item or hidden completion.                                                                            | Server-selected next available activity; fall back to learning home when none exists.         | On client-side entry, focus the heading once; on direct load, retain normal focus order. Announce politely once when an existing list becomes empty; do not repeat on reload or recomposition. | No activity completion, goal change, or manufactured review progress.                                 |
 
 ## Dependency-safe phase sequence
 
@@ -338,11 +349,68 @@ The 390px-first flow is:
 
 `setup → editable goal → start from beginning → prepare → answer → check → confirmed feedback → continue or finish → confirmed progress`
 
+The learner-flow ID order is closed:
+
+```json
+[
+  "setup",
+  "editable_goal",
+  "start_from_beginning",
+  "prepare",
+  "answer",
+  "check",
+  "confirmed_feedback",
+  "continue_or_finish",
+  "confirmed_progress"
+]
+```
+
+The experience-state ID order is closed:
+
+```json
+[
+  "PREPARING",
+  "ACTIVE",
+  "SUBMITTING",
+  "CONFIRMED",
+  "RETRYABLE_ERROR",
+  "STALE_CONTENT",
+  "SESSION_ENDED",
+  "ACCESS_BLOCKED",
+  "EMPTY_REVIEW",
+  "OFFLINE_READ_ONLY"
+]
+```
+
 Placement is omitted. One scroll surface contains the top bar, textual progress, prompt, response, feedback/recovery, and action region in reading order. Targets are at least 44px; inputs use at least 16px text; the only action remains reachable at 200% text and compact landscape. Progress has a semantic name and value. Focus, headings, announcements, status, and recovery are deterministic and do not rely on color alone.
 
 The original visual direction is **Conversation Canvas**, using Fluyo paper/ink/cobalt/coral/sun/mint tokens and a clipped lower-start corner. Focus is a 3px cobalt ring plus offset on light surfaces and a 3px sun ring plus offset on dark surfaces. Motion is state-bound and interruptible: 120ms press, 140ms selection, 180ms entry, 220ms confirmed transition, and 240ms progress, each with a static reduced-motion equivalent. No infinite animation, shimmer, floating loop, pulsing call to action, confetti, mascot, shake, or celebration before confirmation is allowed.
 
 Required viewport evidence: 320×568, 390×844, 430px phone, compact landscape, 768px, and at least 1200px; each relevant state also covers 200% text, English pseudolocale expansion, `ar-XB`, keyboard, light/dark, and the 15 Break-UI fixtures listed in the evidence report.
+
+The Break-UI fixture ID order is closed:
+
+```json
+[
+  "long_localized_prompt_and_choices",
+  "rtl_mixed_script_activity",
+  "large_text_compact_landscape",
+  "one_character_and_multiline_answers",
+  "empty_activity_catalog",
+  "network_loss_during_submit",
+  "duplicate_submit",
+  "stale_content_version",
+  "late_confirmation_after_exit",
+  "authentication_expired",
+  "entitlement_blocked",
+  "offline_saved_material",
+  "corrupt_cache_recovery",
+  "protected_mode_unknown_cohort",
+  "missing_optional_explanation"
+]
+```
+
+Every fixture preserves meaningful headings, names, roles, logical focus order, one-time announcements, 200% text reflow, reachable 44px targets, non-color state, and a static reduced-motion equivalent. Motion remains bounded and interruptible. Fixtures may demonstrate only the accepted learning flow and recovery states; placement, audio, notifications, social features, competition, economy, ads, purchases, experiments, child-specific behavior, offline writes, native learning, and downloadable content remain deferred and unavailable.
 
 ## Reliability and rollback acceptance
 
