@@ -1,6 +1,9 @@
 # ADR 0007: Learning experience and operational boundaries
 
-- Status: proposed
+- Status: accepted
+- Accepted by: Marlon on 2026-10-31
+- Acceptance reference: explicit Codex approval of this byte-unchanged decision at exact `main` `496518f9c0fc340ac2bc1152076c35381adb9aca`; accepted blob `78c84f2307f57216ecb8d4ddf8bbdf898bbe2ae1`, introduced by R0 merge `fa9ecb17180fde1723032ff2c0b43b43cead9d57`
+- Acceptance scope: records the existing credential-free boundaries without changing product direction and authorizes no production, signing, store, spend, credential, external-account, publication, or destructive action
 - Date: 2026-10-31
 - Decision owners: product, architecture, security, UX, infrastructure, and engineering
 - Extends: [ADR 0005](0005-learning-domain-ownership-and-progress.md)

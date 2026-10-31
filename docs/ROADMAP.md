@@ -143,7 +143,7 @@ gated by five proposed and nine blocked material decisions; safe evidence and sp
 
 Goal: ship onboarding, dashboard, short lessons, phrase review, progress synchronization, audio controls, safe offline behavior, and notification preferences across web, iOS, and Android.
 
-Staged subset: [2026-10-31 Sprint 6 learning-experience build plan](2026-10-31_sprint-6-learning-experience-build-plan_v1.md), supported by the [public-evidence study](research/2026-10-31_duolingo-public-evidence-study_v1.md) and proposed [ADR 0007](adr/0007-learning-experience-and-operational-boundaries.md). R0–R4 cover evidence, shared contracts, a read-only planner, fail-closed optional controls, and a web-only original presentation. Completing that subset does not complete the broad Sprint 6 goal or clear native learning.
+Staged subset: [2026-10-31 Sprint 6 learning-experience build plan](2026-10-31_sprint-6-learning-experience-build-plan_v1.md), supported by the [public-evidence study](research/2026-10-31_duolingo-public-evidence-study_v1.md) and accepted [ADR 0007](adr/0007-learning-experience-and-operational-boundaries.md). R0–R4 cover evidence, shared contracts, a read-only planner, fail-closed optional controls, and a web-only original presentation. Completing that subset does not complete the broad Sprint 6 goal or clear native learning.
 
 Any later offline learning slice requires an owner-scoped operation journal with immutable operation IDs, idempotent replay, explicit pending/confirmed/rejected state, bounded retry, conflict handling, and account-switch cleanup. Billing, entitlements, access, currency, rankings, and streak grants remain server-authoritative and are never granted optimistically.
 

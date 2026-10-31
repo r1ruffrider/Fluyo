@@ -19,6 +19,8 @@ const readme = readFileSync(resolve(contractDirectory, "README.md"), "utf8");
 const authAcceptance = JSON.parse(
   readFileSync(resolve(authStateDirectory, "acceptance.json"), "utf8"),
 ) as JsonObject;
+const standingApprovalPresentationSop =
+  "Whenever Marlon must approve an action or make a material decision, Adriana presents mutually exclusive choices as app-native clickable selection buttons. The Recommended choice appears first and each choice states its consequence or tradeoff. The exact selected button is the approval or decision record. No secret value appears in a button or prompt. If app-native controls are unavailable, Adriana says so explicitly and uses concise numbered choice codes.";
 
 const asObject = (value: unknown, label = "value"): JsonObject => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -1149,6 +1151,7 @@ describe("native live-auth readiness decision packet v1", () => {
       expect(text).toContain(
         "Elana remains the sole independent exact-head QA and code-review gate",
       );
+      expect(text).toContain(standingApprovalPresentationSop);
     }
   });
 
