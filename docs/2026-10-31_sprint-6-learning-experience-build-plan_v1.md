@@ -1,0 +1,221 @@
+# Sprint 6 learning-experience build plan
+
+## Document control
+
+| Field               | Value                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| Status              | Proposed; R0 documentation only                                                            |
+| Date                | 2026-10-31                                                                                 |
+| Source commit       | `80563fee339a07bd2ab9706b8186ed772a3b9a1a`                                                 |
+| Orchestration owner | Adriana Solano                                                                             |
+| Architecture        | [ADR 0007](adr/0007-learning-experience-and-operational-boundaries.md)                     |
+| Evidence            | [Duolingo public-evidence study](research/2026-10-31_duolingo-public-evidence-study_v1.md) |
+
+R0 records a lawful public-evidence study, original Fluyo boundaries, architecture, risks, and the dependency-safe sequence. It changes no application runtime, dependency, database schema, API, UI, native project, hosted service, credential, production setting, branch protection, signing configuration, store, or external account. It does not modify or clear PR #61.
+
+## Existing authority and conflicts
+
+- [ADR 0005](adr/0005-learning-domain-ownership-and-progress.md) remains authoritative for catalog content, immutable activity versions, attempts, progress, goals, streaks, and notification preferences.
+- ADR 0007 extends experience planning and operational safety. It does not redefine ADR 0005 schemas or permit client-awarded progress.
+- Sprint 5 still states that native learning and live native authentication are not implemented. R4 is web-only unless separate native gates later pass.
+- Existing ADR 0005 telemetry permits internal IDs and a correlation ID for its historical server boundary. The proposed experience-operational contract is a stricter independent no-op boundary and does not silently rewrite ADR 0005.
+- [ROADMAP](ROADMAP.md) retains the broad Sprint 6 goal. This dated plan is the canonical staged subset; completing R0–R4 does not complete every broad Sprint 6 item.
+
+## Architecture boundary
+
+```text
+ADR 0005 Learning Core (authoritative)
+  ├─ catalog/version reads
+  ├─ attempt write + idempotency
+  └─ confirmed progress projections
+          │ one-way read
+          ▼
+Learning Session Planner (optional, read-only)
+  └─ zero or one next item, reason = "next"
+          │ optional presentation input
+          ▼
+Experience Projection / Conversation Canvas (rebuildable)
+
+Static Experience Policy (default disabled)
+  └─ can disable optional experience only
+
+Closed No-op Operational Sink
+  └─ cannot affect Learning Core or user state
+```
+
+The planner, projections, policy, and sink are optional. Their absence or failure leaves the existing Learning Core and dashboard fallback usable.
+Optional modules cannot award progress, expand access, or make Learning Core unavailable.
+
+## State and authority contract
+
+| State               | Allowed transition                                               | Durable effect                                 |
+| ------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
+| `PREPARING`         | `ACTIVE`, `RETRYABLE_ERROR`, `SESSION_ENDED`                     | None                                           |
+| `ACTIVE`            | `SUBMITTING`, `SESSION_ENDED`                                    | None                                           |
+| `SUBMITTING`        | `CONFIRMED`, `RETRYABLE_ERROR`, `STALE_CONTENT`, `SESSION_ENDED` | None until authoritative response              |
+| `CONFIRMED`         | `ACTIVE` or finish                                               | Existing ADR 0005 transaction is authoritative |
+| `RETRYABLE_ERROR`   | Retry with the same idempotency key or exit                      | None                                           |
+| `STALE_CONTENT`     | Refresh or safe exit                                             | None                                           |
+| `OFFLINE_READ_ONLY` | Reconnect or safe exit                                           | None; no queue in R0–R4                        |
+
+Only `CONFIRMED` may reflect a canonical progress change already committed by the server. Late results after exit, authentication-generation change, or content-version change are discarded.
+
+## Dependency-safe phase sequence
+
+| Phase | Scope                                                                                          | Explicit exclusions                                                                                  | Exit evidence                                                                                                    |
+| ----- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| R0    | This evidence report, dated plan, ADR 0007, repository links, and regression test              | No runtime code, dependency, schema, API, UI, vendor, external action, or product claim              | Provenance classified; originality and unknowns explicit; specialist reviews; Elana exact-head PASS              |
+| R1    | Shared `LearningSessionPlanV1` and `LearningOperationalPolicyV1` closed types plus tests       | No API, DB, UI, SDK, telemetry transport, notification delivery, or hosted flags                     | Deterministic serialization; closed records; unknown-field rejection; disabled default; zero schema delta        |
+| R2    | Read-only zero-or-one session planner over ADR 0005 authority                                  | No progress mutation, new projection table, offline write, social, economy, or new entitlement       | `reason: "next"`; owner and entitlement enforcement; stable ordering; existing dashboard fallback                |
+| R3    | Static repository kill switch, typed no-op operational sink, failure isolation, rollback drill | No analytics ingestion, crash exporter, remote flags, stable device/owner IDs, or production rollout | Malformed/unavailable policy disables optional feature; sink failure is isolated; sanitized rollback proof       |
+| R4-A  | Dated UX/visual specification and Break-UI catalog                                             | No UI implementation                                                                                 | Camila flow/accessibility and Daniela originality/tokens/motion accepted                                         |
+| R4-B  | Web-only Conversation Canvas behind the approved boundary                                      | No native, audio, reminder, social, competition, commerce, public campaign, or offline-write claim   | Full states; 390px and desktop; 200% text; RTL; keyboard/screen reader; runtime/build/start evidence; Elana PASS |
+
+R1 begins only after R0 merges and its post-main checks pass. Every phase uses a separate small branch and pull request.
+
+## R1 contract requirements
+
+`LearningSessionPlanV1`:
+
+- returns zero or one item;
+- permits only `reason: "next"`;
+- references an existing server-derived activity and immutable content version;
+- carries no prompt, answer, owner, email, entitlement, economy, or analytics payload beyond what the accepted shared contract requires;
+- cannot mutate progress; and
+- falls back to the current dashboard when absent, disabled, invalid, or failed.
+
+`LearningOperationalPolicyV1`:
+
+- is closed, versioned, source-bound, environment-bound, size-bounded, and default-disabled;
+- initially recognizes only `LEARNING_SESSION_PLAN_ENABLED`;
+- cannot be enabled by a client or an unavailable/malformed policy;
+- contains no remote expression, executable content, arbitrary component tree, endpoint, secret, or stable identity; and
+- has an injected local clock only at its expiry boundary.
+
+No Prisma, OpenAPI, workspace dependency, environment variable, UI, workflow, or hosted integration changes are allowed in R1.
+
+## Security and privacy acceptance
+
+1. Learning Core retains exclusive authority for owner, access, catalog, attempts, progress, goals, streaks, rewards, social relationships, experiments, and deletion state.
+2. Every future mutation requires owner binding, authorization, idempotency, versioning, stale-response rejection, and generation/write fencing.
+3. R0–R4 collect no contacts and add no child/social/leaderboard/UGC/advertising/purchase/notification behavior.
+4. Child or unknown cohorts use the protective state; no profiling, public visibility, purchase pressure, or notification pressure is inferred.
+5. Experience-operational events are typed no-op records. Allowed values are bounded schema version, policy/scenario identifier, enumerated outcome, result, and duration bucket where explicitly defined.
+6. Forbidden values include identities, record IDs, activity or lesson IDs, email, tokens, codes, URLs, query strings, provider payloads, device/install IDs, accessibility settings, correlation IDs, answer or free text, file paths, and raw exceptions or stacks.
+7. Optional controls stop collection and processing as well as presentation.
+8. Offline cache, when later accepted, must be encrypted, owner-partitioned, versioned, expiring, no-backup, and fail-closed. R0–R4 implement no offline write queue.
+
+## UX and visual acceptance
+
+The 390px-first flow is:
+
+`setup → editable goal → start from beginning → prepare → answer → check → confirmed feedback → continue or finish → confirmed progress`
+
+Placement is omitted. One scroll surface contains the top bar, textual progress, prompt, response, feedback/recovery, and action region in reading order. Targets are at least 44px; inputs use at least 16px text; the only action remains reachable at 200% text and compact landscape. Progress has a semantic name and value. Focus, headings, announcements, status, and recovery are deterministic and do not rely on color alone.
+
+The original visual direction is **Conversation Canvas**, using Fluyo paper/ink/cobalt/coral/sun/mint tokens and a clipped lower-start corner. Focus is a 3px cobalt ring plus offset on light surfaces and a 3px sun ring plus offset on dark surfaces. Motion is state-bound and interruptible: 120ms press, 140ms selection, 180ms entry, 220ms confirmed transition, and 240ms progress, each with a static reduced-motion equivalent. No infinite animation, shimmer, floating loop, pulsing call to action, confetti, mascot, shake, or celebration before confirmation is allowed.
+
+Required viewport evidence: 320×568, 390×844, 430px phone, compact landscape, 768px, and at least 1200px; each relevant state also covers 200% text, English pseudolocale expansion, `ar-XB`, keyboard, light/dark, and the 15 Break-UI fixtures listed in the evidence report.
+
+## Reliability and rollback acceptance
+
+| Failure                                                    | Required behavior                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------- |
+| Planner throws                                             | Existing next-activity/dashboard fallback remains usable |
+| Optional projection throws                                 | Omit the optional card; Learning Core remains usable     |
+| Policy is missing, stale, malformed, or build-incompatible | Optional feature is disabled                             |
+| No-op sink throws                                          | Learner action and progress are unchanged                |
+| Cache owner/version mismatch                               | Purge and refetch; never reveal another owner            |
+| Candidate catalog is invalid                               | Preserve last-known-good catalog pointer                 |
+| Build is stale                                             | Disable optional experience                              |
+
+Rollback disables the optional module first, verifies Learning Core and attempt idempotency, reverts the application commit if necessary, and records only sanitized source, schema, scenario, outcome, result, artifact hash, and scan evidence. There is no database rollback in R1 because R1 has no schema change.
+
+## Measurement and claim rules
+
+- Correctness measures use exact counts: contract vectors, deterministic plans, zero duplicate awards, and zero forbidden retained fields.
+- Exposure, completion, duration, performance, and reliability are descriptive until a separately accepted target exists.
+- Every future experiment defines metric version, denominator, eligibility, unit, allocation, platform, locale, build, timezone, and observation window before collection.
+- Reports include raw counts, absolute and relative effects, and uncertainty. Correlation, controlled experiment, synthetic test, and runtime observation are labeled separately.
+- Engagement cannot be presented as learning efficacy.
+- Duolingo's published figures and proprietary metrics are historical reference only and cannot become Fluyo forecasts, defaults, weights, SLOs, or success claims.
+
+## 13-agent responsibility and handoff ledger
+
+| Agent            | Bounded responsibility                            | Required evidence                                             | Handoff                                          |
+| ---------------- | ------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------ |
+| Adriana Solano   | Orchestration, scope, PR sequence, merge/status   | Exact-head gate reconciliation                                | Dispatch and advance only after Elana PASS       |
+| Bianca Morales   | Records, dates, filenames, ledgers, handoff       | Cross-document owner/link/status reconciliation               | Today / Waiting / Needs you / Tomorrow           |
+| Gabriela Mendoza | Official/public research                          | URL/date provenance; observation/inference/unknown separation | Evidence to Catalina, Isabella, Julieta          |
+| Catalina Moreno  | Architecture, interfaces, dependencies, rollback  | ADR, file map, state/authority contract                       | Buildable boundary to Valentina                  |
+| Natalia Ortega   | Threat, privacy, child/data/external boundaries   | Abuse cases, no-go list, telemetry/storage constraints        | Defects to Catalina/Valentina; evidence to Elana |
+| Renata Vega      | Reproducible environment, CI, controls, rollback  | Clean commands, failure matrix, sanitized evidence            | Runbook and exact commands                       |
+| Camila Reyes     | Learning flow, states, accessibility, Break-UI    | State table, focus, 200% text, targets, recovery fixtures     | UX criteria to Daniela/Catalina/Valentina        |
+| Daniela Vargas   | Original visual system, responsive layout, motion | Token/contrast/motion table; similarity review                | Approved design spec to Valentina                |
+| Isabella Navarro | Positioning and claims                            | Claim inventory with implementation/evidence gates            | Safe wording to Fernanda and Elana               |
+| Fernanda Ortiz   | Retention/social and publishing boundary          | Non-coercive rules; community/publishing gate                 | Drafts only after runtime evidence               |
+| Julieta Herrera  | Independent numerical/economy audit               | Source, denominator, date, calculation, transferability       | Clears every numerical/economy claim             |
+| Valentina Cruz   | Implements only accepted R1–R4 specifications     | Development tests, fixtures, exact diff, QA brief             | Candidate to Adriana; does not self-certify      |
+| Elana Castillo   | Sole independent exact-head QA/code-review gate   | Counted checks, PASS/FAIL, bug table, unattempted rows        | Final unchanged-head verdict to Adriana          |
+
+## Risk and decision register
+
+| ID     | Risk or decision                              | Control / owner                                      |
+| ------ | --------------------------------------------- | ---------------------------------------------------- |
+| RSK-01 | Copying competitor expression or trade dress  | Originality ledger; Daniela, Natalia, Elana          |
+| RSK-02 | Transferring published metrics to Fluyo       | Julieta and Isabella claim gates                     |
+| RSK-03 | Child or protected-user exposure              | Protective default; Natalia; later material decision |
+| RSK-04 | Client-awarded or duplicate progress          | ADR 0005 authority; confirmed-only writes            |
+| RSK-05 | Coercive streak/economy mechanics             | Deferred; Camila, Isabella, Fernanda                 |
+| RSK-06 | Notification pressure or spam                 | No delivery in R0–R4                                 |
+| RSK-07 | Telemetry identity/content leakage            | Closed no-op contract; Natalia/Renata mutations      |
+| RSK-08 | Offline conflict or stale award               | Read-only offline; stale results never award         |
+| RSK-09 | Fail-open optional control                    | Default disabled; independent kill switch            |
+| RSK-10 | Accessibility or contrast regression          | Conversation Canvas tokens, Break-UI, runtime audit  |
+| RSK-11 | PR #61 contamination                          | Separate branch and PR; no external-setting action   |
+| RSK-12 | Sprint 6 claim outruns incomplete native work | R4 web-only; native claims stay blocked              |
+
+Later decision packets must cover placement, audio, reminders and delivery, protected cohorts, guardians, XP/leagues/hearts/Energy/gems/rewards/badges/quests/streak freezes, social graphs, ads/IAP, experiments, offline writes and conflict resolution, native learning, and atomic downloadable content.
+
+## Verification commands
+
+R0 and every later phase run the relevant focused test plus the unchanged repository gates:
+
+```text
+npm ci --ignore-scripts
+npm run prisma:generate
+npm run audit:policy
+npm run prisma:validate
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run format:check
+git diff --check
+```
+
+R1 additionally proves two identical serializations, zero Prisma schema delta, zero dependency delta, unknown-field rejection, forbidden-field mutation resistance, planner fallback, malformed-policy disable, sink failure isolation, and production-fixture exclusion.
+
+## Status
+
+**Today**
+
+- R0 specialist inputs and the lawful evidence boundary are assembled.
+- Runtime implementation remains zero.
+- PR #61 and its required-check blocker remain separate and untouched.
+
+**Waiting**
+
+- Exact-head specialist review of the R0 candidate.
+- Elana's final unchanged-head audit.
+
+**Needs you**
+
+- No new material decision is required for R0–R3.
+- Production, signing, stores, spend, credentials, external accounts, economy, social, child, notification, offline-write, and native-learning decisions remain gated.
+
+**Tomorrow**
+
+- Merge R0 only after every specialist gate, protected checks, mergeability, and Elana PASS.
+- Verify post-main checks.
+- Create a separate R1 branch from the new main; do not carry the R0 worktree forward.
