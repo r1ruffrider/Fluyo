@@ -769,6 +769,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_VALID",
         guards: [
+          "CURRENT_AUTH_GENERATION",
           "SIGN_IN_RETURN_RESULT_VALID",
           "AUTH_IDENTITY_CONFIRMED",
           "AUTH_SAME_OWNER",
@@ -787,7 +788,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T31",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
+        guards: ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
         effects: [
           "DISCARD_OWNER_NEUTRAL_ROUTE",
           "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
@@ -801,7 +802,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T32",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
+        guards: ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -811,7 +812,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T33",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
+        guards: ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -821,7 +822,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T34",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
+        guards: ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -831,7 +832,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
         id: "T35",
         source: "SESSION_ENDED",
         event: "SIGN_IN_RETURN_REJECTED",
-        guards: ["SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
+        guards: ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
         effects: ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
         target: null,
         externalDestination: "LEARNING_HOME",
@@ -1016,7 +1017,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     const canonical = JSON.stringify(manifest);
     const digest = createHash("sha256").update(canonical, "utf8").digest("hex");
-    const expectedDigest = "a326000567fad95dc74fc096f96be90b6228e935cfa5986a029b63f111e060f0";
+    const expectedDigest = "330d8ca1bb398ee81aa4f4850d2cc0ebc9793a929c50d4cb3910bfb9165e50d6";
     expect(manifest).toEqual(expectedManifest);
     expect(manifest).toHaveLength(48);
     expect(manifest.map(({ id }) => id)).toEqual(
@@ -1098,6 +1099,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(manifest[13]?.target).toBe("RETRYABLE_ERROR");
 
     expect(manifest[29]?.guards).toEqual([
+      "CURRENT_AUTH_GENERATION",
       "SIGN_IN_RETURN_RESULT_VALID",
       "AUTH_IDENTITY_CONFIRMED",
       "AUTH_SAME_OWNER",
@@ -1108,11 +1110,11 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "ROUTE_IS_LEARNING_SESSION_ENTRY",
     ]);
     expect(manifest.slice(30, 35).map(({ guards }) => guards)).toEqual([
-      ["SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
-      ["SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
-      ["SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
-      ["SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
-      ["SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
+      ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
+      ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
+      ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
+      ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
+      ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
     ]);
     expect(
       manifest
@@ -1215,6 +1217,31 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       );
     }
 
+    for (const rowIndex of [29, 30, 31, 32, 33, 34]) {
+      const generationGuardMutations: Array<(guards: string[]) => void> = [
+        (guards) => {
+          guards.splice(guards.indexOf("CURRENT_AUTH_GENERATION"), 1);
+        },
+        (guards) => {
+          guards.push(guards.shift()!);
+        },
+        (guards) => {
+          guards.unshift("CURRENT_AUTH_GENERATION");
+        },
+        (guards) => {
+          guards[0] = "CURRENT_GENERATION";
+        },
+      ];
+      for (const mutateGuards of generationGuardMutations) {
+        const candidate = structuredClone(expectedManifest);
+        mutateGuards(candidate[rowIndex]!.guards);
+        expect(candidate).not.toEqual(expectedManifest);
+        expect(
+          createHash("sha256").update(JSON.stringify(candidate), "utf8").digest("hex"),
+        ).not.toBe(expectedDigest);
+      }
+    }
+
     for (const state of ["SESSION_ENDED", "ACCESS_BLOCKED", "EMPTY_REVIEW"]) {
       expect(manifest.some(({ source, target }) => source === state || target === state)).toBe(
         true,
@@ -1228,6 +1255,17 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
   });
 
   it("locks closed sign-in-return and reconnect normalization truth tables", () => {
+    const manifestBlock = plan
+      .split("### Canonical ordered learning transition manifest")[1]
+      ?.match(/```json\s*([\s\S]*?)```/);
+    if (!manifestBlock?.[1]) throw new Error("missing canonical transition manifest");
+    const manifest = JSON.parse(manifestBlock[1]) as Array<{
+      id: string;
+      guards: string[];
+      effects: string[];
+      durableEffect: string;
+    }>;
+
     type SignInReturnResult =
       | "VALID"
       | "OWNER_CHANGED"
@@ -1239,6 +1277,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     type ReconnectResult = "VALID" | "OWNER_CHANGED" | "REVALIDATE" | "INVALID";
     type SignInSnapshot = {
       complete: boolean;
+      currentGeneration: boolean;
       identityConfirmed: boolean;
       ownerChanged: boolean;
       sameOwner: boolean;
@@ -1261,7 +1300,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     };
 
     const normalizeSignIn = (snapshot: SignInSnapshot): SignInReturnResult => {
-      if (!snapshot.complete) return "INVALID";
+      if (!snapshot.complete || !snapshot.currentGeneration) return "INVALID";
       if (snapshot.ownerChanged) return "OWNER_CHANGED";
       if (!snapshot.identityConfirmed || !snapshot.sameOwner || !snapshot.routeValid)
         return "INVALID";
@@ -1310,6 +1349,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     const signInKeys: Array<keyof SignInSnapshot> = [
       "complete",
+      "currentGeneration",
       "identityConfirmed",
       "ownerChanged",
       "sameOwner",
@@ -1323,21 +1363,22 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       const snapshot = Object.fromEntries(
         signInKeys.map((key, bit) => [key, Boolean(mask & (1 << bit))]),
       ) as SignInSnapshot;
-      const expected: SignInReturnResult = !snapshot.complete
-        ? "INVALID"
-        : snapshot.ownerChanged
-          ? "OWNER_CHANGED"
-          : !snapshot.identityConfirmed || !snapshot.sameOwner || !snapshot.routeValid
-            ? "INVALID"
-            : !snapshot.authorized
-              ? "AUTHORIZATION_DENIED"
-              : !snapshot.entitled
-                ? "ENTITLEMENT_DENIED"
-                : !snapshot.contentCurrent
-                  ? "CONTENT_STALE"
-                  : !snapshot.activityAvailable
-                    ? "ACTIVITY_UNAVAILABLE"
-                    : "VALID";
+      const expected: SignInReturnResult =
+        !snapshot.complete || !snapshot.currentGeneration
+          ? "INVALID"
+          : snapshot.ownerChanged
+            ? "OWNER_CHANGED"
+            : !snapshot.identityConfirmed || !snapshot.sameOwner || !snapshot.routeValid
+              ? "INVALID"
+              : !snapshot.authorized
+                ? "AUTHORIZATION_DENIED"
+                : !snapshot.entitled
+                  ? "ENTITLEMENT_DENIED"
+                  : !snapshot.contentCurrent
+                    ? "CONTENT_STALE"
+                    : !snapshot.activityAvailable
+                      ? "ACTIVITY_UNAVAILABLE"
+                      : "VALID";
       const result = normalizeSignIn(snapshot);
       expect(result).toBe(expected);
       expect(signInEvent(result).length).toBeLessThanOrEqual(1);
@@ -1378,6 +1419,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     const validSignIn: SignInSnapshot = {
       complete: true,
+      currentGeneration: true,
       identityConfirmed: true,
       ownerChanged: false,
       sameOwner: true,
@@ -1395,6 +1437,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "ACTIVITY_UNAVAILABLE",
     );
     expect(signInEvent(normalizeSignIn({ ...validSignIn, complete: false }))).toEqual([]);
+    expect(signInEvent(normalizeSignIn({ ...validSignIn, currentGeneration: false }))).toEqual([]);
     expect(signInEvent(normalizeSignIn({ ...validSignIn, routeValid: false }))).toEqual([]);
 
     const allSignInFailures = {
@@ -1407,6 +1450,29 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       activityAvailable: false,
     };
     expect(signInEvent(normalizeSignIn(allSignInFailures))).toEqual(["T31"]);
+
+    const selectableSignInSnapshots: SignInSnapshot[] = [
+      validSignIn,
+      { ...validSignIn, ownerChanged: true, sameOwner: false },
+      { ...validSignIn, authorized: false },
+      { ...validSignIn, entitled: false },
+      { ...validSignIn, contentCurrent: false },
+      { ...validSignIn, activityAvailable: false },
+      allSignInFailures,
+    ];
+    const signInRows = new Map(manifest.slice(29, 35).map((row) => [row.id, row] as const));
+    const executedEffects: string[] = [];
+    const settleSignIn = (snapshot: SignInSnapshot) => {
+      for (const id of signInEvent(normalizeSignIn(snapshot))) {
+        executedEffects.push(...(signInRows.get(id)?.effects ?? []));
+      }
+    };
+    for (const snapshot of selectableSignInSnapshots) {
+      executedEffects.length = 0;
+      settleSignIn({ ...snapshot, currentGeneration: false });
+      expect(executedEffects).toEqual([]);
+      expect(signInEvent(normalizeSignIn({ ...snapshot, currentGeneration: false }))).toEqual([]);
+    }
 
     const signInFailurePriority = [
       ["authorized", "AUTHORIZATION_DENIED"],
@@ -1473,15 +1539,6 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       }
     }
 
-    const manifestBlock = plan
-      .split("### Canonical ordered learning transition manifest")[1]
-      ?.match(/```json\s*([\s\S]*?)```/);
-    if (!manifestBlock?.[1]) throw new Error("missing canonical transition manifest");
-    const manifest = JSON.parse(manifestBlock[1]) as Array<{
-      id: string;
-      effects: string[];
-      durableEffect: string;
-    }>;
     const t31 = manifest.find(({ id }) => id === "T31");
     const t45 = manifest.find(({ id }) => id === "T45");
     for (const row of [t31, t45]) {
@@ -1496,7 +1553,11 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     for (const phrase of [
       "SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID",
       "one immutable validation snapshot",
-      "INVALID` emits no graph event, remains in `SESSION_ENDED`",
+      "required `currentGeneration: boolean`",
+      "if (!snapshot.complete || !snapshot.currentGeneration) return INVALID",
+      "stale-generation result executes no T30–T35 effect",
+      "current state and data remain unchanged",
+      "INVALID` emits no graph event and remains in `SESSION_ENDED`",
       "ReconnectResult` is exactly `VALID | OWNER_CHANGED | REVALIDATE | INVALID",
       "fresh post-reconnect server authorization, entitlement, content-version, and activity-availability evidence",
       "Cached evidence, stale-generation evidence, or missing fresh evidence yields `INVALID`",

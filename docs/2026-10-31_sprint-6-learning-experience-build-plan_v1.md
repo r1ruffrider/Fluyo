@@ -50,7 +50,7 @@ Optional modules cannot award progress, expand access, or make Learning Core una
 
 ### Canonical ordered learning transition manifest
 
-This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `a326000567fad95dc74fc096f96be90b6228e935cfa5986a029b63f111e060f0`.
+This 48-row manifest is the only authoritative transition graph for R0. Its object key order is `id`, `source`, `event`, `guards`, `effects`, `target`, `externalDestination`, `durableEffect`. The canonical digest is lowercase SHA-256 of UTF-8 `JSON.stringify(manifest)` with no trailing newline: `330d8ca1bb398ee81aa4f4850d2cc0ebc9793a929c50d4cb3910bfb9165e50d6`.
 
 ```json
 [
@@ -439,6 +439,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_VALID",
     "guards": [
+      "CURRENT_AUTH_GENERATION",
       "SIGN_IN_RETURN_RESULT_VALID",
       "AUTH_IDENTITY_CONFIRMED",
       "AUTH_SAME_OWNER",
@@ -457,7 +458,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T31",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
+    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_OWNER_CHANGED"],
     "effects": [
       "DISCARD_OWNER_NEUTRAL_ROUTE",
       "CLEAR_PREVIOUS_OWNER_CLIENT_STATE",
@@ -471,7 +472,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T32",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
+    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_AUTHORIZATION_DENIED"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -481,7 +482,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T33",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
+    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ENTITLEMENT_DENIED"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -491,7 +492,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T34",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
+    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_CONTENT_STALE"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -501,7 +502,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
     "id": "T35",
     "source": "SESSION_ENDED",
     "event": "SIGN_IN_RETURN_REJECTED",
-    "guards": ["SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
+    "guards": ["CURRENT_AUTH_GENERATION", "SIGN_IN_RETURN_RESULT_ACTIVITY_UNAVAILABLE"],
     "effects": ["DISCARD_OWNER_NEUTRAL_ROUTE", "PRESERVE_AUTHENTICATED_SESSION"],
     "target": null,
     "externalDestination": "LEARNING_HOME",
@@ -687,7 +688,7 @@ This 48-row manifest is the only authoritative transition graph for R0. Its obje
 
 ### Closed sign-in-return and reconnect normalization
 
-`SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID`. It is computed once from one immutable validation snapshot. Its priority is owner change, then same-owner authorization denial, entitlement denial, stale content, unavailable activity, and finally fully valid. `INVALID` emits no graph event, remains in `SESSION_ENDED`, and retains no owner-neutral route. Exactly one normalized result and at most one graph event may be produced.
+`SignInReturnResult` is exactly `VALID | OWNER_CHANGED | AUTHORIZATION_DENIED | ENTITLEMENT_DENIED | CONTENT_STALE | ACTIVITY_UNAVAILABLE | INVALID`. It is computed once from one immutable validation snapshot that includes required `currentGeneration: boolean`. The first normalization rule is `if (!snapshot.complete || !snapshot.currentGeneration) return INVALID`, before any other classification. Its remaining priority is owner change, then same-owner authorization denial, entitlement denial, stale content, unavailable activity, and finally fully valid. `INVALID` emits no graph event and remains in `SESSION_ENDED`. A stale-generation result executes no T30–T35 effect: it does not use or discard the owner-neutral route, request an activity, navigate, clear or write owner state, replace or preserve a session, or reflect progress; current state and data remain unchanged. Exactly one normalized result and at most one graph event may be produced.
 
 `ReconnectResult` is exactly `VALID | OWNER_CHANGED | REVALIDATE | INVALID`. It is computed only after network restoration and current-generation validation, using fresh post-reconnect server authorization, entitlement, content-version, and activity-availability evidence. Its priority is owner change, then any same-owner authorization denial, entitlement denial, stale content, or unavailable activity as `REVALIDATE`, and finally fully valid. Cached evidence, stale-generation evidence, or missing fresh evidence yields `INVALID`, emits no graph event, and never restores an answer. Exactly one normalized result and at most one graph event may be produced.
 
