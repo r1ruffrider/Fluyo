@@ -48,6 +48,7 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
 
     const src013 = sourceLedger.split("\n").find((line) => line.startsWith("| SRC-013 |"));
     const src014 = sourceLedger.split("\n").find((line) => line.startsWith("| SRC-014 |"));
+    const src018 = sourceLedger.split("\n").find((line) => line.startsWith("| SRC-018 |"));
     expect(src013).toContain("Apple App Store, “Duolingo: Learn Languages”");
     expect(src013).toContain(
       "US title captured 2026-10-31; recheck title and OS metadata before reuse",
@@ -55,12 +56,24 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(src014).toContain("Duolingo Android Google Play listing (title dynamic/UNKNOWN)");
     expect(src014).toContain("hl=en&gl=US");
     expect(src014).toContain("dynamic listing update date (UNKNOWN)");
-    expect(src014).toContain("displayed Oct 26, 2026");
-    expect(src014).toContain("title and update metadata are dynamic/region-dependent");
+    expect(src014).toContain(
+      "US/en capture on 2026-10-31 observed title “Duolingo: Learn Languages” and update label Oct 26, 2026",
+    );
+    expect(src014).toContain(
+      "both are dynamic, region-dependent capture context, not canonical facts",
+    );
     expect(src014).not.toContain("Duolingo: Language Lessons");
     expect(src014).not.toMatch(/Google Play, [“\"]Duolingo:/);
+    expect(src018).toContain(
+      "Duolingo, “How we reduced manual regression tests by 70% using AI tools”",
+    );
+    expect(src018).toContain("Official title reproduced verbatim");
+    expect(src018).toContain("body claim is qualified as an up-to-70% company-reported result");
     expect(report).not.toContain("updated 2026-09-08");
-    expect(handoff).toContain("title `dynamic/UNKNOWN`");
+    expect(handoff).toContain("canonical title `dynamic/UNKNOWN`");
+    expect(handoff).toContain(
+      "dated capture observed the title “Duolingo: Learn Languages” and update label Oct 26, 2026",
+    );
     expect(handoff).toContain("no transient Google Play title is canonical");
   });
 
@@ -144,8 +157,6 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "`COMPANY-REPORTED` upper-bound workflow result; methodology and baseline are `UNKNOWN`",
       "`DO NOT USE AS FLUYO TARGET/FORECAST`; not a Fluyo quality, coverage, or efficiency target.",
     ]);
-    expect(report).toContain("manual regression tests by up to 70%");
-    expect(report).not.toContain("manual regression tests by 70%");
     expect(numericalClaims).not.toMatch(/\| SRC-018 \| `70%`/);
 
     const src009 = numericalClaims.split("\n").find((line) => line.startsWith("| SRC-009 |"));
