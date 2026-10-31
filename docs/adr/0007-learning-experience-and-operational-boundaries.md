@@ -25,6 +25,7 @@ Adopt an additive, dependency-safe experience boundary:
 6. **Offline starts read-only.** R0–R4 implement no offline write queue. Any future operation journal requires accepted authentication, encrypted owner-partitioned storage, idempotency, conflict UX, account-switch cleanup, and exact runtime evidence.
 7. **Notification intent is delivery-independent.** Existing preferences do not imply a delivery channel. R0–R4 add no notification delivery.
 8. **Optional failures cannot break core learning.** Planner, projection, policy, and sink failures preserve the existing Learning Core and safe fallback.
+9. **Future social and retention behavior is separately gated and non-coercive.** R0–R4 implement none. Any later proposal must be affirmative opt-in, cooperative-only, private by default, safely reversible, and non-punitive. It must not use guilt or shame, peer-obligation reminders or nudges, threatened streak loss, learning gates, paid recovery, scarcity or loss-pressure economy, reward transfers, rankings, or notification pressure. Opting out cannot reduce learning access, confirmed progress, ordinary feedback, or previously earned non-transferable recognition.
 
 ## R1 raw contract boundary
 
@@ -44,7 +45,8 @@ Only `CONFIRMED` may display a progress change that the server has already commi
 
 - Owner, age capability, authorization, entitlement, attempts, progress, rewards, social relationships, experiment assignment, notification eligibility, and deletion state remain server-owned.
 - Every future mutation requires owner binding, authorization, idempotency, versioning, stale-result rejection, and generation/write fencing.
-- Child or unknown cohorts default to no social, public ranking, profiling, targeted ads, purchase pressure, or notification pressure.
+- Child or unknown cohorts default to no social participation, ranking, profiling, targeted ads, purchase pressure, or notification pressure.
+- Any separately accepted economy remains non-coercive: no scarcity/loss pressure, paid recovery, reward transfer, or learning gate. Any separately accepted social feature follows the affirmative-opt-in, cooperative-only, private, safely reversible, and non-punitive boundary above.
 - Operational records exclude identity, owner/profile/activity/lesson IDs, answer or free text, email, token, code, URL/query, provider payload, device/install ID, accessibility setting, correlation ID, file path, and raw exception/stack.
 - Optional kill switches stop optional collection and processing as well as UI.
 - R0–R3 introduce no hosted analytics, crash reporter, remote flag provider, credential, external account, domain, signing, store, production, or spending action.
@@ -84,7 +86,7 @@ Every phase uses a separate small pull request. R1 may begin only after R0 merge
 1. **Copy a mature competitor's product loop or visual expression.** Rejected: public evidence does not license proprietary expression and a clone would violate Fluyo's originality and claim boundaries.
 2. **Add a general remote-UI or hosted flag system first.** Rejected: it expands attack surface, external dependencies, privacy, and rollback complexity before a proven need.
 3. **Make the client planner or offline cache authoritative.** Rejected: it conflicts with ADR 0005, owner isolation, idempotency, and explainable progress.
-4. **Build social/economy mechanics for retention first.** Rejected: product, child-safety, fairness, privacy, moderation, and coercion decisions are not accepted.
+4. **Build social/economy mechanics for retention first.** Rejected: public evidence includes peer-obligation, reminder, and reward-pressure patterns that Fluyo will not reproduce, while product, child-safety, fairness, privacy, moderation, and coercion decisions remain unaccepted.
 5. **Keep all experience selection inside the dashboard component.** Rejected for later phases because a small read-only contract improves testing and failure isolation, but it remains the R2 fallback until proven.
 
 ## Consequences

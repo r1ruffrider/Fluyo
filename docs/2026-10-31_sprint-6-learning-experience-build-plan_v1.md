@@ -1080,6 +1080,48 @@ Required tests cover every valid environment; default false; valid non-productio
 7. Optional controls stop collection and processing as well as presentation.
 8. Offline cache, when later accepted, must be encrypted, owner-partitioned, versioned, expiring, no-backup, and fail-closed. R0–R4 implement no offline write queue.
 
+The future social and retention boundary is closed:
+
+```json
+{
+  "status": "deferred_not_implemented_in_R0_through_R4",
+  "positiveRequirements": [
+    "affirmative_opt_in",
+    "cooperative_only",
+    "private_by_default",
+    "safely_reversible",
+    "non_punitive"
+  ],
+  "economyBoundary": "non_coercive_no_scarcity_loss_pressure_paid_recovery_or_reward_transfers",
+  "prohibitedMechanics": [
+    "guilt_or_shame",
+    "peer_obligation_reminders_or_nudges",
+    "threatened_streak_loss",
+    "learning_gates",
+    "paid_recovery",
+    "scarcity_or_loss_pressure_economy",
+    "reward_transfers",
+    "rankings",
+    "notification_pressure"
+  ],
+  "protectedCohorts": {
+    "cohorts": ["child", "unknown"],
+    "prohibited": [
+      "social",
+      "ranking",
+      "profiling",
+      "targeted_ads",
+      "purchase_pressure",
+      "notification_pressure"
+    ]
+  }
+}
+```
+
+R0–R4 implement no social, retention, ranking, economy, purchase, or notification mechanic. Any future separately approved participation must require a clear unselected affirmative opt-in; consent is never inferred from learning activity, contacts, or an existing relationship. Participation is cooperative-only and private by default, can be left or disabled safely, and cannot reduce learning access, confirmed progress, ordinary feedback, or previously earned non-transferable recognition. Opting out creates no penalty, debt, public signal, degraded learning path, or recovery charge.
+
+The use of guilt or shame copy, peer-obligation reminders or nudges, threatened streak loss, learning gates, paid recovery, scarcity or loss-pressure economy, reward transfers, rankings, and notification pressure is prohibited. Any separately approved economy must remain non-coercive and cannot buy recovery, transfer pressure between people, or condition learning on scarcity or loss. Child and unknown cohorts remain in the protective state with no social participation, ranking, profiling, targeted ads, purchase pressure, or notification pressure.
+
 ## UX and visual acceptance
 
 The 390px-first flow is:

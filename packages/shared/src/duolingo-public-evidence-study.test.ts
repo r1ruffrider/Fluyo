@@ -51,6 +51,23 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(plan).toContain("Engagement cannot be presented as learning efficacy");
   });
 
+  it("records bounded negative social evidence without claiming intent or harm", () => {
+    for (const evidence of [
+      "OBS-009",
+      "social-accountability prompts, friend-directed nudges/notifications, reminders",
+      "shared progress, XP, or gems",
+      "patterns to evaluate and reject, not reproduce",
+      "Does not establish current rollout, frequency, user sentiment, causal effect, intent, or harm",
+      "INF-006",
+      "Peer obligation, accountability/reminder pressure, and social reward/XP/gem pressure",
+      "This is a Fluyo design constraint, not a claim about competitor intent, harm, prevalence, or efficacy",
+    ]) {
+      expect(report).toContain(evidence);
+    }
+
+    expect(report).toContain("SRC-006, SRC-007");
+  });
+
   it("registers SRC-018's company-reported 70% workflow result as non-transferable", () => {
     const numericalClaims =
       report.split("## Numerical claim register")[1]?.split("## Safe claim language")[0] ?? "";
@@ -96,6 +113,86 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(plan).toContain("No Prisma, OpenAPI, workspace dependency");
     expect(plan).toContain("R1 begins only after R0 merges");
     expect(plan).toContain("Every phase uses a separate small branch and pull request");
+  });
+
+  it("locks the future cooperative-only social and non-coercive retention boundary", () => {
+    const futureSocial = closedJsonAfter<{
+      status: string;
+      positiveRequirements: string[];
+      economyBoundary: string;
+      prohibitedMechanics: string[];
+      protectedCohorts: { cohorts: string[]; prohibited: string[] };
+    }>("The future social and retention boundary is closed:");
+
+    expect(futureSocial).toEqual({
+      status: "deferred_not_implemented_in_R0_through_R4",
+      positiveRequirements: [
+        "affirmative_opt_in",
+        "cooperative_only",
+        "private_by_default",
+        "safely_reversible",
+        "non_punitive",
+      ],
+      economyBoundary: "non_coercive_no_scarcity_loss_pressure_paid_recovery_or_reward_transfers",
+      prohibitedMechanics: [
+        "guilt_or_shame",
+        "peer_obligation_reminders_or_nudges",
+        "threatened_streak_loss",
+        "learning_gates",
+        "paid_recovery",
+        "scarcity_or_loss_pressure_economy",
+        "reward_transfers",
+        "rankings",
+        "notification_pressure",
+      ],
+      protectedCohorts: {
+        cohorts: ["child", "unknown"],
+        prohibited: [
+          "social",
+          "ranking",
+          "profiling",
+          "targeted_ads",
+          "purchase_pressure",
+          "notification_pressure",
+        ],
+      },
+    });
+
+    for (const positiveBoundary of [
+      "clear unselected affirmative opt-in",
+      "cooperative-only and private by default",
+      "left or disabled safely",
+      "Opting out creates no penalty, debt, public signal, degraded learning path, or recovery charge",
+      "Any separately approved economy must remain non-coercive",
+    ]) {
+      expect(plan).toContain(positiveBoundary);
+    }
+
+    for (const source of [plan, adr]) {
+      for (const prohibitedBoundary of [
+        "guilt or shame",
+        "peer-obligation reminders or nudges",
+        "threatened streak loss",
+        "learning gates",
+        "paid recovery",
+        "scarcity or loss-pressure economy",
+        "reward transfers",
+        "rankings",
+        "notification pressure",
+      ]) {
+        expect(source).toContain(prohibitedBoundary);
+      }
+    }
+
+    expect(adr).toContain(
+      "affirmative opt-in, cooperative-only, private by default, safely reversible, and non-punitive",
+    );
+    expect(adr).toContain(
+      "Child or unknown cohorts default to no social participation, ranking, profiling, targeted ads, purchase pressure, or notification pressure",
+    );
+    expect(plan).toContain(
+      "R0–R4 implement no social, retention, ranking, economy, purchase, or notification mechanic",
+    );
   });
 
   it("locks phase-specific verification ownership and prevents R1 phase drift", () => {
