@@ -810,14 +810,14 @@ The three terminal and recovery rows are authoritative:
 
 ## Dependency-safe phase sequence
 
-| Phase | Scope                                                                                          | Explicit exclusions                                                                                  | Exit evidence                                                                                                    |
-| ----- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| R0    | This evidence report, dated plan, ADR 0007, repository links, and regression test              | No runtime code, dependency, schema, API, UI, vendor, external action, or product claim              | Provenance classified; originality and unknowns explicit; specialist reviews; Elana exact-head PASS              |
-| R1    | Shared `LearningSessionPlanV1` and `LearningOperationalPolicyV1` closed types plus tests       | No API, DB, UI, SDK, telemetry transport, notification delivery, or hosted flags                     | Deterministic serialization; closed records; unknown-field rejection; disabled default; zero schema delta        |
-| R2    | Read-only zero-or-one session planner over ADR 0005 authority                                  | No progress mutation, new projection table, offline write, social, economy, or new entitlement       | `reason: "next"`; owner and entitlement enforcement; stable ordering; existing dashboard fallback                |
-| R3    | Static repository kill switch, typed no-op operational sink, failure isolation, rollback drill | No analytics ingestion, crash exporter, remote flags, stable device/owner IDs, or production rollout | Malformed/unavailable policy disables optional feature; sink failure is isolated; sanitized rollback proof       |
-| R4-A  | Dated UX/visual specification and Break-UI catalog                                             | No UI implementation                                                                                 | Camila flow/accessibility and Daniela originality/tokens/motion accepted                                         |
-| R4-B  | Web-only Conversation Canvas behind the approved boundary                                      | No native, audio, reminder, social, competition, commerce, public campaign, or offline-write claim   | Full states; 390px and desktop; 200% text; RTL; keyboard/screen reader; runtime/build/start evidence; Elana PASS |
+| Phase | Scope                                                                                          | Explicit exclusions                                                                                  | Exit evidence                                                                                               |
+| ----- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| R0    | This evidence report, dated plan, ADR 0007, repository links, and regression test              | No runtime code, dependency, schema, API, UI, vendor, external action, or product claim              | Provenance classified; originality and unknowns explicit; specialist reviews; Elana exact-head PASS         |
+| R1    | Shared `LearningSessionPlanV1` and `LearningOperationalPolicyV1` closed types plus tests       | No API, DB, UI, SDK, telemetry transport, notification delivery, or hosted flags                     | Deterministic serialization; contract validation; malformed-policy evaluation; zero dependency/schema delta |
+| R2    | Read-only zero-or-one session planner over ADR 0005 authority                                  | No progress mutation, new projection table, offline write, social, economy, or new entitlement       | `reason: "next"`; owner and entitlement enforcement; stable ordering; existing dashboard fallback           |
+| R3    | Static repository kill switch, typed no-op operational sink, failure isolation, rollback drill | No analytics ingestion, crash exporter, remote flags, stable device/owner IDs, or production rollout | Static switch remains default-disabled; sink failure is isolated; sanitized rollback proof                  |
+| R4-A  | Dated UX/visual specification and Break-UI catalog                                             | No UI implementation                                                                                 | Camila flow/accessibility and Daniela originality/tokens/motion accepted                                    |
+| R4-B  | Web-only Conversation Canvas behind the approved boundary                                      | No native, audio, reminder, social, competition, commerce, public campaign, or offline-write claim   | Full states; dev-fixture production exclusion; responsive/accessibility runtime evidence; Elana PASS        |
 
 R1 may begin only after R0 merges, all post-main checks pass, and ADR 0007 is recorded as accepted at an exact head reviewed by the required specialists and Elana. R1 implements only the shared files and closed contracts named above. R1 begins only after R0 merges under this exact phase lock. Every phase uses a separate small branch and pull request.
 
@@ -1205,6 +1205,37 @@ The measurable Conversation Canvas visual-regression contract is closed:
     "assistiveTechnology": "NVDA",
     "versionPolicy": "record exact OS, browser, and AT versions"
   },
+  "evidencePrivacy": {
+    "dataPolicy": "committed_synthetic_fixtures_only",
+    "realAccountsAllowed": false,
+    "realSessionsAllowed": false,
+    "productionDataAllowed": false,
+    "networkPolicy": "isolated_loopback_fixture_harness_no_external_network",
+    "maximumExternalRequests": 0,
+    "forbiddenPayloadClasses": [
+      "identity",
+      "email",
+      "user_id",
+      "secret",
+      "token",
+      "real_answer",
+      "real_learning_content",
+      "url",
+      "account_derived_payload"
+    ],
+    "preRetentionScanScope": ["png", "text", "json"],
+    "preRetentionChecks": ["structured_payload_scan", "local_screenshot_ocr", "manual_review"],
+    "accessPolicy": "named_reviewers_only_no_public_or_shared_link",
+    "retention": {
+      "maximumCalendarDaysFromCapture": 30,
+      "deleteWithinHoursAfterVerdictPrClosureOrSupersedingCapture": 24
+    },
+    "failureDisposition": {
+      "cellStatus": "UNATTEMPTED",
+      "retainAnyArtifact": false,
+      "deleteTransientCopies": "immediately"
+    }
+  },
   "contrast": {
     "normalTextMinRatio": 4.5,
     "largeTextMinRatio": 3,
@@ -1309,6 +1340,12 @@ The 200% condition means Chromium browser zoom set to exactly 200% after configu
 Before capture, use the same production build, deterministic fixture, fonts, color profile, and cleared storage. `manifest.json` records the six exact evidence-cell identity fields in their closed order—`stateId`, `viewportId`, `themeId`, `localeId`, `textScaleId`, and `fixtureId`—plus build SHA, browser/AT profile ID, configured and observed viewport dimensions, browser zoom percent, device scale factor, OS version, Chromium version, NVDA version, fixture-data digest, font digest, color profile, and UTC capture time. `en-XA` provides expanded English and `ar-XB` runs with RTL direction. Identity fields cannot be null, inferred from a path, or replaced by an unlabeled default.
 
 A baseline is comparable only when state ID, viewport ID and configured dimensions, theme ID, locale ID and direction, text-scale ID and browser zoom percent, fixture ID and fixture-data digest, browser/AT profile and exact versions, device scale factor, fonts, and color profile match; only the candidate build SHA and capture time may differ. Otherwise the cell is unattempted rather than passed.
+
+Every visual-evidence cell is synthetic-only. Capture runs in an isolated fixture harness with external network access denied and only harness-local loopback traffic permitted; any external request fails the run. It uses committed synthetic fixtures and an in-memory synthetic session, never a real account, real session/cookie, production snapshot, production database, captured account response, or account-derived payload. PNG, text, and JSON artifacts—including baselines, diffs, OCR output, announcements, focus traces, manifests, and scan output—must contain no identity, email, user ID, secret, token, real answer, real learning content, URL, query string, session value, or other account-derived payload.
+
+Artifacts are created only in an isolated ephemeral location. Before anything is copied into the evidence tree, every text/JSON value receives a structured forbidden-payload scan, every screenshot receives local no-network OCR and the same scan, and a named reviewer manually reviews every PNG/text/JSON artifact and OCR result. Baselines must pass the same current scan; inherited approval is insufficient. If a scan is missing, incomplete, unavailable, or detects a forbidden value, the cell is `UNATTEMPTED`, all transient artifacts and OCR output are deleted immediately, and no artifact, manifest, scan excerpt, baseline, derived payload, or external upload is retained.
+
+Passing artifacts are stored with least-privilege access for named reviewers only, with no public or shared link and no external OCR/storage service. They are deleted no later than 30 calendar days after capture and within 24 hours after the exact-head verdict, PR closure, or a superseding capture, whichever occurs first. Deletion is verified without preserving artifact contents or forbidden payloads.
 
 The visual-QA artifact ID order is closed:
 
@@ -1430,7 +1467,24 @@ npm run format:check
 git diff --check
 ```
 
-R1 additionally proves two identical serializations, zero Prisma schema delta, zero dependency delta, unknown-field rejection, forbidden-field mutation resistance, planner fallback, malformed-policy disable, sink failure isolation, and production-fixture exclusion.
+The phase-verification ownership contract is closed:
+
+```json
+{
+  "R1": [
+    "deterministic_serialization",
+    "contract_validation",
+    "zero_dependency_delta",
+    "zero_schema_delta",
+    "malformed_policy_evaluation"
+  ],
+  "R2": ["planner_fallback"],
+  "R3": ["sink_failure_isolation"],
+  "R4-B": ["development_fixture_production_exclusion"]
+}
+```
+
+R1 verification is limited to deterministic serialization, closed contract validation including unknown/forbidden-field rejection, zero dependency delta, zero schema delta, and fail-closed malformed-policy evaluation. Planner fallback is first verified in R2, no-op sink-failure isolation is first verified in R3, and development-fixture production exclusion is first verified in R4-B. No earlier phase may claim, waive, or substitute evidence owned by a later phase.
 
 ## Status
 

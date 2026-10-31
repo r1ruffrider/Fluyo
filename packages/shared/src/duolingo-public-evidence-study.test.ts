@@ -98,6 +98,42 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(plan).toContain("Every phase uses a separate small branch and pull request");
   });
 
+  it("locks phase-specific verification ownership and prevents R1 phase drift", () => {
+    const phaseVerification = closedJsonAfter<Record<string, string[]>>(
+      "The phase-verification ownership contract is closed:",
+    );
+
+    expect(phaseVerification).toEqual({
+      R1: [
+        "deterministic_serialization",
+        "contract_validation",
+        "zero_dependency_delta",
+        "zero_schema_delta",
+        "malformed_policy_evaluation",
+      ],
+      R2: ["planner_fallback"],
+      R3: ["sink_failure_isolation"],
+      "R4-B": ["development_fixture_production_exclusion"],
+    });
+
+    expect(phaseVerification.R1).not.toContain("planner_fallback");
+    expect(phaseVerification.R1).not.toContain("sink_failure_isolation");
+    expect(phaseVerification.R1).not.toContain("development_fixture_production_exclusion");
+    expect(new Set(Object.values(phaseVerification).flat()).size).toBe(
+      Object.values(phaseVerification).flat().length,
+    );
+
+    for (const boundary of [
+      "R1 verification is limited to deterministic serialization",
+      "Planner fallback is first verified in R2",
+      "no-op sink-failure isolation is first verified in R3",
+      "development-fixture production exclusion is first verified in R4-B",
+      "No earlier phase may claim, waive, or substitute evidence owned by a later phase",
+    ]) {
+      expect(plan).toContain(boundary);
+    }
+  });
+
   it("locks Catalina's exact R1 file map, prohibited paths, and dependency edges", () => {
     const exactR1Files = [
       "packages/shared/src/learning-contract-json.ts",
@@ -653,6 +689,79 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(plan).toContain(
       "It does not change the canonical transition manifest or its `7cef0f307e365ec4f2ee0e8c83a2b8f0bb56401e6d8ccabafdf4008cea3631e9` digest",
     );
+  });
+
+  it("locks synthetic-only visual evidence privacy, scanning, access, and deletion", () => {
+    const visualContract = closedJsonAfter<{
+      evidencePrivacy: {
+        dataPolicy: string;
+        realAccountsAllowed: boolean;
+        realSessionsAllowed: boolean;
+        productionDataAllowed: boolean;
+        networkPolicy: string;
+        maximumExternalRequests: number;
+        forbiddenPayloadClasses: string[];
+        preRetentionScanScope: string[];
+        preRetentionChecks: string[];
+        accessPolicy: string;
+        retention: {
+          maximumCalendarDaysFromCapture: number;
+          deleteWithinHoursAfterVerdictPrClosureOrSupersedingCapture: number;
+        };
+        failureDisposition: {
+          cellStatus: string;
+          retainAnyArtifact: boolean;
+          deleteTransientCopies: string;
+        };
+      };
+    }>("The measurable Conversation Canvas visual-regression contract is closed:");
+
+    expect(visualContract.evidencePrivacy).toEqual({
+      dataPolicy: "committed_synthetic_fixtures_only",
+      realAccountsAllowed: false,
+      realSessionsAllowed: false,
+      productionDataAllowed: false,
+      networkPolicy: "isolated_loopback_fixture_harness_no_external_network",
+      maximumExternalRequests: 0,
+      forbiddenPayloadClasses: [
+        "identity",
+        "email",
+        "user_id",
+        "secret",
+        "token",
+        "real_answer",
+        "real_learning_content",
+        "url",
+        "account_derived_payload",
+      ],
+      preRetentionScanScope: ["png", "text", "json"],
+      preRetentionChecks: ["structured_payload_scan", "local_screenshot_ocr", "manual_review"],
+      accessPolicy: "named_reviewers_only_no_public_or_shared_link",
+      retention: {
+        maximumCalendarDaysFromCapture: 30,
+        deleteWithinHoursAfterVerdictPrClosureOrSupersedingCapture: 24,
+      },
+      failureDisposition: {
+        cellStatus: "UNATTEMPTED",
+        retainAnyArtifact: false,
+        deleteTransientCopies: "immediately",
+      },
+    });
+
+    for (const boundary of [
+      "Every visual-evidence cell is synthetic-only",
+      "external network access denied and only harness-local loopback traffic permitted",
+      "never a real account, real session/cookie, production snapshot, production database",
+      "must contain no identity, email, user ID, secret, token, real answer, real learning content, URL, query string, session value, or other account-derived payload",
+      "every screenshot receives local no-network OCR",
+      "a named reviewer manually reviews every PNG/text/JSON artifact and OCR result",
+      "the cell is `UNATTEMPTED`",
+      "no artifact, manifest, scan excerpt, baseline, derived payload, or external upload is retained",
+      "least-privilege access for named reviewers only",
+      "deleted no later than 30 calendar days after capture and within 24 hours",
+    ]) {
+      expect(plan).toContain(boundary);
+    }
   });
 
   it("locks the canonical 48-row transition manifest, digest, and recovery invariants", () => {
