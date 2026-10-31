@@ -52,11 +52,16 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(src013).toContain(
       "US title captured 2026-10-31; recheck title and OS metadata before reuse",
     );
+    expect(src014).toContain("Duolingo Android Google Play listing (title dynamic/UNKNOWN)");
     expect(src014).toContain("hl=en&gl=US");
     expect(src014).toContain("dynamic listing update date (UNKNOWN)");
     expect(src014).toContain("displayed Oct 26, 2026");
-    expect(src014).toContain("dynamic/region-dependent and not a canonical update date");
+    expect(src014).toContain("title and update metadata are dynamic/region-dependent");
+    expect(src014).not.toContain("Duolingo: Language Lessons");
+    expect(src014).not.toMatch(/Google Play, [“\"]Duolingo:/);
     expect(report).not.toContain("updated 2026-09-08");
+    expect(handoff).toContain("title `dynamic/UNKNOWN`");
+    expect(handoff).toContain("no transient Google Play title is canonical");
   });
 
   it("marks the session-local replay unavailable and keeps exactly nine canonical limitations", () => {
@@ -122,14 +127,46 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(report).toContain("SRC-006, SRC-007");
   });
 
-  it("registers SRC-018's company-reported 70% workflow result as non-transferable", () => {
+  it("locks precise, non-transferable readings for the audited numerical claims", () => {
     const numericalClaims =
       report.split("## Numerical claim register")[1]?.split("## Safe claim language")[0] ?? "";
     const src018Rows = numericalClaims.split("\n").filter((line) => line.startsWith("| SRC-018 |"));
 
-    expect(src018Rows).toEqual([
-      "| SRC-018 | `70%`                           | `COMPANY-REPORTED` workflow result; methodology and baseline are `UNKNOWN` | `DO NOT USE AS FLUYO TARGET/FORECAST`; not a Fluyo quality, coverage, or efficiency target. |",
+    expect(src018Rows).toHaveLength(1);
+    expect(
+      src018Rows[0]
+        ?.split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    ).toEqual([
+      "SRC-018",
+      "`up to 70%`",
+      "`COMPANY-REPORTED` upper-bound workflow result; methodology and baseline are `UNKNOWN`",
+      "`DO NOT USE AS FLUYO TARGET/FORECAST`; not a Fluyo quality, coverage, or efficiency target.",
     ]);
+    expect(report).toContain("manual regression tests by up to 70%");
+    expect(report).not.toContain("manual regression tests by 70%");
+    expect(numericalClaims).not.toMatch(/\| SRC-018 \| `70%`/);
+
+    const src009 = numericalClaims.split("\n").find((line) => line.startsWith("| SRC-009 |"));
+    expect(src009).toContain("Risk ratio (RR) 2.0: 200% of baseline, a 100% relative increase");
+    expect(numericalClaims).not.toContain("100% relative risk");
+
+    const streakRow = numericalClaims
+      .split("\n")
+      .find((line) => line.startsWith("| SRC-023 | `over 40%`"));
+    expect(streakRow).toContain(
+      "The number of learners on a 7+ day streak increased by over 40%; direction and measured count are source-established",
+    );
+    expect(streakRow).toContain("Baseline, cohort, confidence, and transferability are missing");
+    expect(streakRow).not.toContain("Direction, denominator, and comparison window are ambiguous");
+
+    const minutesRow = numericalClaims
+      .split("\n")
+      .find((line) => line.startsWith("| SRC-024 | approximately `+1.1M`"));
+    expect(minutesRow).toContain("approximately `+1.1M` and `+1.8M` minutes/day");
+    expect(minutesRow).toContain("Approximate absolute totals with no user denominator");
+    expect(minutesRow).toContain("cannot be combined into a sequential `+64%` claim");
   });
 
   it("locks the lawful no-copy and originality boundary", () => {
