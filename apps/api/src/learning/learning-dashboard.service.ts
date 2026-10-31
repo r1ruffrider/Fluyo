@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 
 import { EntitlementsService } from "../billing/entitlements.service";
 import { PrismaService } from "../database/prisma.service";
+import { LearningExperienceOperations } from "./learning-experience-operations";
 import { LearningSettingsService } from "./learning-settings.service";
 import { LearningSessionPlannerService } from "./learning-session-planner.service";
 import { LearningTelemetryService } from "./learning-telemetry.service";
@@ -44,6 +45,7 @@ export class LearningDashboardService {
     private readonly settings: LearningSettingsService,
     @Optional() private readonly planner?: LearningSessionPlannerService,
     @Optional() private readonly telemetry?: LearningTelemetryService,
+    @Optional() private readonly operations?: LearningExperienceOperations,
   ) {}
 
   async getDashboard(userId: string): Promise<LearningDashboardResponse> {
@@ -113,8 +115,9 @@ export class LearningDashboardService {
       const visibleActivityIds = new Set(activities.map((activity) => activity.id));
       const next = activities.find((activity) => !completedActivityIds.has(activity.id));
       let selectedActivity = next;
+      let plannerOutcome: "selected" | "fallback" | null = null;
 
-      if (this.planner) {
+      if (this.planner && this.sessionPlannerEnabled()) {
         let plannedItem: ReturnType<LearningDashboardService["plannedItem"]> = null;
         try {
           plannedItem = this.plannedItem(
@@ -139,8 +142,13 @@ export class LearningDashboardService {
               activity.publishedVersion === plannedItem.contentVersion &&
               !completedActivityIds.has(activity.id),
           );
-          if (plannedActivity) selectedActivity = plannedActivity;
+          if (plannedActivity) {
+            selectedActivity = plannedActivity;
+            plannerOutcome = "selected";
+          }
         }
+
+        plannerOutcome ??= "fallback";
       }
 
       const nextActivity = selectedActivity ? this.mapActivity(selectedActivity) : null;
@@ -182,6 +190,7 @@ export class LearningDashboardService {
           unavailableReason,
         },
       };
+      if (plannerOutcome) this.recordPlannerOutcome(plannerOutcome);
       this.telemetry?.recordDashboard({
         outcome: nextActivity ? "ready" : "empty",
         durationMs: Date.now() - startedAt,
@@ -190,6 +199,22 @@ export class LearningDashboardService {
     } catch (error) {
       this.telemetry?.recordDashboard({ outcome: "failed", durationMs: Date.now() - startedAt });
       throw error;
+    }
+  }
+
+  private sessionPlannerEnabled(): boolean {
+    try {
+      return this.operations?.isSessionPlannerEnabled() === true;
+    } catch {
+      return false;
+    }
+  }
+
+  private recordPlannerOutcome(outcome: "selected" | "fallback"): void {
+    try {
+      this.operations?.recordSessionPlannerOutcome(outcome);
+    } catch {
+      // Optional operational evidence cannot affect the dashboard response.
     }
   }
 

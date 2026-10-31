@@ -18,6 +18,13 @@ import { LearningSettingsService } from "./learning-settings.service";
 import { LearningDataLifecycleService } from "./learning-data-lifecycle.service";
 import { LearningDashboardController } from "./learning-dashboard.controller";
 import { LearningDashboardService } from "./learning-dashboard.service";
+import {
+  LEARNING_EXPERIENCE_CONTROL,
+  LEARNING_OPERATIONAL_SINK,
+  LearningExperienceOperations,
+  NoOpLearningOperationalSink,
+  REPOSITORY_LEARNING_EXPERIENCE_CONTROL,
+} from "./learning-experience-operations";
 import { LearningSessionPlannerService } from "./learning-session-planner.service";
 import {
   LEARNING_TELEMETRY_SINK,
@@ -44,6 +51,16 @@ import { PrismaActivityAttemptReplayStore } from "./prisma-activity-attempt-repl
     ActivityAttemptService,
     LearningDataLifecycleService,
     LearningDashboardService,
+    {
+      provide: LEARNING_EXPERIENCE_CONTROL,
+      useValue: REPOSITORY_LEARNING_EXPERIENCE_CONTROL,
+    },
+    NoOpLearningOperationalSink,
+    {
+      provide: LEARNING_OPERATIONAL_SINK,
+      useExisting: NoOpLearningOperationalSink,
+    },
+    LearningExperienceOperations,
     LearningSessionPlannerService,
     LoggerLearningTelemetrySink,
     {
