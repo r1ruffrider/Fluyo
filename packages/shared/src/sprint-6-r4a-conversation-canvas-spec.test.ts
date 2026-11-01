@@ -392,6 +392,14 @@ const keyboardApplicabilityFields = [
   "dialogContextId",
   "applicableInteractionIds",
 ];
+const keyboardPresentationFocusMapFields = [
+  "presentationId",
+  "interactionId",
+  "applicability",
+  "expectedFocusTargetId",
+  "expectedFocusMoveCount",
+  "rationaleId",
+];
 const syntheticObservationFields = [
   "confirmedCount",
   "dailyTarget",
@@ -406,8 +414,10 @@ const keyboardExecutionFields = [
   "exclusionReason",
   "expectedOutcomeId",
   "expectedFocusId",
+  "expectedFocusMoveCount",
   "observedOutcomeId",
   "observedFocusId",
+  "observedFocusMoveCount",
   "observedAnnouncementDelta",
   "noProgressMutation",
   "verdict",
@@ -448,7 +458,7 @@ const keyboardProtocol = [
     "primary_action",
     ["Enter", "Space"],
     "activate_control",
-    "activated_destination_heading",
+    "presentation_specific_focus_map",
     1,
   ],
   [
@@ -481,6 +491,93 @@ const keyboardProtocol = [
     announcementDelta,
     noProgressMutation: true,
   }),
+) as JsonRecord[];
+const keyboardPresentationInteractionGroups: ReadonlyArray<
+  readonly [presentationId: string, interactionIds: readonly string[]]
+> = [
+  ["PREPARING", ["document_tab_forward", "document_tab_reverse", "skip_link_activate"]],
+  [
+    "ACTIVE",
+    [
+      "document_tab_forward",
+      "document_tab_reverse",
+      "radio_next",
+      "radio_previous",
+      "radio_select",
+      "primary_action_activate",
+      "skip_link_activate",
+    ],
+  ],
+  ["SUBMITTING", ["document_tab_forward", "document_tab_reverse", "skip_link_activate"]],
+  ...[
+    "CONFIRMED:confirmed_correct_continue",
+    "CONFIRMED:confirmed_correct_finish",
+    "CONFIRMED:confirmed_incorrect_continue",
+    "CONFIRMED:confirmed_incorrect_finish",
+    "RETRYABLE_ERROR:retryable_error_prepare",
+    "RETRYABLE_ERROR:retryable_error_submit",
+    "STALE_CONTENT",
+    "SESSION_ENDED",
+    "ACCESS_BLOCKED",
+    "EMPTY_REVIEW",
+    "OFFLINE_READ_ONLY:offline_read_only_prepare",
+    "OFFLINE_READ_ONLY:offline_read_only_active",
+  ].map(
+    (presentationId) =>
+      [
+        presentationId,
+        [
+          "document_tab_forward",
+          "document_tab_reverse",
+          "primary_action_activate",
+          "skip_link_activate",
+        ],
+      ] as const,
+  ),
+  ["ACTIVE", ["dialog_tab_cycle", "dialog_escape"]],
+  ["SUBMITTING", ["dialog_tab_cycle", "dialog_escape"]],
+  ["RETRYABLE_ERROR:retryable_error_submit", ["dialog_tab_cycle", "dialog_escape"]],
+  ["OFFLINE_READ_ONLY:offline_read_only_active", ["dialog_tab_cycle", "dialog_escape"]],
+];
+const focusContractByInteraction: Record<
+  string,
+  readonly [expectedFocusTargetId: string, expectedFocusMoveCount: number, rationaleId: string]
+> = {
+  document_tab_forward: ["next_expected_stop", 1, "sequential_focus_navigation"],
+  document_tab_reverse: ["previous_expected_stop", 1, "sequential_focus_navigation"],
+  radio_next: ["next_radio_in_canonical_order", 1, "radio_roving_focus"],
+  radio_previous: ["previous_radio_in_canonical_order", 1, "radio_roving_focus"],
+  radio_select: ["current_radio", 0, "in_place_selection"],
+  dialog_tab_cycle: ["exit_stay", 1, "modal_focus_cycle"],
+  dialog_escape: ["invoking_exit_control", 1, "modal_dismiss_focus_restore"],
+  skip_link_activate: ["single_h1", 1, "skip_link_main_heading"],
+};
+const retainedPrimaryActionPresentations = new Set([
+  "ACTIVE",
+  "RETRYABLE_ERROR:retryable_error_submit",
+]);
+const keyboardPresentationFocusMap = keyboardPresentationInteractionGroups.flatMap(
+  ([presentationId, interactionIds]) =>
+    interactionIds.map((interactionId) => {
+      const focusContract =
+        interactionId === "primary_action_activate"
+          ? retainedPrimaryActionPresentations.has(presentationId)
+            ? ([
+                "primary_action_status_position",
+                0,
+                "retain_primary_action_status_position",
+              ] as const)
+            : (["activated_destination_heading", 1, "activated_destination_heading"] as const)
+          : focusContractByInteraction[interactionId]!;
+      return {
+        presentationId,
+        interactionId,
+        applicability: "APPLICABLE",
+        expectedFocusTargetId: focusContract[0],
+        expectedFocusMoveCount: focusContract[1],
+        rationaleId: focusContract[2],
+      };
+    }),
 ) as JsonRecord[];
 const nvdaProtocolFields = [
   "sequence",
@@ -1738,9 +1835,15 @@ const validArtifactType = (typeName: string, value: unknown): boolean => {
           )) &&
         enumIncludes("keyboardOutcomeIds", item.expectedOutcomeId) &&
         enumIncludes("keyboardFocusIds", item.expectedFocusId) &&
+        (item.expectedFocusMoveCount === null ||
+          (Number.isSafeInteger(item.expectedFocusMoveCount) &&
+            [0, 1].includes(Number(item.expectedFocusMoveCount)))) &&
         (item.observedOutcomeId === null ||
           enumIncludes("keyboardOutcomeIds", item.observedOutcomeId)) &&
         (item.observedFocusId === null || enumIncludes("keyboardFocusIds", item.observedFocusId)) &&
+        (item.observedFocusMoveCount === null ||
+          (Number.isSafeInteger(item.observedFocusMoveCount) &&
+            [0, 1].includes(Number(item.observedFocusMoveCount)))) &&
         (item.observedAnnouncementDelta === null ||
           (Number.isSafeInteger(item.observedAnnouncementDelta) &&
             [0, 1].includes(Number(item.observedAnnouncementDelta)))) &&
@@ -1852,6 +1955,25 @@ const validKeyboardProtocol = (value: unknown): boolean =>
   new Set(records(value).map(({ interactionId }) => interactionId)).size === value.length &&
   JSON.stringify(value) === JSON.stringify(keyboardProtocol);
 
+const validKeyboardPresentationFocusMap = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.length === 69 &&
+  value.every(
+    (entry) =>
+      exactObjectKeys(entry, keyboardPresentationFocusMapFields) &&
+      validTransitionPresentationId(record(entry).presentationId) &&
+      keyboardProtocol.some(({ interactionId }) => interactionId === record(entry).interactionId) &&
+      record(entry).applicability === "APPLICABLE" &&
+      enumIncludes("keyboardFocusIds", record(entry).expectedFocusTargetId) &&
+      Number.isSafeInteger(record(entry).expectedFocusMoveCount) &&
+      [0, 1].includes(Number(record(entry).expectedFocusMoveCount)) &&
+      enumIncludes("keyboardFocusRationaleIds", record(entry).rationaleId),
+  ) &&
+  new Set(
+    records(value).map(({ presentationId, interactionId }) => `${presentationId}|${interactionId}`),
+  ).size === value.length &&
+  JSON.stringify(value) === JSON.stringify(keyboardPresentationFocusMap);
+
 const dialogContextForCell = (cell: JsonRecord): string | null => {
   const variantId = stateFixtureVariant(cell.stateId, cell.fixtureId)?.variantId ?? null;
   if (cell.stateId === "ACTIVE" && cell.fixtureId === "late_confirmation_after_exit")
@@ -1884,6 +2006,19 @@ const keyboardApplicabilityForCell = (cell: JsonRecord): JsonRecord | undefined 
   );
 };
 
+const keyboardPresentationIdForCell = (cell: JsonRecord): string => {
+  const variantId = stateFixtureVariant(cell.stateId, cell.fixtureId)?.variantId ?? null;
+  return variantId === null ? String(cell.stateId) : `${String(cell.stateId)}:${variantId}`;
+};
+
+const keyboardPresentationFocusContract = (
+  presentationId: string,
+  interactionId: string,
+): JsonRecord | undefined =>
+  records(record(catalog.evidence).keyboardPresentationFocusMap).find(
+    (entry) => entry.presentationId === presentationId && entry.interactionId === interactionId,
+  );
+
 const exclusionReason = (interactionId: unknown, dialogContextId: unknown): string => {
   if (
     dialogContextId !== null &&
@@ -1900,8 +2035,12 @@ const expectedKeyboardExecutions = (cell: JsonRecord): JsonRecord[] => {
   const applicability = keyboardApplicabilityForCell(cell);
   if (!applicability) return [];
   const applicable = new Set(strings(applicability.applicableInteractionIds));
+  const presentationId = keyboardPresentationIdForCell(cell);
   return keyboardProtocol.map((protocol) => {
     const isApplicable = applicable.has(String(protocol.interactionId));
+    const focusContract = isApplicable
+      ? keyboardPresentationFocusContract(presentationId, String(protocol.interactionId))
+      : undefined;
     return {
       sequence: protocol.sequence,
       interactionId: protocol.interactionId,
@@ -1910,9 +2049,11 @@ const expectedKeyboardExecutions = (cell: JsonRecord): JsonRecord[] => {
         ? null
         : exclusionReason(protocol.interactionId, applicability.dialogContextId),
       expectedOutcomeId: protocol.expectedOutcomeId,
-      expectedFocusId: protocol.expectedFocusId,
+      expectedFocusId: focusContract?.expectedFocusTargetId ?? protocol.expectedFocusId,
+      expectedFocusMoveCount: focusContract?.expectedFocusMoveCount ?? null,
       observedOutcomeId: isApplicable ? protocol.expectedOutcomeId : null,
-      observedFocusId: isApplicable ? protocol.expectedFocusId : null,
+      observedFocusId: isApplicable ? focusContract?.expectedFocusTargetId : null,
+      observedFocusMoveCount: isApplicable ? focusContract?.expectedFocusMoveCount : null,
       observedAnnouncementDelta: isApplicable ? protocol.announcementDelta : null,
       noProgressMutation: true,
       verdict: isApplicable ? "PASS" : "EXCLUDED",
@@ -4744,6 +4885,7 @@ const bundleByteSize = (files: Record<string, Buffer>): number =>
 const computedUxContractDigest = (): string => {
   const subset = Object.fromEntries(uxSubsetKeys.map((key) => [key, catalog[key]]));
   subset.keyboardProtocol = record(catalog.evidence).keyboardProtocol;
+  subset.keyboardPresentationFocusMap = record(catalog.evidence).keyboardPresentationFocusMap;
   subset.nvdaExpectationTemplates = record(catalog.evidence).nvdaExpectationTemplates;
   subset.syntheticObservationValues = record(catalog.evidence).syntheticObservationValues;
   return createHash("sha256")
@@ -8422,7 +8564,7 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
 
   it("uses canonical duplicate-free safe JSON and rejects structural mutations", () => {
     expect(createHash("sha256").update(rawCatalog).digest("hex")).toBe(
-      "0e29f7285eba7467115fcef63d848cfc1745f5fe30ee1a7193928a3b4629d359",
+      "93571a5b5068faa6f5ec4e93986f6555220e281730744df39984fec708255bf8",
     );
     exactKeys(catalog, topLevelKeys);
     expect(() => validateScalarSafety(catalog)).not.toThrow();
@@ -9838,6 +9980,58 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       expect(validArtifactType("KeyboardProtocolRecord", entry)).toBe(true);
       expect(entry.noProgressMutation).toBe(true);
     });
+    expect(evidence.keyboardPresentationFocusMapFields).toEqual(keyboardPresentationFocusMapFields);
+    expect(evidence.keyboardPresentationFocusMap).toEqual(keyboardPresentationFocusMap);
+    expect(validKeyboardPresentationFocusMap(evidence.keyboardPresentationFocusMap)).toBe(true);
+    expect(records(evidence.keyboardPresentationFocusMap)).toHaveLength(69);
+    expect(evidence.keyboardPresentationFocusMapRules).toEqual([
+      "one_row_for_every_applicable_presentation_interaction_pair_in_exact_keyboardApplicability_order",
+      "ACTIVE_check_answer_and_RETRYABLE_ERROR_submit_try_again_retain_primary_action_status_position_with_zero_programmatic_focus_moves",
+      "true_navigation_primary_actions_focus_activated_destination_heading_with_one_programmatic_focus_move",
+      "in_place_and_modal_interactions_retain_their_closed_focus_targets_and_move_counts",
+      "missing_extra_duplicate_reordered_or_unknown_references_fail_closed",
+    ]);
+    const applicabilityPairs = records(evidence.keyboardApplicability).flatMap((entry) => {
+      const presentationId =
+        entry.variantId === null
+          ? String(entry.stateId)
+          : `${String(entry.stateId)}:${String(entry.variantId)}`;
+      return strings(entry.applicableInteractionIds).map(
+        (interactionId) => `${presentationId}|${interactionId}`,
+      );
+    });
+    expect(
+      records(evidence.keyboardPresentationFocusMap).map(
+        ({ presentationId, interactionId }) => `${presentationId}|${interactionId}`,
+      ),
+    ).toEqual(applicabilityPairs);
+    expect(
+      records(evidence.keyboardPresentationFocusMap).filter(
+        ({ interactionId }) => interactionId === "primary_action_activate",
+      ),
+    ).toHaveLength(13);
+    expect(
+      records(evidence.keyboardPresentationFocusMap).filter(
+        ({ rationaleId }) => rationaleId === "retain_primary_action_status_position",
+      ),
+    ).toEqual([
+      {
+        presentationId: "ACTIVE",
+        interactionId: "primary_action_activate",
+        applicability: "APPLICABLE",
+        expectedFocusTargetId: "primary_action_status_position",
+        expectedFocusMoveCount: 0,
+        rationaleId: "retain_primary_action_status_position",
+      },
+      {
+        presentationId: "RETRYABLE_ERROR:retryable_error_submit",
+        interactionId: "primary_action_activate",
+        applicability: "APPLICABLE",
+        expectedFocusTargetId: "primary_action_status_position",
+        expectedFocusMoveCount: 0,
+        rationaleId: "retain_primary_action_status_position",
+      },
+    ]);
     expect(evidence.keyboardProtocolRules).toEqual([
       "radio_arrows_follow_canonical_answer_order_in_LTR_and_RTL",
       "Enter_and_Space_activate_only_native_control_semantics",
@@ -9846,7 +10040,14 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       "keyboard_interactions_cannot_synthesize_confirmation_or_progress",
     ]);
     expect(evidence.keyboardProtocolDigest).toBe(
-      createHash("sha256").update(JSON.stringify(keyboardProtocol)).digest("hex"),
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            keyboardProtocol,
+            keyboardPresentationFocusMap,
+          }),
+        )
+        .digest("hex"),
     );
     expect(evidence.nvdaProtocolFields).toEqual(nvdaProtocolFields);
     expect(evidence.nvdaProtocolEventIds).toEqual(nvdaProtocolEventIds);
@@ -9878,6 +10079,41 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       ),
     ])
       expect(validKeyboardProtocol(mutation)).toBe(false);
+
+    const mutatePresentationFocus = (index: number, mutation: JsonRecord) =>
+      keyboardPresentationFocusMap.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, ...mutation } : entry,
+      );
+    for (const mutation of [
+      keyboardPresentationFocusMap.slice(1),
+      [
+        ...keyboardPresentationFocusMap,
+        {
+          presentationId: "PREPARING",
+          interactionId: "radio_select",
+          applicability: "APPLICABLE",
+          expectedFocusTargetId: "current_radio",
+          expectedFocusMoveCount: 0,
+          rationaleId: "in_place_selection",
+        },
+      ],
+      [...keyboardPresentationFocusMap, keyboardPresentationFocusMap[0]],
+      [
+        keyboardPresentationFocusMap[1],
+        keyboardPresentationFocusMap[0],
+        ...keyboardPresentationFocusMap.slice(2),
+      ],
+      mutatePresentationFocus(0, { presentationId: "UNKNOWN" }),
+      mutatePresentationFocus(0, { interactionId: "unknown_interaction" }),
+      mutatePresentationFocus(0, { applicability: "EXCLUDED" }),
+      mutatePresentationFocus(8, { expectedFocusTargetId: "activated_destination_heading" }),
+      mutatePresentationFocus(8, { expectedFocusMoveCount: 1 }),
+      mutatePresentationFocus(8, { rationaleId: "activated_destination_heading" }),
+      keyboardPresentationFocusMap.map((entry, index) =>
+        index === 0 ? Object.fromEntries(Object.entries(entry).reverse()) : entry,
+      ),
+    ])
+      expect(validKeyboardPresentationFocusMap(mutation)).toBe(false);
 
     const activeCell = closedCellRecords().find(
       ({ stateId, fixtureId }) =>
@@ -9986,6 +10222,7 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       "keyboardKeyIds",
       "keyboardOutcomeIds",
       "keyboardFocusIds",
+      "keyboardFocusRationaleIds",
       "keyboardApplicabilityIds",
       "keyboardExecutionVerdicts",
       "keyboardExclusionReasonIds",
@@ -10070,10 +10307,22 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
         "next_radio_in_canonical_order",
         "previous_radio_in_canonical_order",
         "current_radio",
+        "presentation_specific_focus_map",
+        "primary_action_status_position",
         "activated_destination_heading",
         "invoking_exit_control",
         "exit_stay",
         "single_h1",
+      ],
+      keyboardFocusRationaleIds: [
+        "sequential_focus_navigation",
+        "radio_roving_focus",
+        "in_place_selection",
+        "retain_primary_action_status_position",
+        "activated_destination_heading",
+        "modal_focus_cycle",
+        "modal_dismiss_focus_restore",
+        "skip_link_main_heading",
       ],
       keyboardApplicabilityIds: ["APPLICABLE", "EXCLUDED"],
       keyboardExecutionVerdicts: ["PASS", "EXCLUDED"],
@@ -11023,7 +11272,7 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       ),
     ).toBe(false);
     expect(createHash("sha256").update(JSON.stringify(contracts)).digest("hex")).toBe(
-      "1eaa02503b9dc10fb89666f2cf0c5ced9df6ed9de26ee577ffe095117fb65e26",
+      "c1630c070a80d9cba914c43c0bd4f7426cf263678d17b147e9bcd8d74403acc8",
     );
   });
 
@@ -11058,6 +11307,37 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
     const executions = expectedKeyboardExecutions(cell);
     expect(executions).toHaveLength(9);
     expect(validKeyboardExecutions(executions, cell)).toBe(true);
+    expect(
+      executions.find(({ interactionId }) => interactionId === "primary_action_activate"),
+    ).toMatchObject({
+      applicability: "APPLICABLE",
+      expectedFocusId: "primary_action_status_position",
+      expectedFocusMoveCount: 0,
+      observedFocusId: "primary_action_status_position",
+      observedFocusMoveCount: 0,
+    });
+    const retrySubmitFixtureId = String(
+      records(catalog.stateFixtureVariants).find(
+        ({ stateId, variantId }) =>
+          stateId === "RETRYABLE_ERROR" && variantId === "retryable_error_submit",
+      )?.fixtureId,
+    );
+    const retrySubmitCell = {
+      ...cell,
+      stateId: "RETRYABLE_ERROR",
+      fixtureId: retrySubmitFixtureId,
+    };
+    expect(
+      expectedKeyboardExecutions(retrySubmitCell).find(
+        ({ interactionId }) => interactionId === "primary_action_activate",
+      ),
+    ).toMatchObject({
+      applicability: "APPLICABLE",
+      expectedFocusId: "primary_action_status_position",
+      expectedFocusMoveCount: 0,
+      observedFocusId: "primary_action_status_position",
+      observedFocusMoveCount: 0,
+    });
     const applicableIndex = executions.findIndex(
       ({ applicability }) => applicability === "APPLICABLE",
     );
@@ -11073,6 +11353,8 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       mutateExecution(applicableIndex, { applicability: "EXCLUDED" }),
       mutateExecution(applicableIndex, { observedOutcomeId: null }),
       mutateExecution(applicableIndex, { observedFocusId: "single_h1" }),
+      mutateExecution(applicableIndex, { expectedFocusMoveCount: 9 }),
+      mutateExecution(applicableIndex, { observedFocusMoveCount: 9 }),
       mutateExecution(applicableIndex, { observedAnnouncementDelta: 9 }),
       mutateExecution(applicableIndex, { noProgressMutation: false }),
       mutateExecution(excludedIndex, {
@@ -12319,6 +12601,9 @@ describe("Sprint 6 R4-A Conversation Canvas specification", () => {
       "keyboardProtocolFields",
       "keyboardProtocol",
       "keyboardProtocolRules",
+      "keyboardPresentationFocusMapFields",
+      "keyboardPresentationFocusMap",
+      "keyboardPresentationFocusMapRules",
       "keyboardProtocolDigest",
       "keyboardApplicabilityFields",
       "keyboardApplicability",

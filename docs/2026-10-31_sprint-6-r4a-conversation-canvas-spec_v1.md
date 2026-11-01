@@ -59,8 +59,8 @@ specification. Object and array order are normative for regression tests.
     "docs/research/2026-10-31_duolingo-public-evidence-study_v1.md"
   ],
   "transitionDigest": "7cef0f307e365ec4f2ee0e8c83a2b8f0bb56401e6d8ccabafdf4008cea3631e9",
-  "uxContractDigestAlgorithm": "lowercase_sha256_of_UTF8_fluyo:r4a:ux-contract:v1_LF_plus_canonical_JSON_of_ordered_flowContracts_flowVariants_dynamicCopyRules_states_stateVariants_stateActionContracts_stateFixtureVariants_exitDialogContexts_exitDialogs_modalInteractionContract_keyboardProtocol_nvdaExpectationTemplates_syntheticObservationValues",
-  "uxContractDigest": "f6cf4639a67376d9525b6f2f20e7361b4fcf9e5f451894a6169390a616b659eb",
+  "uxContractDigestAlgorithm": "lowercase_sha256_of_UTF8_fluyo:r4a:ux-contract:v1_LF_plus_canonical_JSON_of_ordered_flowContracts_flowVariants_dynamicCopyRules_states_stateVariants_stateActionContracts_stateFixtureVariants_exitDialogContexts_exitDialogs_modalInteractionContract_keyboardProtocol_keyboardPresentationFocusMap_nvdaExpectationTemplates_syntheticObservationValues",
+  "uxContractDigest": "55ee313d911105afbcfa656badbf282b82fcc9ec1d7b04eb611b3eb688b9be13",
   "flowIds": [
     "setup",
     "editable_goal",
@@ -3710,7 +3710,7 @@ specification. Object and array order are normative for regression tests.
         "contextId": "primary_action",
         "keyIds": ["Enter", "Space"],
         "expectedOutcomeId": "activate_control",
-        "expectedFocusId": "activated_destination_heading",
+        "expectedFocusId": "presentation_specific_focus_map",
         "announcementDelta": 1,
         "noProgressMutation": true
       },
@@ -3752,7 +3752,576 @@ specification. Object and array order are normative for regression tests.
       "disabled_or_busy_controls_cannot_activate",
       "keyboard_interactions_cannot_synthesize_confirmation_or_progress"
     ],
-    "keyboardProtocolDigest": "e4ee954c1b88cd5faffd7996885319a8f3ab8ff7b89c4d62995a28c967e8d108",
+    "keyboardPresentationFocusMapFields": [
+      "presentationId",
+      "interactionId",
+      "applicability",
+      "expectedFocusTargetId",
+      "expectedFocusMoveCount",
+      "rationaleId"
+    ],
+    "keyboardPresentationFocusMap": [
+      {
+        "presentationId": "PREPARING",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "PREPARING",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "PREPARING",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "radio_next",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_radio_in_canonical_order",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "radio_roving_focus"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "radio_previous",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_radio_in_canonical_order",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "radio_roving_focus"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "radio_select",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "current_radio",
+        "expectedFocusMoveCount": 0,
+        "rationaleId": "in_place_selection"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "primary_action_status_position",
+        "expectedFocusMoveCount": 0,
+        "rationaleId": "retain_primary_action_status_position"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "SUBMITTING",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "SUBMITTING",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "SUBMITTING",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_continue",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_continue",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_continue",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_continue",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_finish",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_finish",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_finish",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_correct_finish",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_continue",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_continue",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_continue",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_continue",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_finish",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_finish",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_finish",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "CONFIRMED:confirmed_incorrect_finish",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_prepare",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_prepare",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_prepare",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_prepare",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_submit",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_submit",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_submit",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "primary_action_status_position",
+        "expectedFocusMoveCount": 0,
+        "rationaleId": "retain_primary_action_status_position"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_submit",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "STALE_CONTENT",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "STALE_CONTENT",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "STALE_CONTENT",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "STALE_CONTENT",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "SESSION_ENDED",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "SESSION_ENDED",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "SESSION_ENDED",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "SESSION_ENDED",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "ACCESS_BLOCKED",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "ACCESS_BLOCKED",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "ACCESS_BLOCKED",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "ACCESS_BLOCKED",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "EMPTY_REVIEW",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "EMPTY_REVIEW",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "EMPTY_REVIEW",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "EMPTY_REVIEW",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_prepare",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_prepare",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_prepare",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_prepare",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_active",
+        "interactionId": "document_tab_forward",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "next_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_active",
+        "interactionId": "document_tab_reverse",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "previous_expected_stop",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "sequential_focus_navigation"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_active",
+        "interactionId": "primary_action_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "activated_destination_heading",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "activated_destination_heading"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_active",
+        "interactionId": "skip_link_activate",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "single_h1",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "skip_link_main_heading"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "dialog_tab_cycle",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "exit_stay",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_focus_cycle"
+      },
+      {
+        "presentationId": "ACTIVE",
+        "interactionId": "dialog_escape",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "invoking_exit_control",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_dismiss_focus_restore"
+      },
+      {
+        "presentationId": "SUBMITTING",
+        "interactionId": "dialog_tab_cycle",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "exit_stay",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_focus_cycle"
+      },
+      {
+        "presentationId": "SUBMITTING",
+        "interactionId": "dialog_escape",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "invoking_exit_control",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_dismiss_focus_restore"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_submit",
+        "interactionId": "dialog_tab_cycle",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "exit_stay",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_focus_cycle"
+      },
+      {
+        "presentationId": "RETRYABLE_ERROR:retryable_error_submit",
+        "interactionId": "dialog_escape",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "invoking_exit_control",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_dismiss_focus_restore"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_active",
+        "interactionId": "dialog_tab_cycle",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "exit_stay",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_focus_cycle"
+      },
+      {
+        "presentationId": "OFFLINE_READ_ONLY:offline_read_only_active",
+        "interactionId": "dialog_escape",
+        "applicability": "APPLICABLE",
+        "expectedFocusTargetId": "invoking_exit_control",
+        "expectedFocusMoveCount": 1,
+        "rationaleId": "modal_dismiss_focus_restore"
+      }
+    ],
+    "keyboardPresentationFocusMapRules": [
+      "one_row_for_every_applicable_presentation_interaction_pair_in_exact_keyboardApplicability_order",
+      "ACTIVE_check_answer_and_RETRYABLE_ERROR_submit_try_again_retain_primary_action_status_position_with_zero_programmatic_focus_moves",
+      "true_navigation_primary_actions_focus_activated_destination_heading_with_one_programmatic_focus_move",
+      "in_place_and_modal_interactions_retain_their_closed_focus_targets_and_move_counts",
+      "missing_extra_duplicate_reordered_or_unknown_references_fail_closed"
+    ],
+    "keyboardProtocolDigest": "f7debf47b92f25d22a7b56f75fdca485704f03f61babdffc7bd4b99681c9cafd",
     "keyboardApplicabilityFields": [
       "stateId",
       "variantId",
@@ -3958,8 +4527,10 @@ specification. Object and array order are normative for regression tests.
       "exclusionReason",
       "expectedOutcomeId",
       "expectedFocusId",
+      "expectedFocusMoveCount",
       "observedOutcomeId",
       "observedFocusId",
+      "observedFocusMoveCount",
       "observedAnnouncementDelta",
       "noProgressMutation",
       "verdict"
@@ -4384,10 +4955,22 @@ specification. Object and array order are normative for regression tests.
         "next_radio_in_canonical_order",
         "previous_radio_in_canonical_order",
         "current_radio",
+        "presentation_specific_focus_map",
+        "primary_action_status_position",
         "activated_destination_heading",
         "invoking_exit_control",
         "exit_stay",
         "single_h1"
+      ],
+      "keyboardFocusRationaleIds": [
+        "sequential_focus_navigation",
+        "radio_roving_focus",
+        "in_place_selection",
+        "retain_primary_action_status_position",
+        "activated_destination_heading",
+        "modal_focus_cycle",
+        "modal_dismiss_focus_restore",
+        "skip_link_main_heading"
       ],
       "keyboardApplicabilityIds": ["APPLICABLE", "EXCLUDED"],
       "keyboardExecutionVerdicts": ["PASS", "EXCLUDED"],
@@ -4641,8 +5224,10 @@ specification. Object and array order are normative for regression tests.
           "exclusionReason",
           "expectedOutcomeId",
           "expectedFocusId",
+          "expectedFocusMoveCount",
           "observedOutcomeId",
           "observedFocusId",
+          "observedFocusMoveCount",
           "observedAnnouncementDelta",
           "noProgressMutation",
           "verdict"
@@ -4654,8 +5239,10 @@ specification. Object and array order are normative for regression tests.
           "exclusionReason": "enum_keyboardExclusionReasonIds_or_null",
           "expectedOutcomeId": "enum_keyboardOutcomeIds",
           "expectedFocusId": "enum_keyboardFocusIds",
+          "expectedFocusMoveCount": "safe_integer_0_or_1_or_null_only_when_EXCLUDED",
           "observedOutcomeId": "enum_keyboardOutcomeIds_or_null_only_when_EXCLUDED",
           "observedFocusId": "enum_keyboardFocusIds_or_null_only_when_EXCLUDED",
+          "observedFocusMoveCount": "safe_integer_0_or_1_or_null_only_when_EXCLUDED",
           "observedAnnouncementDelta": "safe_integer_0_or_1_or_null_only_when_EXCLUDED",
           "noProgressMutation": "literal_true",
           "verdict": "enum_PASS_or_EXCLUDED"
@@ -4663,7 +5250,7 @@ specification. Object and array order are normative for regression tests.
         "bounds": [
           "one_record_per_closed_protocol_interaction_in_sequence_order",
           "applicability_derived_from_owning_state_variant_and_dialog_context",
-          "APPLICABLE_requires_PASS_and_observed_outcome_focus_announcement_equal_expected",
+          "APPLICABLE_requires_PASS_and_observed_outcome_focus_focusMoveCount_announcement_equal_expected_and_the_closed_presentation_focus_map",
           "EXCLUDED_requires_exact_reason_null_observed_fields_and_EXCLUDED_verdict",
           "no_record_can_synthesize_progress"
         ]
@@ -5057,6 +5644,7 @@ specification. Object and array order are normative for regression tests.
             "element_focus_requires_a_closed_valid_FocusTarget",
             "stateId_variantId_and_themeId_equal_owning_cell_and_closed_fixture_variant",
             "keyboardProtocol_exactly_matches_closed_nine_interaction_protocol",
+            "keyboardExecutions_resolve_every_applicable_presentation_interaction_pair_through_the_closed_69_row_keyboardPresentationFocusMap_without_implicit_defaults",
             "keyboardExecutions_contains_all_nine_interactions_in_protocol_order_with_applicability_derived_from_owning_state_variant_and_dialog_context",
             "every_applicable_execution_is_PASS_with_observed_outcome_focus_and_announcement_equal_expected_and_no_progress_mutation",
             "every_excluded_execution_has_the_exact_closed_reason_null_observed_fields_EXCLUDED_verdict_and_no_progress_mutation",
@@ -5669,7 +6257,7 @@ specification. Object and array order are normative for regression tests.
         "fixtureBundleByteSize": "safe_positive_integer_recomputed_from_trusted_fixture_bytes",
         "fontDigest": "lowercase_hex_64",
         "fontBundleByteSize": "safe_positive_integer_recomputed_from_trusted_font_bytes",
-        "keyboardProtocolDigest": "lowercase_hex_64_equal_closed_keyboard_protocol_digest",
+        "keyboardProtocolDigest": "lowercase_hex_64_equal_closed_keyboard_protocol_and_presentation_focus_map_digest",
         "nvdaProtocolDigest": "lowercase_hex_64_equal_closed_NVDA_protocol_contract_digest",
         "browserAtProfileId": "literal_windows_chromium_nvda",
         "osVersion": "ASCII_allowlisted_display_1_to_48_chars_no_url_host_drive_UNC_slash_backslash_query_fragment_or_IP",
@@ -6063,6 +6651,17 @@ authorized server-selected next activity produces exactly one **Continue**
 action only after owner, entitlement, activity, and version validation;
 otherwise the only action is **Finish**. Missing, unknown, or stale retry origin
 uses the exact generic retry fallback and never exposes origin dispatch logic.
+
+Keyboard focus resolution has no implicit or presentation-agnostic fallback.
+The closed 69-row `keyboardPresentationFocusMap` contains one ordered record for
+every applicable presentation/interaction pair. **Check answer** from `ACTIVE`
+and submit-retry **Try again** retain the primary-action status position while
+the interface enters `SUBMITTING`, with zero programmatic focus moves. Primary
+actions that truly navigate move focus once to the activated destination
+heading. In-place selection, sequential navigation, radio roving, modal focus,
+modal dismissal, and skip-link activation retain their closed target and move
+count. Missing, extra, duplicate, reordered, unknown, or mismatched rows fail
+closed. The nine interaction IDs and the matrix/artifact counts do not change.
 
 `transition-evidence.json` is one separate sanitized durable run-level 49-record
 artifact, not a ninth per-cell artifact and not a matrix axis. Its 15 direct
