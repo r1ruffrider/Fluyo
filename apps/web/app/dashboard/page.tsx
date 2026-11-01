@@ -1,5 +1,4 @@
 import type { BillingStatusResponse, LearningDashboardResponse } from "@fluyo/shared";
-import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -7,7 +6,6 @@ import { BillingApiError, fetchBillingStatus } from "../../lib/billing-api";
 import { fetchLearningDashboard, LearningApiError } from "../../lib/learning-api";
 import { getVerifiedWebIdentity } from "../../lib/supabase/identity";
 import { signOut } from "../auth/actions";
-import { ActivityCard } from "./activity-card";
 
 export const dynamic = "force-dynamic";
 
@@ -133,39 +131,25 @@ export default async function DashboardPage() {
           </div>
 
           {dashboard.nextActivity ? (
-            <ActivityCard
-              activity={dashboard.nextActivity}
-              initialIdempotencyKey={randomUUID()}
-              key={dashboard.nextActivity.id}
-            />
-          ) : dashboard.access.unavailableReason === "entitlement_required" ? (
-            <div className="dashboard-empty-card">
-              <span aria-hidden="true">🔒</span>
-              <h3>This lesson needs Fluyo Plus.</h3>
-              <p>
-                Your current access remains unchanged. Choose a plan to unlock the next activity.
-              </p>
-              <Link className="button button-cobalt" href="/pricing">
-                See plans
+            <div className="dashboard-activity-card">
+              <div className="dashboard-card-topline">
+                <span>Next tiny win</span>
+              </div>
+              <h3>{dashboard.nextActivity.prompt}</h3>
+              <p>Your answer and progress stay unchanged until the server confirms your attempt.</p>
+              <Link className="button button-cobalt dashboard-submit" href="/learn/session">
+                Start activity
               </Link>
             </div>
-          ) : dashboard.access.unavailableReason === "catalog_empty" ? (
+          ) : dashboard.access.unavailableReason === "entitlement_required" ? (
             <div className="dashboard-empty-card">
-              <span aria-hidden="true">☕</span>
-              <h3>The saved lesson catalog is empty.</h3>
-              <p>You can still use the clearly labeled browser-only café preview.</p>
-              <Link className="button button-cobalt" href="/learn">
-                Open preview
-              </Link>
+              <h3>This lesson isn&apos;t available for your account right now.</h3>
+              <p>Your current access and confirmed progress remain unchanged.</p>
             </div>
           ) : (
             <div className="dashboard-empty-card">
-              <span aria-hidden="true">🎉</span>
-              <h3>You completed every available activity.</h3>
-              <p>Your confirmed progress is saved. Return when a new lesson is published.</p>
-              <Link className="button button-outline" href="/">
-                Explore Fluyo
-              </Link>
+              <h3>Nothing to review right now.</h3>
+              <p>Your server-confirmed progress is unchanged.</p>
             </div>
           )}
         </section>

@@ -757,3 +757,117 @@ R4-B1 manifest, rerun the bounded specialist gates on those exact bytes, and obt
 mergeability, and Elana's final unchanged-head code/security/build PASS. Only after R4-B1 merges and
 its applicable post-main workflows pass may the team prepare R4-B2's trusted baseline `A`; no R4-B2
 capture or R4-B3 review/cleanup action is implied by this record.
+
+## R4-B1 working-tree implementation candidate — 2026-11-02
+
+The R4-B1 candidate is an uncommitted and unstaged working-tree integration on verified `main`
+`7a31f3b1ff7806419dcde1b0a86cbeb933f1feb1`. It carries the approved authenticated web runtime from
+historical implementation commit `6914b5644849f562f38b018814be3f476213be81`, the later development
+route and zero-egress repairs, and the six-file topology-neutral evidence core. The twenty-two
+application and evidence files comprise nineteen unchanged files that match their reviewed
+source-worktree SHA-256 values plus the three Conversation Canvas heading/style files carrying the
+documented Camila repair and bound by the current 24-path manifest. The obsolete
+`apps/web/app/__fixtures/conversation-canvas` private-folder paths are absent; the development page is
+the routable `/dev-fixtures/conversation-canvas` path.
+
+The exact 24-path candidate surface is:
+
+- `apps/web/app/dashboard/page.tsx`
+- `apps/web/app/dashboard/page.spec.tsx`
+- `apps/web/app/learn/session/actions.ts`
+- `apps/web/app/learn/session/conversation-canvas-state.ts`
+- `apps/web/app/learn/session/conversation-canvas-state.spec.ts`
+- `apps/web/app/learn/session/conversation-canvas.tsx`
+- `apps/web/app/learn/session/conversation-canvas.dom.spec.tsx`
+- `apps/web/app/learn/session/conversation-canvas.module.css`
+- `apps/web/app/learn/session/conversation-canvas.styles.spec.ts`
+- `apps/web/app/learn/session/loading.tsx`
+- `apps/web/app/learn/session/page.tsx`
+- `apps/web/app/learn/session/page.spec.tsx`
+- `apps/web/app/dev-fixtures/conversation-canvas/fixture-access.ts`
+- `apps/web/app/dev-fixtures/conversation-canvas/fixture-access.spec.ts`
+- `apps/web/app/dev-fixtures/conversation-canvas/fixtures.ts`
+- `apps/web/app/dev-fixtures/conversation-canvas/page.tsx`
+- `scripts/r4b-evidence/catalog.mjs`
+- `scripts/r4b-evidence/canonical.mjs`
+- `scripts/r4b-evidence/identity.mjs`
+- `scripts/r4b-evidence/transition.mjs`
+- `scripts/r4b-evidence/core.test.mjs`
+- `scripts/r4b-evidence/transition.test.mjs`
+- `package.json`
+- `docs/DEVELOPMENT_HANDOFF.md`
+
+Catalina approved the only package-script change: `test:audit-policy` now explicitly includes
+`scripts/r4b-evidence/*.test.mjs`, so the nested evidence tests participate in the protected root
+test path. There is no dependency, lockfile, workflow, API, schema, database, credential, external
+service, provider, deployment, production, signing, store, spend, device, or publication change.
+
+The fixture page checks the exact `NODE_ENV === "development"` boundary before reading selectors.
+Missing, unknown, array-valued, or case-changed selectors fail closed through `notFound()`. Fixture
+submission selects an inert local action, omits the form action attribute, and prevents native form
+submission. The normal authenticated `/learn/session` path retains the real server action. Accepted
+production exclusion remains a request-time 404 with no synthetic marker; production-manifest
+omission is not claimed or required.
+
+The evidence core reads only the accepted repository R4-A specification, rejects a caller-supplied
+authority path and symlinked specification, binds the exact accepted specification/catalog byte
+counts and SHA-256 values, enumerates the closed 10,800 cells and 49 transitions, and emits only the
+closed content-addressed artifact-key shapes. It is repository tooling only and is not imported by
+the web or API runtime.
+
+Valentina's development checks on the current application/evidence/package bytes are:
+
+- `npm ci --ignore-scripts`: completed from the tracked lockfile with no tracked-file change;
+- evidence syntax: 6/6 modules passed `node --check`;
+- focused evidence core: 11/11 tests passed;
+- focused web: 7/7 files and 812/812 expanded tests passed;
+- full web: 10/10 files and 832/832 tests passed;
+- API, rerun with its required localhost-only ephemeral test sockets available: 42/42 files and
+  381/381 tests passed;
+- expanded root policy suite after the local dependency install: 189/189 tests passed;
+- root lint, typecheck, formatting, and `git diff --check`: passed;
+- the default `npm run build --workspace @fluyo/web` did not clear on the exact final bytes: three
+  attempts ended with the same Turbopack internal child-process error while processing
+  `conversation-canvas.module.css`. The webpack-mode production build compiled those exact bytes
+  successfully and enabled the production fixture probe below, so this record does not infer a CSS
+  defect or fixture exposure. The default protected build path remains required on the later clean
+  committed head and protected CI before merge clearance;
+- production standalone fixture probe with synthetic localhost-only public configuration: the valid
+  fixture URL returned 404 with no synthetic marker; `/learn/session` returned 200, with no
+  authenticated learner result or redirect claim inferred from that status;
+- development fixture probe: the valid closed selector pair returned 200 with the synthetic marker,
+  while missing, case-changed, array-valued, and unknown selectors each returned 404;
+- browser zero-egress trace on `http://localhost:3011`: the duplicate-submit synthetic event moved
+  the rendered fixture from active to `SUBMITTING`; the drained Next development-server log emitted
+  no request after that interaction, and the browser console contained only the normal React
+  DevTools and HMR messages. No POST, Next server-action request, or Learning API request occurred;
+- Camila's first exact-candidate review found that the exit-dialog title skipped from the page `h1`
+  to `h4`. Valentina changed the dialog title and its three scoped CSS/test selectors to `h2`; the
+  two affected test files passed 462/462, and fresh Camila clearance remains required on the updated
+  manifest;
+- full root `npm test`: the policy stage passed 189/189, then the shared workspace passed 466/468.
+  Its two failures are independent native-auth repository-state guards that intentionally reject the
+  required dirty precommit R4-B1 tree; the API and web stages did not run after that short-circuit.
+  Adriana directed the team not to weaken the guards, create a temporary commit, or expand scope.
+  The authoritative full-root rerun is required on the later committed exact head after Elana PASS
+  and Adriana confirmation;
+- specialist gates, protected CI, mergeability, and Elana's unchanged-head audit remain pending at
+  this record boundary.
+
+An earlier pre-install root-policy attempt passed 186/189 and failed three existing Multer-policy
+checks because the fresh linked worktree had no physical worktree-local `node_modules`. That result
+is an environment finding, not a product-code result, and is superseded by the post-install 189/189
+run. The observed focused web denominator is 812, so the historical pre-integration 814 count is not
+repeated as current evidence.
+
+The code and DOM test prove that fixture mode selects the inert local action, omits the form action,
+prevents native submission, and does not call the mocked live submit action. The browser trace above
+confirms that the synthetic event settles locally without a runtime request; Natalia and Elana still
+retain independent security and exact-candidate review authority.
+
+This is a preparatory R4-B1 code candidate only. Runtime/browser/assistive-technology execution,
+rendered contrast, actual 200% zoom/reflow, computed reduced-motion behavior, and the complete
+10,800-cell, 86,400-artifact, 49-transition capture remain unattempted. No runtime/accessibility
+completion, public availability, R4-B2 baseline, capture, review, or cleanup claim is made. A fresh
+document-inclusive manifest must be computed after this record and every applicable specialist plus
+Elana must review the same unchanged bytes before Adriana may commit or advance the candidate.
