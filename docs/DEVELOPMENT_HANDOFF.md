@@ -871,3 +871,29 @@ rendered contrast, actual 200% zoom/reflow, computed reduced-motion behavior, an
 completion, public availability, R4-B2 baseline, capture, review, or cleanup claim is made. A fresh
 document-inclusive manifest must be computed after this record and every applicable specialist plus
 Elana must review the same unchanged bytes before Adriana may commit or advance the candidate.
+
+## R4-B1 clean-head compatibility follow-up — 2026-11-02
+
+Adriana governed the 24-path candidate into commit
+`32cdc752baedbb800bca6ea6a965fbed46cd6c29`. On that clean head, the root audit-policy suite passed
+189/189. The subsequent shared-workspace run exposed two bounded compatibility issues: the
+historical auth-runtime completed-phase test read the current `package.json` instead of the immutable
+`phaseCompletion` snapshot, and the real-Git tests exceeded their generic 5-second and 15-second
+Windows time bounds under contention.
+
+Catalina approved only these exact test-compatibility changes:
+
+- compare `phaseCompletion` with `phaseBase` through `git show` for the completed-phase assertion;
+- give `records the exact completed-phase allowlist...` and `prevents acceptance...` 30-second
+  timeouts;
+- give `proves the approval path...` a 60-second timeout.
+
+The changes do not alter assertions, retries, skips, mocks, operating-system branches, or CI
+serialization. Valentina's focused readiness file passed 10/10, the paired runtime-plus-readiness
+run passed 19/19, and Prettier plus `git diff --check` passed.
+
+The full shared serial runner and the default-parallel local Windows Vitest runner subsequently
+disappeared or stalled before producing authoritative totals. Therefore the full shared suite, full
+root suite, and default production build are not cleared locally. Clean Ubuntu protected CI in the
+default configuration remains mandatory and merge-blocking. This follow-up changes no product or
+runtime behavior, dependency, workflow, or lockfile.

@@ -753,7 +753,7 @@ describe("native live-auth readiness decision packet v1", () => {
         }),
       ).toBe(false);
     }
-  });
+  }, 30_000);
 
   it("proves the approval path against a real three-commit Git history", () => {
     const temporaryRepositoryRoot = mkdtempSync(
@@ -1039,7 +1039,7 @@ describe("native live-auth readiness decision packet v1", () => {
     } finally {
       rmSync(temporaryRepositoryRoot, { recursive: true, force: true });
     }
-  }, 15_000);
+  }, 60_000);
 
   it("locks deep-link UX reviewers and product-facing accessibility evidence", () => {
     const byId = new Map(decisions.map((decision) => [String(decision.id), decision]));
