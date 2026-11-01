@@ -688,3 +688,72 @@ The study uses official/public evidence only and separates observation, inferenc
 R0 is documentation and a regression guard only. R1 may add shared closed contracts with no API, database, UI, dependency, SDK, or external-service change. R2 may add a read-only zero-or-one planner with the existing dashboard fallback. R3 may add a repository-owned default-disabled optional policy and typed no-op sink. R4 requires a separate dated design specification before any web-only UI. Offline writes, social/economy, notifications, audio, native learning, production, signing, stores, spending, credentials, and external accounts remain gated.
 
 The complete 13-agent roster has bounded ownership in the build plan. Elana remains the sole independent exact-head QA and code-review gate. PR #61 remains a separate draft; its required-check external setting is unchanged, native runtime remains zero, and all 24 live-auth rows remain unattempted. This R0 work cannot clear or modify those facts.
+
+## Approved staged R4-B amendment — Choice A — 2026-11-01
+
+Marlon selected **A** and approved this exact staged amendment:
+
+> A — Approve staged R4-B amendment: R4-B1 is a preparatory, credential-free repository phase for
+> runtime, dev fixture, zero-egress protection, production exclusion, harness and topology-neutral
+> evidence core; its exit gate is bounded specialist review, protected CI, mergeability and Elana
+> exact-head code/security/build PASS, and it makes NO runtime/accessibility completion claim. R4-B2
+> establishes and approves trusted baseline commit A on main, then captures from descendant source S
+> under separately approved pinned tool/provider/install controls. R4-B3 records E1 direct child of S
+> with review only and E2 direct child of E1 with cleanup only, and requires the complete 10,800-cell,
+> 86,400-artifact, 49-transition browser/AT evidence plus Elana runtime/AT PASS before R4-B
+> completion.
+
+This decision amends phase sequencing plus the explicitly enumerated real-capture packaging,
+resource-budget, raw-bundle encoding, and manual-review rules in ADR 0008. It preserves the closed
+10,800-cell, 86,400-artifact, and 49-transition cardinalities; exhaustive automated validation;
+trusted `A`, descendant `S`, exact-source run `R`, review-only `E1`, and cleanup-only `E2` lineage;
+content addressing; reviewer attestation; retention; fail-closed behavior; and Elana's final
+runtime/browser/assistive-technology authority. It does not convert any historical specialist FAIL
+or unattempted runtime or assistive-technology row to PASS.
+
+The exact repository heads and candidate manifests at the amendment boundary are:
+
+- verified `main`: `b0f32d97e6d763e4cf080b1854ac1db4ee695d6a`;
+- committed R4-B implementation parent: `6914b5644849f562f38b018814be3f476213be81`;
+- historical route-repair ten-path manifest before the zero-egress repair:
+  `439854c9967329634a18fc7a45f90371bc797cb73509373a7e41837ee44f5f1c`;
+- route plus zero-egress security-repair candidate manifest:
+  `3f83f8f19259dbbf377f603fee28668c773301f9a7dd68b754af96338ffc507e`.
+
+The `439854c9…` manifest is historical and cannot clear the repaired candidate. The `3f83f8f1…`
+manifest identifies the route/security-repair candidate before this records amendment. Integrating
+this record requires a fresh document-inclusive manifest and rerun exact-head gates; neither digest
+may be presented as the final post-integration subject.
+
+Current counted evidence remains deliberately separated:
+
+- **PASS, historical only:** Catalina 24/24 and Renata 28/28 on `439854c9…`; these results predate the
+  zero-egress repair and do not transfer.
+- **FAIL, historical defect finding:** Camila 26/27 on `439854c9…` because the handoff mixed earlier
+  specialist evidence with the current manifest. The documentation repair resolves the wording, but
+  a fresh Camila gate is still required.
+- **FAIL, historical defect finding:** Natalia 17/18 on `439854c9…` because the routable fixture could
+  bind the live submission action. The zero-egress repair makes fixture submission inert, omits the
+  form action, and preserves the authenticated runtime action, but a fresh Natalia gate is still
+  required.
+- **PASS, implementation checks on the zero-egress repair:** focused 7/7 files with 814/814 tests;
+  full web 10/10 files with 832/832 tests; web typecheck, lint, scoped formatting, and
+  `git diff --check` passed. These checks are not independent specialist or Elana clearance.
+- **UNATTEMPTED:** browser runtime, assistive technology, rendered contrast, actual 200% zoom/reflow,
+  runtime motion/interruption, and computed reduced-motion evidence remain 0 executed. All 10,800
+  cells, 86,400 per-cell artifacts, and the separate 49-record transition artifact remain required.
+
+R4-B1 explicitly excludes credentials, live production data, provider/dashboard changes, external
+accounts, purchases or spend, deployment, production, signing, device/store actions, publication,
+and any runtime/accessibility completion claim. R4-B2 pinned tool, provider, installation, capture,
+credential, or external-service actions require their separately approved controls and are not
+authorized by Choice A alone. R4-B3 cannot begin from fabricated, caller-supplied, stale, or
+pre-repair evidence and cannot complete until the full evidence set, trusted review/cleanup chain,
+and Elana runtime/AT PASS exist.
+
+**Next action:** merge this amendment only after its own exact-head documentation gates pass. Then
+integrate the route and zero-egress repair with the topology-neutral evidence core, compute a fresh
+R4-B1 manifest, rerun the bounded specialist gates on those exact bytes, and obtain protected CI,
+mergeability, and Elana's final unchanged-head code/security/build PASS. Only after R4-B1 merges and
+its applicable post-main workflows pass may the team prepare R4-B2's trusted baseline `A`; no R4-B2
+capture or R4-B3 review/cleanup action is implied by this record.
