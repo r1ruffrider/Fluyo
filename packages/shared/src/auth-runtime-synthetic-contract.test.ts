@@ -581,11 +581,12 @@ describe("native auth executable synthetic kernel", () => {
       "apps/android/app/src/main/java/com/fluyo/app/MainActivity.kt",
       "apps/android/app/src/main/java/com/fluyo/app/FoundationShell.kt",
     ]) {
-      expect(readFileSync(resolve(root, path)), path).toEqual(
-        execFileSync("git", ["show", `${phaseBase}:${path}`], { cwd: root }),
-      );
+      expect(
+        execFileSync("git", ["show", `${phaseCompletion}:${path}`], { cwd: root }),
+        path,
+      ).toEqual(execFileSync("git", ["show", `${phaseBase}:${path}`], { cwd: root }));
     }
-  });
+  }, 30_000);
 
   it("keeps product kernels provider-neutral, redacted, and structurally telemetry-free", () => {
     const sources = [

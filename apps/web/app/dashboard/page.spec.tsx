@@ -44,7 +44,6 @@ vi.mock("../../lib/billing-api", () => ({
   },
 }));
 
-import { ActivityCard } from "./activity-card";
 import DashboardPage from "./page";
 
 const ACTIVITY_A: PublishedActivity = {
@@ -81,17 +80,17 @@ function dashboard(nextActivity: PublishedActivity): LearningDashboardResponse {
   };
 }
 
-function findActivityCard(node: ReactNode): ReactElement | null {
+function findSessionLink(node: ReactNode): ReactElement | null {
   if (Array.isArray(node)) {
     for (const child of node) {
-      const match = findActivityCard(child);
+      const match = findSessionLink(child);
       if (match) return match;
     }
     return null;
   }
   if (!isValidElement(node)) return null;
-  if (node.type === ActivityCard) return node;
-  return findActivityCard((node.props as { children?: ReactNode }).children);
+  if ((node.props as { href?: string }).href === "/learn/session") return node;
+  return findSessionLink((node.props as { children?: ReactNode }).children);
 }
 
 describe("dashboard activity transition", () => {
@@ -101,24 +100,15 @@ describe("dashboard activity transition", () => {
     fetchBillingStatusMock.mockResolvedValue(BILLING);
   });
 
-  it("gives the next activity a new component key and attempt key without a page reload", async () => {
+  it("links each server-authorized next activity to the dedicated session document", async () => {
     fetchLearningDashboardMock
       .mockResolvedValueOnce(dashboard(ACTIVITY_A))
       .mockResolvedValueOnce(dashboard(ACTIVITY_B));
 
-    const firstCard = findActivityCard(await DashboardPage());
-    const secondCard = findActivityCard(await DashboardPage());
+    const firstLink = findSessionLink(await DashboardPage());
+    const secondLink = findSessionLink(await DashboardPage());
 
-    expect(firstCard?.key).toBe(ACTIVITY_A.id);
-    expect(secondCard?.key).toBe(ACTIVITY_B.id);
-    expect(firstCard?.key).not.toBe(secondCard?.key);
-
-    const firstAttemptKey = (firstCard?.props as { initialIdempotencyKey?: string })
-      .initialIdempotencyKey;
-    const secondAttemptKey = (secondCard?.props as { initialIdempotencyKey?: string })
-      .initialIdempotencyKey;
-    expect(firstAttemptKey).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(secondAttemptKey).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(firstAttemptKey).not.toBe(secondAttemptKey);
+    expect((firstLink?.props as { href?: string }).href).toBe("/learn/session");
+    expect((secondLink?.props as { href?: string }).href).toBe("/learn/session");
   });
 });
