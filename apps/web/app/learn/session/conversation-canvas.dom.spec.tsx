@@ -101,6 +101,40 @@ describe("Conversation Canvas primary-action DOM continuity", () => {
     expect(renderState(states[2]!)).toContain(">Try again</button>");
   });
 
+  it("keeps pending and offline semantics focusable with guarded aria-disabled controls", () => {
+    for (const state of [
+      states[1]!,
+      {
+        id: "OFFLINE_READ_ONLY",
+        origin: "active",
+        active: states[0],
+        operationGeneration: 1,
+      } as ConversationCanvasState,
+    ]) {
+      const html = renderState(state);
+      expect(html).toContain('aria-disabled="true"');
+      expect(html).not.toMatch(/<fieldset[^>]*\sdisabled(?:=|\s|>)/u);
+      expect(html).not.toMatch(/<input[^>]*type="radio"[^>]*\sdisabled(?:=|\s|>)/u);
+      expect(html).toMatch(/<input[^>]*type="radio"[^>]*name="selectedChoiceId"/u);
+    }
+  });
+
+  it("renders one native named radio group in active, submitting, and confirmed presentations", () => {
+    expect(renderState(states[0]!).match(/type="radio"/gu)).toHaveLength(1);
+    expect(renderState(states[0]!).match(/name="selectedChoiceId"/gu)).toHaveLength(2);
+    expect(renderState(states[1]!).match(/type="radio"/gu)).toHaveLength(1);
+    expect(renderState(states[1]!)).toMatch(/<input[^>]*type="radio"[^>]*name="selectedChoiceId"/u);
+    expect(
+      renderState({
+        id: "CONFIRMED",
+        attempt,
+        result: "correct",
+        feedback: "Correct",
+        nextActivityAvailable: true,
+      }).match(/type="radio"/gu),
+    ).toBeNull();
+  });
+
   it.each([
     [
       "prepare",

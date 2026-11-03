@@ -64,10 +64,13 @@ function AttemptActionButton({ state }: { state: ConversationCanvasState }) {
     pending;
   return (
     <button
+      aria-disabled={disabled || undefined}
       className={styles.primaryButton}
       data-focus-owner="attempt-action"
-      disabled={disabled}
       id={ATTEMPT_PRIMARY_ACTION_DOM_ID}
+      onClick={(event) => {
+        if (disabled) event.preventDefault();
+      }}
       type="submit"
     >
       {pending ? "Checking…" : copy.primaryAction}
@@ -320,7 +323,11 @@ export function ConversationCanvas({
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
-    if (isDevelopmentFixture) event.preventDefault();
+    const canSubmit =
+      (state.id === "ACTIVE" && state.selectedChoiceId !== null) ||
+      (state.id === "RETRYABLE_ERROR" && state.origin === "submit");
+    if (isDevelopmentFixture || !canSubmit) event.preventDefault();
+    if (!canSubmit) return;
     if (state.id === "ACTIVE" && state.selectedChoiceId) {
       lastSubmittedChoice.current = state.selectedChoiceId;
       dispatch({ type: "SUBMIT" });
@@ -390,6 +397,9 @@ export function ConversationCanvas({
               aria-valuemax={1}
               aria-valuemin={0}
               aria-valuenow={state.id === "CONFIRMED" ? 1 : 0}
+              aria-valuetext={
+                state.id === "CONFIRMED" ? "Activity complete" : "Activity incomplete"
+              }
               className={styles.sessionProgress}
               role="progressbar"
             >
@@ -438,17 +448,31 @@ export function ConversationCanvas({
 
           {showChoices && activity ? (
             <fieldset
+              aria-disabled={isBusy || state.id === "OFFLINE_READ_ONLY" || undefined}
               className={styles.fieldset}
-              disabled={isBusy || state.id === "OFFLINE_READ_ONLY"}
             >
               <legend>{activity.prompt}</legend>
               <div className={styles.choiceList}>
                 {activity.choices.map((choice) => (
                   <label className={styles.choice} key={choice.id}>
                     <input
+                      aria-disabled={isBusy || state.id === "OFFLINE_READ_ONLY" || undefined}
                       checked={selectedChoiceId === choice.id}
-                      name={state.id === "ACTIVE" ? "selectedChoiceId" : undefined}
+                      name="selectedChoiceId"
                       onChange={() => chooseAnswer(choice.id)}
+                      onClick={(event) => {
+                        if (isBusy || state.id === "OFFLINE_READ_ONLY") event.preventDefault();
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          (isBusy || state.id === "OFFLINE_READ_ONLY") &&
+                          [" ", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp"].includes(
+                            event.key,
+                          )
+                        ) {
+                          event.preventDefault();
+                        }
+                      }}
                       type="radio"
                       value={choice.id}
                     />

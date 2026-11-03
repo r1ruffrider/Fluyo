@@ -1,0 +1,9 @@
+{
+  "name": "@fluyo/r4b-preflight-harness",
+  "version": "0.0.0-non-evidence",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "start": "next start"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "paths": {
+      "@fluyo/shared": ["../../packages/shared/src/index.ts"]
+    },
+    "strict": true,
+    "target": "ES2022",
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", ".next-attempt-002/types/**/*.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}

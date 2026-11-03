@@ -31,6 +31,13 @@ html {
   background: var(--paper);
 }
 
+/* Browser zoom reduces the CSS viewport below 320px. Reflow instead of forcing overflow. */
+@media (max-width: 319px) {
+  html {
+    min-width: 0;
+  }
+}
+
 body {
   margin: 0;
 }

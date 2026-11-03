@@ -897,3 +897,887 @@ disappeared or stalled before producing authoritative totals. Therefore the full
 root suite, and default production build are not cleared locally. Clean Ubuntu protected CI in the
 default configuration remains mandatory and merge-blocking. This follow-up changes no product or
 runtime behavior, dependency, workflow, or lockfile.
+
+## R4-B1 completion and R4-B2 decision boundary — 2026-11-02
+
+R4-B1 is complete on merged `main` `fea1f5fadb2307ca611379f30461a7ee47861fff`.
+All five post-main workflows passed across 16/16 jobs. This closes the R4-B1 runtime/harness phase
+only; it does not create an R4-B2 trusted baseline, authorize capture or providers, establish runtime
+accessibility, or complete R4-B.
+
+The records-only R4-B2 packet is
+`docs/2026-11-02_r4b2_discarded_preflight_decision_v1.md`. It recommends Choice A: a bounded,
+credential-free, no-cloud discarded preflight whose outputs remain `NON_EVIDENCE`. Choices B and C
+defer the preflight or require a replacement design. No provider/account/credential, UAC/firewall
+mutation, storage expansion, spend, full capture, upload, production, or cleanup action is authorized
+by the original packet. Marlon selected **A** in Codex on 2026-11-02. Adriana may therefore
+coordinate only the bounded credential-free, no-cloud, synthetic-only `NON_EVIDENCE` preflight.
+Provider/account/credential actions, UAC/firewall or other administrator mutation, storage or spend,
+full capture, upload, production, and destructive cleanup remain separately gated and unauthorized.
+Choice A permits deletion only of bytes created by the preflight inside its fresh exclusive temporary
+root after sanitized aggregate verification. It never permits deletion of pre-existing/user/provider
+data, and the bounded ephemeral deletion is not R4-B3 `E2` proof.
+
+## R4-B2 attempt-001 completion and attempt-002 Choice A — 2026-11-02
+
+The first bounded `NON_EVIDENCE` preflight attempt is sealed. Its loopback Chrome/Driver smoke passed,
+but its sanitized result is honestly `BLOCKED` with 0 conducted, 0 passed, 0 failed, 144 blocked, and
+144 required-unattempted checks. Its fixed raw root was deleted after validated result binding and the
+not-E2 receipt records zero residual bytes. The immutable predecessor records are:
+
+| Attempt-001 record     | SHA-256                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| Tool manifest          | `a9128a28ebb11329eadb40e35adb0eb43e2f970d8f037f380ce7cfeaf0c04738` |
+| Smoke result           | `267430f37142d29e9fc8925e7f908ce9449fb53d19100064185ff75705185992` |
+| Sanitized result       | `6429c43544f025c9a60ad01e10e5284930b15d952e6467c3a018ad22c1500e1a` |
+| Not-E2 discard receipt | `48161fe1845ac28d0b214f7e5ed5c709c102300d30e7752297b06c82446643be` |
+
+Marlon then selected attempt-002 **Choice A** in Codex on 2026-11-02: approve an isolated
+production-built test harness plus a bounded local NVDA speech-transcript adapter. This is separate
+from the earlier discarded-preflight Choice A. It authorizes repository implementation and review
+inside `docs/2026-11-02_r4b2_attempt002_infrastructure_plan_v1.md`; it does not waive pre-execution
+gates or authorize deployment, Vercel/mobile/public exposure, production data, provider/account/
+credential/admin/system/spend actions, OCR acquisition/build/run, or final-evidence credit.
+
+Attempt 002 remains `NOT_STARTED`. Catalina architecture and Natalia security are mandatory first;
+Camila accessibility, Daniela visual/motion, Julieta counts/capacity, Gabriela provenance, Isabella
+claims, Fernanda non-coercion, Renata reproducibility/exclusion, and Bianca records follow their
+bounded roles. Valentina implements the frozen design and development checks. Every specialist
+reports to Adriana. Elana alone provides the final exact-head independent QA/code-review PASS. Only
+after the unchanged-head specialist and Elana gates may Adriana advance the commit, draft PR,
+protected-CI, and later execution sequence under the standing delegation.
+
+### Attempt-002 implementation gate status — 2026-11-02
+
+The current uncommitted candidate remains on product authority
+`fea1f5fadb2307ca611379f30461a7ee47861fff`. Root independently reproduced 48/48 focused Node tests,
+the isolated-harness TypeScript check, ESLint, and `git diff --check` with no failures. These are
+development checks only and do not establish architecture, security, runtime, or QA approval.
+
+Catalina's strict stable-tree architecture re-review is **FAIL**: 7 architecture checkpoints passed,
+9 failed, and 5 remain required-unattempted. The nine required repairs are the static/query route
+conflict; live imported product action/navigation edges; incomplete immutable per-role process
+identity and pre-kill revalidation; cooperative-only timeout/cancellation; incorrect `BLOCKED`
+classification for never-started observations; incomplete persisted runtime lifecycle states;
+contradictory canonical plan steps; missing YAML/shell/PowerShell/Dockerfile deployment scans; and a
+local observer precondition that incorrectly requires unavailable Vercel, Android, and iOS artifacts.
+Valentina owns the bounded remediation and must stop on a stable tree for a fresh Catalina review.
+Natalia and all later specialist gates remain pending; no harness build, NVDA launch, attempt
+execution, staging, commit, push, PR, deployment, or cleanup is authorized or has occurred.
+After that verdict, root used the existing pinned CPython 3.12.5 executable to compile the NVDA
+plugin source in memory with bytecode writes disabled; syntax passed. This closes only Catalina's
+Python-syntax subcheck. The actual NVDA plugin load/runtime remains required-unattempted, so the
+architecture verdict stays FAIL.
+
+Catalina's next exact-tree re-review confirmed six of the nine repairs but remains **FAIL** with
+9 checkpoints passed, 3 failed, and 4 required-unattempted. The remaining blockers are: full
+harness-only interception and proof for router buttons, callback actions, and pointer/keyboard form
+submission; a fresh exact-identity comparison immediately before forced termination; and a single
+fixed build/recovery transaction with persisted server, driver, and NVDA readiness boundaries plus
+failure-held coverage for every mutation. Valentina owns the implementation corrections, and Renata
+is independently reviewing only the build/recovery reproducibility contract. All later gates and all
+runtime actions remain on hold.
+
+The implementation has since closed those three repairs and is frozen on candidate manifest
+`4b4872e35d27365bdb235c026a37588f9edc77c7bdb37e729de2fb3f55ae8f3a`. Root independently
+reproduced 65/65 focused tests plus TypeScript, ESLint, Prettier, `git diff --check`, and direct
+CPython plugin parsing with zero failures. Renata's independent exact-byte infrastructure review is
+**PASS**: 10 passed, 0 failed, and 4 intentionally unattempted execution-phase checks. Catalina's
+fresh architecture review is in progress; Natalia and later specialist/Elana gates remain
+required-unattempted. Attempt 002 is still `NOT_STARTED`, and no build, launch, execution, staging,
+commit, push, PR, deployment, or cleanup has occurred.
+
+Catalina's third strict review then closed 11/12 architecture checkpoints and found one remaining
+critical builder-ownership gap: synchronous Next invocation could leave descendant processes alive
+after timeout. Valentina replaced it with an asynchronously registered `harness-builder`, persisted
+the eight-field identity, added recursive descendant/socket monitoring, hard cancellation, exact
+termination revalidation, zero-process proof before recovery, and adversarial timeout/PID-reuse/
+egress/residual tests. Root independently reproduced the resulting 66/66 focused checks with zero
+failures. Catalina and Renata are re-reviewing these final frozen bytes. Natalia and all later gates
+remain required-unattempted; Attempt 002 remains `NOT_STARTED` and no repository or runtime action
+has occurred.
+
+Catalina and Renata's exact-byte reviews of the first asynchronous builder repair are **FAIL**:
+5 infrastructure/architecture checkpoints passed, 7 failed, and 4 remain required-unattempted.
+Although 66/66 focused tests passed, the live 900,000 ms builder timeout contradicts the shared
+120,000 ms ceiling; a spawn-before-receipt crash window remains; current-parent-chain discovery can
+lose orphan grandchildren; recovery cannot yet prove every descendant/socket absent; and persisted
+receipt/command validation is not exact. Valentina is correcting these seven bounded defects with a
+closed builder timeout, durable pre-spawn launch intent or equivalent OS ownership, accumulated
+descendant identities, fail-closed ambiguous recovery, exact receipt/argv schemas, and the missing
+adversarial tests. Attempt 002 and every repository/runtime action remain on hold.
+
+The seven-point remediation passed 74/74 focused checks, but Catalina and Renata's next exact-byte
+reviews remain **FAIL**. Catalina counted 9 passed, 2 failed, and 4 required-unattempted architecture
+checkpoints; Renata counted 7 passed, 4 failed, and 1 required-unattempted infrastructure checkpoint.
+Both found that polling cannot guarantee ownership of descendants created and orphaned between
+snapshots or during termination, and an early unregistered root exit could falsely reach
+`ZERO_PROOF`. Valentina is replacing polling authority with an OS-backed Windows Job Object whose
+kill-on-close membership atomically covers the exact builder tree, removing the empty-registry zero
+path and requiring separated two-pass absence proof before journal removal/cleanup. Attempt 002 and
+all repository/runtime actions remain on hold pending fresh exact-byte reviews.
+
+Valentina has now implemented the OS-backed standard-user Windows Job Object repair and frozen
+manifest `50874013d28e76752def544afc4595315c49abaa30496b80791a28aef050b996`.
+The repository-owned helper creates the exact builder suspended, assigns it to a kill-on-close Job
+Object before resume, durably records job assignment plus parent acknowledgement, keeps incomplete
+ownership permanently ambiguous, and requires repeated separated process/socket absence proofs
+before journal or artifact cleanup. Development evidence is 77/77 focused checks plus static
+PowerShell/C#/TypeScript/ESLint/Prettier/Python/diff passes. Catalina and Renata are performing fresh
+read-only exact-byte reviews; the helper and builder have not been launched and Attempt 002 remains
+`NOT_STARTED`.
+
+Catalina's exact-byte static architecture gate is now **PASS** with 12 passed, 0 failed, and 4
+required-unattempted checkpoints. Renata's reproducibility gate remains **FAIL** with 9 passed, 3
+failed, and 1 required-unattempted checkpoint because `CreateProcessW` currently inherits the
+PowerShell helper environment instead of receiving the exact six-key environment whose digest is
+recorded. Valentina is making the bounded final repair: a sorted double-NUL Unicode environment
+block, `CREATE_UNICODE_ENVIRONMENT`, exact delivered-byte binding, and adversarial no-inheritance
+tests. All later gates and runtime/repository actions remain on hold.
+
+The exact environment repair produced candidate manifest
+`e06b4185036b467ca697977d70056b3994a3261ec13daaba18c853b85af3d1c0`. Valentina reported 78/78
+development tests passing. Catalina then issued **PASS** with 13 passed, 0 failed, and 4
+required-unattempted checkpoints; Renata issued **PASS** with 12 passed, 0 failed, and 1
+required-unattempted checkpoint. Those PASS results bind only the unchanged candidate bytes and do
+not authorize execution.
+
+Natalia's subsequent exact-byte security review is **FAIL** with 19 passed, 3 failed, 0 blocked, and
+4 required-unattempted controls. Two blockers remain: Attempt-002 mutation and cleanup paths do not
+yet reject and revalidate every junction/reparse ancestor, and the Windows Job helper does not prove
+termination of a suspended unassigned process after Job assignment failure. A third failed control
+requires bounded, identity-checked reads that enforce NVDA transcript/control-file limits before
+allocation. Valentina owns these three repairs and their adversarial tests. After the bytes change,
+Catalina, Renata, and Natalia must re-review the new exact candidate before any later specialist or
+Elana gate. Attempt 002 remains `NOT_STARTED`; no helper, production build, server, ChromeDriver,
+NVDA, emulator, staging, commit, push, pull request, deployment, or cleanup has been launched.
+
+Valentina completed those three repairs and froze the ordered 45-file candidate digest
+`8a65d200ba5505dd663caba2983b4c4d3d5b144291a3f6a26d18b8a56ed55e87`. The implementation adds a
+central reparse-aware fixed-root guard with descriptor identity and double-inventory cleanup,
+mandatory real Windows-junction regressions, proven assignment-failure termination outcomes in the
+Job helper, and pre-allocation bounded identity-checked NVDA reads. Root independently reran the
+complete R4-B static suite outside the restricted sandbox so the mandatory temporary junctions could
+be created: **82 passed, 0 failed, 0 skipped**. Catalina, Renata, and Natalia are now performing fresh
+read-only exact-byte reviews in parallel. Attempt 002 remains `NOT_STARTED`, and no runtime or
+repository publication action has occurred.
+
+Catalina's fresh architecture gate on that candidate is **FAIL** with 15 passed, 1 failed, 0 blocked,
+and 4 required-unattempted checkpoints. The security controls themselves pass, but the document
+declaring itself the canonical Attempt-002 infrastructure plan still omits the repaired boundaries
+and current dependency/file map, is absent from `FROZEN_HARNESS_FILES`, and is not the plan digest
+bound by A2. Valentina is updating the single canonical plan, freezing its exact bytes into H, and
+binding a distinct canonical-infrastructure-plan digest through A2 without conflating it with the
+generated observation-plan digest. This byte change invalidates prior exact-byte reviews; fresh
+Catalina, Renata, Natalia, and later specialist/Elana gates remain mandatory.
+
+Renata independently confirmed 82/82 R4-B static checks outside the restricted sandbox but issued
+**FAIL** with 12 passed, 1 failed, and 1 required-unattempted infrastructure control because the same
+canonical-plan omission invalidates frozen authority. The repository-wide policy suite is 257/260;
+the three failures are unchanged main-controlled Multer dependency/environment assertions and are
+not represented as green CI.
+
+Natalia's review of the now-superseded 45-file candidate is also **FAIL** with 21 passed, 2 failed,
+0 blocked, and 4 required-unattempted controls. The first repair must prevent an already-validated
+ancestor from being swapped to a junction between validation and a path-based write or delete; the
+second must apply pre-allocation size, regular-file/reparse, and descriptor-identity checks to every
+ignored lifecycle, builder journal/receipt/recovery, and helper acknowledgement read. Valentina owns
+these security corrections together with the canonical-plan binding repair. The candidate bytes are
+actively changing, so none of the superseded reviews authorize execution.
+
+Valentina completed the combined repair and froze ordered 46-file candidate digest
+`bfcf66d572eea10f71ec89bd52fa5d597bbaa275bb2dbf0ce209e99ec62e7363`. The canonical infrastructure
+plan is now the sixth frozen H inventory entry, and closed A2 schema v3 binds distinct
+`infrastructurePlanDigest` and `observationPlanDigest` fields while rejecting the old ambiguous
+field. Mutation and cleanup boundaries use no-follow descriptor identity plus immediate parent-chain
+revalidation and mandatory ancestor-swap junction tests. All ignored runtime-record reads are bounded
+before allocation and identity-revalidated, including the PowerShell acknowledgement. Root
+independently reproduced the complete static suite outside the restricted sandbox: **84 passed,
+0 failed, 0 skipped**. Fresh Catalina, Renata, and Natalia exact-byte reviews are in progress.
+Attempt 002 remains `NOT_STARTED`; no runtime or repository publication action has occurred.
+
+Those exact-byte gates are now **FAIL** despite the 84/84 static result. Catalina counted 15 passed,
+1 failed, and 4 required-unattempted architecture checkpoints; Renata counted 13 passed, 2 failed,
+and 1 required-unattempted infrastructure checkpoint; Natalia counted 13 satisfactory, 2 failed,
+and 4 required-unattempted security groups. On Windows, Node and Python `O_NOFOLLOW` fallbacks are
+undefined/zero and protect neither ancestor directories nor the final check-to-syscall interval.
+Create, mkdir, rename, unlink, recursive cleanup, and Job receipt/ack I/O therefore remain vulnerable
+to a same-account ancestor swap after validation. The current test swaps before the call rather than
+inside that interval. Natalia also requires bounded identity-checked CLI manifest reads, streaming
+inventory hashes, and a bounded Python plugin self-hash. Catalina is defining one retained-handle
+Windows-native operation contract; Valentina will implement that frozen contract and synchronized
+race fixtures before another exact-byte review cycle. Attempt 002 remains `NOT_STARTED`.
+
+Catalina has now frozen the implementation contract for a single persistent Windows-native broker.
+It retains non-reparse ancestor handles without delete sharing across each protected operation,
+validates volume/file IDs and final paths, performs handle-bound mutation and deletion, streams
+bounded reads/hashes/inventories, owns the Job Object builder boundary, and supplies NVDA only pinned
+inherited handles. Closed framed IPC, a native mutation journal, crash-held recovery, exact caps, and
+synchronized `TEST_ROOT` race hooks are required. Valentina is implementing the new frozen C#/Node
+broker, removing the obsolete PowerShell Job helper, converting all protected call sites, and adding
+deterministic concurrent-swap fixtures. Tests may launch only the broker and temporary test actors;
+Attempt 002 and all product runtimes remain prohibited and `NOT_STARTED`.
+
+Valentina completed that native-boundary implementation and froze ordered 48-file digest
+`410ec2a447e868c1f519cd967d5b330c566adee350ce194a16d004c2db8ab06d`. The new C# boundary hash is
+`247923a3fd7d2a58db6dcb5b968094b8b177a134027c4975ae01fd381ae7f9f6`; the Node client hash is
+`b06536d8c237534e1fe29ef352ee046c690f362efa5851d61d9dc4b271d2f2ec`. The legacy PowerShell Job
+helper is removed. The broker now owns retained-handle filesystem operations, closed IPC, bounded
+inventory, Job creation and receipt/ack, and suspended NVDA launch with an explicit four-handle
+inheritance list. Root independently recomputed the digest and reproduced **89 passed, 0 failed,
+0 skipped** static checks outside the restricted sandbox, including nine synchronized ancestor-swap
+operation families. Fresh Catalina, Renata, and Natalia exact-byte gates are in progress. Only test
+broker actors have run; Attempt 002 remains `NOT_STARTED` and no product runtime, repository
+publication, deployment, or cleanup has occurred.
+
+The 48-file candidate is **rejected** despite 89/89 passing development tests. Catalina's architecture
+gate is **FAIL** with 7 passed, 11 failed, and 7 required-unattempted checkpoints. Natalia's security
+gate is **FAIL** with 13 passed, 7 failed, 0 blocked, and 4 required attack-grade groups unattempted.
+The synchronized race proof was simulated inside the broker rather than coordinated with a separate
+attacker; the client spawned a new unchained broker per operation; native source bytes were not
+hash-bound before `Add-Type`; framed schemas and root rights were not closed; cleanup adopted a fresh
+inventory instead of binding prior exact entry identities; rename used path-based `MoveFileEx`;
+Job inputs were not retained and pinned; and NVDA inherited handles were not actually consumed by the
+Python plugin. Valentina is replacing every placeholder with the persistent closed broker, real
+external attacker barriers, native journal/recovery, exact source/operation/root/inventory identity,
+retained-handle Job and rename boundaries, and genuinely consumed NVDA handles. Passing tests may not
+be reused as proof unless the new fixtures exercise those exact properties.
+
+Valentina then replaced those gaps with a persistent broker, a broker-created retained exchange root,
+exclusive request/response/ready/ack publication, exact source verification before `Add-Type`, closed
+schemas/rights/caps, a hash-chained native mutation journal with crash-held recovery, prior exact
+inventory identities, retained-handle rename and cleanup, pinned Job inputs, a real suspended
+non-evidence Job fixture, a ten-handle NVDA boundary, and a compiled Python inherited-handle consumer.
+Separate attacker processes now enter deterministic operation windows and verify attempted
+rename/junction substitution, the intended inside-root result, and an unchanged outside sentinel.
+
+Root independently computed the full current frozen inventory as **49 files** with digest
+`66aed3a7a6fc506b4be6eb9f763601630153fc152706ef57025ba38133c74d59` and independently reproduced
+**95 passed, 0 failed, 0 skipped** R4-B checks outside the restricted sandbox. The native C# exact
+hash and embedded client pin are `26440cc26433294dfa58118c70c0af4010d4b252fac312c80291eedd4d6fd8fb`;
+the client file hash is `7d0ab74df30d3e0a0b4aef454917fae92de48c44c0ca1b4779adacff674ec11b`;
+the plan hash is `ab80b6a983e9e2ae8373c01306949763b0db82aa7fcddcc37b94d5bb2942ac61`.
+Fresh Catalina, Renata, and Natalia exact-byte reviews are in progress. Live portable NVDA and every
+Attempt-002 product execution remain required-unattempted; only test broker/actor/fixture processes
+have run. Nothing is staged, committed, pushed, opened as a pull request, deployed, or cleaned.
+
+That 49-file candidate is **rejected** despite 95/95 development checks. Natalia's security gate is
+**FAIL** with 30 passed, 8 failed, 0 blocked, and 4 required-unattempted groups. Renata's
+infrastructure gate is **FAIL** with 11 passed, 7 failed, 0 blocked, and 4 required-unattempted
+groups. Catalina also identified the transaction/authentication gaps before her detailed report was
+interrupted. The actual build root is `.next-attempt-002` but the native map uses `.next`; live
+cleanup discards the approved inventory token and adopts a fresh inventory; broker requests can be
+rewritten after publication; mutation can commit before response/ready/ack success; journal restart
+has no independent anchor or ambiguous-replay state; Job receipt/ack sharing and authority binding
+are invalid; NVDA handle sharing/PID/handshake semantics are statically nonfunctional; framed Job and
+NVDA operations remain stubs while one-shot helpers bypass the persistent broker; and root rights are
+not closed per operation. Catalina is defining the corrected transaction state machine, root/rights
+map, journal anchor/recovery, Job acknowledgement, and NVDA handle protocol before Valentina's next
+implementation pass. Attempt 002 remains `NOT_STARTED`.
+
+Catalina has now frozen the corrected transaction architecture. One persistent capability-bound
+broker must use inherited anonymous request/response pipes only; authoritative exchange files and
+one-shot Job/NVDA helpers are forbidden. A frozen native contract defines exact narrower roots,
+per-operation rights, schemas, caps, and digests. The transaction advances through durable
+`INTENT` → `APPLIED_UNACKED` → capability-ACKed `ACKED_COMMITTED`; replay returns the stored response
+without reapplying. The controller retains the journal-anchor handle and exact last digest/sequence;
+replacement, truncation, controller loss, or ambiguous recovery is permanently held. Cleanup carries
+the original approved root/entry identity token through relative-handle deletion. Job receipt/ACK and
+NVDA control/ready are framed broker operations over inherited handles with distinct controller,
+broker, builder/NVDA identities. Valentina is implementing the exact contract plus response/ACK loss,
+crash-boundary, journal-tamper, original-inventory, relative-delete, real framed Job, and injected NVDA
+consumer acceptance tests. Attempt 002 remains `NOT_STARTED`.
+
+### Corrected capability-pipe implementation checkpoint — 2026-11-02
+
+Valentina replaced the authoritative filesystem message exchange with one persistent 64-bit
+PowerShell/C# broker per closed command and inherited anonymous stdin/stdout capability pipes. The
+new frozen `windows-native-contract.json` orders the exact roots, rights, fields, operations, and
+payload caps; `windows-native-worker.mjs` is the synchronous controller bridge. `HELLO` now returns
+the actual broker PID, PowerShell path/version/signature, contract digest, and controller-held
+journal-anchor handle. The broker and client enforce exact sequence/request replay and a response
+digest ACK over the request pipe. Focused fixtures prove response loss and ACK loss replay the same
+response without applying `WRITE_NEW` twice.
+
+The native root map now uses the real `.next-attempt-002`, build-temp, nested NVDA config/portable/raw,
+raw, attempt, runtime-control, tools-read, downloads-read, repository-read, and test-only roots.
+Production cannot select `TEST_ROOT`. Mutation journal states are
+`INTENT_DURABLE` → `APPLIED_UNACKED_DURABLE` → `ACKED_COMMITTED_DURABLE`; the journal handle is
+duplicated into the controller and a replacement broker can adopt that exact anchor. Inventory now
+retains the original root/entry handles without delete sharing until cleanup, rejects fresh token
+adoption, detects injected entries, blocks rename-out, and deletes through the original retained
+handles.
+
+This is a checkpoint, not an H candidate. The persistent framed Job operations 13–16 now own exact
+input pins, suspended creation, Job assignment, response/ACK, resume, status, close, and termination.
+NVDA operations 17–18 now own its exact ten pins, explicit seven-handle inheritance list, framed
+control/ready/transcript/diagnostic/status, resume-after-control, and termination. Build and observer
+consume only framed broker authority. The rejected one-shot Job/NVDA methods and file receipt/control
+authority have been removed; the injected Python consumer exercises op 17 with distinct
+controller/broker/consumer identities. Live NVDA remains intentionally UNATTEMPTED.
+The bootstrap verifies size, final path, stable `fsutil queryFileId` identity, and digest while
+holding source/contract streams before the reviewed boundary `Add-Type`. Production recovery is
+bound to the exact failure digest/count/state and controller anchor. Explicit fixtures now prove
+that controller loss returns `JOURNAL_PERMANENT_HELD`, while coherent journal rewrite, zero-byte
+truncation, and same-byte file replacement return `ORPHANED_PERMANENT_HELD`; every case proves zero
+retry, mutation, recovery, or cleanup. Therefore H/A2 derivation remains forbidden and Attempt 002
+remains `NOT_STARTED`.
+
+Valentina completed the final domain repair and froze a new **57-file** subject. Root independently
+reproduced canonical digest
+`e572f9490a38292720afcfa5c131fa4a1097ef8bafad686ee943469555ff637f` and independently reran the
+full TAP suite outside the sandbox: **128 passed, 0 failed, 0 cancelled, 0 skipped**. Risk cells now
+run complete keyboard traces; transition families execute behavior-specific reducer/UI sequences;
+NVDA CLOSE waits for queue drain/quiet and rejects late generations; every traversed target has an
+ordered speech contract; mobile/RTL/semantic evidence fields gate their named results; contrast uses
+adjacent surfaces and logical borders; reduced-motion scroll and sub-320 reflow are explicit; and the
+disk sample bytes are bound three ways to the exact cleanup inventory and result. Final Camila,
+Daniela, and Julieta gates are in progress. Attempt 002 and all runtime/repository actions remain
+unattempted.
+
+The third domain wave on `e572f949…` produced Julieta **PASS** with 64/64 numerical/privacy checks.
+Camila remains **FAIL** with 23 passed and 2 failed because NVDA CLOSE waits for a queue barrier while
+holding the callback condition, and the ordered speech contract tries to focus native-disabled
+controls that cannot expose the required semantics. Daniela remains **FAIL** with 26 passed and 4
+failed because progress accessible naming ignores valid `aria-labelledby`, offset focus rings compare
+against the control's own fill, pale state tints are incorrectly treated as meaningful 3:1 surfaces
+while progress fill/track contrast is insufficient, and the RTL notch check hard-codes 20px despite a
+responsive 24px token. Valentina owns this final bounded accessibility/visual correction; all other
+domain and core controls remain frozen.
+
+Development verification on the unchanged candidate completed outside the sandbox. The focused
+Windows boundary/build/observer/NVDA/fixed-root matrix conducted 51 tests: 51 passed, 0 failed, and
+0 required-unattempted. The full R4-B subset conducted 102 tests: 102 passed, 0 failed, and 0
+required-unattempted. An earlier complete audit-policy run conducted 276 tests: 273 passed and 3
+failed. All R4-B capability-pipe, fixed-root, framed Job, injected NVDA, transaction replay,
+permanent-hold, journal-tamper, and crash-boundary tests pass. The three full-repository failures
+remain outside this implementation slice in the pre-existing Multer override checks: two behavior
+assertions and one missing installed `@nestjs/platform-express` package in this worktree. C#
+compilation, JavaScript syntax, Python in-memory compilation, lint, touched-file formatting, and
+`git diff --check` passed. Repository TypeScript checking remains failed by pre-existing missing
+shared learning/catalog exports and downstream implicit-any errors. Live NVDA remains
+required-unattempted; no product runtime was launched and no stage, commit, push, PR, H, or A2
+action occurred.
+
+The final uncommitted 51-file `FROZEN_HARNESS_FILES` working-tree inventory digest is
+`0fde8d886be910389a7f12da2e22e1e05f58d187268edfa5ba643739ecc63adb`; this is a review aid, not
+an H commit digest. The canonical infrastructure plan SHA-256 is
+`c4aecd22be09c1ae6ea31748825cfd50ba67590262f0c52ab486ade82db83dae`, and the generated
+observation-plan digest is `9ca1c6b7c5ef0b37224e195d755a4f0e53edada58e07ba1ee3bdaeb76fa9e1c3`.
+The frozen native contract, C# broker, and JavaScript client SHA-256 values are respectively
+`539fe3cc9a62fbf662d4d28c809d81f2efc9a2b261b28efe710056cf515be603`,
+`a21ef3a1e5a6de2d24d9a4c94116a1e0db4397ee2f4e89c022ac7f31c6a0d0e7`, and
+`c55c95432f2b3ac3e2b6b9fabb0640303a031515e2eec2e7061a85d54d3707c3`.
+
+At the 2026-11-02 16:03Z hourly reconciliation, root independently reran the unchanged 51-file
+candidate with the compact Node test reporter and counted 102 dots: **102 passed, 0 failed**. Fresh
+read-only exact-byte gates were dispatched to Catalina (architecture), Renata
+(infrastructure/reproducibility/rollback), and Natalia (security) against working-tree digest
+`0fde8d886be910389a7f12da2e22e1e05f58d187268edfa5ba643739ecc63adb`. Their verdicts remain
+pending. Attempt 002 remains `NOT_STARTED`; no stage, commit, push, pull request, product runtime,
+Next build, live NVDA, emulator, deployment, or cleanup action has occurred.
+
+Those exact-byte gates rejected the `0fde8d88…` candidate despite its 102/102 development result.
+Catalina's architecture gate is **FAIL** with 20 passed, 8 failed, 0 blocked, and 4
+required-unattempted checkpoints. Renata's infrastructure gate is **FAIL** with 27 passed, 2 failed,
+0 blocked, and 4 required-unattempted checkpoints. Natalia's security gate is **FAIL** with 32
+passed, 8 failed, 0 blocked, and 4 required-unattempted checkpoints. The application still releases
+the approved inventory lease and adopts a fresh tree at deletion; response ACK lacks a durable final
+commit-confirmation frame; production recovery remains an unsafe generic held-state clear; C# does
+not enforce the promised root/operation/path matrix; the production Job argument slots are swapped;
+NVDA authority remains predictable share-writable named files with incomplete inherited handles and
+identity schema; production shutdown still invokes a one-shot NVDA helper; and bootstrap remains a
+path-following `FileStream` rather than a no-reparse native open. Valentina owns one consolidated
+implementation/fixture repair covering every finding. All downstream domain reviews and Elana's
+final gate remain required-unattempted. Attempt 002 remains `NOT_STARTED`, with no repository
+publication or product/runtime action authorized on these rejected bytes.
+
+Valentina completed the consolidated repair and stopped on a new stable 51-file candidate. The
+working-tree inventory digest is
+`fd0361fb6b6f62a7eee73e887387814141dbfd1a470c1a783a6268811d913a4e`; root independently reproduced
+that exact count/digest and independently reran the full R4-B development suite outside the sandbox:
+**107 passed, 0 failed**. The native contract, C# broker, JavaScript client, and infrastructure plan
+SHA-256 values are respectively
+`dff0f140ba0794c212a996ca8cd868e857d81edb6ceefe59c0e387857540c812`,
+`b52519f762b17921199269a7364704a22207a6f76156d8da6dc7a2ec6d774e9b`,
+`da30d476af4e267a259b7c6ec692c03dea0958af6b2bd03dcac1f254a2debfc2`, and
+`4c89953f3d8eaf166c0a6a8942791df727b925ad721a35fff0943d39ef9c15ef`.
+The repair retains the original approved inventory lease through deletion, adds controller response
+validation and final durable `COMMIT_CONFIRMED`, closes production recovery outcomes, enforces C#
+root/operation/path rights, exercises the corrected production Job mapping through a persistent
+non-Next broker fixture, uses anonymous NVDA control/ready pipes with ten exact inherited handles and
+write-forgery refusal, removes one-shot shutdown authority, and pins source/contract through native
+no-reparse opens. Fresh Catalina, Renata, and Natalia exact-byte gates are in progress on these bytes.
+Attempt 002, H/A2, Next, live NVDA, emulator, deployment, cleanup, staging, commit, push, and pull
+request actions remain unattempted.
+
+The exact-byte gates rejected the `fd0361fb…` candidate despite 107/107 development checks.
+Catalina's architecture gate is **FAIL** with 13 passed and 4 failed; Renata's infrastructure gate is
+**FAIL** with 31 passed and 1 failed; Natalia's security gate is **FAIL** with 17 passed, 3 failed,
+and 2 required executable recovery branches unattempted. Remaining defects are: C# relative-path
+authorization is still broader than the exact allowlist; recovery trusts caller-asserted identities
+and is not wired through production failure paths; partial cleanup cannot resume after one tree is
+already durably deleted; NVDA synchronously reads one control frame per speech callback although the
+controller sends one per observation; Job output authority omits the real infrastructure-plan digest
+and composite root/path/parent/distDir binding; the worker ACKs before operation-specific semantic
+validation; and durable Job assignment/close records do not retain/bind the complete receipt and
+pins. Valentina owns the consolidated implementation and executable-fixture repair. Downstream domain
+gates and Elana remain unattempted, and Attempt 002 remains `NOT_STARTED`.
+
+Valentina completed the seven-family repair and stopped on a new stable **53-file** subject. Root
+independently reproduced working-tree digest
+`f5c6ca7b418c27ecfc4ca4a3bfa9ecb9f0600509439ca084ed2940fce4eaf86f` and independently reran the
+complete R4-B development suite outside the sandbox: **114 passed, 0 failed**. The contract, C#
+broker, JavaScript client, infrastructure plan, and pre-ACK response-validator SHA-256 values are
+`13b1ce5f32bed39842862d07fc720f25b9280c089a82b8066399294f8bfd8686`,
+`37b2f541dd8e19f365570596a4557da48451ad92e2f462a5be5552e200c7f570`,
+`5ba879c22dd2dc046de29f364a23b118dba5dc090a1aeb1ce5f1672860a56ab5`,
+`5bd42d653239cc771d65d0c3e6561350dbfe70f21f843c4aa0615264a9f20283`, and
+`0e266d01eb32d80cec4556f1f37bf043223a9c5a08139d6dd21f3a9c4577edeb`.
+The new bytes add exact C# operation/path authorization; broker-derived durable recovery with stored
+response replay and production call sites; resumable identity-bound cleanup tombstones; a dedicated
+NVDA control reader with latched observation state; real infrastructure-plan and composite output
+authority binding; operation-specific response validation before ACK; and complete durable Job
+assignment/close receipt binding. Fresh Catalina, Renata, and Natalia exact-byte reviews are in
+progress. Attempt 002 and every product/runtime/repository-publication action remain unattempted.
+
+The exact-byte gate on `f5c6ca7…` remains held. Renata issued **PASS** after 57/57 focused checks,
+but Catalina issued **FAIL** with 14 passed and 4 failed, and Natalia issued **FAIL** with 14 passed
+and 2 failed. The actual observer/config/diagnostic production paths do not match the new exact C#
+allowlists; an internally re-created deleted-tree tombstone fails object-identity validation before
+the resumable no-op; the NVDA reader emits an unread ready frame for every control and can fill its
+4096-byte pipe; `JOB_CLOSED` is still memory-only instead of a durable authority-bound event; and
+`RENAME_EXCLUSIVE` recovery proves only the absent source, not the destination file identity/content.
+Valentina owns the narrow production-path, tombstone, ready-ACK, durable-close, and composite-rename
+recovery repair. The candidate is not eligible for downstream specialists, Elana, H/A2, Attempt 002,
+or repository publication.
+
+Valentina closed the five remaining production-path defects and froze a new **53-file** subject.
+Root independently reproduced canonical working-tree digest
+`62a1fba1945666f69302e9d7a85f17a1927de64d3e4b0329b4146e5909ab16c9` and independently reran the
+full R4-B TAP suite: **118 passed, 0 failed, 0 cancelled, 0 skipped**. The contract, C# broker,
+JavaScript client, response validator, and infrastructure-plan SHA-256 values are
+`ad22a902d1599835b5b30328aa1fcfa41b5525403dfbd1e6b8d6c29f818e2c9e`,
+`9facabfa1935fc78eccf05a0272439ca4761e900eddf5aeaf1b0bd1d1cc7e871`,
+`5dcb475567b19202fdbf69418451f32ac67d78648e74bc8944a7f1d32d649f54`,
+`0daab78941801b33db5015e85a1154a519d6ffe864531f516c56429906ee6c89`, and
+`958986bab9e2696930cd41b28ca25f8cee25c91b90a28177e03393062195e060`.
+The repairs align exact broker paths with production constructors, authenticate resumable deletion
+tombstones, drain and validate one ready ACK per NVDA control with a reader-driven 120-control stress
+fixture, append a fully authority-bound durable `JOB_CLOSED` before cleanup, and recover rename only
+after proving composite source-plus-destination identity. Fresh Catalina, Renata, and Natalia reviews
+are in progress on these exact bytes. Attempt 002 and all repository/product/runtime actions remain
+unattempted.
+
+On exact subject `62a1fba1…`, Renata issued **PASS** with 66/66 focused checks. Catalina issued
+**FAIL** with 18 passed and 1 failed because the frozen JSON `RAW_ROOT` allowlist omits the exact
+intermediate nodes `checks`, `checks/risk`, `checks/transition`, and `profiles` that C# already
+authorizes. Natalia issued **FAIL — evidence only** with 17/17 conducted checks passing and two
+required controls unattempted: malformed/truncated canonical `JOB_CLOSED` receipt refusal, and
+tamper/truncation of a journal specifically containing `JOB_CLOSED_DURABLE` with permanent hold and
+zero cleanup. No repaired production-code vulnerability remains known. Valentina owns the bounded
+contract-parity and negative-fixture closure; all subsequent exact-byte gates remain required.
+
+Valentina completed the bounded closure and froze a new **53-file** subject. Root independently
+reproduced canonical working-tree digest
+`8538971f478bc55f59694d6de7bc934dee6797641f99602ae94a30f1d8390fe6` and independently reran the
+full TAP suite: **122 passed, 0 failed, 0 cancelled, 0 skipped**. The contract, C# broker, JavaScript
+client, response validator, native test, and infrastructure-plan SHA-256 values are
+`7deee905e0bae20abd8e7612467c4ffe2cc4cb6929943cf96c9762a33c4c419b`,
+`e47649c79cb916c7420a09b216798fc912518d4d5fdd1f49ed921b879efb11c0`,
+`26b2364815c130d0e144368879ed90be5b96e5e5be33181681e884a8afe7e0b9`,
+`0daab78941801b33db5015e85a1154a519d6ffe864531f516c56429906ee6c89`,
+`a665baec73b30f0b4180654f43a056b5b7792cb552124903356dba380e6951e8`, and
+`958986bab9e2696930cd41b28ca25f8cee25c91b90a28177e03393062195e060`.
+The frozen contract now includes all exact RAW_ROOT intermediate nodes with executable contract↔C#
+parity coverage. Direct receipt negatives cover truncated/schema/key/value/digest-binding refusal,
+and isolated-controller fixtures corrupt/truncate a real `JOB_CLOSED_DURABLE` journal and prove
+permanent hold, unchanged journal after hold, forbidden retry, and zero cleanup. Final Catalina,
+Renata, and Natalia exact-byte gates are in progress. Attempt 002 and all repository/product/runtime
+actions remain unattempted.
+
+On exact subject `8538971f…`, Catalina issued **PASS** with 20/20 architecture checks and Renata
+issued **PASS** with 70/70 infrastructure checks. Natalia issued **FAIL** with 19 passed and 1 failed:
+the durable journal hash omits the response digest/bytes, so a same-account attacker can coherently
+rewrite a canonical `JOB_CLOSED` receipt, update the stored response digest, and preserve the record
+hash and file identity. The negative fixture currently changes only the response bytes and therefore
+proves incoherent corruption, not this coherent rewrite. Catalina is defining a minimal non-circular
+response/record hash sequence because responses and commit confirmations currently carry predicted
+post-ACK anchors. The candidate remains held; no downstream or runtime action may advance.
+
+Valentina implemented Catalina's non-circular J2 journal contract and froze a new **53-file** subject.
+Root independently reproduced canonical digest
+`7ba44f1d21741777796ca887a90bf52689b27666ee7571dea76ec66d893c4649` and independently reran the
+full TAP suite outside the sandbox: **126 passed, 0 failed, 0 cancelled, 0 skipped**. J2 records have
+16 exact fields and hash the exact response digest, byte length, canonical Base64 bytes, and prior
+record. Initial responses carry only a durable predecessor anchor; exact raw response bytes are
+journaled through APPLIED/ACKED, and only final `COMMIT_CONFIRMED` binds that raw digest to the actual
+post-ACK head and advances controller state. Replacement recovery verifies the controller's confirmed
+prefix, allows only a valid same-request suffix, revalidates exact stored response bytes, and holds
+legacy J1. Coherent rewrite, recomputed-chain/prefix mismatch, live-handle, canonical encoding,
+raw-response replay, failure-response, legacy, Job-close, rename, truncation, replacement, and
+post-ACK-failure fixtures pass. Fresh Catalina, Renata, and Natalia exact-byte gates remain required;
+Attempt 002 and repository/product/runtime actions remain unattempted.
+
+The core J2 exact-byte gates are all **PASS** on `7ba44f1d…`: Catalina 26/26, Renata 74/74,
+Natalia 20/20, and root 126/126. The first downstream domain wave remains **FAIL**. Camila counted
+16 passed and 9 failed UX/accessibility checkpoints: speech semantics and generation barriers are too
+weak, transitions are direct-loaded rather than exercised, fixture semantics/focus/primary-action/RTL/
+mobile predicates are incomplete, effective radio targets are mismeasured, and progress lacks exact
+value text. Daniela counted 16 passed and 8 failed visual/mobile/motion checkpoints: the harness omits
+the production global visual context; contrast/focus/overflow/reduced-motion artifacts lack required
+measurements; and en-XA/ar-XB are not genuine pseudolocale presentations. Julieta counted 48 passed
+and 1 failed numerical/privacy checkpoint: `rawInventory.bytes × 720` is mislabeled as peak usage.
+Catalina clarified that ×720 remains valid only as a conservative logical-disk admission budget:
+`(10,800 / 30) × (2 / 1)`, with explicit counts/factors, a 100% disk safety margin, separate
+`observerPeakRssBytes`, documented inclusions/exclusions, and no memory/concurrency claim. Valentina
+owns the consolidated product-observer, harness-fidelity, artifact-traceability, pseudolocale,
+transition, NVDA-generation, and capacity-contract repair. Attempt 002 remains `NOT_STARTED`.
+
+Valentina completed the consolidated domain repair and froze a new **56-file** subject. Root
+independently reproduced canonical digest
+`a55f6c64d651fe93c5fe09296eaa49470e7d9ea73e06af494a9f59d3e7e5c2ba` and independently reran the
+full TAP suite outside the sandbox: **128 passed, 0 failed, 0 cancelled, 0 skipped**. The repaired
+subject freezes the production visual context and localization boundary, measures effective targets,
+records complete focus/geometry/contrast/motion artifacts, adds exact progress value text and logical
+RTL/pseudolocale assertions, exercises reducer-driven transitions, and uses expected per-state NVDA
+speech contracts with observation close/drain/idle generations. Capacity now reports an explicit
+disk-only `(10,800 / 30) × (2 / 1)` conservative budget and a separate observer RSS value. Fresh
+Camila, Daniela, and Julieta gates are in progress. Attempt 002, live Next/NVDA, H/A2, platform
+artifacts, and repository publication remain unattempted.
+
+The second domain wave remains **FAIL** on `a55f6c64…`. Camila counted 18 passed and 7 failed:
+risk cells do not execute keyboard traversal; transition families are self-labeled reset traces;
+NVDA IDLE is not a real queue-drain barrier; speech contracts omit traversed controls; and recorded
+mobile/RTL/semantic predicates do not all gate their named statuses. Daniela counted 23 passed and 5
+failed: boundary contrast compares an opaque surface to itself; reduced-motion global scroll behavior
+is missing; clipping/overlap/occlusion/compact-landscape fields are not verdict inputs; the actual
+canvas notch is not checked for RTL mirroring; and the 320px/200% reflow contract is not proven.
+Julieta counted 60 passed and 1 failed: the explicit disk-budget sample byte count is not required to
+equal the exact raw inventory/result byte count, and the current fixture demonstrates the mismatch is
+accepted. Valentina owns the final runtime-equivalent observer/product/schema repair. Attempt 002
+remains `NOT_STARTED`.
+
+The later **58-file** subject
+`ee1d8c7cd2e64174c4c1a31d577bce0dede56b024430ca2e740a8cb3a279eee5` passed root's exact R4-B
+development suite with **133 passed, 0 failed**. Valentina also reported **458/458** web DOM checks
+and the 120-generation asynchronous NVDA fixture passing. Julieta issued **PASS** with 66/66
+numerical/privacy checks. The subject nevertheless remained held: Camila issued **FAIL** with 24/25
+checks because the observer counted hidden inputs and every same-name radio as independent Tab stops,
+instead of modeling native hidden-control exclusion, one sequential stop per radio group, and separate
+Arrow-key traversal. Daniela issued **FAIL** with 21/24 checks because the observer compared the
+primary button's cobalt border to its identical fill, the light warning rule was only **1.3316:1**
+against its tint, and the exact 600-character prompt plus four 180-character choices could overflow on
+the required phone cell. Valentina received one bounded consolidated repair; no runtime or repository
+publication action advanced on the rejected bytes.
+
+Valentina froze the repaired **58-file** subject at working-byte digest
+`d0b340c38f20de894f5233620bd68291f920666f714f7004ccfbda8a61392bcb`. Root independently
+reproduced that count and digest and reran the exact R4-B suite outside the sandbox: **137 passed, 0
+failed, 0 cancelled, 0 skipped, 0 todo** in **141,932.2039 ms**. Valentina reported **459/459** web
+DOM checks, **20/20** focused observer/production-exclusion checks, and passing harness TypeScript,
+lint, formatting, syntax, and diff checks. The repair now models native Tab order and named-radio
+grouping with separate guarded Arrow-key fixtures for ACTIVE, SUBMITTING, and CONFIRMED; records
+closed contextual state, choice, and primary-control contrast pairs; uses warning rule `#8a5b00` at
+**5.4647:1** in light and **9.8842:1** in dark; and proves no document or named-region overflow for
+the exact 600-character prompt plus four 180-character unbroken choices.
+
+The full web workspace typecheck remains **HOLD**, not PASS or candidate FAIL. This worktree has no
+root `node_modules`; invoking the primary checkout's compiler resolves `@fluyo/shared` through the
+main-checkout junction `C:\dev\Fluyo\node_modules\@fluyo\shared` to
+`C:\dev\Fluyo\packages\shared`, bypassing the correct R4-B2 worktree exports. The unchanged lockfile
+SHA-256 is `DF4A53010F48DA9A7C9448E3FC754AEF6C1C76E7CC360BADE212168140093503`. A broader
+audit-policy run counted **312 passed and 3 failed**; those are the same pre-existing Multer behavior
+and missing installed dependency-tree failures, not failures of the exact R4-B candidate suite.
+Renata still owes the isolated dependency-graph or clean-CI proof, and protected CI remains mandatory.
+
+Fresh exact-byte review begins with Catalina and Natalia, followed by Camila, Daniela, Julieta, the
+remaining applicable provenance/claims/non-coercion specialists, Bianca's record reconciliation,
+Renata's reproducibility gate, and Elana last. Attempt 002, H/A2, product Next, live browser/NVDA,
+platform artifacts, emulator, deployment, cleanup, staging, commit, push, and pull-request creation
+all remain unattempted.
+
+The domain wave on `d0b340c3…` produced Camila **PASS** with 25/25 conducted checks and three
+runtime-required groups still unattempted, and Julieta **PASS** with 78/78 checks. Daniela remained
+**FAIL** with 23/24 checks: whole-element opacity `0.52` changed the actual light-theme disabled
+focus/surface composites to approximately **2.5965:1** for ACTIVE and **2.7075:1** for SUBMITTING,
+while the observer used raw colors and therefore falsely passed those cells. The exact subject
+remained held, and Valentina received only the bounded disabled-state composition repair.
+
+Valentina froze the next **58-file** subject at working-byte digest
+`a33152d0ef742bcf726881e4d019a5aa67739727c1812f67f217ac81461b7ef2`. The implementation replaces
+whole-element disabled opacity with explicit opaque light/dark disabled tokens; composes focus, text,
+surface, and boundary colors through both element and ancestor opacity; parses `rgb()`, `rgba()`, and
+`color(srgb ...)`; fails closed on invalid colors; and includes exact negative and positive fixtures.
+Root independently reproduced the digest and reran the exact R4-B suite: **139 passed, 0 failed, 0
+cancelled, 0 skipped, 0 todo** in **143,895.1672 ms**. Valentina reported **22/22** focused checks,
+**459/459** web DOM checks, and passing static gates. These implementation results remain development
+evidence only; fresh independent exact-byte gates are underway.
+
+Attempt 002, H/A2, product Next, live browser/NVDA, platform artifacts, emulator, deployment,
+cleanup, staging, commit, push, and pull-request creation remain unattempted.
+
+The domain wave on `a33152d0…` produced Camila **PASS** with 30/30 conducted checks and three
+runtime-required groups still unattempted, and Daniela **PASS** with 26/26 checks. Julieta remained
+**FAIL** with 99/100 checks: the disabled choice's `0.72` whole-element opacity reduced the actual
+light-theme unchecked boundary to **2.9073645:1**, below the required 3:1. The same audit confirmed
+the dark boundary at **4.6364:1** and light text at **6.9823:1**. The subject remained held, and
+Valentina received only the bounded disabled-choice composition repair.
+
+Valentina froze the next **58-file** subject at working-byte digest
+`4b2eb65e3cd0c78bfa2616f52f3cb874a3b693e6fc42ec0ff26d564d150899b1`. The implementation replaces
+disabled-choice opacity with explicit opaque light/dark surface, text, unchecked-boundary,
+checked-boundary, and focus tokens. Exact fixtures cover the **2.9073645:1** regression plus nested
+opacity and transparent-color negatives. Root independently reproduced the digest and reran the exact
+R4-B suite: **140 passed, 0 failed, 0 cancelled, 0 skipped, 0 todo** in **146,612.8902 ms**.
+Valentina reported **23/23** focused checks, **459/459** web DOM checks, and passing static gates.
+These implementation results remain development evidence only; final fresh independent exact-byte
+gates are underway.
+
+Attempt 002, H/A2, product Next, live browser/NVDA, platform artifacts, emulator, deployment,
+cleanup, staging, commit, push, and pull-request creation remain unattempted.
+
+The remaining-roster wave on `4b2eb65e…` produced Fernanda **PASS** with 37/37 checks and Isabella
+**PASS** with 14/14 checks. Gabriela issued **FAIL** across 10/11 research audit areas even though the
+bounded executable suite passed 35/35 checks: the plan described the NVDA signer and certificate
+thumbprint as already verified without a bound manifest or official verification proof, while live
+NVDA remained unattempted. The subject remained held, and Valentina received only the bounded
+prospective-pin correction.
+
+Valentina froze the next **58-file** subject at working-byte digest
+`17c22bde52edd55c37e923a0bec57196c805514ecd025035d0be1b4e9d8a547f`. Manifest v2 now starts with
+`UNATTEMPTED` status and null verification fields. Before launch it requires the exact official URL,
+download SHA-256, same-byte signature-evidence hash, verification method and status, chain status,
+verification time, signer subject, and signer thumbprint. Missing, mismatched, stale, unbound, or
+untrusted proof fails closed. This correction performs no download. Root independently reproduced the
+digest and reran the exact R4-B suite: **141 passed, 0 failed, 0 cancelled, 0 skipped, 0 todo** in
+**144,806.5807 ms**. Valentina reported **29/29** focused checks and passing static gates. These
+implementation results remain development evidence only; fresh independent exact-byte gates are
+required.
+
+Attempt 002, H/A2, product Next, live browser/NVDA, platform artifacts, emulator, deployment,
+cleanup, staging, commit, push, and pull-request creation remain unattempted.
+
+## 2026-11-03 R4-B2 dependency-checker closure and final specialist rebind
+
+The dependency-checker remediation first preserved a **58-file** frozen subject at working-byte
+digest `5f525e6deeab00cdea64003bcef98dca122fb6613b53b838e55103863bb6d412`.
+Its initial checker split had exact SHA-256 values
+`78adf1992a8df4db38e11e6884e572c439a6f650f16a028bbf2f67b95df95df2` for `package.json`,
+`56518134fd76250bcb886a6f16a4aa8248d1ea3671a701dbfcb1920c36510c1a` for the checker,
+`e2a6c51b5299a28d2f23fa375e04104c5ca260a67eaf922530ec3dcf13b61423` for its tests, and
+`d914c69493610a69ab0106e5531855f334780fcd8ca83f0b7eeb1c41e7ac8569` for the integration entry.
+Root's independent direct invocation failed with the sanitized `NPM_LS_SPAWN_ERROR`, exposing that
+the entry depended only on npm's `npm_execpath` environment. Valentina added deterministic
+current-Node layout resolution; the interim checker/test hashes became `2a56400a…ac43f` and
+`b37e23e0…db526`. Catalina passed 27/27 architecture checks, but Natalia rejected those exact bytes
+with 24/26 security checks: an arbitrary absolute same-basename `npm-cli.js` could expand executable
+trust, and a pre-aborted or racing `AbortSignal` could still spawn or lose its abort. Renata's
+environment result was therefore recorded as HOLD, superseded by Natalia's FAIL. No rejected subject
+advanced.
+
+Valentina's final bounded repair derives the trusted npm CLI set only from fixed layouts relative to
+the real current Node executable; `npm_execpath` may select only an already trusted real path.
+Pre-aborted signals now settle before spawn, and spawn-time aborts perform exactly one owned-tree
+cleanup and one sanitized settlement. The final exact SHA-256 values are
+`78adf1992a8df4db38e11e6884e572c439a6f650f16a028bbf2f67b95df95df2` for `package.json`,
+`797213b301ca17bdd14c14f196182a55ac43885876cc60d4d4c7f06047402a5e` for the checker,
+`f3263f6d3a472bd061a8d5d1d55538a493786fc3d29a4559658b80ef3385da49` for its tests, and
+`d914c69493610a69ab0106e5531855f334780fcd8ca83f0b7eeb1c41e7ac8569` for the integration entry.
+The lockfile remains unchanged at
+`DF4A53010F48DA9A7C9448E3FC754AEF6C1C76E7CC360BADE212168140093503`. Valentina's development
+evidence is focused **21/21 PASS**, direct no-`npm_execpath` integration PASS, two final-byte audit
+policy runs of **329/329 PASS** followed by exactly one installed-tree PASS each, and passing lint,
+workspace typecheck, formatting, and diff checks. Root independently reproduced all final hashes and
+the unchanged 58-file digest, then independently passed the direct integration and focused **21/21**
+Windows process-tree suite.
+
+Every fresh exact-byte gate now reports PASS on the final subject: Catalina **31/31**, Natalia
+**29/29**, and Renata's environment/reproducibility gate with audit policy **329/329** plus one
+installed-tree PASS, web **834/834**, API **381/381**, and **466** shared behavioral checks. The two
+remaining shared checks are the expected pre-H dirty/phase-allowlist guards and must rerun after H.
+The downstream specialist rebinds are Camila **30/30 PASS** with three honest runtime-required groups,
+Daniela **26/26 PASS**, Julieta **100/100 PASS**, Gabriela **12/12 PASS** plus provenance **6/6**,
+Isabella **18/18 PASS** plus executable claim evidence **36/36**, and Fernanda **37/37 PASS**. All
+specialists reported evidence to Adriana within their assigned boundaries; implementation results did
+not substitute for independent review.
+
+The candidate remains held for Elana's sole final exact-head QA/code-review verdict. If Elana passes
+the unchanged subject, Adriana may advance H, rerun the clean-checkout guards, derive A2, reconcile
+protected CI, and continue under the existing standing authorization. Attempt 002, product Next,
+live NVDA, the 30 browser-cell observations, 120 live NVDA observations, 49 browser transition
+records, deployment, signing, and store actions remain unattempted. No user approval is required at
+this point; production, signing, store, spending, credential, destructive, and external-account
+actions remain separately gated.
+
+## 2026-11-03 R4-B2 bytecode-residue repair and exact-byte rebind
+
+Elana's sole final read-only QA gate rejected the `5f525e6d…d412` subject despite **2,176**
+automated executions: **2,174 passed**, and the only two test failures were the already documented
+pre-H dirty-checkout and completed-phase guards. The blocking defect was a **32,745-byte** generated
+`fluyoPreflightSpeech.cpython-312.pyc`. The NVDA latch fixture imported the frozen plug-in source
+without disabling Python bytecode writes, leaving the nonignored file under the repository's
+`scratchpad/globalPlugins/__pycache__` directory. Because A2 validates global clean status, H and A2
+remained held; deleting the file once would have been insufficient because the test recreated it.
+
+Valentina made only the bounded fixture/test repair. The dedicated Python fixture now sets
+`sys.dont_write_bytecode` before `exec_module`, and the existing native-boundary regression executes
+the latch twice and asserts after each run that no `__pycache__` exists. The test detects residue; it
+does not delete, ignore, or conceal it. After resolving and verifying the exact target, Valentina
+removed only the generated `.pyc` and its now-empty cache directory. No `.gitignore` masking was
+added. The new **58-file** frozen working-byte digest is
+`34678765c8814e15dd488a68ab9dd4a584f544bec9abc500c67866b5ae0cfa35`. The exact SHA-256 values are
+`112a162361d6b2433db7d7712dff140959fa524ed36130f2a1d7325961f22a20` for
+`nvda-plugin-latch-fixture.py` and
+`7c51f88e82ffef787972dc251ec9a73b2b3cc37b9d93ed46baf984357bb2bd72` for
+`windows-native-boundary.test.mjs`; the package, checker, integration-entry, and lockfile seals remain
+unchanged.
+
+Valentina's final-byte development evidence is the repeated latch regression **1/1 PASS** with two
+internal executions, Windows-native **40/40 PASS**, a clean exact R4-B **141/141 PASS**, production
+exclusion **5/5 PASS**, and passing Python in-memory compilation, Node syntax, lint, formatting,
+diff, and post-test residue checks. One earlier full R4-B run ended **140/141** only because Windows
+returned a transient `rmSync` `EPERM` while deleting a fixed-root fixture's temporary directory. The
+exact isolated test then passed **1/1**, and the unchanged clean full repeat passed **141/141**; no
+code change or waiver was used. Root independently reproduced the new digest and both changed-file
+hashes, passed the exact R4-B suite **141/141** outside the sandbox, and verified no bytecode residue
+afterward.
+
+Every fresh applicable specialist gate reports PASS on `34678765…fa35`: Catalina **20/20**,
+Natalia **24/24**, and Renata's environment/reproducibility gate with an independent exact R4-B
+**141/141** plus passing typecheck, lint, formatting, production exclusion, syntax, diff, and genuine
+post-test cleanliness checks. Camila passed **14/14** accessibility checks; Gabriela passed **10/10**
+research areas plus **13/13** provenance/protocol tests; Julieta retained the base **100/100**
+numerical/privacy ledger and passed **12/12** repair-delta checks. Daniela passed **14/14**, with all
+seven presentation bindings, **30/30** observer/plan/exclusion checks, and **464/464** focused canvas
+checks. Isabella passed **18/18** claims checks plus **29/29** executable checks, and Fernanda passed
+**22/22** non-coercion checks plus **30/30** plan/observer/exclusion checks. No reviewer treated
+repository cleanliness as proof of live NVDA, installer authenticity, accessibility conformance, or
+completed runtime evidence.
+
+The candidate remains held for Adriana's phase-boundary reconciliation and a fresh Elana exact-state
+QA/code-review verdict. H, the two clean-checkout guard reruns, A2, protected CI, Attempt 002, product
+Next, live NVDA, the 30 browser-cell observations, 120 live NVDA observations, 49 browser transition
+records, deployment, signing, and store actions remain unattempted. No user action is needed now;
+production, signing, store, spending, credential, destructive, and external-account actions remain
+separately gated.
+
+## 2026-11-03 R4-B2 deterministic worker-cleanup repair and final rebind
+
+Elana's fresh exact-state audit rejected the `34678765…fa35` subject after confirming the bytecode
+repair itself was complete. Across **2,546** automated executions, **2,543 passed** and three failed:
+the two documented post-H-only shared guards plus one material Windows cleanup failure. The first
+full audit-policy unit run completed **328/329** because the retained-inventory fixture passed its
+functional assertions but `rmSync` then received `EPERM` while removing its temporary root. The exact
+isolated case and one clean policy repeat passed, but that did not erase the failed required run or
+the recurring residue.
+
+Read-only inspection identified three persistent test-owned roots under the real Windows temp
+directory: `fluyo-fixed-retained-replace-4FmERM`, `fluyo-fixed-retained-replace-qyO62X`, and
+`fluyo-fixed-retained-replace-xmR9I9`. Each contained only `owned/seed.txt` with the expected fixture
+value `approved`. The defect was `terminateBrokerForTest()`: it initiated
+`broker.worker.terminate()` without awaiting worker exit and retained-handle release, removed broker
+registry state, and let the caller immediately delete the root. The race made cleanup
+nondeterministic and invalidated H/A2 advancement.
+
+Under the separately gated exact cleanup approval, only those three verified Fluyo test roots were
+permanently removed; no other path was touched. Valentina then made the bounded three-file repair.
+`terminateBrokerForTest()` is now asynchronous, attempts the closed shutdown, awaits
+`worker.terminate()`, marks exit, and deletes the registry entry only when it still identifies that
+broker. All **18** affected callers await the helper before root deletion. The retained-inventory
+test now performs two rounds of `late-new`, `replace`, and `move`, immediately removes the owned root,
+and asserts absence. It adds no retry, sleep, `EPERM` masking, or assertion-time residue cleanup.
+`crashBrokerForTest` remains the intentional crash-model boundary and `shutdownBrokers` remains
+process-exit-only; neither was broadened without evidence.
+
+The new **58-file** frozen working-byte digest is
+`e3b07c539e97498b65378c45a3961fb3236b8f20f979bbb9c8bb4f455e9afb21`. Exact SHA-256 values are
+`1e73bd7d4753e3e9dfe22dd49c319deaba66b0a34b351ef964557176935b5622` for
+`windows-native-client.mjs`,
+`c36b95dec5f2d1e779350a596d2e4fd475de8024ed7e3d331a5ebc2ac41208cd` for
+`fixed-root-guard.test.mjs`, and
+`f5ca862fa539f7626557c3ef59de27c1223d847c31f550d356ac80da7b5bd8fc` for
+`windows-native-boundary.test.mjs`. The package, checker, checker-test, integration-entry, and
+lockfile pins remain unchanged.
+
+Development and root evidence on the final bytes is focused cleanup **3/3 PASS** from a verified
+zero baseline, containing **18/18** nested broker lifecycle observations; fixed-root **5/5 PASS**;
+Windows-native **40/40 PASS**; exact R4-B **141/141 PASS**; two audit-policy runs of **329/329 PASS**
+followed by exactly one installed-tree PASS each; production exclusion **5/5 PASS**; and passing
+typecheck, lint, formatting, Node syntax, diff, topology, and post-run residue checks. Every observed
+boundary ended with zero matching `fluyo-fixed-retained-*` roots and zero repository
+`.pyc`/`__pycache__` artifacts.
+
+Renata's earlier aggregate of `877` tests is withdrawn. The corrected non-overlapping ledger is
+**852/852 Node test executions** (`3 + 5 + 40 + 141 + 329 + 329 + 5`), **18/18 nested broker
+lifecycle observations**, and **12/12 static checkpoints**, reported as separate denominators.
+Julieta independently reconciled the correction and closed the reporting discrepancy **3/3 PASS**.
+
+Every fresh applicable specialist gate reports PASS on `e3b07c53…afb21`: Catalina **27/27**,
+Natalia **26/26**, and Renata's reproducibility gate with **852/852** Node executions, **18/18**
+nested lifecycles, and **12/12** static checkpoints. Camila passed **16/16** accessibility checks;
+Gabriela passed **12/12** research areas plus **13/13** provenance/protocol and **5/5** exclusion
+tests; Julieta's source numerical/privacy gate passed **50/50** and her corrected reporting gate
+passed **3/3**. Daniela passed **12/12** static integrity checks plus **494/494** automated visual
+checks. Isabella passed **18/18** claim checks plus **36/36** executable checks, and Fernanda passed
+**24/24** non-coercion checks plus **30/30** executable checks. All reviews remained read-only and
+reported to Adriana.
+
+The candidate remains held for Adriana's phase-boundary reconciliation and a fresh Elana exact-state
+QA/code-review verdict. H, both clean-checkout guard reruns, A2, protected CI, Attempt 002, product
+Next, live NVDA, the 30 browser-cell observations, 120 live NVDA observations, 49 browser transition
+records, deployment, signing, and store actions remain unattempted. No user action is needed now;
+production, signing, store, spending, credential, destructive, and external-account actions remain
+separately gated.
+
+## Sprint 6 R4-B2 historical journal cleanup decision — 2026-11-04
+
+Marlon selected option **A** in Codex on 2026-11-04 (Asia/Riyadh), explicitly approving permanent
+deletion of the exact manifest-bound historical mixed local R4-B journal directory. Immediately
+before deletion, the directory still matched the approved boundary: **6,125** files and
+**18,534,904** bytes. Both independently defined manifests matched:
+
+- versioned v1 manifest SHA-256:
+  `71c80db07f297430f68618254cffc28666e8d8493370283f801e41cb43970567`;
+- NUL-delimited manifest SHA-256:
+  `0b80905db9fce2aed1cd950fe930f66262ef14a156250a7d5142268e8f5fe13d`.
+
+Only that exact literal directory was permanently deleted. The exact historical journals and their
+forensic replay are unrecoverable; the repository test fixtures remain rerunnable. Post-deletion
+verification found the historical directory absent and **no dedicated test-journal residue**. This
+does not claim that every unrelated temporary or operational path on the machine is residue-free.
+
+Repository state remained unchanged by the cleanup: HEAD
+`fea1f5fadb2307ca611379f30461a7ee47861fff`, zero staged paths, and `git diff --check` PASS. The
+canonical working subject remains **61** paths and **6,830** manifest bytes with SHA-256
+`07b14874f0118cba8a51a4f24f10811df3ff5f9bf615c8cfaf3b45416b3bba42`; this handoff file is
+excluded by that canonical subject rule.
+
+Eight exact-subject specialist gates report PASS. Julieta's post-cleanup numerical, privacy, and
+claims re-audit is in progress. Elana's sole independent final exact-head QA/code-review gate has not
+yet run. Overlapping test commands remain recorded under their own denominators and must not be
+presented as one unique aggregate. Production, signing, store, spending, credential, publication,
+and external-account actions remain separately gated.
+
+### Final exact-head reconciliation — 2026-11-04
+
+This entry supersedes the pending-Julieta and pending-Elana status above without rewriting that
+chronology. Elana issued **FINAL PASS** on unchanged HEAD
+`fea1f5fadb2307ca611379f30461a7ee47861fff` and canonical subject
+`07b14874f0118cba8a51a4f24f10811df3ff5f9bf615c8cfaf3b45416b3bba42`: **61** paths and
+**6,830** manifest bytes, with zero staged paths and `git diff --check` PASS. Her bug table has no
+entries, and the final gate has **0 required-unattempted** checks.
+
+Verified command outcomes remain separate because their scopes overlap: exact R4-B **154/154**,
+audit policy **342/342**, web **834/834**, and the installed-tree Multer policy PASS. Lint,
+typecheck, formatting, and production build also PASS. These results are not presented as one unique
+aggregate.
+
+The deleted historical **6,125-file** manifest-bound set remains absent. The current worktree has
+exactly one expected content-addressed production-journal identity: one zero-byte `.journal` file.
+It contains no historical or test-fixture content. The dedicated test-journal namespace remains at
+zero files; this bounded statement does not claim global machine residue absence.
+
+Attempt 002, product Next, live NVDA, physical-device and platform evidence, deployment,
+production, signing, and store actions remain nonrequired for this exact-head gate and unattempted.
+They are not implied by Elana's PASS and retain their existing authorization boundaries.
