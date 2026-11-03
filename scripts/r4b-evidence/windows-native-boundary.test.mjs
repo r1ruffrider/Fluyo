@@ -3,9 +3,11 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   truncateSync,
@@ -13,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { basename, isAbsolute, resolve } from "node:path";
 import test from "node:test";
 
 import {
@@ -28,8 +30,49 @@ windowsNativeBoundaryTesting.enableTestRoot();
 test.after(() => windowsNativeBoundaryTesting.shutdownBrokers());
 
 const POWERSHELL = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
-const PYTHON = "C:\\Users\\r1ruf\\AppData\\Local\\Programs\\Python\\Python312\\python.exe";
 const CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
+
+function validateTestPythonBinding() {
+  const configured = process.env.FLUYO_R4B_TEST_PYTHON;
+  const expectedSha256 = process.env.FLUYO_R4B_TEST_PYTHON_SHA256;
+  if (!configured || !isAbsolute(configured)) {
+    throw new Error("FLUYO_R4B_TEST_PYTHON must bind an absolute Python 3.12 interpreter path");
+  }
+  if (!/^[0-9a-f]{64}$/u.test(expectedSha256 ?? "")) {
+    throw new Error("FLUYO_R4B_TEST_PYTHON_SHA256 must be exact lowercase 64-hex");
+  }
+  const metadata = lstatSync(configured);
+  if (!metadata.isFile() || metadata.isSymbolicLink()) {
+    throw new Error("FLUYO_R4B_TEST_PYTHON must be a regular non-link file");
+  }
+  const resolved = realpathSync.native(configured);
+  if (resolve(configured).toLowerCase() !== resolved.toLowerCase()) {
+    throw new Error("FLUYO_R4B_TEST_PYTHON must already be an exact resolved path");
+  }
+  if (basename(resolved).toLowerCase() !== "python.exe") {
+    throw new Error("FLUYO_R4B_TEST_PYTHON must resolve to python.exe");
+  }
+  const sha256 = createHash("sha256").update(readFileSync(resolved)).digest("hex");
+  if (sha256 !== expectedSha256) {
+    throw new Error("FLUYO_R4B_TEST_PYTHON_SHA256 does not match the resolved interpreter bytes");
+  }
+  const version = execFileSync(resolved, ["--version"], {
+    encoding: "utf8",
+    windowsHide: true,
+  }).trim();
+  if (!/^Python 3\.12\.\d+$/u.test(version)) {
+    throw new Error(`FLUYO_R4B_TEST_PYTHON must report Python 3.12.x, received ${version}`);
+  }
+  return Object.freeze({ path: resolved, sha256, version });
+}
+
+const PYTHON_BINDING = validateTestPythonBinding();
+const PYTHON = PYTHON_BINDING.path;
+
+function assertTestPythonBinding() {
+  const current = validateTestPythonBinding();
+  assert.deepEqual(current, PYTHON_BINDING, "test-only Python interpreter binding changed");
+}
 
 function journalPathForTest(root) {
   const runId = process.env.FLUYO_TEST_JOURNAL_RUN_ID;
@@ -884,6 +927,7 @@ test("rejects every mismatched Job output-authority component before assignment"
 });
 
 test("passes only inherited handles to a compiled Python consumer fixture", () => {
+  assertTestPythonBinding();
   const root = mkdtempSync(resolve(tmpdir(), "fluyo-nvda-handle-consumer-"));
   try {
     const fixture = resolve(
@@ -919,6 +963,7 @@ test("passes only inherited handles to a compiled Python consumer fixture", () =
 });
 
 test("latches one NVDA control across multiple speech and cancel callbacks", () => {
+  assertTestPythonBinding();
   const root = mkdtempSync(resolve(tmpdir(), "fluyo-nvda-plugin-latch-"));
   try {
     const fixture = resolve(
@@ -1048,7 +1093,7 @@ test("exercises the exact injected handle consumer through persistent NVDA op 17
           PYTHON,
           fixture,
           root,
-          digest(PYTHON),
+          PYTHON_BINDING.sha256,
           digest(fixture),
           pathDigest(root),
         ]),

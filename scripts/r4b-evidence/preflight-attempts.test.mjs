@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -17,7 +17,7 @@ import {
   validateAttempt002Lifecycle,
   validateAttempt002BuildAbortRecords,
   validateAttempt002ReadinessReceipt,
-  verifyAttempt001Seals,
+  validateAttempt001SealedBytes,
 } from "./preflight-attempts.mjs";
 import { PREFLIGHT_SCHEMAS } from "./preflight-contracts.mjs";
 
@@ -310,7 +310,18 @@ test("rejects dirty, multi-parent, and non-authority-only A2 fixture checkouts",
 });
 
 test("verifies the sealed predecessor and validates the exact authority-v3 H/A2 record", () => {
-  assert.equal(verifyAttempt001Seals().result.status, "BLOCKED");
+  const resultBytes = readFileSync(
+    new URL("./fixtures/attempt-001/sanitized-result.fixture", import.meta.url),
+  );
+  const receiptBytes = readFileSync(
+    new URL("./fixtures/attempt-001/discard-receipt.fixture", import.meta.url),
+  );
+  assert.equal(validateAttempt001SealedBytes(resultBytes, receiptBytes).result.status, "BLOCKED");
+  assert.throws(
+    () =>
+      validateAttempt001SealedBytes(Buffer.concat([resultBytes, Buffer.from(" ")]), receiptBytes),
+    /immutable result or receipt seal changed/u,
+  );
   const authority = {
     schema: PREFLIGHT_SCHEMAS.attemptAuthority,
     creditable: false,

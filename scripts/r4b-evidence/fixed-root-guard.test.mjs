@@ -116,49 +116,43 @@ test("accepts only an internally issued original-lease tombstone for a deleted t
   }
 });
 
-test(
-  "retains the original native inventory across late-new, replacement, and move attempts",
-  {
-    skip: process.platform !== "win32",
-  },
-  async () => {
-    for (let round = 0; round < 2; round += 1) {
-      for (const attack of ["late-new", "replace", "move"]) {
-        const root = mkdtempSync(resolve(tmpdir(), `fluyo-fixed-retained-${attack}-`));
-        const owned = resolve(root, "owned");
-        const seed = resolve(owned, "seed.txt");
-        try {
-          mkdirSync(owned);
-          writeFileSync(seed, "approved");
-          const approved = inventoryFixedOwnedTree(owned, root, "application approved inventory");
-          if (attack === "late-new") {
-            writeFileSync(resolve(owned, "late.txt"), "late");
-            assert.throws(
-              () => removeFixedOwnedTree(owned, root, approved, "application retained cleanup"),
-              /unknown|missing|inventory|held/iu,
-            );
-            assert.equal(readFileSync(seed, "utf8"), "approved");
-            assert.equal(readFileSync(resolve(owned, "late.txt"), "utf8"), "late");
-          } else if (attack === "replace") {
-            assert.throws(() => unlinkSync(seed), /EPERM|EBUSY|access|used/iu);
-            assert.equal(readFileSync(seed, "utf8"), "approved");
-          } else {
-            assert.throws(
-              () => renameSync(seed, resolve(owned, "moved.txt")),
-              /EPERM|EBUSY|access|used/iu,
-            );
-            assert.equal(existsSync(seed), true);
-            assert.equal(readFileSync(seed, "utf8"), "approved");
-          }
-        } finally {
-          await windowsNativeBoundaryTesting.terminateBrokerForTest(root);
-          rmSync(root, { recursive: true, force: true });
-          assert.equal(existsSync(root), false);
+test("retains the original native inventory across late-new, replacement, and move attempts", async () => {
+  for (let round = 0; round < 2; round += 1) {
+    for (const attack of ["late-new", "replace", "move"]) {
+      const root = mkdtempSync(resolve(tmpdir(), `fluyo-fixed-retained-${attack}-`));
+      const owned = resolve(root, "owned");
+      const seed = resolve(owned, "seed.txt");
+      try {
+        mkdirSync(owned);
+        writeFileSync(seed, "approved");
+        const approved = inventoryFixedOwnedTree(owned, root, "application approved inventory");
+        if (attack === "late-new") {
+          writeFileSync(resolve(owned, "late.txt"), "late");
+          assert.throws(
+            () => removeFixedOwnedTree(owned, root, approved, "application retained cleanup"),
+            /unknown|missing|inventory|held/iu,
+          );
+          assert.equal(readFileSync(seed, "utf8"), "approved");
+          assert.equal(readFileSync(resolve(owned, "late.txt"), "utf8"), "late");
+        } else if (attack === "replace") {
+          assert.throws(() => unlinkSync(seed), /EPERM|EBUSY|access|used/iu);
+          assert.equal(readFileSync(seed, "utf8"), "approved");
+        } else {
+          assert.throws(
+            () => renameSync(seed, resolve(owned, "moved.txt")),
+            /EPERM|EBUSY|access|used/iu,
+          );
+          assert.equal(existsSync(seed), true);
+          assert.equal(readFileSync(seed, "utf8"), "approved");
         }
+      } finally {
+        await windowsNativeBoundaryTesting.terminateBrokerForTest(root);
+        rmSync(root, { recursive: true, force: true });
+        assert.equal(existsSync(root), false);
       }
     }
-  },
-);
+  }
+});
 
 test("anchors writes and detects an adversarial ancestor swap before mutation", () => {
   const root = mkdtempSync(resolve(tmpdir(), "fluyo-fixed-mutation-"));

@@ -122,6 +122,9 @@ export const FROZEN_HARNESS_FILES = Object.freeze([
   "scripts/r4b-evidence/windows-native-test-journal-runner.mjs",
   "scripts/r4b-evidence/windows-native-test-journal-runner.test.mjs",
   "scripts/r4b-evidence/windows-native-boundary.test.mjs",
+  "scripts/r4b-evidence/r4b-test-lanes.mjs",
+  "scripts/r4b-evidence/fixtures/attempt-001/sanitized-result.fixture",
+  "scripts/r4b-evidence/fixtures/attempt-001/discard-receipt.fixture",
   "scripts/r4b-evidence/preflight-attempts.mjs",
   "scripts/r4b-evidence/preflight-attempts.test.mjs",
   "scripts/r4b-evidence/preflight-build.mjs",
@@ -510,15 +513,18 @@ export function validateAttempt002Authority(value) {
   return value;
 }
 
-export function verifyAttempt001Seals() {
+export function validateAttempt001SealedBytes(resultBytes, receiptBytes) {
+  if (!Buffer.isBuffer(resultBytes) || !Buffer.isBuffer(receiptBytes)) {
+    throw new Error("attempt-001 seal validation requires exact result and receipt bytes");
+  }
   if (
-    fileDigest(ATTEMPT_001_PATHS.result) !== ATTEMPT_001_SEALS.result ||
-    fileDigest(ATTEMPT_001_PATHS.receipt) !== ATTEMPT_001_SEALS.receipt
+    digest(resultBytes) !== ATTEMPT_001_SEALS.result ||
+    digest(receiptBytes) !== ATTEMPT_001_SEALS.receipt
   ) {
     throw new Error("attempt-001 immutable result or receipt seal changed");
   }
-  const result = readJson(ATTEMPT_001_PATHS.result);
-  const receipt = readJson(ATTEMPT_001_PATHS.receipt);
+  const result = JSON.parse(resultBytes.toString("utf8"));
+  const receipt = JSON.parse(receiptBytes.toString("utf8"));
   validatePreflightResult(result);
   validatePreflightDiscard(receipt);
   if (
@@ -529,6 +535,23 @@ export function verifyAttempt001Seals() {
     throw new Error("attempt-001 sealed semantics changed");
   }
   return Object.freeze({ result, receipt });
+}
+
+export function verifyAttempt001Seals() {
+  return validateAttempt001SealedBytes(
+    readBoundedRegularFile(
+      ATTEMPT_001_PATHS.result,
+      ROOT,
+      1048576,
+      "attempt-001 operational result read",
+    ),
+    readBoundedRegularFile(
+      ATTEMPT_001_PATHS.receipt,
+      ROOT,
+      1048576,
+      "attempt-001 operational receipt read",
+    ),
+  );
 }
 
 function productTreeDigest() {

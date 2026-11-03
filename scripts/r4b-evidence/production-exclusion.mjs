@@ -19,8 +19,17 @@ export const FORBIDDEN_DEPLOYMENT_MARKERS = Object.freeze([
 const ALLOWED_LOCAL_TEST_SCRIPTS = new Set([
   "test:audit-policy",
   "test:audit-policy:unit",
+  "test:ci:portable",
+  "test:ci:windows-native",
+  "test:r4b:portable",
+  "test:r4b:windows-native",
   "test:r4b:exact",
 ]);
+export const FORBIDDEN_EXACT_FILE_SHA256 = Object.freeze([
+  "48161fe1845ac28d0b214f7e5ed5c709c102300d30e7752297b06c82446643be",
+  "6429c43544f025c9a60ad01e10e5284930b15d952e6467c3a018ad22c1500e1a",
+]);
+const FORBIDDEN_EXACT_FILE_SHA256_SET = new Set(FORBIDDEN_EXACT_FILE_SHA256);
 const SOURCE_EXTENSIONS = new Set([
   ".js",
   ".jsx",
@@ -102,7 +111,12 @@ function regularFiles(root) {
 
 function markerHits(bytes) {
   const text = bytes.toString("utf8");
-  return FORBIDDEN_DEPLOYMENT_MARKERS.filter((marker) => text.includes(marker));
+  const hits = FORBIDDEN_DEPLOYMENT_MARKERS.filter((marker) => text.includes(marker));
+  const exactFileSha256 = sha256(bytes);
+  if (FORBIDDEN_EXACT_FILE_SHA256_SET.has(exactFileSha256)) {
+    hits.push(`fixture-sha256:${exactFileSha256}`);
+  }
+  return hits;
 }
 
 function isProductionScannableFile(path) {

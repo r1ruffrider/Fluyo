@@ -183,11 +183,70 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
-      - name: Test
-        run: npm test
+      - name: Test portable suite
+        run: npm run test:ci:portable
 
-      - name: Test auth approval history validator
-        run: node --test scripts/check-auth-approval-history.test.mjs
+  test_windows_native:
+    name: Tests (Windows native)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact checkout
+        shell: pwsh
+        run: |
+          $actualHead = git rev-parse HEAD
+          if ($actualHead -ne $env:FLUYO_CI_HEAD) {
+            throw "Exact-head mismatch: expected $env:FLUYO_CI_HEAD, got $actualHead"
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Bind test-only Python interpreter
+        shell: pwsh
+        run: |
+          $python = python -c "import os, sys; print(os.path.realpath(sys.executable))"
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($python)) {
+            throw "Unable to resolve the Python test interpreter"
+          }
+          $python = $python.Trim()
+          if (-not [System.IO.Path]::IsPathFullyQualified($python)) {
+            throw "Python test interpreter is not an absolute path: $python"
+          }
+          if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+            throw "Python test interpreter is not a regular file: $python"
+          }
+          $pythonSha256 = (Get-FileHash -LiteralPath $python -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($pythonSha256 -notmatch '^[0-9a-f]{64}$') {
+            throw "Unable to pin the Python test interpreter SHA-256"
+          }
+          "FLUYO_R4B_TEST_PYTHON=$python" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "FLUYO_R4B_TEST_PYTHON_SHA256=$pythonSha256" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Test Windows-native suite
+        run: npm run test:ci:windows-native
 
   build:
     name: Build

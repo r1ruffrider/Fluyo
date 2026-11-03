@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -9,6 +9,7 @@ import {
   requiredPostBuildExclusionTargets,
   evaluatePostBuildExclusionTargets,
   evaluateLaterPlatformExclusionGates,
+  FORBIDDEN_EXACT_FILE_SHA256,
   productionExclusionTesting,
   scanBuiltOutput,
   scanPackagedArtifact,
@@ -80,7 +81,7 @@ test("allows only the exact local evidence test scripts to name the isolated har
   try {
     writeFileSync(
       resolve(root, "package.json"),
-      `${JSON.stringify({ scripts: { "test:audit-policy:unit": "node scripts/r4b-evidence/runner.mjs", "test:r4b:exact": "node scripts/r4b-evidence/runner.mjs" } })}\n`,
+      `${JSON.stringify({ scripts: { "test:audit-policy:unit": "node scripts/r4b-evidence/runner.mjs", "test:ci:portable": "npm run test:r4b:portable", "test:ci:windows-native": "npm run test:r4b:windows-native", "test:r4b:portable": "node scripts/r4b-evidence/runner.mjs", "test:r4b:windows-native": "node scripts/r4b-evidence/runner.mjs", "test:r4b:exact": "node scripts/r4b-evidence/runner.mjs" } })}\n`,
     );
     assert.deepEqual(scanProductionSourceTrees(root), {
       scannedRoots: 7,
@@ -145,6 +146,24 @@ test("requires exhaustive post-build output scans and rejects deploy inclusion",
     );
     assert.throws(
       () => scanPackagedArtifact(badArchive, { kind: "ios-ipa" }),
+      /preflight markers/u,
+    );
+    const fixture = readFileSync(
+      new URL("./fixtures/attempt-001/sanitized-result.fixture", import.meta.url),
+    );
+    assert.equal(FORBIDDEN_EXACT_FILE_SHA256.length, 2);
+    const fixtureOutput = resolve(root, "fixture-contaminated");
+    mkdirSync(fixtureOutput);
+    const flattened = resolve(fixtureOutput, "clean-looking-production.json");
+    writeFileSync(flattened, fixture);
+    assert.throws(
+      () => scanBuiltOutput(fixtureOutput, { kind: "web-standalone" }),
+      /includes preflight bytes/u,
+    );
+    const archive = resolve(root, "renamed-fixture.apk");
+    writeFileSync(archive, storedZip([["assets/config.json", fixture]]));
+    assert.throws(
+      () => scanPackagedArtifact(archive, { kind: "android-apk" }),
       /preflight markers/u,
     );
   } finally {

@@ -433,12 +433,34 @@ describe("native auth executable synthetic kernel", () => {
     expect(workflow).toContain(
       "FLUYO_CI_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
+    expect(workflow.match(/- name: Checkout/g)).toHaveLength(9);
+    expect(workflow.match(/uses: actions\/checkout@v4/g)).toHaveLength(9);
     expect(
       workflow.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g),
-    ).toHaveLength(8);
-    expect(workflow.match(/fetch-depth: 0/g)).toHaveLength(8);
-    expect(workflow.match(/- name: Verify exact checkout/g)).toHaveLength(8);
+    ).toHaveLength(9);
+    expect(workflow.match(/fetch-depth: 0/g)).toHaveLength(9);
+    expect(workflow.match(/- name: Verify exact checkout/g)).toHaveLength(9);
     expect(workflow.match(/test "\$\(git rev-parse HEAD\)" = "\$FLUYO_CI_HEAD"/g)).toHaveLength(8);
+    expect(workflow.match(/\$actualHead = git rev-parse HEAD/g)).toHaveLength(1);
+    expect(workflow.match(/\$actualHead -ne \$env:FLUYO_CI_HEAD/g)).toHaveLength(1);
+
+    const windowsNativeJob = workflow
+      .split(/\n(?=  [a-z_]+:\n)/u)
+      .find((job) => job.startsWith("  test_windows_native:\n"));
+    expect(windowsNativeJob).toBeDefined();
+    expect(windowsNativeJob).toContain("name: Tests (Windows native)");
+    expect(windowsNativeJob).toContain("runs-on: windows-latest");
+    expect(windowsNativeJob).toContain("- name: Test Windows-native suite");
+
+    const verifyStart = windowsNativeJob!.indexOf("      - name: Verify exact checkout\n");
+    const verifyEnd = windowsNativeJob!.indexOf("\n      - name:", verifyStart + 1);
+    expect(verifyStart).toBeGreaterThanOrEqual(0);
+    expect(verifyEnd).toBeGreaterThan(verifyStart);
+    const windowsVerify = windowsNativeJob!.slice(verifyStart, verifyEnd);
+    expect(windowsVerify).toContain("shell: pwsh");
+    expect(windowsVerify).toContain("$actualHead = git rev-parse HEAD");
+    expect(windowsVerify).toContain("if ($actualHead -ne $env:FLUYO_CI_HEAD)");
+    expect(windowsVerify).not.toContain('test "$(git rev-parse HEAD)" = "$FLUYO_CI_HEAD"');
   });
 
   it("carries only validated auth diagnostics and removes the Android sidecar", () => {
