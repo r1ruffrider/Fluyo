@@ -1,8 +1,8 @@
 # R4-B2 discarded-preflight decision packet
 
-Date: 2026-11-02  
-Decision owner: Marlon  
-Coordinator: Adriana Solano  
+Date: 2026-11-02\
+Decision owner: Marlon\
+Coordinator: Adriana Solano\
 Status: **CHOICE A SELECTED — BOUNDED DISCARDED PREFLIGHT AUTHORIZED**
 
 ## Decision record

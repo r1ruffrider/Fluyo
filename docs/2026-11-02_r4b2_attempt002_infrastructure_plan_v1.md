@@ -1,9 +1,9 @@
 # R4-B2 attempt-002 canonical infrastructure plan
 
-Status: **CHOICE A SELECTED; IMPLEMENTATION IN REVIEW; EXECUTION GATED**  
-Owner: Renata Vega  
-Product source: `fea1f5fadb2307ca611379f30461a7ee47861fff`  
-Attempt: `attempt-002-observer`  
+Status: **CHOICE A SELECTED; IMPLEMENTATION IN REVIEW; EXECUTION GATED**\
+Owner: Renata Vega\
+Product source: `fea1f5fadb2307ca611379f30461a7ee47861fff`\
+Attempt: `attempt-002-observer`\
 Qualification: `NON_EVIDENCE`
 
 This file is the canonical attempt-002 plan. It replaces older instructions that built or
