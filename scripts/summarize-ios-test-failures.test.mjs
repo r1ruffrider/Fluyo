@@ -179,6 +179,78 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
     );
   }
 
+  const invariantDiagnosticCases = [
+    ["generation_change_cancels_work_and_blocks_stale_writes", "comparison_start_timeout"],
+    ["generation_change_cancels_work_and_blocks_stale_writes", "comparison_release_timeout"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_initialize"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_receive_callback"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_cancel_callback"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_handle_401"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_handle_403"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_schedule_timeout"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_delayed_announcement"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_sign_out"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_switch_account"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_entrypoint_sequence"],
+  ];
+  assert.equal(invariantDiagnosticCases.length, 12);
+  for (const [corpusId, mismatch] of invariantDiagnosticCases) {
+    const marker = `[auth_corpus_${corpusId}_stage_invariant_${mismatch}]`;
+    writeFileSync(file, `${marker}\n${aggregateFailure} ${privateValues.join(" ")}`);
+    const invariantDiagnostic = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const invariantDiagnosticOutput = `${invariantDiagnostic.stdout}${invariantDiagnostic.stderr}`;
+    assert.equal(
+      invariantDiagnosticOutput,
+      `iOS phase failed; phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; corpus=${corpusId}; stage=invariant; mismatch=${mismatch}; raw output discarded\n`,
+    );
+    for (const value of privateValues)
+      assert.equal(invariantDiagnosticOutput.includes(value), false);
+  }
+
+  const [validInvariantCorpus, validInvariantMismatch] = invariantDiagnosticCases[0];
+  const validInvariantMarker = `[auth_corpus_${validInvariantCorpus}_stage_invariant_${validInvariantMismatch}]`;
+  for (const invalidInvariantMarker of [
+    "[auth_corpus_evidence_is_closed_and_mutation_safe_stage_invariant_comparison_start_timeout]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_terminal_not_fenced_after_initialize]",
+    "[auth_corpus_private_value_stage_invariant_comparison_start_timeout]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_private_value]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_comparison_start_timeout_private]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_comparison_start_timeout]_private",
+  ]) {
+    writeFileSync(
+      file,
+      `${validInvariantMarker}\n${invalidInvariantMarker}\n${aggregateFailure} ${privateValues.join(" ")}`,
+    );
+    const rejectedInvariant = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const rejectedInvariantOutput = `${rejectedInvariant.stdout}${rejectedInvariant.stderr}`;
+    assert.doesNotMatch(rejectedInvariantOutput, /corpus=|stage=|mismatch=/);
+    for (const value of privateValues) assert.equal(rejectedInvariantOutput.includes(value), false);
+  }
+
+  writeFileSync(
+    file,
+    `${validInvariantMarker}\n[auth_corpus_callback_cancel_stage_invariant_checkpoint]\n${aggregateFailure} ${privateValues.join(" ")}`,
+  );
+  const invariantOutranksCheckpoint = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${invariantOutranksCheckpoint.stdout}${invariantOutranksCheckpoint.stderr}`,
+    new RegExp(
+      `corpus=${validInvariantCorpus}; stage=invariant; mismatch=${validInvariantMismatch}`,
+    ),
+  );
+
   for (const invalidCheckpoint of [
     "[auth_corpus_private_value_stage_step_checkpoint]",
     "[auth_corpus_callback_cancel_stage_private_value_checkpoint]",
@@ -270,6 +342,27 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
     [...summarizerCheckpointCorpusIds].sort(),
     ["corpus_manifest", ...corpusRows].sort(),
   );
+  const expectedInvariantDeclarationStrings = [
+    ...new Set(invariantDiagnosticCases.flatMap(([corpusId, mismatch]) => [corpusId, mismatch])),
+  ].sort();
+  const summarizerInvariantStart = summarizerSource.indexOf(
+    "const invariantDiagnosticsByCorpus = new Map([",
+  );
+  const summarizerInvariantEnd = summarizerSource.indexOf(
+    "]);\nconst traceValuePattern",
+    summarizerInvariantStart,
+  );
+  assert.notEqual(summarizerInvariantStart, -1);
+  assert.notEqual(summarizerInvariantEnd, -1);
+  const summarizerInvariantDeclaration = summarizerSource.slice(
+    summarizerInvariantStart,
+    summarizerInvariantEnd,
+  );
+  const summarizerInvariantStrings = [
+    ...summarizerInvariantDeclaration.matchAll(/"([a-z0-9_]+)"/g),
+  ].map((match) => match[1]);
+  assert.equal(summarizerInvariantStrings.length, 14);
+  assert.deepEqual([...summarizerInvariantStrings].sort(), expectedInvariantDeclarationStrings);
 
   assert.deepEqual(
     [...new Set(swiftCheckpointIds)].sort(),
@@ -332,6 +425,64 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
       ),
     ].length,
     requiredRunStages.length,
+  );
+
+  const invariantDiagnosticSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private static let invariantDiagnosticsByCorpus"),
+    swiftTestSource.indexOf("private static let diagnosticCorpusId"),
+  );
+  const swiftInvariantStrings = [...invariantDiagnosticSource.matchAll(/"([a-z0-9_]+)"/g)].map(
+    (match) => match[1],
+  );
+  assert.equal(swiftInvariantStrings.length, 14);
+  assert.deepEqual([...swiftInvariantStrings].sort(), expectedInvariantDeclarationStrings);
+  for (const [, mismatch] of invariantDiagnosticCases) {
+    assert.equal([...swiftTestSource.matchAll(new RegExp(`"${mismatch}"`, "g"))].length >= 2, true);
+  }
+  const generationCoordination = swiftTestSource.slice(
+    swiftTestSource.indexOf("private func verifyEveryDestructiveMutationRejectsStaleGeneration()"),
+    swiftTestSource.indexOf("private func verifyCallbackValidationCancellationPrecedesPurge()"),
+  );
+  assert.match(
+    generationCoordination,
+    /if !comparisonStarted \{[\s\S]*generations\.releaseComparison\(\)[\s\S]*_ = await mutation\.value[\s\S]*comparison_start_timeout/,
+  );
+  assert.match(
+    generationCoordination,
+    /let applied = await mutation\.value; await activation\.value[\s\S]*comparisonReleaseTimedOut\(\)[\s\S]*comparison_release_timeout/,
+  );
+  const generationCell = swiftTestSource.slice(
+    swiftTestSource.indexOf("private final class GenerationCell"),
+    swiftTestSource.indexOf("private actor ScriptProvider"),
+  );
+  assert.doesNotMatch(generationCell, /XCTAssert/);
+  assert.match(generationCell, /func waitComparisonStarted\(\) -> Bool/);
+  assert.match(generationCell, /releaseTimedOut = !released/);
+  const terminalEntryPoints = swiftTestSource.slice(
+    swiftTestSource.indexOf("private func exerciseTerminalEntryPoints"),
+    swiftTestSource.indexOf("private func makeCoordinator"),
+  );
+  const entrypointMismatches = invariantDiagnosticCases
+    .filter(
+      ([corpusId, mismatch]) =>
+        corpusId === "evidence_is_closed_and_mutation_safe" &&
+        mismatch !== "terminal_not_fenced_after_entrypoint_sequence",
+    )
+    .map(([, mismatch]) => mismatch);
+  assert.equal(entrypointMismatches.length, 9);
+  for (const mismatch of entrypointMismatches) {
+    assert.match(
+      terminalEntryPoints,
+      new RegExp(`try await requireTerminalFence\\(coordinator, "${mismatch}"\\)`),
+    );
+  }
+  assert.match(
+    swiftTestSource,
+    /case "evidence_is_closed_and_mutation_safe":[\s\S]*let terminal = await coordinator\.isTerminalFenced\(\)[\s\S]*terminal_not_fenced_after_entrypoint_sequence[\s\S]*XCTAssertTrue\(terminal\)/,
+  );
+  assert.match(
+    swiftTestSource,
+    /private func failInvariant[\s\S]*print\(marker\)[\s\S]*XCTFail\(marker[\s\S]*throw CorpusError\.invalid/,
   );
 
   writeFileSync(
@@ -547,6 +698,10 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   const annotationTest =
     "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups";
   const annotationCases = [
+    ...invariantDiagnosticCases.map(([corpusId, mismatch]) => [
+      `[auth_corpus_${corpusId}_stage_invariant_${mismatch}]`,
+      `corpus=${corpusId}; stage=invariant; mismatch=${mismatch}`,
+    ]),
     [
       "[auth_corpus_callback_cancel_stage_invariant_checkpoint]",
       "corpus=callback_cancel; stage=invariant; mismatch=assertion",

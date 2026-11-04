@@ -14,6 +14,18 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case rejectedWrites = "rejected_writes"
         case completions, exchange, generation, terminal, invariant
     }
+    private static let invariantDiagnosticsByCorpus: [String: Set<String>] = [
+        "generation_change_cancels_work_and_blocks_stale_writes": [
+            "comparison_start_timeout", "comparison_release_timeout",
+        ],
+        "evidence_is_closed_and_mutation_safe": [
+            "terminal_not_fenced_after_initialize", "terminal_not_fenced_after_receive_callback",
+            "terminal_not_fenced_after_cancel_callback", "terminal_not_fenced_after_handle_401",
+            "terminal_not_fenced_after_handle_403", "terminal_not_fenced_after_schedule_timeout",
+            "terminal_not_fenced_after_delayed_announcement", "terminal_not_fenced_after_sign_out",
+            "terminal_not_fenced_after_switch_account", "terminal_not_fenced_after_entrypoint_sequence",
+        ],
+    ]
     private static let diagnosticCorpusId = "cold_start_without_candidate"
     private static let checkpointCorpusIds: Set<String> = [
         "corpus_manifest",
@@ -105,6 +117,14 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let rejectedCheckpoint = selectCorpusCheckpoint(privateInput, .step)
         XCTAssertEqual(rejectedCheckpoint, "[auth_corpus_stage_diagnostic_rejected]")
         XCTAssertFalse(rejectedCheckpoint.contains(privateInput))
+        for (corpusId, mismatches) in Self.invariantDiagnosticsByCorpus {
+            for mismatch in mismatches {
+                XCTAssertEqual(selectInvariantDiagnostic(corpusId, mismatch), "[auth_corpus_\(corpusId)_stage_invariant_\(mismatch)]")
+            }
+        }
+        let rejectedInvariant = selectInvariantDiagnostic(privateInput, privateInput)
+        XCTAssertEqual(rejectedInvariant, "[auth_corpus_stage_diagnostic_rejected]")
+        XCTAssertFalse(rejectedInvariant.contains(privateInput))
     }
 
     private func run(_ vector: Vector, checkpoints: Bool = false) async throws {
@@ -203,7 +223,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "timeout30": await coordinator.scheduleTimeout(.totalActionable)
         case "callback_purge_fail", "cleanup_each_failure":
             await ports.callback.setPurgeResult(.failed); await coordinator.signOut(); if step == "cleanup_each_failure" { try await verifyEveryCleanupFailureLatches() }; return 1
-        case "terminal_entrypoints": await exerciseTerminalEntryPoints(coordinator); return 9
+        case "terminal_entrypoints": try await exerciseTerminalEntryPoints(coordinator); return 9
         case "effect_drain": break
         default: XCTFail("unknown closed step"); throw CorpusError.invalid
         }
@@ -225,7 +245,10 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "403_never_refreshes_or_signs_out": let calls = await ports.provider.refreshCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertEqual(snapshot.state, .safeTerminalError); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
         case "offline_never_confirms_new_owner_or_expands_access": let calls = await ports.provider.verifyCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
         case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness(); try await verifyPostFenceCancellationIsIrrevocable(); try await verifySuppressedStaleLifecycle()
-        case "evidence_is_closed_and_mutation_safe": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal)
+        case "evidence_is_closed_and_mutation_safe":
+            let terminal = await coordinator.isTerminalFenced()
+            if !terminal { try failInvariant(id, "terminal_not_fenced_after_entrypoint_sequence") }
+            XCTAssertTrue(terminal)
         case "no_op_telemetry_has_zero_retention_and_zero_transport": XCTAssertEqual(Mirror(reflecting: TrapTelemetry()).children.count, 0)
         default: break
         }
@@ -402,9 +425,19 @@ final class AuthRuntimeKernelTests: XCTestCase {
         do {
             let p = ScriptPorts(times: [0]); await p.callback.seed(); p.generations.pauseAfterComparison(1)
             let callback = p.callback, generations = p.generations
-            let mutation = Task.detached { await callback.purge(generation: 1) }; await Task.detached { generations.waitComparisonStarted() }.value
+            let mutation = Task.detached { await callback.purge(generation: 1) }
+            let comparisonStarted = await Task.detached { generations.waitComparisonStarted() }.value
+            if !comparisonStarted {
+                generations.releaseComparison()
+                _ = await mutation.value
+                try failInvariant("generation_change_cancels_work_and_blocks_stale_writes", "comparison_start_timeout")
+            }
             let activation = Task.detached { generations.activate(2) }; await Task.yield(); generations.releaseComparison()
-            let applied = await mutation.value; XCTAssertEqual(applied, .applied); await activation.value; let pendingAfterMutation = await p.callback.hasPending(); XCTAssertFalse(pendingAfterMutation)
+            let applied = await mutation.value; await activation.value
+            if generations.comparisonReleaseTimedOut() {
+                try failInvariant("generation_change_cancels_work_and_blocks_stale_writes", "comparison_release_timeout")
+            }
+            XCTAssertEqual(applied, .applied); let pendingAfterMutation = await p.callback.hasPending(); XCTAssertFalse(pendingAfterMutation)
             await p.callback.seed(); let stale = await p.callback.purge(generation: 1), pendingAfterStale = await p.callback.hasPending(); XCTAssertEqual(stale, .staleGeneration); XCTAssertTrue(pendingAfterStale)
         }
         do { let p = ScriptPorts(times: [0]); await p.vault.seed(); p.generations.activate(2); let outcome = await p.vault.clear(generation: 1), stored = await p.vault.hasStoredCandidate(); XCTAssertEqual(outcome, .staleGeneration); XCTAssertTrue(stored) }
@@ -498,8 +531,20 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.count, 1); XCTAssertEqual(history.first?.sequence, effect.sequence)
     }
 
-    private func exerciseTerminalEntryPoints(_ coordinator: AuthRuntimeCoordinator) async {
-        await coordinator.initialize(online: true); await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); await coordinator.cancelCallback(); await coordinator.handle401(SyntheticAuthFixture.candidate()); await coordinator.handle403(); await coordinator.scheduleTimeout(.providerOrApiStep); await coordinator.scheduleDelayedAnnouncement(.safeTerminalError, priority: .assertive); await coordinator.signOut(); await coordinator.switchAccount()
+    private func exerciseTerminalEntryPoints(_ coordinator: AuthRuntimeCoordinator) async throws {
+        await coordinator.initialize(online: true); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_initialize")
+        await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_receive_callback")
+        await coordinator.cancelCallback(); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_cancel_callback")
+        await coordinator.handle401(SyntheticAuthFixture.candidate()); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_handle_401")
+        await coordinator.handle403(); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_handle_403")
+        await coordinator.scheduleTimeout(.providerOrApiStep); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_schedule_timeout")
+        await coordinator.scheduleDelayedAnnouncement(.safeTerminalError, priority: .assertive); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_delayed_announcement")
+        await coordinator.signOut(); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_sign_out")
+        await coordinator.switchAccount(); try await requireTerminalFence(coordinator, "terminal_not_fenced_after_switch_account")
+    }
+
+    private func requireTerminalFence(_ coordinator: AuthRuntimeCoordinator, _ mismatch: String) async throws {
+        guard await coordinator.isTerminalFenced() else { try failInvariant("evidence_is_closed_and_mutation_safe", mismatch) }
     }
 
     private func makeCoordinator(_ ports: ScriptPorts, generation: UInt64 = 1) -> AuthRuntimeCoordinator { .init(provider: ports.provider, vault: ports.vault, callbackStore: ports.callback, clock: ports.clock, ownerStore: ports.owner, telemetry: TrapTelemetry(), initialGeneration: generation) }
@@ -537,6 +582,16 @@ final class AuthRuntimeKernelTests: XCTestCase {
     private func selectCorpusCheckpoint(_ corpusId: String, _ stage: CorpusCheckpointStage) -> String {
         guard Self.checkpointCorpusIds.contains(corpusId) else { return "[auth_corpus_stage_diagnostic_rejected]" }
         return "[auth_corpus_\(corpusId)_stage_\(stage.rawValue)_checkpoint]"
+    }
+    private func selectInvariantDiagnostic(_ corpusId: String, _ mismatch: String) -> String {
+        guard Self.invariantDiagnosticsByCorpus[corpusId]?.contains(mismatch) == true else { return "[auth_corpus_stage_diagnostic_rejected]" }
+        return "[auth_corpus_\(corpusId)_stage_invariant_\(mismatch)]"
+    }
+    private func failInvariant(_ corpusId: String, _ mismatch: String, file: StaticString = #filePath, line: UInt = #line) throws -> Never {
+        let marker = selectInvariantDiagnostic(corpusId, mismatch)
+        print(marker)
+        XCTFail(marker, file: file, line: line)
+        throw CorpusError.invalid
     }
     private func emitCorpusCheckpoint(_ corpusId: String, _ stage: CorpusCheckpointStage, enabled: Bool = true) {
         guard enabled else { return }
@@ -591,12 +646,13 @@ private actor CompletionAudit {
     func values() -> [String] { entries }
 }
 private final class GenerationCell: @unchecked Sendable {
-    private let lock = NSLock(); private var value: UInt64 = 1, pausedGeneration: UInt64?; private var comparisonStarted = DispatchSemaphore(value: 0), comparisonRelease = DispatchSemaphore(value: 0)
+    private let lock = NSLock(); private var value: UInt64 = 1, pausedGeneration: UInt64?, releaseTimedOut = false; private var comparisonStarted = DispatchSemaphore(value: 0), comparisonRelease = DispatchSemaphore(value: 0)
     func activate(_ generation: UInt64) { lock.lock(); defer { lock.unlock() }; if generation > value { value = generation } }
-    func pauseAfterComparison(_ generation: UInt64) { lock.lock(); pausedGeneration = generation; comparisonStarted = .init(value: 0); comparisonRelease = .init(value: 0); lock.unlock() }
-    func waitComparisonStarted() { XCTAssertEqual(comparisonStarted.wait(timeout: .now() + 5), .success) }
+    func pauseAfterComparison(_ generation: UInt64) { lock.lock(); pausedGeneration = generation; releaseTimedOut = false; comparisonStarted = .init(value: 0); comparisonRelease = .init(value: 0); lock.unlock() }
+    func waitComparisonStarted() -> Bool { comparisonStarted.wait(timeout: .now() + 5) == .success }
     func releaseComparison() { comparisonRelease.signal() }
-    func compareAndMutate(_ generation: UInt64, _ mutation: () -> Void) -> Bool { lock.lock(); defer { lock.unlock() }; guard value == generation else { return false }; if pausedGeneration == generation { comparisonStarted.signal(); XCTAssertEqual(comparisonRelease.wait(timeout: .now() + 5), .success); pausedGeneration = nil }; mutation(); return true }
+    func comparisonReleaseTimedOut() -> Bool { lock.lock(); defer { lock.unlock() }; return releaseTimedOut }
+    func compareAndMutate(_ generation: UInt64, _ mutation: () -> Void) -> Bool { lock.lock(); defer { lock.unlock() }; guard value == generation else { return false }; if pausedGeneration == generation { comparisonStarted.signal(); let released = comparisonRelease.wait(timeout: .now() + 5) == .success; releaseTimedOut = !released; pausedGeneration = nil; guard released else { return false } }; mutation(); return true }
 }
 private final class ScriptPorts {
     let audit: Audit, completions: CompletionAudit, generations: GenerationCell, provider: ScriptProvider, vault: ScriptVault, callback: ScriptCallback, clock: ScriptClock, owner: ScriptOwner

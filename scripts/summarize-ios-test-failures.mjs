@@ -62,6 +62,27 @@ const checkpointStages = new Set([
   "terminal",
   "invariant",
 ]);
+const invariantDiagnosticsByCorpus = new Map([
+  [
+    "generation_change_cancels_work_and_blocks_stale_writes",
+    new Set(["comparison_start_timeout", "comparison_release_timeout"]),
+  ],
+  [
+    "evidence_is_closed_and_mutation_safe",
+    new Set([
+      "terminal_not_fenced_after_initialize",
+      "terminal_not_fenced_after_receive_callback",
+      "terminal_not_fenced_after_cancel_callback",
+      "terminal_not_fenced_after_handle_401",
+      "terminal_not_fenced_after_handle_403",
+      "terminal_not_fenced_after_schedule_timeout",
+      "terminal_not_fenced_after_delayed_announcement",
+      "terminal_not_fenced_after_sign_out",
+      "terminal_not_fenced_after_switch_account",
+      "terminal_not_fenced_after_entrypoint_sequence",
+    ]),
+  ],
+]);
 const traceValuePattern =
   "(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)";
 const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
@@ -74,6 +95,8 @@ const diagnosticFallbackPattern =
 const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
 const checkpointCandidatePattern =
   /\[auth_corpus_([^\]\r\n]{1,128})_stage_([^\]\r\n]{1,64})_checkpoint([^\]\r\n]{0,128})\]([A-Za-z0-9_]?)/g;
+const invariantDiagnosticCandidatePattern =
+  /\[auth_corpus_([^\]\r\n]{1,128})_stage_invariant_([^\]\r\n]{1,128})\]([A-Za-z0-9_]?)/g;
 
 const args = process.argv.slice(2);
 const githubAnnotationIndex = args.indexOf("--github-annotation");
@@ -167,6 +190,23 @@ const test =
 const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
+const invariantDiagnosticCandidates = [...raw.matchAll(invariantDiagnosticCandidatePattern)].filter(
+  (candidate) =>
+    !(
+      candidate[2] === "checkpoint" &&
+      candidate[3] === "" &&
+      checkpointCorpusIds.has(candidate[1])
+    ),
+);
+const invariantDiagnosticCandidate = invariantDiagnosticCandidates.at(-1);
+const invariantDiagnostic =
+  invariantDiagnosticCandidate &&
+  invariantDiagnosticCandidate[3] === "" &&
+  invariantDiagnosticsByCorpus
+    .get(invariantDiagnosticCandidate[1])
+    ?.has(invariantDiagnosticCandidate[2])
+    ? invariantDiagnosticCandidate
+    : null;
 const checkpointCandidates = [...raw.matchAll(checkpointCandidatePattern)];
 const checkpointCandidate = checkpointCandidates.at(-1);
 const checkpoint =
@@ -183,7 +223,7 @@ const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
 const compileFailurePattern =
   /(?:\b(?:SwiftCompile|SwiftEmitModule|EmitSwiftModule)\b[^\r\n]*(?:failed|failure|nonzero exit)|failed to build module|\.swift:\d+:\d+:\s*error:)/i;
 const category =
-  authDiagnostic || checkpoint || diagnosticFallback || diagnosticUnavailable
+  invariantDiagnostic || authDiagnostic || checkpoint || diagnosticFallback || diagnosticUnavailable
     ? "auth_contract"
     : /linker command failed|undefined symbol/i.test(raw)
       ? "link"
@@ -200,24 +240,32 @@ const category =
                 : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
                   ? "assertion"
                   : "unknown";
-const boundedDiagnostic = authDiagnostic
-  ? authDiagnostic[2]
-    ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
-    : authDiagnostic[3]
-      ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence_unavailable`
-      : authDiagnostic[4]
-        ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
-        : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
-  : checkpoint
-    ? `; corpus=${checkpoint[1]}; stage=${checkpoint[2]}; mismatch=assertion`
-    : diagnosticFallback
-      ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
-      : diagnosticUnavailable
-        ? "; stage=diagnostic; mismatch=unavailable"
-        : "";
+const boundedDiagnostic = invariantDiagnostic
+  ? `; corpus=${invariantDiagnostic[1]}; stage=invariant; mismatch=${invariantDiagnostic[2]}`
+  : authDiagnostic
+    ? authDiagnostic[2]
+      ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
+      : authDiagnostic[3]
+        ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence_unavailable`
+        : authDiagnostic[4]
+          ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
+          : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
+    : checkpoint
+      ? `; corpus=${checkpoint[1]}; stage=${checkpoint[2]}; mismatch=assertion`
+      : diagnosticFallback
+        ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
+        : diagnosticUnavailable
+          ? "; stage=diagnostic; mismatch=unavailable"
+          : "";
 if (githubAnnotation) {
   const fields = [`phase=${phase}`, `category=${category}`];
-  if (authDiagnostic) {
+  if (invariantDiagnostic) {
+    fields.push(
+      `corpus=${invariantDiagnostic[1]}`,
+      "stage=invariant",
+      `mismatch=${invariantDiagnostic[2]}`,
+    );
+  } else if (authDiagnostic) {
     fields.push(`corpus=${authDiagnostic[1]}`);
     if (authDiagnostic[2]) {
       fields.push("stage=snapshot", `mismatch=${authDiagnostic[2]}`);
