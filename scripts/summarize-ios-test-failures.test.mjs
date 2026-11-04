@@ -540,7 +540,7 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   );
   assert.match(
     aggregateMethod,
-    /continueAfterFailure = true[\s\S]*let observer = try requireCorpusStageObserver\(\)[\s\S]*observeStage\("corpus_manifest", \.manifest, observer: observer\)[\s\S]*let rows = try loadCorpus\(\)/,
+    /continueAfterFailure = true[\s\S]*let observer = corpusStageObserver[\s\S]*observer\.reset\(\)[\s\S]*defer \{ observer\.reset\(\) \}[\s\S]*observeStage\("corpus_manifest", \.manifest, observer: observer\)[\s\S]*let rows = try loadCorpus\(\)/,
   );
   assert.match(aggregateMethod, /run\(vector, observer: observer\)/);
   assert.match(aggregateMethod, /try closeObservedStage\(observer\)/);
@@ -585,17 +585,43 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   );
   assert.doesNotMatch(runMethod, /emitCorpusCheckpoint/);
 
+  const observerClassSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private final class CorpusStageObserver"),
+    swiftTestSource.indexOf("private static let regularFailureStages"),
+  );
+  const recordOverrideSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("override func record(_ issue: XCTIssue)"),
+    swiftTestSource.indexOf("private static let regularFailureStages"),
+  );
   const observerSource = swiftTestSource.slice(
-    swiftTestSource.indexOf("private func requireCorpusStageObserver"),
+    swiftTestSource.indexOf("private func observeStage"),
     swiftTestSource.indexOf("private func failInvariant"),
   );
-  assert.match(observerSource, /guard let testRun else/);
-  assert.match(observerSource, /\[auth_corpus_diagnostic_unavailable\]/);
-  assert.match(observerSource, /observer\.testRun\.failureCount > active\.baseline/);
-  assert.doesNotMatch(observerSource, /totalFailureCount/);
+  assert.equal(
+    [...swiftTestSource.matchAll(/override func record\(_ issue: XCTIssue\)/g)].length,
+    1,
+  );
+  assert.equal([...swiftTestSource.matchAll(/super\.record\(issue\)/g)].length, 1);
+  assert.doesNotMatch(swiftTestSource, /override func recordFailure/);
+  assert.doesNotMatch(swiftTestSource, /XCTestRun|failureCount|totalFailureCount/);
+  assert.doesNotMatch(swiftTestSource, /\[auth_corpus_diagnostic_unavailable\]/);
+  assert.match(recordOverrideSource, /corpusStageObserver\.recordAssertion\(\)/);
+  assert.match(recordOverrideSource, /super\.record\(issue\)/);
+  assert.doesNotMatch(recordOverrideSource, /issue\./);
+  assert.doesNotMatch(recordOverrideSource, /XCTFail/);
+  assert.equal([...recordOverrideSource.matchAll(/\brecord\(/g)].length, 2);
+  assert.match(observerClassSource, /private let lock = NSLock\(\)/);
+  assert.match(
+    observerClassSource,
+    /func recordAssertion\(\)[\s\S]*withLock[\s\S]*namedDiagnosticDepth == 0[\s\S]*assertionRecorded = true/,
+  );
+  assert.match(
+    observerClassSource,
+    /func withNamedDiagnostic[\s\S]*withLock \{ namedDiagnosticDepth \+= 1 \}[\s\S]*defer \{ withLock \{ namedDiagnosticDepth -= 1 \} \}/,
+  );
   assert.match(
     observerSource,
-    /catch CorpusError\.diagnosticAbort[\s\S]*throw CorpusError\.diagnosticAbort[\s\S]*catch \{[\s\S]*failureCount > active\.baseline[\s\S]*failRecordedAssertion/,
+    /catch CorpusError\.diagnosticAbort[\s\S]*observer\.reset\(\)[\s\S]*throw CorpusError\.diagnosticAbort[\s\S]*catch \{[\s\S]*observer\.finishStage\(\)[\s\S]*failRecordedAssertion/,
   );
   assert.match(
     observerSource,
@@ -603,8 +629,12 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   );
   assert.match(
     observerSource,
-    /print\(marker\); XCTFail\(marker[\s\S]*throw CorpusError\.diagnosticAbort/,
+    /private func failRecordedAssertion[\s\S]*print\(marker\)[\s\S]*throw CorpusError\.diagnosticAbort/,
   );
+  const genericFailureSource = observerSource.slice(
+    observerSource.indexOf("private func failRecordedAssertion"),
+  );
+  assert.doesNotMatch(genericFailureSource, /XCTFail|\.record\(/);
 
   const invariantDiagnosticSource = swiftTestSource.slice(
     swiftTestSource.indexOf("private static let invariantDiagnosticsByCorpus"),
@@ -657,15 +687,20 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   }
   assert.match(
     swiftTestSource,
-    /case "evidence_is_closed_and_mutation_safe":[\s\S]*let terminal = await coordinator\.isTerminalFenced\(\)[\s\S]*terminal_not_fenced_after_entrypoint_sequence[\s\S]*XCTAssertTrue\(terminal\)/,
+    /case "evidence_is_closed_and_mutation_safe":[\s\S]*let terminal = await coordinator\.isTerminalFenced\(\)[\s\S]*if !terminal \{ try failInvariant\(id, "terminal_not_fenced_after_entrypoint_sequence"\) \}/,
+  );
+  const evidenceInvariant = swiftTestSource.slice(
+    swiftTestSource.indexOf('case "evidence_is_closed_and_mutation_safe":'),
+    swiftTestSource.indexOf('case "no_op_telemetry_has_zero_retention_and_zero_transport"'),
+  );
+  assert.doesNotMatch(evidenceInvariant, /XCTAssertTrue\(terminal\)/);
+  assert.match(
+    swiftTestSource,
+    /private func failInvariant[\s\S]*print\(marker\)[\s\S]*corpusStageObserver\.withNamedDiagnostic \{ XCTFail\(marker[\s\S]*throw CorpusError\.diagnosticAbort/,
   );
   assert.match(
     swiftTestSource,
-    /private func failInvariant[\s\S]*print\(marker\)[\s\S]*XCTFail\(marker[\s\S]*throw CorpusError\.diagnosticAbort/,
-  );
-  assert.match(
-    swiftTestSource,
-    /private func requireCorpusMatch[\s\S]*XCTFail\(boundedMarker[\s\S]*throw CorpusError\.diagnosticAbort/,
+    /private func requireCorpusMatch[\s\S]*corpusStageObserver\.withNamedDiagnostic \{ XCTFail\(boundedMarker[\s\S]*throw CorpusError\.diagnosticAbort/,
   );
 
   writeFileSync(

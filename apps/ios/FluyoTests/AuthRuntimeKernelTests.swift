@@ -14,11 +14,54 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case rejectedWrites = "rejected_writes"
         case completions, exchange, generation, terminal, invariant
     }
-    private final class CorpusStageObserver {
-        struct ActiveStage { let corpusId: String, stage: CorpusCheckpointStage, baseline: Int }
-        let testRun: XCTestRun
-        var activeStage: ActiveStage?
-        init(_ testRun: XCTestRun) { self.testRun = testRun }
+    private final class CorpusStageObserver: @unchecked Sendable {
+        struct ActiveStage {
+            let corpusId: String, stage: CorpusCheckpointStage
+            var assertionRecorded: Bool
+        }
+        private let lock = NSLock()
+        private var activeStage: ActiveStage?
+        private var namedDiagnosticDepth = 0
+
+        func begin(_ corpusId: String, _ stage: CorpusCheckpointStage) {
+            withLock { activeStage = .init(corpusId: corpusId, stage: stage, assertionRecorded: false) }
+        }
+        func recordAssertion() {
+            withLock {
+                guard namedDiagnosticDepth == 0, var activeStage else { return }
+                activeStage.assertionRecorded = true
+                self.activeStage = activeStage
+            }
+        }
+        func finishStage() -> ActiveStage? {
+            withLock {
+                guard let activeStage else { return nil }
+                self.activeStage = nil
+                return activeStage.assertionRecorded ? activeStage : nil
+            }
+        }
+        func reset() {
+            withLock {
+                activeStage = nil
+                namedDiagnosticDepth = 0
+            }
+        }
+        func withNamedDiagnostic(_ operation: () -> Void) {
+            withLock { namedDiagnosticDepth += 1 }
+            defer { withLock { namedDiagnosticDepth -= 1 } }
+            operation()
+        }
+        private func withLock<T>(_ operation: () -> T) -> T {
+            lock.lock()
+            defer { lock.unlock() }
+            return operation()
+        }
+    }
+    private let corpusStageObserver = CorpusStageObserver()
+
+    override func record(_ issue: XCTIssue) {
+        corpusStageObserver.recordAssertion()
+        super.record(issue)
     }
     private static let regularFailureStages: Set<CorpusCheckpointStage> = [
         .fingerprint, .step, .snapshot, .effects, .drain, .trace, .wipe, .rejectedWrites,
@@ -72,7 +115,9 @@ final class AuthRuntimeKernelTests: XCTestCase {
 
     func testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups() async throws {
         continueAfterFailure = true
-        let observer = try requireCorpusStageObserver()
+        let observer = corpusStageObserver
+        observer.reset()
+        defer { observer.reset() }
         let rows = try await observeStage("corpus_manifest", .manifest, observer: observer) {
             let rows = try loadCorpus(); XCTAssertEqual(rows.filter { $0.kind == "scenario" }.count, 28); XCTAssertEqual(rows.filter { $0.kind == "invariant" }.count, 13); return rows
         }
@@ -272,7 +317,6 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case "evidence_is_closed_and_mutation_safe":
             let terminal = await coordinator.isTerminalFenced()
             if !terminal { try failInvariant(id, "terminal_not_fenced_after_entrypoint_sequence") }
-            XCTAssertTrue(terminal)
         case "no_op_telemetry_has_zero_retention_and_zero_transport": XCTAssertEqual(Mirror(reflecting: TrapTelemetry()).children.count, 0)
         default: break
         }
@@ -618,51 +662,39 @@ final class AuthRuntimeKernelTests: XCTestCase {
         guard isManifest || isRegular || isExchange else { return "[auth_corpus_stage_diagnostic_rejected]" }
         return "[auth_corpus_\(corpusId)_stage_\(stage.rawValue)_assertion_recorded]"
     }
-    private func requireCorpusStageObserver(file: StaticString = #filePath, line: UInt = #line) throws -> CorpusStageObserver {
-        guard let testRun else {
-            let marker = "[auth_corpus_diagnostic_unavailable]"
-            print(marker); XCTFail(marker, file: file, line: line); throw CorpusError.diagnosticAbort
-        }
-        return CorpusStageObserver(testRun)
-    }
     private func observeStage<T>(_ corpusId: String, _ stage: CorpusCheckpointStage, observer: CorpusStageObserver?, operation: () async throws -> T) async throws -> T {
         guard let observer else { return try await operation() }
         try closeObservedStage(observer)
-        observer.activeStage = .init(corpusId: corpusId, stage: stage, baseline: observer.testRun.failureCount)
+        observer.begin(corpusId, stage)
         emitCorpusCheckpoint(corpusId, stage)
         do {
             let result = try await operation()
             try checkObservedStage(observer)
             return result
         } catch CorpusError.diagnosticAbort {
-            observer.activeStage = nil
+            observer.reset()
             throw CorpusError.diagnosticAbort
         } catch {
-            if let active = observer.activeStage, observer.testRun.failureCount > active.baseline {
-                observer.activeStage = nil
-                try failRecordedAssertion(active)
-            }
-            observer.activeStage = nil
+            if let active = observer.finishStage() { try failRecordedAssertion(active) }
             throw error
         }
     }
     private func checkObservedStage(_ observer: CorpusStageObserver) throws {
-        guard let active = observer.activeStage, observer.testRun.failureCount > active.baseline else { return }
-        observer.activeStage = nil
+        guard let active = observer.finishStage() else { return }
         try failRecordedAssertion(active)
     }
     private func closeObservedStage(_ observer: CorpusStageObserver) throws {
         try checkObservedStage(observer)
-        observer.activeStage = nil
     }
-    private func failRecordedAssertion(_ active: CorpusStageObserver.ActiveStage, file: StaticString = #filePath, line: UInt = #line) throws -> Never {
+    private func failRecordedAssertion(_ active: CorpusStageObserver.ActiveStage) throws -> Never {
         let marker = selectRecordedAssertionDiagnostic(active.corpusId, active.stage)
-        print(marker); XCTFail(marker, file: file, line: line); throw CorpusError.diagnosticAbort
+        print(marker)
+        throw CorpusError.diagnosticAbort
     }
     private func failInvariant(_ corpusId: String, _ mismatch: String, file: StaticString = #filePath, line: UInt = #line) throws -> Never {
         let marker = selectInvariantDiagnostic(corpusId, mismatch)
         print(marker)
-        XCTFail(marker, file: file, line: line)
+        corpusStageObserver.withNamedDiagnostic { XCTFail(marker, file: file, line: line) }
         throw CorpusError.diagnosticAbort
     }
     private func emitCorpusCheckpoint(_ corpusId: String, _ stage: CorpusCheckpointStage, enabled: Bool = true) {
@@ -673,7 +705,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         guard !matches else { return }
         let boundedMarker = selectBoundedDiagnostic(corpusId, stage, boundedMismatch)
         print(boundedMarker)
-        XCTFail(boundedMarker, file: file, line: line)
+        corpusStageObserver.withNamedDiagnostic { XCTFail(boundedMarker, file: file, line: line) }
         throw CorpusError.diagnosticAbort
     }
     private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#

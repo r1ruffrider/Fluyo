@@ -196,6 +196,38 @@ describe("native auth executable synthetic kernel", () => {
     expect(swift).toContain("diagnostic_inconsistent");
     expect(swift).toContain("diagnostic_rejected");
     expect(swift).not.toContain("[auth_corpus_diagnostic_unavailable]");
+    expect(swift).not.toContain("XCTestRun");
+    expect(swift).not.toContain("failureCount");
+    expect(swift.match(/override func record\(_ issue: XCTIssue\)/g)).toHaveLength(1);
+    expect(swift.match(/super\.record\(issue\)/g)).toHaveLength(1);
+    expect(swift).not.toContain("override func recordFailure");
+    const recordOverride = swift.slice(
+      swift.indexOf("override func record(_ issue: XCTIssue)"),
+      swift.indexOf("private static let regularFailureStages"),
+    );
+    expect(recordOverride).toContain("corpusStageObserver.recordAssertion()");
+    expect(recordOverride).toContain("super.record(issue)");
+    expect(recordOverride).not.toContain("issue.");
+    expect(recordOverride).not.toContain("XCTFail");
+    expect(recordOverride.match(/\brecord\(/g)).toHaveLength(2);
+    expect(swift).toContain("private let lock = NSLock()");
+    expect(swift).toMatch(
+      /func recordAssertion\(\)[^]*withLock[^]*namedDiagnosticDepth == 0[^]*assertionRecorded = true/,
+    );
+    expect(swift).toMatch(
+      /func withNamedDiagnostic[^]*withLock \{ namedDiagnosticDepth \+= 1 \}[^]*defer \{ withLock \{ namedDiagnosticDepth -= 1 \} \}/,
+    );
+    expect(swift.match(/corpusStageObserver\.withNamedDiagnostic \{ XCTFail/g)).toHaveLength(2);
+    const recordedAssertionFailure = swift.slice(
+      swift.indexOf("private func failRecordedAssertion"),
+      swift.indexOf("private func failInvariant"),
+    );
+    expect(recordedAssertionFailure).toContain("print(marker)");
+    expect(recordedAssertionFailure).toContain("throw CorpusError.diagnosticAbort");
+    expect(recordedAssertionFailure).not.toContain("XCTFail");
+    expect(swift).toMatch(
+      /for step in vector\.steps \{\s*rejected \+= try await observeStage\(vector\.id, \.step, observer: observer\)/,
+    );
     expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
     expect(swift).toContain("entries.count < commands.count");
     expect(swift).toContain("verifyLateTimerRegistrationCancellation");
