@@ -123,6 +123,7 @@ export const FROZEN_HARNESS_FILES = Object.freeze([
   "scripts/r4b-evidence/windows-native-test-journal-runner.test.mjs",
   "scripts/r4b-evidence/windows-native-boundary.test.mjs",
   "scripts/r4b-evidence/r4b-test-lanes.mjs",
+  "scripts/r4b-evidence/test-python-binding.mjs",
   "scripts/r4b-evidence/fixtures/attempt-001/sanitized-result.fixture",
   "scripts/r4b-evidence/fixtures/attempt-001/discard-receipt.fixture",
   "scripts/r4b-evidence/preflight-attempts.mjs",

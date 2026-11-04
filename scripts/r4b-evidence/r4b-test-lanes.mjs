@@ -3,6 +3,8 @@ import { lstatSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { bindTestPythonEnvironment } from "./test-python-binding.mjs";
+
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const EVIDENCE_ROOT = resolve(ROOT, "scripts/r4b-evidence");
 
@@ -72,10 +74,10 @@ export function validateR4bTestLaneInventory() {
   });
 }
 
-function runNode(arguments_) {
+function runNode(arguments_, environment = process.env) {
   const result = spawnSync(process.execPath, arguments_, {
     cwd: ROOT,
-    env: process.env,
+    env: environment,
     stdio: "inherit",
     windowsHide: true,
   });
@@ -110,17 +112,21 @@ if (mode === "portable") {
   );
 } else {
   assertWindowsNativeLane();
+  const { environment } = bindTestPythonEnvironment();
   const selected =
     mode === "windows-native"
       ? WINDOWS_NATIVE_R4B_TESTS
       : [...PORTABLE_R4B_TESTS, ...WINDOWS_NATIVE_R4B_TESTS];
-  runNode([
-    "scripts/r4b-evidence/windows-native-test-journal-runner.mjs",
-    "--",
-    "--test-concurrency=1",
-    "--test",
-    ...selected,
-  ]);
+  runNode(
+    [
+      "scripts/r4b-evidence/windows-native-test-journal-runner.mjs",
+      "--",
+      "--test-concurrency=1",
+      "--test",
+      ...selected,
+    ],
+    environment,
+  );
   if (mode === "exact") {
     const { verifyAttempt001Seals } = await import("./preflight-attempts.mjs");
     verifyAttempt001Seals();
