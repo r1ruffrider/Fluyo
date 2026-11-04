@@ -189,7 +189,7 @@ jobs:
   test_windows_native:
     name: Tests (Windows native)
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:

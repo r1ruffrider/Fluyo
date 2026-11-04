@@ -122,6 +122,7 @@ if (mode === "portable") {
       "scripts/r4b-evidence/windows-native-test-journal-runner.mjs",
       "--",
       "--test-concurrency=1",
+      "--test-reporter=tap",
       "--test",
       ...selected,
     ],

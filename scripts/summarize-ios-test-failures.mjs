@@ -45,6 +45,23 @@ const authCorpusIds = new Set([
   "no_op_telemetry_has_zero_retention_and_zero_transport",
   "evidence_is_closed_and_mutation_safe",
 ]);
+const checkpointCorpusIds = new Set(["corpus_manifest", ...authCorpusIds]);
+const checkpointStages = new Set([
+  "manifest",
+  "fingerprint",
+  "step",
+  "snapshot",
+  "effects",
+  "drain",
+  "trace",
+  "wipe",
+  "rejected_writes",
+  "completions",
+  "exchange",
+  "generation",
+  "terminal",
+  "invariant",
+]);
 const traceValuePattern =
   "(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)";
 const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
@@ -55,6 +72,8 @@ const authDiagnosticPattern = new RegExp(
 const diagnosticFallbackPattern =
   /\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\](?![A-Za-z0-9_])/;
 const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
+const checkpointCandidatePattern =
+  /\[auth_corpus_([^\]\r\n]{1,128})_stage_([^\]\r\n]{1,64})_checkpoint([^\]\r\n]{0,128})\]([A-Za-z0-9_]?)/g;
 
 const args = process.argv.slice(2);
 const githubAnnotationIndex = args.indexOf("--github-annotation");
@@ -135,6 +154,8 @@ const allowedTests = [
   "testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed",
   "testDiagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
 ];
+const aggregateCorpusTest =
+  "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups";
 const test =
   allowedTests.find((name) => {
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -146,12 +167,23 @@ const test =
 const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
+const checkpointCandidates = [...raw.matchAll(checkpointCandidatePattern)];
+const checkpointCandidate = checkpointCandidates.at(-1);
+const checkpoint =
+  checkpointCandidate &&
+  test === aggregateCorpusTest &&
+  checkpointCandidate[3] === "" &&
+  checkpointCandidate[4] === "" &&
+  checkpointCorpusIds.has(checkpointCandidate[1]) &&
+  checkpointStages.has(checkpointCandidate[2])
+    ? checkpointCandidate
+    : null;
 const diagnosticFallback = raw.match(diagnosticFallbackPattern);
 const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
 const compileFailurePattern =
   /(?:\b(?:SwiftCompile|SwiftEmitModule|EmitSwiftModule)\b[^\r\n]*(?:failed|failure|nonzero exit)|failed to build module|\.swift:\d+:\d+:\s*error:)/i;
 const category =
-  authDiagnostic || diagnosticFallback || diagnosticUnavailable
+  authDiagnostic || checkpoint || diagnosticFallback || diagnosticUnavailable
     ? "auth_contract"
     : /linker command failed|undefined symbol/i.test(raw)
       ? "link"
@@ -176,11 +208,13 @@ const boundedDiagnostic = authDiagnostic
       : authDiagnostic[4]
         ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
         : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
-  : diagnosticFallback
-    ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
-    : diagnosticUnavailable
-      ? "; stage=diagnostic; mismatch=unavailable"
-      : "";
+  : checkpoint
+    ? `; corpus=${checkpoint[1]}; stage=${checkpoint[2]}; mismatch=assertion`
+    : diagnosticFallback
+      ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
+      : diagnosticUnavailable
+        ? "; stage=diagnostic; mismatch=unavailable"
+        : "";
 if (githubAnnotation) {
   const fields = [`phase=${phase}`, `category=${category}`];
   if (authDiagnostic) {
@@ -205,6 +239,8 @@ if (githubAnnotation) {
         `actual=${authDiagnostic[8]}`,
       );
     }
+  } else if (checkpoint) {
+    fields.push(`corpus=${checkpoint[1]}`, `stage=${checkpoint[2]}`, "mismatch=assertion");
   } else if (diagnosticFallback) {
     if (test !== "unknown") fields.push(`test=${test}`);
     fields.push(`stage=${diagnosticFallback[1]}`, `mismatch=${diagnosticFallback[2]}`);

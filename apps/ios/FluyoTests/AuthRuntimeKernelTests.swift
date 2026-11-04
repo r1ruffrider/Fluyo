@@ -9,7 +9,29 @@ private enum SyntheticAuthFixture {
 
 final class AuthRuntimeKernelTests: XCTestCase {
     private enum DiagnosticStage: String { case snapshot, trace }
+    private enum CorpusCheckpointStage: String, CaseIterable {
+        case manifest, fingerprint, step, snapshot, effects, drain, trace, wipe
+        case rejectedWrites = "rejected_writes"
+        case completions, exchange, generation, terminal, invariant
+    }
     private static let diagnosticCorpusId = "cold_start_without_candidate"
+    private static let checkpointCorpusIds: Set<String> = [
+        "corpus_manifest",
+        "cold_start_without_candidate", "cold_start_with_candidate", "warm_callback_success", "cold_callback_success",
+        "callback_cancel", "callback_malformed", "callback_expired", "callback_replay", "callback_duplicate_delivery",
+        "callback_unsupported", "callback_overlap_rejected", "refresh_success", "refresh_explicit_revocation",
+        "refresh_transient_failure_preserves_candidate", "refresh_repeated_401_clears", "forbidden_403_preserves_session",
+        "offline_startup_preserves_verified_display_only", "background_foreground", "termination_relaunch_without_transaction",
+        "account_switch_cleanup", "stale_response_discarded", "stale_storage_write_discarded", "vault_corruption_cleanup",
+        "clock_skew", "owner_subject_mismatch", "zero_telemetry_launch", "zero_telemetry_resume", "zero_telemetry_error",
+        "public_state_is_secret_free", "callback_transaction_is_purpose_environment_host_path_and_expiry_bound",
+        "callback_transaction_consumes_once_and_wipes", "valid_verified_session_survives_bad_link",
+        "generation_change_cancels_work_and_blocks_stale_writes", "owner_data_waits_for_private_subject_confirmation",
+        "transient_refresh_failure_preserves_candidate", "explicit_invalidation_and_repeated_401_clear",
+        "403_never_refreshes_or_signs_out", "offline_never_confirms_new_owner_or_expands_access",
+        "cleanup_precedes_signed_out_or_new_owner_exposure", "no_op_telemetry_has_zero_retention_and_zero_transport",
+        "evidence_is_closed_and_mutation_safe",
+    ]
     private struct Vector {
         let kind: String, id: String, initial: String
         let steps: [String], times: [UInt64], completions: [String], snapshots: [String]
@@ -27,8 +49,10 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
 
     func testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups() async throws {
+        continueAfterFailure = false
+        emitCorpusCheckpoint("corpus_manifest", .manifest)
         let rows = try loadCorpus(); XCTAssertEqual(rows.filter { $0.kind == "scenario" }.count, 28); XCTAssertEqual(rows.filter { $0.kind == "invariant" }.count, 13)
-        for (index, vector) in rows.enumerated() { try await run(vector); print("AUTH_KERNEL_VECTOR \(index) \(vector.id) \(vector.digest) PASS") }
+        for (index, vector) in rows.enumerated() { try await run(vector, checkpoints: true); print("AUTH_KERNEL_VECTOR \(index) \(vector.id) \(vector.digest) PASS") }
     }
 
     func testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation() async throws {
@@ -75,26 +99,42 @@ final class AuthRuntimeKernelTests: XCTestCase {
             XCTAssertEqual(wrongCorpus, "[auth_corpus_stage_\(stage.rawValue)_diagnostic_rejected]")
             XCTAssertFalse(invalid.contains(privateInput)); XCTAssertFalse(wrongCorpus.contains("callback_cancel"))
         }
+        for stage in CorpusCheckpointStage.allCases {
+            XCTAssertEqual(selectCorpusCheckpoint(Self.diagnosticCorpusId, stage), "[auth_corpus_\(Self.diagnosticCorpusId)_stage_\(stage.rawValue)_checkpoint]")
+        }
+        let rejectedCheckpoint = selectCorpusCheckpoint(privateInput, .step)
+        XCTAssertEqual(rejectedCheckpoint, "[auth_corpus_stage_diagnostic_rejected]")
+        XCTAssertFalse(rejectedCheckpoint.contains(privateInput))
     }
 
-    private func run(_ vector: Vector) async throws {
+    private func run(_ vector: Vector, checkpoints: Bool = false) async throws {
+        emitCorpusCheckpoint(vector.id, .fingerprint, enabled: checkpoints)
         XCTAssertEqual(vector.digest, Self.digest, vector.id)
         let ports = ScriptPorts(times: vector.times, completionCommands: vector.completions.filter { $0 != "none" })
         let coordinator = makeCoordinator(ports, generation: vector.initial == "overflow" ? .max : 1)
         var rejected = 0
-        for step in vector.steps { rejected += try await execute(step, coordinator, ports) }
+        for step in vector.steps { emitCorpusCheckpoint(vector.id, .step, enabled: checkpoints); rejected += try await execute(step, coordinator, ports) }
+        emitCorpusCheckpoint(vector.id, .snapshot, enabled: checkpoints)
         let snapshots = await coordinator.snapshotHistory().map { normalize($0.0, $0.1) }
         requireCorpusMatch(snapshots == vector.snapshots, vector.id, .snapshot, snapshotMismatch(vector.snapshots, snapshots))
+        emitCorpusCheckpoint(vector.id, .effects, enabled: checkpoints)
         let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); XCTAssertEqual(fullEffectHistory, vector.effects, vector.id)
+        emitCorpusCheckpoint(vector.id, .drain, enabled: checkpoints)
         let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
         let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
-        let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
-        assertFenceTraceSemantics(vector.id, trace)
         XCTAssertTrue(firstDrain.allSatisfy { $0.generation == generation }, vector.id); XCTAssertTrue(secondDrain.isEmpty, vector.id); XCTAssertTrue(staleDrain.isEmpty, vector.id)
-        requireCorpusMatch(trace == vector.trace, vector.id, .trace, traceMismatch(vector.trace, trace)); XCTAssertEqual(wipe, vector.wipe, vector.id); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
+        let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
+        emitCorpusCheckpoint(vector.id, .trace, enabled: checkpoints)
+        assertFenceTraceSemantics(vector.id, trace)
+        requireCorpusMatch(trace == vector.trace, vector.id, .trace, traceMismatch(vector.trace, trace))
+        emitCorpusCheckpoint(vector.id, .wipe, enabled: checkpoints); XCTAssertEqual(wipe, vector.wipe, vector.id)
+        emitCorpusCheckpoint(vector.id, .rejectedWrites, enabled: checkpoints); XCTAssertEqual(rejected, vector.rejectedWrites, vector.id)
+        emitCorpusCheckpoint(vector.id, .completions, enabled: checkpoints)
         XCTAssertEqual(completions, vector.completions.filter { $0 != "none" }, vector.id)
-        if vector.id == "warm_callback_success" { let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") }
-        XCTAssertEqual(generation, vector.generation, vector.id); XCTAssertEqual(terminal, vector.terminal, vector.id)
+        if vector.id == "warm_callback_success" { emitCorpusCheckpoint(vector.id, .exchange, enabled: checkpoints); let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") }
+        emitCorpusCheckpoint(vector.id, .generation, enabled: checkpoints); XCTAssertEqual(generation, vector.generation, vector.id)
+        emitCorpusCheckpoint(vector.id, .terminal, enabled: checkpoints); XCTAssertEqual(terminal, vector.terminal, vector.id)
+        emitCorpusCheckpoint(vector.id, .invariant, enabled: checkpoints)
         try await validateInvariant(vector.id, coordinator, ports)
     }
 
@@ -493,6 +533,14 @@ final class AuthRuntimeKernelTests: XCTestCase {
         if detailed.range(of: boundedDiagnosticPattern, options: .regularExpression) != nil { return detailed }
         let reason = corpusId == Self.diagnosticCorpusId && mismatch == "none" ? "diagnostic_inconsistent" : "diagnostic_rejected"
         return "[auth_corpus_stage_\(stage.rawValue)_\(reason)]"
+    }
+    private func selectCorpusCheckpoint(_ corpusId: String, _ stage: CorpusCheckpointStage) -> String {
+        guard Self.checkpointCorpusIds.contains(corpusId) else { return "[auth_corpus_stage_diagnostic_rejected]" }
+        return "[auth_corpus_\(corpusId)_stage_\(stage.rawValue)_checkpoint]"
+    }
+    private func emitCorpusCheckpoint(_ corpusId: String, _ stage: CorpusCheckpointStage, enabled: Bool = true) {
+        guard enabled else { return }
+        print(selectCorpusCheckpoint(corpusId, stage))
     }
     private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ stage: DiagnosticStage, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) {
         guard !matches else { return }
