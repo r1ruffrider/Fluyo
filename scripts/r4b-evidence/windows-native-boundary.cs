@@ -50,7 +50,9 @@ public static class FluyoNativeBoundary
     private static string BrokerRepositoryRoot;
     private static string BrokerSessionNonce;
     private static string BrokerJournalPath;
+    private static string BrokerRequestedJournalPath;
     private static bool BrokerTestMode;
+    private static string BrokerTestRunId;
     private static ulong BrokerNextSequence = 1;
     private static bool BrokerCrashHeld;
     private static string BrokerHoldState = "CLOSED";
@@ -116,6 +118,21 @@ public static class FluyoNativeBoundary
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct BY_HANDLE_FILE_INFORMATION
+    {
+        public uint FileAttributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+        public uint VolumeSerialNumber;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint NumberOfLinks;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct FILE_DISPOSITION_INFO
     {
         [MarshalAs(UnmanagedType.Bool)] public bool DeleteFile;
@@ -148,6 +165,12 @@ public static class FluyoNativeBoundary
         int informationClass,
         out FILE_ATTRIBUTE_TAG_INFO information,
         uint bufferSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandle(
+        SafeFileHandle handle,
+        out BY_HANDLE_FILE_INFORMATION information);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -222,13 +245,14 @@ public static class FluyoNativeBoundary
     {
         public ulong Volume;
         public string FileId;
+        public ulong NativeFileIndex;
         public string FinalPath;
         public bool Directory;
     }
 
     private sealed class HeldChain : IDisposable
     {
-        public readonly string Root;
+        public string Root;
         public readonly List<SafeFileHandle> Handles = new List<SafeFileHandle>();
         public readonly List<HandleIdentity> Identities = new List<HandleIdentity>();
         public HeldChain(string root) { Root = root; }
@@ -609,16 +633,34 @@ public static class FluyoNativeBoundary
         if (!String.Equals(fileSystem.ToString(), "NTFS", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("NON_NTFS_VOLUME");
     }
 
+    private static string NativeLocalPath(string path)
+    {
+        string value = Path.GetFullPath(path);
+        if (value.StartsWith("\\\\", StringComparison.Ordinal) || value.Length < 3 || value[1] != ':' ||
+            value[2] != '\\' || value.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("LOCAL_PATH_NAMESPACE");
+        return "\\\\?\\" + value;
+    }
+
     private static SafeFileHandle OpenHandle(string path, uint access, uint share, uint disposition, bool directory, bool writeThrough)
     {
         uint flags = FILE_FLAG_OPEN_REPARSE_POINT | (directory ? FILE_FLAG_BACKUP_SEMANTICS : FILE_ATTRIBUTE_NORMAL);
         if (writeThrough) flags |= FILE_FLAG_WRITE_THROUGH;
-        SafeFileHandle handle = CreateFileW(path, access, share, IntPtr.Zero, disposition, flags, IntPtr.Zero);
+        SafeFileHandle handle = CreateFileW(NativeLocalPath(path), access, share, IntPtr.Zero, disposition, flags, IntPtr.Zero);
         if (handle == null || handle.IsInvalid) throw new Win32Exception(Marshal.GetLastWin32Error(), "CreateFileW");
         return handle;
     }
 
     private static HandleIdentity Inspect(SafeFileHandle handle, string expectedPath, bool expectDirectory)
+    {
+        HandleIdentity identity = InspectIdentity(handle, expectDirectory);
+        string expected = CanonicalLocalPath(expectedPath);
+        if (!String.Equals(identity.FinalPath, expected, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("FINAL_PATH_IDENTITY");
+        return identity;
+    }
+
+    private static HandleIdentity InspectIdentity(SafeFileHandle handle, bool expectDirectory)
     {
         FILE_ATTRIBUTE_TAG_INFO tags;
         Win32(GetFileInformationByHandleEx(handle, FileAttributeTagInfo, out tags, (uint)Marshal.SizeOf(typeof(FILE_ATTRIBUTE_TAG_INFO))), "GetFileInformationByHandleEx(FileAttributeTagInfo)");
@@ -628,14 +670,105 @@ public static class FluyoNativeBoundary
         FILE_ID_INFO id;
         id.FileId = new byte[16];
         Win32(GetFileInformationByHandleEx(handle, FileIdInfo, out id, (uint)Marshal.SizeOf(typeof(FILE_ID_INFO))), "GetFileInformationByHandleEx(FileIdInfo)");
+        BY_HANDLE_FILE_INFORMATION native;
+        Win32(GetFileInformationByHandle(handle, out native), "GetFileInformationByHandle");
         StringBuilder final = new StringBuilder(32768);
         uint length = GetFinalPathNameByHandleW(handle, final, (uint)final.Capacity, 0);
         if (length == 0 || length >= final.Capacity) throw new Win32Exception(Marshal.GetLastWin32Error(), "GetFinalPathNameByHandleW");
-        string actual = final.ToString().Replace("\\\\?\\", "").TrimEnd('\\');
-        string expected = Path.GetFullPath(expectedPath).TrimEnd('\\');
-        if (!String.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("FINAL_PATH_IDENTITY:" + actual + ":" + expected);
-        return new HandleIdentity { Volume = id.VolumeSerialNumber, FileId = Hex(id.FileId), FinalPath = expected, Directory = directory };
+        string actual = final.ToString();
+        if (!actual.StartsWith("\\\\?\\", StringComparison.Ordinal) ||
+            actual.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("FINAL_PATH_NAMESPACE");
+        actual = CanonicalLocalPath(actual.Substring(4));
+        if (actual.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("FINAL_PATH_NAMESPACE");
+        ulong fileIndex = ((ulong)native.FileIndexHigh << 32) | native.FileIndexLow;
+        return new HandleIdentity { Volume = id.VolumeSerialNumber, FileId = Hex(id.FileId),
+            NativeFileIndex = fileIndex, FinalPath = actual, Directory = directory };
+    }
+
+    private static void RequireSameIdentity(HandleIdentity expected, HandleIdentity actual)
+    {
+        if (expected.Volume != actual.Volume || expected.FileId != actual.FileId ||
+            !String.Equals(expected.FinalPath, actual.FinalPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("JOURNAL_IDENTITY_MISMATCH");
+    }
+
+    private static string CanonicalLocalPath(string path)
+    {
+        string value = Path.GetFullPath(path);
+        if (value.StartsWith("\\\\", StringComparison.Ordinal) || value.Length < 3 || value[1] != ':' ||
+            value[2] != '\\' || value.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("TRUSTED_TEMP_NAMESPACE");
+        return value.Length == 3 ? value : value.TrimEnd('\\');
+    }
+
+    private static HeldChain OpenTrustedTempRoot()
+    {
+        string candidate = CanonicalLocalPath(Path.GetTempPath());
+        string driveRoot = Path.GetPathRoot(candidate);
+        string[] segments = candidate.Substring(driveRoot.Length)
+            .Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        HeldChain chain = new HeldChain(driveRoot);
+        try
+        {
+            string current = driveRoot;
+            for (int index = -1; index < segments.Length; index++)
+            {
+                if (index >= 0)
+                {
+                    string segment = segments[index];
+                    if (segment == "." || segment == ".." || segment.IndexOf(':') >= 0)
+                        throw new InvalidDataException("TRUSTED_TEMP_SEGMENT");
+                    current = Path.Combine(chain.Identities[chain.Identities.Count - 1].FinalPath, segment);
+                }
+                SafeFileHandle handle = OpenHandle(current,
+                    FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, true, false);
+                try
+                {
+                    HandleIdentity identity = InspectIdentity(handle, true);
+                    if (chain.Identities.Count > 0 && identity.Volume != chain.Identities[0].Volume)
+                        throw new InvalidDataException("TRUSTED_TEMP_VOLUME_TRANSITION");
+                    chain.Handles.Add(handle);
+                    chain.Identities.Add(identity);
+                    handle = null;
+                }
+                finally { if (handle != null) handle.Dispose(); }
+            }
+            chain.Root = chain.Identities[chain.Identities.Count - 1].FinalPath;
+            AssertFixedNtfs(chain.Root);
+            string expectedFileIndex = Environment.GetEnvironmentVariable("FLUYO_TRUSTED_TEMP_FILE_INDEX");
+            ulong fileIndex;
+            HandleIdentity finalIdentity = chain.Identities[chain.Identities.Count - 1];
+            if (!UInt64.TryParse(expectedFileIndex, NumberStyles.None, CultureInfo.InvariantCulture, out fileIndex))
+                throw new InvalidDataException("TRUSTED_TEMP_CAPTURE_DRIFT");
+            if (fileIndex != finalIdentity.NativeFileIndex) throw new InvalidDataException("TRUSTED_TEMP_CAPTURE_INDEX");
+            return chain;
+        }
+        catch { chain.Dispose(); throw; }
+    }
+
+    private static void HoldJournalDescendants(HeldChain chain, string[] segments, bool create)
+    {
+        for (int index = 0; index < segments.Length; index++)
+        {
+            string path = Combine(chain.Root, segments, index + 1);
+            if (create && !CreateDirectoryW(NativeLocalPath(path), IntPtr.Zero) && Marshal.GetLastWin32Error() != ERROR_ALREADY_EXISTS)
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "CreateDirectoryW(JOURNAL_NAMESPACE)");
+            SafeFileHandle handle = OpenHandle(path, FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, true, false);
+            try
+            {
+                HandleIdentity identity = Inspect(handle, path, true);
+                if (identity.Volume != chain.Identities[0].Volume)
+                    throw new InvalidDataException("JOURNAL_VOLUME_TRANSITION");
+                chain.Handles.Add(handle);
+                chain.Identities.Add(identity);
+                handle = null;
+            }
+            finally { if (handle != null) handle.Dispose(); }
+        }
     }
 
     private static HeldChain HoldExistingAncestors(string root, string[] segments, int count)
@@ -1834,47 +1967,57 @@ public static class FluyoNativeBoundary
             (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f'));
     }
 
-    private static string JournalDirectoryForMode(string tempRoot, bool create)
+    private static string[] JournalSegmentsForMode()
     {
-        if (!BrokerTestMode) return Path.Combine(tempRoot, "fluyo-native-broker-journals");
-        string parent = Path.Combine(tempRoot, "fluyo-native-test-broker-journals");
-        string directory = Path.GetDirectoryName(BrokerJournalPath);
-        string runId = Path.GetFileName(directory);
-        if (!IsLowerHex(runId, 64) ||
-            !String.Equals(directory, Path.Combine(parent, runId), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("TEST_JOURNAL_RUN_ID");
-        if (create)
-        {
-            if (!CreateDirectoryW(parent, IntPtr.Zero) && Marshal.GetLastWin32Error() != ERROR_ALREADY_EXISTS)
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "CreateDirectoryW(test journal parent)");
-            if (!CreateDirectoryW(directory, IntPtr.Zero) && Marshal.GetLastWin32Error() != ERROR_ALREADY_EXISTS)
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "CreateDirectoryW(test journal run)");
-        }
-        return directory;
+        if (!BrokerTestMode) return new string[] { "fluyo-native-broker-journals" };
+        if (!IsLowerHex(BrokerTestRunId, 64)) throw new InvalidDataException("TEST_JOURNAL_RUN_ID");
+        return new string[] { "fluyo-native-test-broker-journals", BrokerTestRunId };
     }
 
-    private static string[] JournalSegmentsForMode(string journalDirectory)
+    private static string ExpectedJournalName()
     {
-        return BrokerTestMode
-            ? ValidateSegments("fluyo-native-test-broker-journals/" + Path.GetFileName(journalDirectory))
-            : ValidateSegments("fluyo-native-broker-journals");
+        return Sha256Hex(Encoding.UTF8.GetBytes(BrokerRepositoryRoot + "\0" + (BrokerTestMode ? "test" : "production"))) + ".journal";
+    }
+
+    private static void BindComputedJournalPath(HeldChain chain, string[] segments)
+    {
+        string expectedName = ExpectedJournalName();
+        string requested = BrokerRequestedJournalPath;
+        if (String.IsNullOrWhiteSpace(requested) || requested.StartsWith("\\\\", StringComparison.Ordinal) ||
+            requested.StartsWith("\\??\\", StringComparison.Ordinal) ||
+            requested.StartsWith("\\\\.\\", StringComparison.Ordinal) || requested.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("JOURNAL_PATH_CONTRACT");
+        string[] requestedSegments = requested.Replace('/', '\\').Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        if (requestedSegments.Any(value => value == "." || value == ".."))
+            throw new InvalidDataException("JOURNAL_PATH_CONTRACT");
+        string requestedFull = Path.GetFullPath(requested);
+        if (!String.Equals(Path.GetFileName(requestedFull), expectedName, StringComparison.Ordinal))
+            throw new InvalidDataException("JOURNAL_PATH_CONTRACT");
+        string requestedDirectory = Path.GetDirectoryName(requestedFull);
+        using (SafeFileHandle requestedDirectoryHandle = OpenHandle(requestedDirectory,
+            FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+            OPEN_EXISTING, true, false))
+        {
+            RequireSameIdentity(chain.Identities[chain.Identities.Count - 1],
+                InspectIdentity(requestedDirectoryHandle, true));
+        }
+        BrokerJournalPath = Path.Combine(Combine(chain.Root, segments, segments.Length), expectedName);
     }
 
     private static void OpenJournalBoundary()
     {
-        string tempRoot = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
-        string journalDirectory = JournalDirectoryForMode(tempRoot, true);
-        string name = Path.GetFileName(BrokerJournalPath);
-        string expectedName = Sha256Hex(Encoding.UTF8.GetBytes(BrokerRepositoryRoot + "\0" + (BrokerTestMode ? "test" : "production"))) + ".journal";
-        if (!String.Equals(Path.GetDirectoryName(BrokerJournalPath), journalDirectory, StringComparison.OrdinalIgnoreCase) ||
-            !String.Equals(name, expectedName, StringComparison.Ordinal) || name.Length != 72 ||
-            name.Substring(0, 64).Any(value => !Uri.IsHexDigit(value)))
-            throw new InvalidDataException("JOURNAL_PATH_CONTRACT");
-        if (!BrokerTestMode && !CreateDirectoryW(journalDirectory, IntPtr.Zero) && Marshal.GetLastWin32Error() != ERROR_ALREADY_EXISTS)
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "CreateDirectoryW(journalDirectory)");
-        BrokerJournalChain = HoldExistingAncestors(tempRoot, JournalSegmentsForMode(journalDirectory), BrokerTestMode ? 2 : 1);
+        string[] segments = JournalSegmentsForMode();
+        HeldChain chain = OpenTrustedTempRoot();
+        try
+        {
+            HoldJournalDescendants(chain, segments, true);
+            BindComputedJournalPath(chain, segments);
+            BrokerJournalChain = chain;
+            chain = null;
+        }
+        finally { if (chain != null) chain.Dispose(); }
         uint access = GENERIC_READ | GENERIC_WRITE | FILE_APPEND_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
-        SafeFileHandle created = CreateFileW(BrokerJournalPath, access, FILE_SHARE_READ, IntPtr.Zero, CREATE_NEW,
+        SafeFileHandle created = CreateFileW(NativeLocalPath(BrokerJournalPath), access, FILE_SHARE_READ, IntPtr.Zero, CREATE_NEW,
             FILE_FLAG_OPEN_REPARSE_POINT | FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, IntPtr.Zero);
         if (created == null || created.IsInvalid)
         {
@@ -1890,18 +2033,23 @@ public static class FluyoNativeBoundary
             BrokerJournalHandle = created;
             BrokerJournalWasCreated = true;
         }
-        Inspect(BrokerJournalHandle, BrokerJournalPath, false);
+        HandleIdentity journalIdentity = Inspect(BrokerJournalHandle, BrokerJournalPath, false);
+        if (journalIdentity.Volume != BrokerJournalChain.Identities[0].Volume)
+            throw new InvalidDataException("JOURNAL_VOLUME_TRANSITION");
     }
 
     private static void AdoptJournalBoundaryFromController(int controllerPid, long controllerAnchor)
     {
-        string tempRoot = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
-        string journalDirectory = JournalDirectoryForMode(tempRoot, false);
-        string expectedName = Sha256Hex(Encoding.UTF8.GetBytes(BrokerRepositoryRoot + "\0" + (BrokerTestMode ? "test" : "production"))) + ".journal";
-        if (!String.Equals(Path.GetDirectoryName(BrokerJournalPath), journalDirectory, StringComparison.OrdinalIgnoreCase) ||
-            !String.Equals(Path.GetFileName(BrokerJournalPath), expectedName, StringComparison.Ordinal))
-            throw new InvalidDataException("JOURNAL_PATH_CONTRACT");
-        BrokerJournalChain = HoldExistingAncestors(tempRoot, JournalSegmentsForMode(journalDirectory), BrokerTestMode ? 2 : 1);
+        string[] segments = JournalSegmentsForMode();
+        HeldChain chain = OpenTrustedTempRoot();
+        try
+        {
+            HoldJournalDescendants(chain, segments, false);
+            BindComputedJournalPath(chain, segments);
+            BrokerJournalChain = chain;
+            chain = null;
+        }
+        finally { if (chain != null) chain.Dispose(); }
         IntPtr controllerProcess = OpenProcess(PROCESS_DUP_HANDLE, false, controllerPid);
         if (controllerProcess == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error(), "OpenProcess(CONTROLLER_ANCHOR)");
         try
@@ -1910,7 +2058,15 @@ public static class FluyoNativeBoundary
             Win32(DuplicateHandle(controllerProcess, new IntPtr(controllerAnchor), GetCurrentProcess(), out localAnchor,
                 0, false, DUPLICATE_SAME_ACCESS), "DuplicateHandle(ADOPT_CONTROLLER_JOURNAL_ANCHOR)");
             BrokerJournalHandle = new SafeFileHandle(localAnchor, true);
-            Inspect(BrokerJournalHandle, BrokerJournalPath, false);
+            HandleIdentity adopted = Inspect(BrokerJournalHandle, BrokerJournalPath, false);
+            using (SafeFileHandle probe = OpenHandle(BrokerJournalPath, FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+                FILE_SHARE_READ, OPEN_EXISTING, false, false))
+            {
+                HandleIdentity expected = Inspect(probe, BrokerJournalPath, false);
+                RequireSameIdentity(expected, adopted);
+            }
+            if (adopted.Volume != BrokerJournalChain.Identities[0].Volume)
+                throw new InvalidDataException("JOURNAL_VOLUME_TRANSITION");
             BrokerControllerJournalAnchor = controllerAnchor;
             BrokerJournalWasCreated = false;
         }
@@ -2051,8 +2207,10 @@ public static class FluyoNativeBoundary
     {
         BrokerRepositoryRoot = Path.GetFullPath(repositoryRoot).TrimEnd(Path.DirectorySeparatorChar);
         BrokerSessionNonce = sessionNonce;
-        BrokerJournalPath = Path.GetFullPath(journalPath);
+        BrokerRequestedJournalPath = journalPath;
+        BrokerJournalPath = null;
         BrokerTestMode = testMode;
+        BrokerTestRunId = Environment.GetEnvironmentVariable("FLUYO_BROKER_TEST_RUN_ID");
         BrokerNextSequence = 1;
         BrokerPendingFrame = null;
         BrokerPendingResponse = null;

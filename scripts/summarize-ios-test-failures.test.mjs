@@ -23,6 +23,44 @@ try {
     "/Users/private/DerivedData/result.xcresult",
     "ProviderPrivateException",
   ];
+  for (const compilePhase of ["compile_tests_minimum", "compile_tests_current"]) {
+    writeFileSync(
+      file,
+      `/Users/private/DerivedData/Fluyo/AuthRuntimeKernelTests.swift:55:13: error: cannot find 'PrivateSymbol' in scope ${privateValues.join(" ")}\n::warning title=owned::private`,
+    );
+    const boundedCompile = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", compilePhase],
+      { encoding: "utf8" },
+    );
+    const boundedCompileOutput = `${boundedCompile.stdout}${boundedCompile.stderr}`;
+    assert.equal(boundedCompile.status, 0);
+    assert.equal(
+      boundedCompileOutput,
+      `iOS phase failed; phase=${compilePhase}; category=compile; test=unknown; raw output discarded\n`,
+    );
+    assert.equal(boundedCompileOutput.length <= 160, true);
+    for (const value of privateValues) {
+      assert.equal(boundedCompileOutput.includes(value), false);
+    }
+    assert.doesNotMatch(boundedCompileOutput, /warning|owned|private/i);
+
+    const annotatedCompile = summarizeAnnotation(file, compilePhase);
+    assert.equal(annotatedCompile.status, 0);
+    assert.equal(annotatedCompile.stderr, "");
+    assert.equal(
+      annotatedCompile.stdout,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=${compilePhase}; category=compile; source=AuthRuntimeKernelTests.swift; line=55; column=13; reason=missing_member\n`,
+    );
+    assert.equal(annotatedCompile.stdout.length <= 220, true);
+    for (const value of privateValues) {
+      assert.equal(annotatedCompile.stdout.includes(value), false);
+    }
+    assert.doesNotMatch(
+      annotatedCompile.stdout,
+      /example\.test|DerivedData|warning|owned|private/i,
+    );
+  }
   writeFileSync(file, `AuthRuntimeKernelTests assertion failed ${privateValues.join(" ")}`);
   const result = spawnSync(
     process.execPath,
@@ -611,8 +649,22 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   );
   assert.match(
     observerSource,
-    /private func requireCorpusAssertion[\s\S]*guard matches\(\) else \{ try failCurrentStageAssertion\(\) \}/,
+    /private func requireCorpusAssertion\(_ matches: Bool\) throws \{[\s\S]*guard matches else \{ try failCurrentStageAssertion\(\) \}/,
   );
+  assert.doesNotMatch(observerSource, /@autoclosure/);
+  const asyncChildStarts = [...swiftTestSource.matchAll(/\basync let\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+  assert.equal(asyncChildStarts.length, 16);
+  for (const startMatch of asyncChildStarts) {
+    const start = startMatch.index;
+    const child = startMatch[1];
+    assert.ok(child);
+    const joinMatch = new RegExp(`_ = await[^\\n]*\\b${child}\\b`).exec(
+      swiftTestSource.slice(start),
+    );
+    const join = joinMatch === null ? -1 : start + joinMatch.index;
+    assert.equal(join > start, true);
+    assert.doesNotMatch(swiftTestSource.slice(start, join), /\btry\b/);
+  }
   assert.match(
     observerSource,
     /private func failCurrentStageAssertion[\s\S]*currentStage\(\)[\s\S]*failRecordedAssertion\(active\)/,

@@ -10,9 +10,12 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  realpathSync,
+  renameSync,
   rmSync,
   rmdirSync,
   symlinkSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -24,20 +27,26 @@ import { fileURLToPath } from "node:url";
 import { windowsNativeBoundaryTesting } from "./windows-native-client.mjs";
 import {
   createTestJournalRunId,
-  runTestJournalChild,
+  runTestJournalChild as runUntrackedTestJournalChild,
   testJournalRunPath,
 } from "./windows-native-test-journal-runner.mjs";
+import {
+  WINDOWS_TRUSTED_TEMP_ROOT,
+  windowsTrustedTempEnvironment,
+} from "./windows-trusted-temp-root.mjs";
 
 const CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
+const TRUSTED_TEMP_URL = new URL("./windows-trusted-temp-root.mjs", import.meta.url).href;
 const RUNNER_URL = new URL("./windows-native-test-journal-runner.mjs", import.meta.url).href;
-const CANONICAL_TEMP_ROOT = resolve(tmpdir());
+const CANONICAL_TEMP_ROOT = WINDOWS_TRUSTED_TEMP_ROOT;
 const LEGACY_PARENT = resolve(CANONICAL_TEMP_ROOT, "fluyo-native-broker-journals");
 const TEST_PARENT = resolve(CANONICAL_TEMP_ROOT, "fluyo-native-test-broker-journals");
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const CLEANUP_SOURCE = resolve(ROOT, "scripts/r4b-evidence/windows-native-test-journal-cleanup.cs");
 const EXPECTED_CLEANUP_SOURCE_SHA256 =
-  "d0adae8b09e8648e3f3f5092c37ea18557f4cae0035308c8fd2612a9633a4509";
+  "7376078454fc47b3b6bd257c5436f7b67a71ee688ffe45191189df5b65568ab8";
 const POWERSHELL = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+const completedRunIds = new Set();
 
 const CLEANUP_FIXTURE_BOOTSTRAP = [
   "$ErrorActionPreference='Stop'",
@@ -49,7 +58,10 @@ const CLEANUP_FIXTURE_BOOTSTRAP = [
   "[Console]::Out.Write($result)",
 ].join(";");
 
-function cleanupTestJournalRunForFixture(runId) {
+function cleanupTestJournalRunForFixture(
+  runId,
+  trustedEnvironment = windowsTrustedTempEnvironment(),
+) {
   testJournalRunPath(runId);
   const source = readFileSync(CLEANUP_SOURCE);
   assert.equal(createHash("sha256").update(source).digest("hex"), EXPECTED_CLEANUP_SOURCE_SHA256);
@@ -67,8 +79,7 @@ function cleanupTestJournalRunForFixture(runId) {
       env: {
         ComSpec: process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe",
         SystemRoot: process.env.SystemRoot ?? "C:\\Windows",
-        TEMP: CANONICAL_TEMP_ROOT,
-        TMP: CANONICAL_TEMP_ROOT,
+        ...trustedEnvironment,
         FLUYO_TEST_JOURNAL_CLEANUP_SOURCE: CLEANUP_SOURCE,
         FLUYO_TEST_JOURNAL_CLEANUP_SHA256: EXPECTED_CLEANUP_SOURCE_SHA256,
         FLUYO_TEST_JOURNAL_RUN_ID: runId,
@@ -83,6 +94,27 @@ function cleanupTestJournalRunForFixture(runId) {
     throw new Error("test journal cleanup failed");
   }
   return Object.freeze({ outcome: result.stdout });
+}
+
+function shortPathFor(path) {
+  const result = spawnSync(
+    POWERSHELL,
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      "[Console]::Out.Write((New-Object -ComObject Scripting.FileSystemObject).GetFolder($env:FLUYO_SHORT_PATH).ShortPath)",
+    ],
+    {
+      env: { ...process.env, FLUYO_SHORT_PATH: path },
+      encoding: "utf8",
+      windowsHide: true,
+    },
+  );
+  assert.equal(result.status, 0);
+  const shortPath = result.stdout.trim();
+  assert.notEqual(shortPath, "");
+  return shortPath;
 }
 
 function productionSnapshot() {
@@ -138,6 +170,16 @@ function currentTestRunDirectories() {
     .sort();
 }
 
+async function runTestJournalChild(argv, options = {}) {
+  const result = await runUntrackedTestJournalChild(argv, options);
+  completedRunIds.add(result.runId);
+  return result;
+}
+
+function completedOwnedRunDirectories() {
+  return [...completedRunIds].filter((runId) => existsSync(testJournalRunPath(runId))).sort();
+}
+
 test("keeps production and test journal namespaces closed and distinct", () => {
   const root = resolve(tmpdir(), "fluyo-journal-path-contract");
   const production = windowsNativeBoundaryTesting.journalPathFor(root, false);
@@ -146,6 +188,201 @@ test("keeps production and test journal namespaces closed and distinct", () => {
   assert.equal(resolve(testPath).startsWith(resolve(TEST_PARENT)), true);
   assert.equal(testPath.includes(process.env.FLUYO_TEST_JOURNAL_RUN_ID), true);
   assert.notEqual(production, testPath);
+});
+
+test("captures one native temp identity and does not follow later environment mutation", () => {
+  const before = windowsTrustedTempEnvironment();
+  const originalTemp = process.env.TEMP;
+  const originalTmp = process.env.TMP;
+  try {
+    process.env.TEMP = resolve(CANONICAL_TEMP_ROOT, "caller-temp-override");
+    process.env.TMP = resolve(CANONICAL_TEMP_ROOT, "caller-tmp-override");
+    assert.deepEqual(windowsTrustedTempEnvironment(), before);
+    assert.equal(before.TEMP, WINDOWS_TRUSTED_TEMP_ROOT);
+    assert.equal(before.TMP, WINDOWS_TRUSTED_TEMP_ROOT);
+    assert.equal(Object.isFrozen(before), true);
+  } finally {
+    if (originalTemp === undefined) delete process.env.TEMP;
+    else process.env.TEMP = originalTemp;
+    if (originalTmp === undefined) delete process.env.TMP;
+    else process.env.TMP = originalTmp;
+  }
+});
+
+test("accepts a real short temp alias only after proving the same native identity", () => {
+  const productionBefore = productionSnapshot();
+  const longRoot = resolve(
+    CANONICAL_TEMP_ROOT,
+    `fluyo short temp ${randomBytes(8).toString("hex")}`,
+  );
+  mkdirSync(longRoot);
+  const shortRoot = shortPathFor(longRoot);
+  assert.notEqual(shortRoot.toLowerCase(), longRoot.toLowerCase());
+  assert.equal(realpathSync.native(shortRoot).toLowerCase(), longRoot.toLowerCase());
+  const runId = createTestJournalRunId();
+  const script = `
+    import { windowsNativeBoundaryTesting as boundary } from ${JSON.stringify(CLIENT_URL)};
+    const root = process.cwd();
+    try {
+      if (boundary.executeTestNative("HELLO", root).status !== "PASS") process.exitCode = 71;
+    } finally {
+      await boundary.terminateBrokerForTest(root);
+    }
+  `;
+  try {
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        TEMP: shortRoot,
+        TMP: shortRoot,
+        FLUYO_TEST_JOURNAL_RUN_ID: runId,
+      },
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 120000,
+    });
+    assert.equal(result.status, 0);
+    assert.equal(cleanupTestJournalRunForFixture(runId).outcome, "ABSENT");
+    assert.deepEqual(productionSnapshot(), productionBefore);
+  } finally {
+    rmSync(longRoot, { recursive: true, force: true });
+  }
+});
+
+test("rejects an initial temp ancestor junction before broker or cleanup mutation", () => {
+  const productionBefore = productionSnapshot();
+  const target = mkdtempSync(resolve(CANONICAL_TEMP_ROOT, "fluyo-temp-junction-target-"));
+  const junction = resolve(
+    CANONICAL_TEMP_ROOT,
+    `fluyo-temp-junction-${randomBytes(8).toString("hex")}`,
+  );
+  const child = resolve(junction, "child");
+  mkdirSync(resolve(target, "child"));
+  symlinkSync(target, junction, "junction");
+  const script = `
+    try {
+      await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+      process.exitCode = 72;
+    } catch (error) {
+      if (error?.message !== "WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY") process.exitCode = 73;
+    }
+  `;
+  try {
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      env: { ...process.env, TEMP: child, TMP: child },
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 30000,
+    });
+    assert.equal(result.status, 0);
+    assert.equal(existsSync(resolve(target, "child", "fluyo-native-test-broker-journals")), false);
+    assert.deepEqual(productionSnapshot(), productionBefore);
+  } finally {
+    rmdirSync(junction);
+    rmSync(target, { recursive: true, force: true });
+  }
+});
+
+test("rejects capture-to-cleanup identity replacement without production mutation", () => {
+  const productionBefore = productionSnapshot();
+  const original = mkdtempSync(resolve(CANONICAL_TEMP_ROOT, "fluyo-temp-capture-"));
+  const moved = `${original}-moved`;
+  const capturedIndex = String(statSync(original, { bigint: true }).ino);
+  renameSync(original, moved);
+  mkdirSync(original);
+  const runId = createTestJournalRunId();
+  const run = resolve(original, "fluyo-native-test-broker-journals", runId);
+  mkdirSync(run, { recursive: true });
+  const journal = resolve(run, `${"a".repeat(64)}.journal`);
+  writeFileSync(journal, "bounded\n");
+  try {
+    assert.throws(
+      () =>
+        cleanupTestJournalRunForFixture(runId, {
+          TEMP: original,
+          TMP: original,
+          FLUYO_TRUSTED_TEMP_FILE_INDEX: capturedIndex,
+        }),
+      /test journal cleanup failed/u,
+    );
+    assert.equal(readFileSync(journal, "utf8"), "bounded\n");
+    assert.deepEqual(productionSnapshot(), productionBefore);
+  } finally {
+    rmSync(original, { recursive: true, force: true });
+    renameSync(moved, original);
+    rmSync(original, { recursive: true, force: true });
+  }
+});
+
+test("blocks or rejects capture-to-create and capture-to-adopt identity replacement", () => {
+  const productionBefore = productionSnapshot();
+  const original = mkdtempSync(resolve(CANONICAL_TEMP_ROOT, "fluyo-temp-runtime-capture-"));
+  const moved = `${original}-moved`;
+  const capturedIndex = String(statSync(original, { bigint: true }).ino);
+  const runId = createTestJournalRunId();
+  const script = `
+    import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
+    await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+    const original = process.env.FLUYO_CAPTURE_TEMP;
+    const moved = process.env.FLUYO_CAPTURE_MOVED;
+    const root = process.cwd();
+    async function swapAndRequireRejection(boundary) {
+      let swapped = false;
+      try {
+        renameSync(original, moved);
+        mkdirSync(original);
+        swapped = true;
+      } catch (error) {
+        if (error?.code !== "EPERM" && error?.code !== "EBUSY") throw error;
+      }
+      if (!swapped) return;
+      try {
+        let rejected = false;
+        try { boundary.executeTestNative("HELLO", root); } catch { rejected = true; }
+        if (!rejected || existsSync(original + "\\\\fluyo-native-test-broker-journals")) {
+          process.exitCode = 74;
+        }
+      } finally {
+        rmSync(original, { recursive: true, force: true });
+        renameSync(moved, original);
+      }
+    }
+    const { windowsNativeBoundaryTesting: boundary } = await import(${JSON.stringify(CLIENT_URL)});
+    await swapAndRequireRejection(boundary);
+    if (process.exitCode) process.exit();
+    boundary.executeTestNative("HELLO", root);
+    await boundary.crashBrokerForTest(root);
+    await swapAndRequireRejection(boundary);
+    await boundary.shutdownBrokers();
+  `;
+  try {
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        TEMP: original,
+        TMP: original,
+        FLUYO_TEST_JOURNAL_RUN_ID: runId,
+        FLUYO_CAPTURE_TEMP: original,
+        FLUYO_CAPTURE_MOVED: moved,
+      },
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 120000,
+    });
+    assert.equal(result.status, 0);
+    const cleanup = cleanupTestJournalRunForFixture(runId, {
+      TEMP: original,
+      TMP: original,
+      FLUYO_TRUSTED_TEMP_FILE_INDEX: capturedIndex,
+    });
+    assert.equal(["ABSENT", "REMOVED"].includes(cleanup.outcome), true);
+    assert.deepEqual(productionSnapshot(), productionBefore);
+  } finally {
+    rmSync(original, { recursive: true, force: true });
+    rmSync(moved, { recursive: true, force: true });
+  }
 });
 
 test("rejects every caller-derived or malformed test run identity", () => {
@@ -339,6 +576,8 @@ test("fails closed while an active broker owns the journal, then removes it afte
     );
     child.once("error", reject);
   });
+  assert.equal(currentTestRunDirectories().includes(runId), true);
+  assert.deepEqual(completedOwnedRunDirectories(), []);
   assert.throws(() => cleanupTestJournalRunForFixture(runId), /test journal cleanup failed/u);
   assert.equal(existsSync(testJournalRunPath(runId)), true);
   child.kill("SIGTERM");
@@ -450,9 +689,6 @@ test("rejects count, size, nested-directory, and reparse bounds without deletion
   rmdirSync(outside);
 });
 
-test("leaves no completed run directories", () => {
-  assert.deepEqual(
-    currentTestRunDirectories().filter((runId) => runId !== process.env.FLUYO_TEST_JOURNAL_RUN_ID),
-    [],
-  );
+test("leaves no completed owned run directories", () => {
+  assert.deepEqual(completedOwnedRunDirectories(), []);
 });

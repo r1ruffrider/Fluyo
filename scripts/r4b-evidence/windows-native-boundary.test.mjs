@@ -1630,6 +1630,49 @@ test("uses only inherited capability pipes for authoritative request, response, 
   assert.equal(worker.includes("writeFrame(responseSha256)"), true);
 });
 
+test("derives the journal only from a handle-proven local temp identity", () => {
+  const client = readFileSync(new URL("./windows-native-client.mjs", import.meta.url), "utf8");
+  const trustedTemp = readFileSync(
+    new URL("./windows-trusted-temp-root.mjs", import.meta.url),
+    "utf8",
+  );
+  const cleanup = readFileSync(
+    new URL("./windows-native-test-journal-cleanup.cs", import.meta.url),
+    "utf8",
+  );
+  const source = windowsNativeBoundaryTesting.loadBoundarySource().toString("utf8");
+  assert.match(trustedTemp, /lstatSync\(path, \{ bigint: true \}\)/u);
+  assert.match(trustedTemp, /openSync\(path, constants\.O_RDONLY\)/u);
+  assert.match(trustedTemp, /fstatSync\(descriptor, \{ bigint: true \}\)/u);
+  assert.match(trustedTemp, /sameIdentity\(before, opened\)/u);
+  assert.match(trustedTemp, /heldDescriptors: Object\.freeze\(heldDescriptors\)/u);
+  assert.match(client, /\.\.\.windowsTrustedTempEnvironment\(\)/u);
+  assert.match(client, /FLUYO_BROKER_TEST_RUN_ID/u);
+  assert.doesNotMatch(client, /RunPipeServer\([^\n]*testRunId/u);
+  for (const required of [
+    "OpenTrustedTempRoot",
+    "HoldJournalDescendants",
+    "BindComputedJournalPath",
+    "RequireSameIdentity",
+    "NativeLocalPath",
+    "JOURNAL_VOLUME_TRANSITION",
+    "TRUSTED_TEMP_CAPTURE_INDEX",
+  ]) {
+    assert.equal(source.includes(required), true, required);
+  }
+  assert.match(source, /BrokerJournalPath = Path\.Combine\(Combine\(chain\.Root, segments/u);
+  assert.doesNotMatch(source, /FINAL_PATH_IDENTITY:/u);
+  for (const required of [
+    "InspectIdentity",
+    "RequireSameIdentity",
+    "NativeLocalPath",
+    "TEST_JOURNAL_VOLUME_TRANSITION",
+    "TEST_JOURNAL_CAPTURE_INDEX",
+  ]) {
+    assert.equal(cleanup.includes(required), true, required);
+  }
+});
+
 test("freezes the exact ordered roots, rights, and PowerShell broker identity", async () => {
   const contract = windowsNativeBoundaryTesting.loadBoundaryContract();
   assert.deepEqual(

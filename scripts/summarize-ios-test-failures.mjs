@@ -128,6 +128,8 @@ const phases = new Set([
   "build_debug",
   "build_staging",
   "build_release",
+  "compile_tests_minimum",
+  "compile_tests_current",
   "test_minimum",
   "test_current",
 ]);

@@ -267,10 +267,21 @@ describe("iOS unsigned foundation structure", () => {
     expect(script).toContain("CODE_SIGNING_REQUIRED=NO");
     expect(script).toContain('if [[ "${GITHUB_ACTIONS:-}" == "true" ]]');
     expect(script).toContain("summary_args+=(--github-annotation)");
+    expect(script).toContain("compile-tests-minimum");
+    expect(script).toContain("compile-tests-current");
+    expect(script.match(/build-for-testing/g)).toHaveLength(2);
+    expect(script.match(/test-without-building/g)).toHaveLength(2);
+    expect(script.match(/-derivedDataPath "\$DERIVED_ROOT\/Tests"/g)).toHaveLength(4);
+    expect(script).not.toMatch(/resultBundlePath[^\n]+\btest\s/);
     expect(failureSummarizer).toContain(
       'new Set(["AuthRuntimeKernel.swift", "AuthRuntimeKernelTests.swift"])',
     );
     expect(failureSummarizer).toContain("compilerErrorPattern.exec(raw)");
+    expect(failureSummarizer).toContain('"compile_tests_minimum"');
+    expect(failureSummarizer).toContain('"compile_tests_current"');
+    expect(failureSummarizer).toMatch(
+      /const phases = new Set\(\[\s*"build_debug",\s*"build_staging",\s*"build_release",\s*"compile_tests_minimum",\s*"compile_tests_current",\s*"test_minimum",\s*"test_current",\s*\]\);/,
+    );
     expect(failureSummarizer).toContain("number <= 65_535");
     for (const reason of [
       "task_transfer",

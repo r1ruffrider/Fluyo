@@ -393,9 +393,10 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let boundaryIngress = SyntheticAuthFixture.ingress()
             async let work: Void = coordinator.receiveCallback(boundaryIngress); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback()
             let afterCancel = await coordinator.snapshot()
-            if now < 500 { try requireCorpusAssertion(afterCancel.state == .callbackPending); await coordinator.signOut() }
-            else { try requireCorpusAssertion(afterCancel.fixedOutcomeCategory == .canceled) }
+            if now < 500 { await coordinator.signOut() }
             await ports.provider.releaseExchange(); _ = await work
+            if now < 500 { try requireCorpusAssertion(afterCancel.state == .callbackPending) }
+            else { try requireCorpusAssertion(afterCancel.fixedOutcomeCategory == .canceled) }
         }
     }
 
@@ -438,9 +439,10 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let ports = ScriptPorts(times: [0, 0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.clock.setDelayedElapsed(elapsed); await ports.provider.setSuspendRefresh(true)
             let timerCandidate = SyntheticAuthFixture.candidate()
             async let work: Void = coordinator.handle401(timerCandidate); await ports.provider.waitRefreshStarted()
-            let history = await coordinator.presentationEffectHistory(); try requireCorpusAssertion(history.count == (elapsed < 500 ? 0 : 1))
-            if let effect = history.first { try requireCorpusAssertion(effect.originatingState == .refreshPending); try requireCorpusAssertion(effect.payload.focus == .heading); try requireCorpusAssertion(effect.payload.announcement == .refreshPending); try requireCorpusAssertion(effect.payload.priority == .polite); try requireCorpusAssertion(effect.payload.navigation == nil) }
+            let history = await coordinator.presentationEffectHistory()
             await ports.provider.releaseRefresh(); _ = await work
+            try requireCorpusAssertion(history.count == (elapsed < 500 ? 0 : 1))
+            if let effect = history.first { try requireCorpusAssertion(effect.originatingState == .refreshPending); try requireCorpusAssertion(effect.payload.focus == .heading); try requireCorpusAssertion(effect.payload.announcement == .refreshPending); try requireCorpusAssertion(effect.payload.priority == .polite); try requireCorpusAssertion(effect.payload.navigation == nil) }
             let generation = await coordinator.currentGeneration(); let drained = await coordinator.drainPresentationEffects(for: generation); try requireCorpusAssertion(drained.isEmpty); let finalHistory = await coordinator.presentationEffectHistory(); try requireCorpusAssertion(finalHistory.count == (elapsed < 500 ? 0 : 1))
         }
     }
@@ -671,8 +673,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
         }
     }
     private func closeObservedStage(_ observer: CorpusStageObserver) { _ = observer.finishStage() }
-    private func requireCorpusAssertion(_ matches: @autoclosure () -> Bool) throws {
-        guard matches() else { try failCurrentStageAssertion() }
+    private func requireCorpusAssertion(_ matches: Bool) throws {
+        guard matches else { try failCurrentStageAssertion() }
     }
     private func failCurrentStageAssertion() throws -> Never {
         guard let active = corpusStageObserver.currentStage() else { throw CorpusError.invalid }

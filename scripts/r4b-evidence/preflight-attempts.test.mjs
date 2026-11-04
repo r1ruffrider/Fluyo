@@ -88,6 +88,10 @@ test("closes attempts to immutable 001 smoke and internally derived 002 observer
     true,
   );
   assert.equal(
+    FROZEN_HARNESS_FILES.includes("scripts/r4b-evidence/windows-trusted-temp-root.mjs"),
+    true,
+  );
+  assert.equal(
     FROZEN_HARNESS_FILES.includes("scripts/r4b-evidence/windows-job-builder.ps1"),
     false,
   );

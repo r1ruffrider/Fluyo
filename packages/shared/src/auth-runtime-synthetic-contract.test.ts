@@ -19,6 +19,9 @@ const acceptance = JSON.parse(
 const phaseBase = "e2197c597a9a49f3685ceb2c2010cd5d067ff299";
 const phaseCompletion = "a5658045cd7d780665cf11cedfb5daccc2c6fc82";
 const authReadinessApprovalTemporaryRootPrefix = ".tmp-auth-readiness-approval-";
+const authorizedPostCompletionExactPaths = new Set([
+  "scripts/r4b-evidence/windows-trusted-temp-root.mjs",
+]);
 
 const phaseUntrackedPaths = (paths: string[]) =>
   paths.filter(
@@ -26,7 +29,8 @@ const phaseUntrackedPaths = (paths: string[]) =>
       Boolean(path) &&
       !path.startsWith(".tmp/") &&
       !path.startsWith(".security-tmp/") &&
-      !path.startsWith(authReadinessApprovalTemporaryRootPrefix),
+      !path.startsWith(authReadinessApprovalTemporaryRootPrefix) &&
+      !authorizedPostCompletionExactPaths.has(path),
   );
 
 const strings = (value: unknown, label: string): string[] => {
@@ -217,7 +221,33 @@ describe("native auth executable synthetic kernel", () => {
     expect(recordedAssertionFailure).toContain("throw CorpusError.diagnosticAbort");
     expect(recordedAssertionFailure).not.toContain("XCTFail");
     expect(swift).toMatch(
-      /private func requireCorpusAssertion[^]*guard matches\(\) else \{ try failCurrentStageAssertion\(\) \}/,
+      /private func requireCorpusAssertion\(_ matches: Bool\) throws \{\s*guard matches else \{ try failCurrentStageAssertion\(\) \}/,
+    );
+    expect(swift).not.toContain("@autoclosure");
+    const asyncChildStarts = [...swift.matchAll(/\basync let\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+    expect(asyncChildStarts).toHaveLength(16);
+    for (const start of asyncChildStarts) {
+      const child = start[1];
+      expect(child).toBeTruthy();
+      const tail = swift.slice(start.index!);
+      const joinMatch = new RegExp(`_ = await[^\\n]*\\b${child}\\b`).exec(tail);
+      const join = joinMatch === null ? -1 : start.index! + joinMatch.index;
+      expect(join).toBeGreaterThan(start.index!);
+      expect(swift.slice(start.index!, join)).not.toMatch(/\btry\b/);
+    }
+    const cancelBoundaries = swift.slice(
+      swift.indexOf("private func verifyCancelAvailabilityBoundaries"),
+      swift.indexOf("private func verifyTotalTimeoutBoundary"),
+    );
+    expect(cancelBoundaries).toMatch(
+      /let afterCancel = await coordinator\.snapshot\(\)[^]*if now < 500 \{ await coordinator\.signOut\(\) \}[^]*releaseExchange\(\); _ = await work[^]*try requireCorpusAssertion/,
+    );
+    const refreshBoundaries = swift.slice(
+      swift.indexOf("private func verifyRefreshTimerBoundaries"),
+      swift.indexOf("private func verifyMutationBoundaries"),
+    );
+    expect(refreshBoundaries).toMatch(
+      /let history = await coordinator\.presentationEffectHistory\(\)[^]*releaseRefresh\(\); _ = await work[^]*try requireCorpusAssertion/,
     );
     expect(swift).toMatch(
       /private func failCurrentStageAssertion[^]*currentStage\(\)[^]*failRecordedAssertion\(active\)/,
@@ -643,9 +673,17 @@ describe("native auth executable synthetic kernel", () => {
       phaseUntrackedPaths([
         ".tmp-auth-readiness-approval-abc123/",
         ".tmp-auth-readiness-approvals-abc123/policy.json",
+        "scripts/r4b-evidence/windows-trusted-temp-root.mjs",
+        "scripts/r4b-evidence/windows-trusted-temp-root.mjs.bak",
+        "scripts/r4b-evidence/windows-trusted-temp-root.test.mjs",
         "unexpected.txt",
       ]),
-    ).toEqual([".tmp-auth-readiness-approvals-abc123/policy.json", "unexpected.txt"]);
+    ).toEqual([
+      ".tmp-auth-readiness-approvals-abc123/policy.json",
+      "scripts/r4b-evidence/windows-trusted-temp-root.mjs.bak",
+      "scripts/r4b-evidence/windows-trusted-temp-root.test.mjs",
+      "unexpected.txt",
+    ]);
 
     const allowed = [
       ".github/workflows/android.yml",

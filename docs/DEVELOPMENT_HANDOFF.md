@@ -1781,3 +1781,210 @@ zero files; this bounded statement does not claim global machine residue absence
 Attempt 002, product Next, live NVDA, physical-device and platform evidence, deployment,
 production, signing, and store actions remain nonrequired for this exact-head gate and unattempted.
 They are not implied by Elana's PASS and retain their existing authorization boundaries.
+
+## Sprint 6 R4-B2 post-commit hygiene repair — 2026-11-04
+
+Initial local commit `8d0d4e5e831088634467517f1c8f4c24aa051d90` failed Elana's post-commit
+hygiene review because seven two-space Markdown hard breaks remained as trailing-space findings in
+two R4-B2 documents. That commit was not pushed.
+
+The bounded repair commit `1326394d60c1205150ac6fa0c7cca9b4d18064ab` changes exactly these two
+files and no implementation or runtime bytes:
+
+- `docs/2026-11-02_r4b2_attempt002_infrastructure_plan_v1.md`;
+- `docs/2026-11-02_r4b2_discarded_preflight_decision_v1.md`.
+
+It replaces exactly seven two-space hard breaks with explicit CommonMark backslash breaks. The
+repair has `git diff --check` PASS and a clean tree. It has not been pushed, and no pull request has
+been created. The new canonical subject is **61** paths and **6,830** manifest bytes with SHA-256
+`8800a0c5a79ebcb8bf3440145e6a831188dbcb73e448fb85007092aa9db7ad64`; the total remains **62**
+paths when this excluded handoff is included.
+
+Fresh exact-subject rebinds report PASS with zero failed, blocked, or required-unattempted checks in
+each review: Gabriela **10/10**, Isabella **14/14**, Julieta **25/25**, Catalina **14/14**, Natalia
+**12/12**, and Renata **15/15**. UI and runtime bytes are unchanged, so the prior applicable UI and
+source evidence remains bound to the same implementation.
+
+Elana's final exact-head re-audit is pending. No push or pull-request transition is authorized until
+that final unchanged-head gate passes and Adriana reconciles the remaining standing conditions.
+
+## Sprint 6 R4-B2 draft PR and CI portability reconciliation — 2026-11-04
+
+This entry supersedes the final two stale sentences above without rewriting their chronology. Draft
+PR [#72](https://github.com/r1ruffrider/Fluyo/pull/72) was opened from
+`codex/sprint6-r4b2-decision-brief`. Its currently pushed exact head remains
+`1326394d60c1205150ac6fa0c7cca9b4d18064ab`. GitHub reported the PR open, draft, mergeable, and
+blocked. On that pushed head, **9** checks passed and the protected `Tests` check failed because the
+Ubuntu job attempted Windows-native R4-B tests.
+
+The bounded portability repair is frozen locally as two unpushed commits:
+
+- `1416d45eb432b2537b23004b5d35c7170efb6e5e` splits the complete R4-B inventory into a protected
+  portable lane and a separate Windows-native lane, adds sealed predecessor fixtures with
+  production-exclusion checks, and updates exact-head workflow assertions;
+- `0d1ba1fe69475a81ce1d6d016587bc193c8a1cfe` adds the repository-owned Python 3.12 resolver so CI
+  and local Windows-native execution use the same self-contained command with immutable path and
+  SHA-256 binding.
+
+Current local exact head is `0d1ba1fe69475a81ce1d6d016587bc193c8a1cfe`, two commits ahead of the
+remote PR head. The only remaining working-tree change is this excluded records-only handoff.
+Counted local evidence on the repaired content is R4-B portable **71/71 PASS** and Windows-native
+**83/83 PASS**, with zero failed or skipped tests in either lane. The audit-policy unit suite passed
+**188/188**, the installed-tree probe passed, the corrected shared CI contract passed **9/9**, and
+lint, typecheck, formatting, diff checks, and the production build passed. These overlapping scopes
+remain separately reported.
+
+Catalina's exact-head architecture gate passed **5/5**, and Renata's exact-head infrastructure gate
+passed **10/10**, with no defects. The repair remains unpushed pending the remaining applicable
+security, numerical/claims, and Elana sole independent exact-head gates plus Adriana's final
+reconciliation. No production, deployment, signing, store, credential, spending, destructive, or
+external-account action has been taken. **Marlon action required: none.**
+
+### Exact-head evidence rebind after Julieta audit — 2026-11-04
+
+Julieta's first audit of unchanged local exact head
+`0d1ba1fe69475a81ce1d6d016587bc193c8a1cfe` conducted **22** checks and reported
+**21 PASS / 1 FAIL**, with **5 required-unattempted** exact-head evidence checks. Her single finding
+was an evidence-binding discrepancy in this records-only handoff: five successful command results
+had been run before the final resolver commit and therefore could not be attributed to the final
+exact head. She did not report a product-code, fixture, numerical, privacy, or production-exclusion
+defect.
+
+Root then reran the five required evidence areas on the unchanged exact head. The audit-policy unit
+suite passed **188/188**; its R4-B portable phase passed **71/71** with zero failures or skips; the
+installed-tree probe reported PASS; the shared CI contract passed **9/9**; typecheck passed; and the
+production build passed. These scopes overlap and remain separately reported. This exact-head
+rerun supersedes the evidence-binding failure above, subject to Julieta's independent re-audit; it
+does not itself constitute Julieta PASS.
+
+Natalia's independent exact-head security review conducted **16** checks and reported
+**16 PASS / 0 FAIL / 0 required-unattempted**, with no blocking or should-fix defects. Her review
+found no added secret, credential, PII, personal path, production endpoint, dependency change,
+product authentication change, deployment action, or external-account action. Her two optional
+future-hardening observations about full-SHA Action pinning and a native-test environment allowlist
+are nonblocking and are not represented as completed work.
+
+Julieta's re-audit and Elana's sole independent exact-head QA/code-review verdict remain pending.
+The local commits remain unpushed, PR #72 remains draft on its older remote head, and this handoff
+remains the only excluded working-tree modification. **Marlon action required: none.**
+
+### Final local exact-head gates — 2026-11-04
+
+This entry supersedes the pending-Julieta and pending-Elana wording immediately above without
+rewriting that chronology. Julieta's independent final re-audit on unchanged exact local head
+`0d1ba1fe69475a81ce1d6d016587bc193c8a1cfe` passed **10/10**, closing her prior evidence-binding
+finding after the five required areas were rerun on that exact head.
+
+Elana then issued the sole independent exact-head QA/code-review verdict: **PASS**, with
+**177/177 passed**, **0 failed**, **0 blocked**, and **0 required-unattempted**. The reviewed head
+remained unchanged throughout both final gates. No defect table entries require a repair, and no
+new commit has invalidated either verdict.
+
+The next authorized step is to push the unchanged local exact head, require fresh protected CI on
+the pushed head—including `Tests` and `Tests (Windows native)`—and reconcile GitHub mergeability.
+PR #72 remains draft on its older remote head until that push. No production, deployment, signing,
+store, credential, spending, destructive, or external-account action is authorized or implied by
+these local gates. **Marlon action required: none.**
+
+## PR #72 deterministic iOS evidence repair and protected-CI handoff — 2026-11-04
+
+This entry supersedes the stale remote-head and next-step wording immediately above without
+rewriting that chronology. Draft PR [#72](https://github.com/r1ruffrider/Fluyo/pull/72) now points
+to exact pushed head `e954652baac7b174290f06891284dcb8dc16eaf1`, with parent
+`c751559a0f2172c4e3c874ab94ca99799e129f10`, tree
+`ea7259dc17a7b2e7d311c6cb1d8acab3ce280378`, and subject
+`test(ios): harden deterministic auth evidence`.
+
+The repair commit contains exactly these three reviewed test/evidence files:
+
+- `apps/ios/FluyoTests/AuthRuntimeKernelTests.swift`;
+- `packages/shared/src/auth-runtime-synthetic-contract.test.ts`;
+- `scripts/summarize-ios-test-failures.test.mjs`.
+
+It replaces XCTest issue interception with deterministic bounded throwing checks, closes the raw
+error-payload path, and extends both structural analyzers through initializer bodies including
+`Vector.init`. It does not change production runtime, the corpus, workflows, dependencies,
+lockfiles, timing values, or the production sanitizer. The exact-commit full shared suite passed
+**468/468** across **17/17** files.
+
+Candidate gates on the frozen blobs reported PASS: Catalina **15/15**; Natalia **15/15** plus
+focused validation **10/10**; Julieta **19/19**; Gabriela **12/12**; and Renata **20/20**. Elana's
+candidate gate also issued strict PASS after **808/810** aggregate executions: the two non-passing
+observations were the expected pre-commit clean-tree guard and a concurrent timed test that passed
+its isolated rerun, with **0 required candidate tests unattempted**.
+
+After the commit, exact-head rebinds reported PASS on unchanged `e954652b`: Catalina **18/18**,
+Natalia **17/17**, Julieta **20/20**, Gabriela **12/12**, and Renata **16/16**. Elana's sole
+push-only exact-head gate passed **469/469**, with **0 failed** and **0 required-unattempted**.
+Adriana then authorized pushing only this exact commit; the push completed on 2026-11-04 and the
+remote PR head was verified as `e954652b`.
+
+Protected CI is still in progress on that unchanged head. At the latest reconciled snapshot,
+**8** checks had passed, **0** had failed, and **7** were in progress. PR #72 remains **draft/HOLD**
+until all protected checks—including minimum and current iOS, sanitized iOS evidence, Android,
+portable, and Windows-native coverage—finish successfully and Adriana reconciles the post-CI
+specialist, Elana, platform, and mergeability gates. This is not a final-CI claim.
+
+No production, deployment, signing, store, credential, spending, destructive, publication, or
+external-account action was taken or authorized by this repair. **Marlon action required: none.**
+
+## PR #72 protected-CI terminal diagnosis and final repair candidate — 2026-11-04
+
+This append-only entry supersedes the in-progress CI snapshot immediately above without rewriting
+that chronology. Remote PR [#72](https://github.com/r1ruffrider/Fluyo/pull/72) still points to exact
+head `e954652baac7b174290f06891284dcb8dc16eaf1`. Protected checks on that pushed head are terminal:
+**13 success, 3 cancelled, and 1 skipped**. The terminal evidence exposed two independent repair
+requirements: the Windows-native path-identity boundary and an iOS deterministic-execution hang.
+Those failures apply to the pushed head, not to the repaired working bytes described below.
+
+The current final candidate is local, uncommitted, and unpushed. Its scope is **15 code paths** plus
+this separately owned records-only handoff: **6 iOS evidence paths** and **9 Windows-native paths**.
+The six iOS paths are:
+
+- `apps/ios/FluyoTests/AuthRuntimeKernelTests.swift`;
+- `packages/shared/src/auth-runtime-synthetic-contract.test.ts`;
+- `packages/shared/src/ios-foundation-structure.test.ts`;
+- `scripts/ios-ci.sh`;
+- `scripts/summarize-ios-test-failures.mjs`;
+- `scripts/summarize-ios-test-failures.test.mjs`.
+
+The nine Windows-native paths are:
+
+- `scripts/r4b-evidence/preflight-attempts.mjs`;
+- `scripts/r4b-evidence/preflight-attempts.test.mjs`;
+- `scripts/r4b-evidence/windows-native-boundary.cs`;
+- `scripts/r4b-evidence/windows-native-boundary.test.mjs`;
+- `scripts/r4b-evidence/windows-native-client.mjs`;
+- `scripts/r4b-evidence/windows-native-test-journal-cleanup.cs`;
+- `scripts/r4b-evidence/windows-native-test-journal-runner.mjs`;
+- `scripts/r4b-evidence/windows-native-test-journal-runner.test.mjs`;
+- `scripts/r4b-evidence/windows-trusted-temp-root.mjs`.
+
+Local evidence on these working bytes remains separated by scope because the commands overlap:
+
+- Renata's independent Windows-native run passed **89/89** in **257.052 seconds**, with zero test
+  residue, zero active lanes, and the production journal unchanged;
+- the portable lane passed **71/71**;
+- audit policy passed **188/188**, including a separately reported portable **71/71** phase;
+- the current iOS structural set passed **20/20**, and the alternate tracked-index auth simulation
+  passed **9/9**;
+- the sanitizer passed **1/1**, including **4/4** compile-phase cases.
+
+Specialist evidence to date reports no repaired-byte numerical, privacy, scope, production, signing,
+or store defect. Renata's independent Windows result is PASS. Julieta's **40-check** audit reported
+**38 PASS / 2 FAIL**, with both failures confined to records: the stale protected-CI snapshot in
+this handoff and the stale PR-body head. Valentina's development evidence is not represented as an
+independent specialist or QA gate. Further applicable specialist rebinds and Elana's sole final
+exact-candidate and exact-head gates remain required.
+
+The PR body is stale: it still names `1326394d…` rather than the authoritative remote head
+`e954652b…`. It must be refreshed only after the final candidate is committed and pushed, when the
+new immutable head and verified evidence are available. No PR-body mutation is authorized by this
+records update.
+
+**HOLD:** no protected CI has run on the repaired 15-path bytes. Do not mark PR #72 ready and do not
+merge until the final candidate is committed under the applicable gates, pushed unchanged,
+protected CI passes on that exact head, the PR body is reconciled, and Adriana confirms the final
+specialist, Elana, platform, and mergeability gates. No production, deployment, signing, store,
+credential, spending, destructive, publication, or external-account action was taken. **Marlon
+action required: none.**

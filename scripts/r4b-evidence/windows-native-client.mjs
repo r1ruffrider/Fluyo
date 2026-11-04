@@ -2,13 +2,16 @@ import { createHash, randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { EventEmitter } from "node:events";
-import { tmpdir } from "node:os";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 
 import { validateNativeResponseFrame } from "./windows-native-response.mjs";
+import {
+  WINDOWS_TRUSTED_TEMP_ROOT,
+  windowsTrustedTempEnvironment,
+} from "./windows-trusted-temp-root.mjs";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SOURCE_PATH = resolve(REPOSITORY_ROOT, "scripts/r4b-evidence/windows-native-boundary.cs");
@@ -22,7 +25,7 @@ const MAX_SOURCE_BYTES = 512 * 1024;
 const MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
 // Updated only after the C# source has passed the native compile and protocol suite.
 // The PowerShell loader independently recomputes this value before Add-Type.
-const EXPECTED_SOURCE_SHA256 = "6671254b97a52bdf14d6e12117bb41694ee20190f3e21cffd84f45cd1e3e912a";
+const EXPECTED_SOURCE_SHA256 = "9b6e6c796d6c5432bdd45cd78787616d31c193cf3bfe1bcbfa3b293c39633ce2";
 const EXPECTED_CONTRACT_SHA256 = "828b1756539f143369b728ef0ac27c4dd379346e664199153eea8be82b72e1d6";
 const BROKERS = new Map();
 const SESSION_ANCHORS = new Map();
@@ -263,8 +266,12 @@ function requireTestJournalRunId() {
 
 function journalPathFor(root, testMode) {
   const directory = testMode
-    ? resolve(tmpdir(), "fluyo-native-test-broker-journals", requireTestJournalRunId())
-    : resolve(tmpdir(), "fluyo-native-broker-journals");
+    ? resolve(
+        WINDOWS_TRUSTED_TEMP_ROOT,
+        "fluyo-native-test-broker-journals",
+        requireTestJournalRunId(),
+      )
+    : resolve(WINDOWS_TRUSTED_TEMP_ROOT, "fluyo-native-broker-journals");
   return resolve(
     directory,
     `${sha256(Buffer.from(`${normalizeRoot(root)}\0${testMode ? "test" : "production"}`))}.journal`,
@@ -301,8 +308,7 @@ function ensureBroker(repositoryRoot, testMode) {
       environment: {
         ComSpec: process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe",
         SystemRoot: process.env.SystemRoot ?? "C:\\Windows",
-        TEMP: process.env.TEMP,
-        TMP: process.env.TMP,
+        ...windowsTrustedTempEnvironment(),
         FLUYO_BROKER_ROOT: normalizeRoot(repositoryRoot),
         FLUYO_BROKER_NONCE: nonce,
         FLUYO_BROKER_PARENT_PID: String(process.pid),
@@ -311,6 +317,7 @@ function ensureBroker(repositoryRoot, testMode) {
         FLUYO_BROKER_CONTRACT_SHA256: EXPECTED_CONTRACT_SHA256,
         FLUYO_BROKER_JOURNAL: journal,
         FLUYO_BROKER_TEST_MODE: testMode ? "1" : "0",
+        FLUYO_BROKER_TEST_RUN_ID: testMode ? requireTestJournalRunId() : "",
         FLUYO_BROKER_SOURCE_PATH: SOURCE_PATH,
         FLUYO_BROKER_CONTRACT_PATH: CONTRACT_PATH,
         FLUYO_BROKER_CAPABILITY: capability,

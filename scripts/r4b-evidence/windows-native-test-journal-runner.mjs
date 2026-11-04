@@ -1,17 +1,21 @@
 import { createHash, randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import {
+  WINDOWS_TRUSTED_TEMP_ROOT,
+  windowsTrustedTempEnvironment,
+} from "./windows-trusted-temp-root.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const CLEANUP_SOURCE = resolve(ROOT, "scripts/r4b-evidence/windows-native-test-journal-cleanup.cs");
 const EXPECTED_CLEANUP_SOURCE_SHA256 =
-  "d0adae8b09e8648e3f3f5092c37ea18557f4cae0035308c8fd2612a9633a4509";
+  "7376078454fc47b3b6bd257c5436f7b67a71ee688ffe45191189df5b65568ab8";
 const POWERSHELL = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const RUN_ID_PATTERN = /^[0-9a-f]{64}$/u;
-const CANONICAL_TEMP_ROOT = resolve(tmpdir());
+const CANONICAL_TEMP_ROOT = WINDOWS_TRUSTED_TEMP_ROOT;
 const CANONICAL_SYSTEM_ROOT = process.env.SystemRoot ?? "C:\\Windows";
 const CANONICAL_COMSPEC = process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe";
 const TEST_PARENT = resolve(CANONICAL_TEMP_ROOT, "fluyo-native-test-broker-journals");
@@ -57,8 +61,7 @@ function cleanupTestJournalRun(runId) {
       env: {
         ComSpec: CANONICAL_COMSPEC,
         SystemRoot: CANONICAL_SYSTEM_ROOT,
-        TEMP: CANONICAL_TEMP_ROOT,
-        TMP: CANONICAL_TEMP_ROOT,
+        ...windowsTrustedTempEnvironment(),
         FLUYO_TEST_JOURNAL_CLEANUP_SOURCE: CLEANUP_SOURCE,
         FLUYO_TEST_JOURNAL_CLEANUP_SHA256: EXPECTED_CLEANUP_SOURCE_SHA256,
         FLUYO_TEST_JOURNAL_RUN_ID: runId,
@@ -102,8 +105,7 @@ export async function runTestJournalChild(argv, options = {}) {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      TEMP: CANONICAL_TEMP_ROOT,
-      TMP: CANONICAL_TEMP_ROOT,
+      ...windowsTrustedTempEnvironment(),
       FLUYO_TEST_JOURNAL_RUN_ID: runId,
     },
     stdio: childOptions.stdio ?? "inherit",

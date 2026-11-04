@@ -49,6 +49,21 @@ public static class FluyoTestJournalCleanup
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct BY_HANDLE_FILE_INFORMATION
+    {
+        public uint FileAttributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+        public uint VolumeSerialNumber;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint NumberOfLinks;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct FILE_DISPOSITION_INFO { [MarshalAs(UnmanagedType.Bool)] public bool DeleteFile; }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -58,7 +73,21 @@ public static class FluyoTestJournalCleanup
     {
         public ulong Volume;
         public string FileId;
+        public ulong NativeFileIndex;
         public string FinalPath;
+    }
+
+    private sealed class TempChain : IDisposable
+    {
+        public string Root;
+        public readonly List<SafeFileHandle> Handles = new List<SafeFileHandle>();
+        public readonly List<Identity> Identities = new List<Identity>();
+        public TempChain(string root) { Root = root; }
+        public void Dispose()
+        {
+            for (int index = Handles.Count - 1; index >= 0; index--) Handles[index].Dispose();
+            Handles.Clear();
+        }
     }
 
     private sealed class Record
@@ -81,6 +110,10 @@ public static class FluyoTestJournalCleanup
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int infoClass,
         out FILE_ID_INFO info, uint size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetFileInformationByHandle(SafeFileHandle handle,
+        out BY_HANDLE_FILE_INFORMATION information);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint GetFinalPathNameByHandleW(SafeFileHandle handle, StringBuilder path,
@@ -112,7 +145,8 @@ public static class FluyoTestJournalCleanup
     private static string Canonical(string path)
     {
         string value = path.StartsWith("\\\\?\\", StringComparison.Ordinal) ? path.Substring(4) : path;
-        return Path.GetFullPath(value).TrimEnd(Path.DirectorySeparatorChar);
+        value = Path.GetFullPath(value);
+        return value.Length == 3 ? value : value.TrimEnd(Path.DirectorySeparatorChar);
     }
 
     private static string Hex(byte[] value)
@@ -131,7 +165,7 @@ public static class FluyoTestJournalCleanup
     private static SafeFileHandle Open(string path, uint access, uint share, bool directory)
     {
         uint flags = FILE_FLAG_OPEN_REPARSE_POINT | (directory ? FILE_FLAG_BACKUP_SEMANTICS : FILE_ATTRIBUTE_NORMAL);
-        SafeFileHandle handle = CreateFileW(path, access, share, IntPtr.Zero, OPEN_EXISTING, flags, IntPtr.Zero);
+        SafeFileHandle handle = CreateFileW(NativeLocalPath(path), access, share, IntPtr.Zero, OPEN_EXISTING, flags, IntPtr.Zero);
         if (handle == null || handle.IsInvalid)
         {
             int error = Marshal.GetLastWin32Error();
@@ -141,7 +175,25 @@ public static class FluyoTestJournalCleanup
         return handle;
     }
 
+    private static string NativeLocalPath(string path)
+    {
+        string value = Path.GetFullPath(path);
+        if (value.StartsWith("\\\\", StringComparison.Ordinal) || value.Length < 3 || value[1] != ':' ||
+            value[2] != '\\' || value.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("TEST_JOURNAL_NAMESPACE");
+        return "\\\\?\\" + value;
+    }
+
     private static Identity Inspect(SafeFileHandle handle, string expectedPath, bool directory)
+    {
+        Identity identity = InspectIdentity(handle, directory);
+        string expected = Canonical(expectedPath);
+        if (!String.Equals(identity.FinalPath, expected, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("TEST_JOURNAL_FINAL_PATH");
+        return identity;
+    }
+
+    private static Identity InspectIdentity(SafeFileHandle handle, bool directory)
     {
         FILE_ATTRIBUTE_TAG_INFO tags;
         Win32(GetFileInformationByHandleEx(handle, FileAttributeTagInfo, out tags,
@@ -154,15 +206,29 @@ public static class FluyoTestJournalCleanup
         id.FileId = new byte[16];
         Win32(GetFileInformationByHandleEx(handle, FileIdInfo, out id,
             (uint)Marshal.SizeOf(typeof(FILE_ID_INFO))), "GetFileInformationByHandleEx(identity)");
+        BY_HANDLE_FILE_INFORMATION native;
+        Win32(GetFileInformationByHandle(handle, out native), "GetFileInformationByHandle");
         StringBuilder final = new StringBuilder(32768);
         uint length = GetFinalPathNameByHandleW(handle, final, (uint)final.Capacity, 0);
         if (length == 0 || length >= final.Capacity)
             throw new Win32Exception(Marshal.GetLastWin32Error(), "GetFinalPathNameByHandleW");
-        string actual = Canonical(final.ToString());
-        string expected = Canonical(expectedPath);
-        if (!String.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("TEST_JOURNAL_FINAL_PATH");
-        return new Identity { Volume = id.VolumeSerialNumber, FileId = Hex(id.FileId), FinalPath = expected };
+        string actual = final.ToString();
+        if (!actual.StartsWith("\\\\?\\", StringComparison.Ordinal) ||
+            actual.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("TEST_JOURNAL_NAMESPACE");
+        actual = Canonical(actual.Substring(4));
+        if (actual.Length < 3 || actual[1] != ':' || actual[2] != '\\' || actual.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("TEST_JOURNAL_NAMESPACE");
+        ulong fileIndex = ((ulong)native.FileIndexHigh << 32) | native.FileIndexLow;
+        return new Identity { Volume = id.VolumeSerialNumber, FileId = Hex(id.FileId),
+            NativeFileIndex = fileIndex, FinalPath = actual };
+    }
+
+    private static void RequireSameIdentity(Identity expected, Identity actual)
+    {
+        if (expected.Volume != actual.Volume || expected.FileId != actual.FileId ||
+            !String.Equals(expected.FinalPath, actual.FinalPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("TEST_JOURNAL_IDENTITY_DRIFT");
     }
 
     private static void AssertFixedNtfs(string path)
@@ -178,6 +244,55 @@ public static class FluyoTestJournalCleanup
             out maximumComponent, out flags, fileSystem, (uint)fileSystem.Capacity), "GetVolumeInformationW");
         if (!String.Equals(fileSystem.ToString(), "NTFS", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("TEST_JOURNAL_NON_NTFS");
+    }
+
+    private static TempChain OpenTrustedTempRoot()
+    {
+        string candidate = Canonical(Path.GetTempPath());
+        if (candidate.StartsWith("\\\\", StringComparison.Ordinal) || candidate.Length < 3 ||
+            candidate[1] != ':' || candidate[2] != '\\' || candidate.IndexOf(':', 2) >= 0)
+            throw new InvalidDataException("TEST_JOURNAL_NAMESPACE");
+        string driveRoot = Path.GetPathRoot(candidate);
+        string[] segments = candidate.Substring(driveRoot.Length)
+            .Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        TempChain chain = new TempChain(driveRoot);
+        try
+        {
+            string current = driveRoot;
+            for (int index = -1; index < segments.Length; index++)
+            {
+                if (index >= 0)
+                {
+                    string segment = segments[index];
+                    if (segment == "." || segment == ".." || segment.IndexOf(':') >= 0)
+                        throw new InvalidDataException("TEST_JOURNAL_SEGMENT");
+                    current = Path.Combine(chain.Identities[chain.Identities.Count - 1].FinalPath, segment);
+                }
+                SafeFileHandle handle = Open(current,
+                    FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE, true);
+                try
+                {
+                    Identity identity = InspectIdentity(handle, true);
+                    if (chain.Identities.Count > 0 && identity.Volume != chain.Identities[0].Volume)
+                        throw new InvalidDataException("TEST_JOURNAL_VOLUME_TRANSITION");
+                    chain.Handles.Add(handle);
+                    chain.Identities.Add(identity);
+                    handle = null;
+                }
+                finally { if (handle != null) handle.Dispose(); }
+            }
+            chain.Root = chain.Identities[chain.Identities.Count - 1].FinalPath;
+            AssertFixedNtfs(chain.Root);
+            string expectedFileIndex = Environment.GetEnvironmentVariable("FLUYO_TRUSTED_TEMP_FILE_INDEX");
+            ulong fileIndex;
+            Identity finalIdentity = chain.Identities[chain.Identities.Count - 1];
+            if (!UInt64.TryParse(expectedFileIndex, NumberStyles.None, CultureInfo.InvariantCulture, out fileIndex))
+                throw new InvalidDataException("TEST_JOURNAL_CAPTURE_DRIFT");
+            if (fileIndex != finalIdentity.NativeFileIndex) throw new InvalidDataException("TEST_JOURNAL_CAPTURE_INDEX");
+            return chain;
+        }
+        catch { chain.Dispose(); throw; }
     }
 
     private static byte[] ReadBounded(SafeFileHandle handle, long maximum)
@@ -230,32 +345,39 @@ public static class FluyoTestJournalCleanup
     public static string Cleanup(string runId)
     {
         if (!LowerHex(runId, 64)) throw new InvalidDataException("TEST_JOURNAL_RUN_ID");
-        string temp = Canonical(Path.GetTempPath());
-        string parent = Path.Combine(temp, "fluyo-native-test-broker-journals");
-        string run = Path.Combine(parent, runId);
-        AssertFixedNtfs(temp);
-        uint attributes = GetFileAttributesW(run);
-        if (attributes == 0xffffffff)
-        {
-            int error = Marshal.GetLastWin32Error();
-            if (error == ErrorFileNotFound || error == ErrorPathNotFound) return "ABSENT";
-            throw new Win32Exception(error, "GetFileAttributesW(test journal run)");
-        }
         List<Record> records = new List<Record>();
-        using (SafeFileHandle tempHandle = Open(temp, FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE, true))
-        using (SafeFileHandle parentHandle = Open(parent, FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE, true))
-        using (SafeFileHandle runHandle = Open(run, FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | DELETE | SYNCHRONIZE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE, true))
+        string trustedRoot;
+        using (TempChain tempChain = OpenTrustedTempRoot())
         {
-            Inspect(tempHandle, temp, true);
-            Inspect(parentHandle, parent, true);
-            Inspect(runHandle, run, true);
+            trustedRoot = tempChain.Root;
+            Identity tempIdentity = tempChain.Identities[tempChain.Identities.Count - 1];
+            SafeFileHandle tempHandle = tempChain.Handles[tempChain.Handles.Count - 1];
+            string temp = tempChain.Root;
+            string parent = Path.Combine(temp, "fluyo-native-test-broker-journals");
+            string run = Path.Combine(parent, runId);
+            AssertFixedNtfs(temp);
+            uint attributes = GetFileAttributesW(NativeLocalPath(run));
+            if (attributes == 0xffffffff)
+            {
+                int error = Marshal.GetLastWin32Error();
+                if (error == ErrorFileNotFound || error == ErrorPathNotFound) return "ABSENT";
+                throw new Win32Exception(error, "GetFileAttributesW(test journal run)");
+            }
+            using (SafeFileHandle parentHandle = Open(parent,
+                FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | SYNCHRONIZE, FILE_SHARE_READ | FILE_SHARE_WRITE, true))
+            using (SafeFileHandle runHandle = Open(run,
+                FILE_READ_ATTRIBUTES | FILE_LIST_DIRECTORY | DELETE | SYNCHRONIZE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, true))
+            {
+            Identity parentIdentity = Inspect(parentHandle, parent, true);
+            Identity runIdentity = Inspect(runHandle, run, true);
+            if (parentIdentity.Volume != tempIdentity.Volume || runIdentity.Volume != tempIdentity.Volume)
+                throw new InvalidDataException("TEST_JOURNAL_VOLUME_TRANSITION");
             long total = 0;
             try
             {
-                foreach (string path in Directory.EnumerateFileSystemEntries(run).OrderBy(value => value, StringComparer.Ordinal))
+                foreach (string path in Directory.EnumerateFileSystemEntries(NativeLocalPath(run))
+                    .Select(Canonical).OrderBy(value => value, StringComparer.Ordinal))
                 {
                     string name = Path.GetFileName(path);
                     if (!name.EndsWith(".journal", StringComparison.Ordinal) ||
@@ -276,7 +398,7 @@ public static class FluyoTestJournalCleanup
                     }
                     finally { if (file != null) file.Dispose(); }
                 }
-                string[] current = Directory.EnumerateFileSystemEntries(run)
+                string[] current = Directory.EnumerateFileSystemEntries(NativeLocalPath(run))
                     .Select(Path.GetFileName).OrderBy(value => value, StringComparer.Ordinal).ToArray();
                 string[] expected = records.Select(value => value.Name)
                     .OrderBy(value => value, StringComparer.Ordinal).ToArray();
@@ -291,6 +413,9 @@ public static class FluyoTestJournalCleanup
                     if (bytes.LongLength != record.Bytes || Sha256(bytes) != record.Sha256)
                         throw new InvalidDataException("TEST_JOURNAL_CONTENT_DRIFT");
                 }
+                RequireSameIdentity(tempIdentity, InspectIdentity(tempHandle, true));
+                RequireSameIdentity(parentIdentity, Inspect(parentHandle, parent, true));
+                RequireSameIdentity(runIdentity, Inspect(runHandle, run, true));
                 foreach (Record record in records)
                 {
                     MarkDelete(record.Handle);
@@ -303,8 +428,10 @@ public static class FluyoTestJournalCleanup
             {
                 foreach (Record record in records) if (record.Handle != null) record.Handle.Dispose();
             }
+            }
         }
-        if (Directory.Exists(run)) throw new InvalidDataException("TEST_JOURNAL_RUN_REMAINS");
+        string remaining = Path.Combine(trustedRoot, "fluyo-native-test-broker-journals", runId);
+        if (Directory.Exists(NativeLocalPath(remaining))) throw new InvalidDataException("TEST_JOURNAL_RUN_REMAINS");
         return "REMOVED";
     }
 }
