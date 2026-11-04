@@ -14,55 +14,23 @@ final class AuthRuntimeKernelTests: XCTestCase {
         case rejectedWrites = "rejected_writes"
         case completions, exchange, generation, terminal, invariant
     }
-    private final class CorpusStageObserver: @unchecked Sendable {
+    private final class CorpusStageObserver {
         struct ActiveStage {
             let corpusId: String, stage: CorpusCheckpointStage
-            var assertionRecorded: Bool
         }
-        private let lock = NSLock()
         private var activeStage: ActiveStage?
-        private var namedDiagnosticDepth = 0
 
         func begin(_ corpusId: String, _ stage: CorpusCheckpointStage) {
-            withLock { activeStage = .init(corpusId: corpusId, stage: stage, assertionRecorded: false) }
-        }
-        func recordAssertion() {
-            withLock {
-                guard namedDiagnosticDepth == 0, var activeStage else { return }
-                activeStage.assertionRecorded = true
-                self.activeStage = activeStage
-            }
+            activeStage = .init(corpusId: corpusId, stage: stage)
         }
         func finishStage() -> ActiveStage? {
-            withLock {
-                guard let activeStage else { return nil }
-                self.activeStage = nil
-                return activeStage.assertionRecorded ? activeStage : nil
-            }
+            defer { activeStage = nil }
+            return activeStage
         }
-        func reset() {
-            withLock {
-                activeStage = nil
-                namedDiagnosticDepth = 0
-            }
-        }
-        func withNamedDiagnostic(_ operation: () -> Void) {
-            withLock { namedDiagnosticDepth += 1 }
-            defer { withLock { namedDiagnosticDepth -= 1 } }
-            operation()
-        }
-        private func withLock<T>(_ operation: () -> T) -> T {
-            lock.lock()
-            defer { lock.unlock() }
-            return operation()
-        }
+        func currentStage() -> ActiveStage? { activeStage }
+        func reset() { activeStage = nil }
     }
     private let corpusStageObserver = CorpusStageObserver()
-
-    override func record(_ issue: XCTIssue) {
-        corpusStageObserver.recordAssertion()
-        super.record(issue)
-    }
     private static let regularFailureStages: Set<CorpusCheckpointStage> = [
         .fingerprint, .step, .snapshot, .effects, .drain, .trace, .wipe, .rejectedWrites,
         .completions, .generation, .terminal, .invariant,
@@ -114,15 +82,14 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
 
     func testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups() async throws {
-        continueAfterFailure = true
         let observer = corpusStageObserver
         observer.reset()
         defer { observer.reset() }
         let rows = try await observeStage("corpus_manifest", .manifest, observer: observer) {
-            let rows = try loadCorpus(); XCTAssertEqual(rows.filter { $0.kind == "scenario" }.count, 28); XCTAssertEqual(rows.filter { $0.kind == "invariant" }.count, 13); return rows
+            let rows = try loadCorpus(); try requireCorpusAssertion(rows.filter { $0.kind == "scenario" }.count == 28); try requireCorpusAssertion(rows.filter { $0.kind == "invariant" }.count == 13); return rows
         }
         for (index, vector) in rows.enumerated() { try await run(vector, observer: observer); print("AUTH_KERNEL_VECTOR \(index) \(vector.id) \(vector.digest) PASS") }
-        try closeObservedStage(observer)
+        closeObservedStage(observer)
     }
 
     func testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation() async throws {
@@ -194,8 +161,24 @@ final class AuthRuntimeKernelTests: XCTestCase {
         XCTAssertEqual(selectRecordedAssertionDiagnostic("callback_cancel", .exchange), "[auth_corpus_stage_diagnostic_rejected]")
     }
 
+    func testUnexpectedCorpusErrorIsConvertedToPayloadFreeSentinel() async {
+        struct PrivateUnexpectedCorpusError: Error, CustomStringConvertible {
+            let description = "private_unexpected_corpus_token"
+        }
+        do {
+            let _: Void = try await observeStage("callback_cancel", .step, observer: nil) {
+                throw PrivateUnexpectedCorpusError()
+            }
+            XCTFail("expected payload-free corpus sentinel")
+        } catch CorpusError.diagnosticAbort {
+            // The closed sentinel is the only permitted escaping value.
+        } catch {
+            XCTFail("unexpected error type escaped corpus observation")
+        }
+    }
+
     private func run(_ vector: Vector, observer: CorpusStageObserver? = nil) async throws {
-        try await observeStage(vector.id, .fingerprint, observer: observer) { XCTAssertEqual(vector.digest, Self.digest, vector.id) }
+        try await observeStage(vector.id, .fingerprint, observer: observer) { try requireCorpusAssertion(vector.digest == Self.digest) }
         let ports = ScriptPorts(times: vector.times, completionCommands: vector.completions.filter { $0 != "none" })
         let coordinator = makeCoordinator(ports, generation: vector.initial == "overflow" ? .max : 1)
         var rejected = 0
@@ -209,40 +192,40 @@ final class AuthRuntimeKernelTests: XCTestCase {
             try requireCorpusMatch(snapshots == vector.snapshots, vector.id, .snapshot, snapshotMismatch(vector.snapshots, snapshots))
         }
         try await observeStage(vector.id, .effects, observer: observer) {
-            let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); XCTAssertEqual(fullEffectHistory, vector.effects, vector.id)
+            let fullEffectHistory = await coordinator.presentationEffectHistory().map(normalize); try requireCorpusAssertion(fullEffectHistory == vector.effects)
         }
         let generation = try await observeStage(vector.id, .drain, observer: observer) {
             let generation = await coordinator.currentGeneration(); let firstDrain = await coordinator.drainPresentationEffects(for: generation)
             let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
-            XCTAssertTrue(firstDrain.allSatisfy { $0.generation == generation }, vector.id); XCTAssertTrue(secondDrain.isEmpty, vector.id); XCTAssertTrue(staleDrain.isEmpty, vector.id); return generation
+            try requireCorpusAssertion(firstDrain.allSatisfy { $0.generation == generation }); try requireCorpusAssertion(secondDrain.isEmpty); try requireCorpusAssertion(staleDrain.isEmpty); return generation
         }
         let trace = await coordinator.normalizedTrace().map(\.rawValue); let wipe = await ports.wipeSummary(); let terminal = await coordinator.isTerminalFenced(); let completions = await ports.completionValues()
-        try await observeStage(vector.id, .trace, observer: observer) { assertFenceTraceSemantics(vector.id, trace); try requireCorpusMatch(trace == vector.trace, vector.id, .trace, traceMismatch(vector.trace, trace)) }
-        try await observeStage(vector.id, .wipe, observer: observer) { XCTAssertEqual(wipe, vector.wipe, vector.id) }
-        try await observeStage(vector.id, .rejectedWrites, observer: observer) { XCTAssertEqual(rejected, vector.rejectedWrites, vector.id) }
-        try await observeStage(vector.id, .completions, observer: observer) { XCTAssertEqual(completions, vector.completions.filter { $0 != "none" }, vector.id) }
-        if vector.id == "warm_callback_success" { try await observeStage(vector.id, .exchange, observer: observer) { let exchanged = await ports.provider.lastExchangeValue(); XCTAssertEqual(exchanged, "opaque-pkce") } }
-        try await observeStage(vector.id, .generation, observer: observer) { XCTAssertEqual(generation, vector.generation, vector.id) }
-        try await observeStage(vector.id, .terminal, observer: observer) { XCTAssertEqual(terminal, vector.terminal, vector.id) }
+        try await observeStage(vector.id, .trace, observer: observer) { try assertFenceTraceSemantics(vector.id, trace); try requireCorpusMatch(trace == vector.trace, vector.id, .trace, traceMismatch(vector.trace, trace)) }
+        try await observeStage(vector.id, .wipe, observer: observer) { try requireCorpusAssertion(wipe == vector.wipe) }
+        try await observeStage(vector.id, .rejectedWrites, observer: observer) { try requireCorpusAssertion(rejected == vector.rejectedWrites) }
+        try await observeStage(vector.id, .completions, observer: observer) { try requireCorpusAssertion(completions == vector.completions.filter { $0 != "none" }) }
+        if vector.id == "warm_callback_success" { try await observeStage(vector.id, .exchange, observer: observer) { let exchanged = await ports.provider.lastExchangeValue(); try requireCorpusAssertion(exchanged == "opaque-pkce") } }
+        try await observeStage(vector.id, .generation, observer: observer) { try requireCorpusAssertion(generation == vector.generation) }
+        try await observeStage(vector.id, .terminal, observer: observer) { try requireCorpusAssertion(terminal == vector.terminal) }
         try await observeStage(vector.id, .invariant, observer: observer) { try await validateInvariant(vector.id, coordinator, ports) }
     }
 
-    private func assertFenceTraceSemantics(_ id: String, _ trace: [String]) {
+    private func assertFenceTraceSemantics(_ id: String, _ trace: [String]) throws {
         switch id {
         case "callback_cancel":
-            let fence = trace.firstIndex(of: AuthTraceEntry.generationFence.rawValue)!
-            let snapshot = trace.indices.first { $0 > fence && trace[$0] == AuthTraceEntry.snapshotPublished.rawValue }!
-            let stale = trace.firstIndex(of: AuthTraceEntry.staleRejected.rawValue)!
-            XCTAssertLessThan(fence, snapshot); XCTAssertLessThan(snapshot, stale)
-            XCTAssertEqual(trace.filter { $0 == AuthTraceEntry.staleRejected.rawValue }.count, 1)
+            guard let fence = trace.firstIndex(of: AuthTraceEntry.generationFence.rawValue) else { try failCurrentStageAssertion() }
+            guard let snapshot = trace.indices.first(where: { $0 > fence && trace[$0] == AuthTraceEntry.snapshotPublished.rawValue }) else { try failCurrentStageAssertion() }
+            guard let stale = trace.firstIndex(of: AuthTraceEntry.staleRejected.rawValue) else { try failCurrentStageAssertion() }
+            try requireCorpusAssertion(fence < snapshot); try requireCorpusAssertion(snapshot < stale)
+            try requireCorpusAssertion(trace.filter { $0 == AuthTraceEntry.staleRejected.rawValue }.count == 1)
         case "stale_response_discarded", "generation_change_cancels_work_and_blocks_stale_writes":
-            let fence = trace.firstIndex(of: AuthTraceEntry.generationFence.rawValue)!
-            let stale = trace.firstIndex(of: AuthTraceEntry.staleRejected.rawValue)!
-            let purge = trace.firstIndex(of: AuthTraceEntry.callbackPurge.rawValue)!
-            XCTAssertLessThan(fence, stale); XCTAssertLessThan(stale, purge)
-            XCTAssertEqual(trace.filter { $0 == AuthTraceEntry.staleRejected.rawValue }.count, 1)
+            guard let fence = trace.firstIndex(of: AuthTraceEntry.generationFence.rawValue) else { try failCurrentStageAssertion() }
+            guard let stale = trace.firstIndex(of: AuthTraceEntry.staleRejected.rawValue) else { try failCurrentStageAssertion() }
+            guard let purge = trace.firstIndex(of: AuthTraceEntry.callbackPurge.rawValue) else { try failCurrentStageAssertion() }
+            try requireCorpusAssertion(fence < stale); try requireCorpusAssertion(stale < purge)
+            try requireCorpusAssertion(trace.filter { $0 == AuthTraceEntry.staleRejected.rawValue }.count == 1)
         case "callback_malformed":
-            XCTAssertFalse(trace.contains(AuthTraceEntry.staleRejected.rawValue))
+            try requireCorpusAssertion(!trace.contains(AuthTraceEntry.staleRejected.rawValue))
         default: break
         }
     }
@@ -294,38 +277,38 @@ final class AuthRuntimeKernelTests: XCTestCase {
             await ports.callback.setPurgeResult(.failed); await coordinator.signOut(); if step == "cleanup_each_failure" { try await verifyEveryCleanupFailureLatches() }; return 1
         case "terminal_entrypoints": try await exerciseTerminalEntryPoints(coordinator); return 9
         case "effect_drain": break
-        default: XCTFail("unknown closed step"); throw CorpusError.invalid
+        default: try failCurrentStageAssertion()
         }
         return 0
     }
 
     private func validateInvariant(_ id: String, _ coordinator: AuthRuntimeCoordinator, _ ports: ScriptPorts) async throws {
         switch id {
-        case "public_state_is_secret_free": let snapshot = await coordinator.snapshot(); XCTAssertEqual(Mirror(reflecting: snapshot).children.compactMap(\.label), ["state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"]); await verifyCompletionAuditTracksRemainingCommands()
-        case "callback_transaction_is_purpose_environment_host_path_and_expiry_bound": let calls = await ports.callback.callCount(); XCTAssertGreaterThan(calls, 0); try await verifyCallbackStoreFailure()
+        case "public_state_is_secret_free": let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(Mirror(reflecting: snapshot).children.compactMap(\.label) == ["state", "hasSessionCandidate", "hasVerifiedOwnerState", "safeDestinationId", "fixedOutcomeCategory"]); try await verifyCompletionAuditTracksRemainingCommands()
+        case "callback_transaction_is_purpose_environment_host_path_and_expiry_bound": let calls = await ports.callback.callCount(); try requireCorpusAssertion(calls > 0); try await verifyCallbackStoreFailure()
         case "callback_transaction_consumes_once_and_wipes":
             let store = StrictCallbackStore(now: 999, expiresAt: 1_000); let first = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1); let second = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1); let empty = await store.confirmEmpty(generation: 1); let calls = await ports.vault.replaceCallsAfterSeed()
-            guard case .consumed = first else { return XCTFail("not consumed") }; guard case .replayed = second else { return XCTFail("not replay protected") }; XCTAssertTrue(empty); XCTAssertEqual(calls, 0)
-        case "valid_verified_session_survives_bad_link": let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
-        case "generation_change_cancels_work_and_blocks_stale_writes": let trace = await coordinator.normalizedTrace(); XCTAssertTrue(trace.contains(.staleRejected)); try await verifySwitchFencesInFlight(); try await verifyCallbackValidationCancellationPrecedesPurge(); try await verifyEveryDestructiveMutationRejectsStaleGeneration()
-        case "owner_data_waits_for_private_subject_confirmation": let snapshot = await coordinator.snapshot(); XCTAssertFalse(snapshot.hasVerifiedOwnerState); try await verifyMutationBoundaries()
-        case "transient_refresh_failure_preserves_candidate": let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.hasSessionCandidate, .present)
-        case "explicit_invalidation_and_repeated_401_clear": let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.hasSessionCandidate, .absent)
-        case "403_never_refreshes_or_signs_out": let calls = await ports.provider.refreshCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertEqual(snapshot.state, .safeTerminalError); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
-        case "offline_never_confirms_new_owner_or_expands_access": let calls = await ports.provider.verifyCallCount(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(calls, 0); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-        case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); XCTAssertTrue(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness(); try await verifyPostFenceCancellationIsIrrevocable(); try await verifySuppressedStaleLifecycle()
+            guard case .consumed = first else { try failCurrentStageAssertion() }; guard case .replayed = second else { try failCurrentStageAssertion() }; try requireCorpusAssertion(empty); try requireCorpusAssertion(calls == 0)
+        case "valid_verified_session_survives_bad_link": let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.state == .unusableLink); try requireCorpusAssertion(snapshot.hasVerifiedOwnerState)
+        case "generation_change_cancels_work_and_blocks_stale_writes": let trace = await coordinator.normalizedTrace(); try requireCorpusAssertion(trace.contains(.staleRejected)); try await verifySwitchFencesInFlight(); try await verifyCallbackValidationCancellationPrecedesPurge(); try await verifyEveryDestructiveMutationRejectsStaleGeneration()
+        case "owner_data_waits_for_private_subject_confirmation": let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(!snapshot.hasVerifiedOwnerState); try await verifyMutationBoundaries()
+        case "transient_refresh_failure_preserves_candidate": let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.hasSessionCandidate == .present)
+        case "explicit_invalidation_and_repeated_401_clear": let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.hasSessionCandidate == .absent)
+        case "403_never_refreshes_or_signs_out": let calls = await ports.provider.refreshCallCount(); let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(calls == 0); try requireCorpusAssertion(snapshot.state == .safeTerminalError); try requireCorpusAssertion(snapshot.hasVerifiedOwnerState)
+        case "offline_never_confirms_new_owner_or_expands_access": let calls = await ports.provider.verifyCallCount(); let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(calls == 0); try requireCorpusAssertion(!snapshot.hasVerifiedOwnerState)
+        case "cleanup_precedes_signed_out_or_new_owner_exposure": let terminal = await coordinator.isTerminalFenced(); try requireCorpusAssertion(terminal); try await verifyDelayedEffectCancellation(); try await verifyCleanupReservationLiveness(); try await verifyPostFenceCancellationIsIrrevocable(); try await verifySuppressedStaleLifecycle()
         case "evidence_is_closed_and_mutation_safe":
             let terminal = await coordinator.isTerminalFenced()
             if !terminal { try failInvariant(id, "terminal_not_fenced_after_entrypoint_sequence") }
-        case "no_op_telemetry_has_zero_retention_and_zero_transport": XCTAssertEqual(Mirror(reflecting: TrapTelemetry()).children.count, 0)
+        case "no_op_telemetry_has_zero_retention_and_zero_transport": try requireCorpusAssertion(Mirror(reflecting: TrapTelemetry()).children.count == 0)
         default: break
         }
     }
 
-    private func verifyCompletionAuditTracksRemainingCommands() async {
+    private func verifyCompletionAuditTracksRemainingCommands() async throws {
         let audit = CompletionAudit(["vault_none"])
         let before = await audit.hasCommands(), consumed = await audit.take(["vault_none"]), after = await audit.hasCommands()
-        XCTAssertTrue(before); XCTAssertEqual(consumed, "vault_none"); XCTAssertFalse(after)
+        try requireCorpusAssertion(before); try requireCorpusAssertion(consumed == "vault_none"); try requireCorpusAssertion(!after)
     }
 
     private func verifyLateTimerRegistrationCancellation() async {
@@ -350,19 +333,19 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
 
     private func strictCallbackChecks() async throws {
-        let valid = StrictCallbackStore(now: 999, expiresAt: 1_000); guard case let .consumed(candidate) = await valid.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("valid callback") }; XCTAssertEqual(candidate.storage, "opaque-pkce"); XCTAssertNotEqual(candidate.storage, "expected")
-        guard case .replayed = await valid.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("replay") }
+        let valid = StrictCallbackStore(now: 999, expiresAt: 1_000); guard case let .consumed(candidate) = await valid.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { try failCurrentStageAssertion() }; try requireCorpusAssertion(candidate.storage == "opaque-pkce"); try requireCorpusAssertion(candidate.storage != "expected")
+        guard case .replayed = await valid.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { try failCurrentStageAssertion() }
         let distinct = StrictCallbackStore(now: 999, expiresAt: 1_000, oauthState: "state-two", verifier: "verifier-two")
         let distinctIngress = OpaqueCallbackIngress("https://auth.dev.fluyo.test/native/auth/callback?code=x&state=state-two&nonce=expected")
-        guard case let .consumed(verifier) = await distinct.validateConsumeAndWipe(distinctIngress, generation: 1) else { return XCTFail("distinct verifier") }; XCTAssertEqual(verifier.storage, "verifier-two")
-        let expired = StrictCallbackStore(now: 1_000, expiresAt: 1_000); guard case .expired = await expired.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("expiry") }
-        let rollback = StrictCallbackStore(now: 999, expiresAt: 2_000, issuedAt: 1_000); guard case .expired = await rollback.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("rollback") }
+        guard case let .consumed(verifier) = await distinct.validateConsumeAndWipe(distinctIngress, generation: 1) else { try failCurrentStageAssertion() }; try requireCorpusAssertion(verifier.storage == "verifier-two")
+        let expired = StrictCallbackStore(now: 1_000, expiresAt: 1_000); guard case .expired = await expired.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { try failCurrentStageAssertion() }
+        let rollback = StrictCallbackStore(now: 999, expiresAt: 2_000, issuedAt: 1_000); guard case .expired = await rollback.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { try failCurrentStageAssertion() }
         let pendingAdversaries = [
             StrictCallbackStore(now: 999, expiresAt: 1_000, purpose: "other"), StrictCallbackStore(now: 999, expiresAt: 1_000, environment: "prod"),
             StrictCallbackStore(now: 999, expiresAt: 1_000, host: "other.dev.fluyo.test"), StrictCallbackStore(now: 999, expiresAt: 1_000, path: "/other"),
             StrictCallbackStore(now: 999, expiresAt: 1_000, oauthState: "other"), StrictCallbackStore(now: 999, expiresAt: 1_000, nonce: "other"),
         ]
-        for store in pendingAdversaries { guard case .malformed = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { return XCTFail("accepted mismatched pending transaction") } }
+        for store in pendingAdversaries { guard case .malformed = await store.validateConsumeAndWipe(SyntheticAuthFixture.ingress(), generation: 1) else { try failCurrentStageAssertion() } }
         let adversaries = [
             "http://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected",
             "https://AUTH.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected",
@@ -375,7 +358,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
             "https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expected\t",
             "https://auth.dev.fluyo.test/native/auth/callback?code=x&state=expected&nonce=expecté",
         ]
-        for raw in adversaries { let store = StrictCallbackStore(now: 999, expiresAt: 1_000); guard case .malformed = await store.validateConsumeAndWipe(.init(raw), generation: 1) else { return XCTFail("accepted control or non-ASCII callback") } }
+        for raw in adversaries { let store = StrictCallbackStore(now: 999, expiresAt: 1_000); guard case .malformed = await store.validateConsumeAndWipe(.init(raw), generation: 1) else { try failCurrentStageAssertion() } }
     }
 
     private func verifyEveryCleanupFailureLatches() async throws {
@@ -383,11 +366,11 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let ports = ScriptPorts(times: [0]); await failure.apply(ports); let coordinator = makeCoordinator(ports); await coordinator.signOut()
             let terminal = await coordinator.isTerminalFenced(); let snapshot = await coordinator.snapshot(); let generation = await coordinator.currentGeneration()
             let effects = await coordinator.drainPresentationEffects(for: generation); let audit = await ports.audit.values(); let persistence = await ports.persistence()
-            XCTAssertTrue(terminal, failure.rawValue); XCTAssertEqual(snapshot.fixedOutcomeCategory, .transientFailure, failure.rawValue)
-            XCTAssertEqual(effects.count, 1, failure.rawValue); if let effect = effects.first { assertTerminalEffect(effect, generation) }
+            try requireCorpusAssertion(terminal); try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .transientFailure)
+            try requireCorpusAssertion(effects.count == 1); if let effect = effects.first { try assertTerminalEffect(effect, generation) }
             let secondDrain = await coordinator.drainPresentationEffects(for: generation); let staleDrain = await coordinator.drainPresentationEffects(for: generation == 1 ? 2 : 1)
-            XCTAssertTrue(secondDrain.isEmpty, failure.rawValue); XCTAssertTrue(staleDrain.isEmpty, failure.rawValue); XCTAssertEqual(audit, failure.expectedPrefix, failure.rawValue)
-            XCTAssertEqual(persistence, failure.expectedPersistence, failure.rawValue)
+            try requireCorpusAssertion(secondDrain.isEmpty); try requireCorpusAssertion(staleDrain.isEmpty); try requireCorpusAssertion(audit == failure.expectedPrefix)
+            try requireCorpusAssertion(persistence == failure.expectedPersistence)
         }
     }
 
@@ -398,8 +381,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let warmCancelIngress = SyntheticAuthFixture.ingress()
         async let work: Void = coordinator.receiveCallback(warmCancelIngress); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback(); await ports.provider.releaseExchange(); _ = await work
         let snapshot = await coordinator.snapshot(); let generation = await coordinator.currentGeneration(); let effects = await coordinator.drainPresentationEffects(for: generation)
-        XCTAssertEqual(snapshot.state, .authenticated); XCTAssertEqual(snapshot.hasSessionCandidate, .present); XCTAssertTrue(snapshot.hasVerifiedOwnerState)
-        XCTAssertEqual(snapshot.fixedOutcomeCategory, .canceled); XCTAssertTrue(effects.isEmpty)
+        try requireCorpusAssertion(snapshot.state == .authenticated); try requireCorpusAssertion(snapshot.hasSessionCandidate == .present); try requireCorpusAssertion(snapshot.hasVerifiedOwnerState)
+        try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .canceled); try requireCorpusAssertion(effects.isEmpty)
     }
 
     private func verifyCancelAvailabilityBoundaries() async throws {
@@ -410,15 +393,15 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let boundaryIngress = SyntheticAuthFixture.ingress()
             async let work: Void = coordinator.receiveCallback(boundaryIngress); await ports.provider.waitExchangeStarted(); await coordinator.cancelCallback()
             let afterCancel = await coordinator.snapshot()
-            if now < 500 { XCTAssertEqual(afterCancel.state, .callbackPending); await coordinator.signOut() }
-            else { XCTAssertEqual(afterCancel.fixedOutcomeCategory, .canceled) }
+            if now < 500 { try requireCorpusAssertion(afterCancel.state == .callbackPending); await coordinator.signOut() }
+            else { try requireCorpusAssertion(afterCancel.fixedOutcomeCategory == .canceled) }
             await ports.provider.releaseExchange(); _ = await work
         }
     }
 
     private func verifyTotalTimeoutBoundary() async throws {
         let ports = ScriptPorts(times: [0, 30_000]); let coordinator = makeCoordinator(ports); await coordinator.scheduleTimeout(.totalActionable)
-        let requests = await ports.clock.requests(); let snapshot = await coordinator.snapshot(); XCTAssertEqual(requests, [30_000]); XCTAssertEqual(snapshot.fixedOutcomeCategory, .timedOut)
+        let requests = await ports.clock.requests(); let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(requests == [30_000]); try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .timedOut)
         try await verifyCallbackContextTimeouts()
         try await verifyRefreshContextExits()
     }
@@ -431,8 +414,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
                 await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
                 let timeoutIngress = SyntheticAuthFixture.ingress()
                 async let work: Void = coordinator.receiveCallback(timeoutIngress); await ports.provider.waitExchangeStarted(); await coordinator.scheduleTimeout(kind); _ = await work
-                let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, .safeTerminalError); XCTAssertEqual(snapshot.hasSessionCandidate, warm ? .present : .absent); XCTAssertEqual(snapshot.hasVerifiedOwnerState, warm); XCTAssertEqual(snapshot.safeDestinationId, warm ? .internalFoundationHome : .signedOut); XCTAssertEqual(snapshot.fixedOutcomeCategory, .timedOut)
-                let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.compactMap { $0.payload.announcement }, [.callbackPending, .safeTerminalError]); let trace = await coordinator.normalizedTrace(); XCTAssertTrue(trace.contains(.staleRejected))
+                let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.state == .safeTerminalError); try requireCorpusAssertion(snapshot.hasSessionCandidate == (warm ? .present : .absent)); try requireCorpusAssertion(snapshot.hasVerifiedOwnerState == warm); try requireCorpusAssertion(snapshot.safeDestinationId == (warm ? .internalFoundationHome : .signedOut)); try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .timedOut)
+                let history = await coordinator.presentationEffectHistory(); try requireCorpusAssertion(history.compactMap { $0.payload.announcement } == [.callbackPending, .safeTerminalError]); let trace = await coordinator.normalizedTrace(); try requireCorpusAssertion(trace.contains(.staleRejected))
             }
         }
     }
@@ -442,12 +425,12 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let ports = ScriptPorts(times: [0, 0, kind.milliseconds]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.provider.setSuspendRefresh(true)
             let timeoutCandidate = SyntheticAuthFixture.candidate()
             async let work: Void = coordinator.handle401(timeoutCandidate); await ports.provider.waitRefreshStarted(); await coordinator.scheduleTimeout(kind); _ = await work
-            let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, expectedState); XCTAssertEqual(snapshot.hasSessionCandidate, .present); XCTAssertTrue(snapshot.hasVerifiedOwnerState); XCTAssertEqual(snapshot.fixedOutcomeCategory, .timedOut)
+            let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.state == expectedState); try requireCorpusAssertion(snapshot.hasSessionCandidate == .present); try requireCorpusAssertion(snapshot.hasVerifiedOwnerState); try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .timedOut)
         }
         let ports = ScriptPorts(times: [0, 0, 500]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.provider.setSuspendRefresh(true)
         let cancelCandidate = SyntheticAuthFixture.candidate()
         async let work: Void = coordinator.handle401(cancelCandidate); await ports.provider.waitRefreshStarted(); await coordinator.cancelRefresh(); _ = await work
-        let snapshot = await coordinator.snapshot(); XCTAssertEqual(snapshot.state, .offlineSessionCandidate); XCTAssertEqual(snapshot.fixedOutcomeCategory, .canceled)
+        let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.state == .offlineSessionCandidate); try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .canceled)
     }
 
     private func verifyRefreshTimerBoundaries() async throws {
@@ -455,37 +438,37 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let ports = ScriptPorts(times: [0, 0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.clock.setDelayedElapsed(elapsed); await ports.provider.setSuspendRefresh(true)
             let timerCandidate = SyntheticAuthFixture.candidate()
             async let work: Void = coordinator.handle401(timerCandidate); await ports.provider.waitRefreshStarted()
-            let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.count, elapsed < 500 ? 0 : 1)
-            if let effect = history.first { XCTAssertEqual(effect.originatingState, .refreshPending); XCTAssertEqual(effect.payload.focus, .heading); XCTAssertEqual(effect.payload.announcement, .refreshPending); XCTAssertEqual(effect.payload.priority, .polite); XCTAssertNil(effect.payload.navigation) }
+            let history = await coordinator.presentationEffectHistory(); try requireCorpusAssertion(history.count == (elapsed < 500 ? 0 : 1))
+            if let effect = history.first { try requireCorpusAssertion(effect.originatingState == .refreshPending); try requireCorpusAssertion(effect.payload.focus == .heading); try requireCorpusAssertion(effect.payload.announcement == .refreshPending); try requireCorpusAssertion(effect.payload.priority == .polite); try requireCorpusAssertion(effect.payload.navigation == nil) }
             await ports.provider.releaseRefresh(); _ = await work
-            let generation = await coordinator.currentGeneration(); let drained = await coordinator.drainPresentationEffects(for: generation); XCTAssertTrue(drained.isEmpty); let finalHistory = await coordinator.presentationEffectHistory(); XCTAssertEqual(finalHistory.count, elapsed < 500 ? 0 : 1)
+            let generation = await coordinator.currentGeneration(); let drained = await coordinator.drainPresentationEffects(for: generation); try requireCorpusAssertion(drained.isEmpty); let finalHistory = await coordinator.presentationEffectHistory(); try requireCorpusAssertion(finalHistory.count == (elapsed < 500 ? 0 : 1))
         }
     }
 
     private func verifyMutationBoundaries() async throws {
         for result in [ConditionalMutationResult.failed, .staleGeneration] {
             let vaultPorts = ScriptPorts(times: [0]); let vaultCoordinator = makeCoordinator(vaultPorts); await vaultPorts.vault.setReadCandidate(false); await vaultCoordinator.initialize(online: true); await vaultPorts.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await vaultPorts.vault.setReplaceResult(result); await vaultCoordinator.receiveCallback(SyntheticAuthFixture.ingress())
-            let vaultSnapshot = await vaultCoordinator.snapshot(); let vaultWipe = await vaultPorts.wipeSummary(); XCTAssertEqual(vaultSnapshot.state, .safeTerminalError); XCTAssertEqual(vaultSnapshot.hasSessionCandidate, .absent); XCTAssertEqual(vaultWipe, "callback_headers_vault_owner_confirm")
+            let vaultSnapshot = await vaultCoordinator.snapshot(); let vaultWipe = await vaultPorts.wipeSummary(); try requireCorpusAssertion(vaultSnapshot.state == .safeTerminalError); try requireCorpusAssertion(vaultSnapshot.hasSessionCandidate == .absent); try requireCorpusAssertion(vaultWipe == "callback_headers_vault_owner_confirm")
             let ownerPorts = ScriptPorts(times: [0]); let ownerCoordinator = makeCoordinator(ownerPorts); await ownerPorts.vault.setReadCandidate(false); await ownerCoordinator.initialize(online: true); await ownerPorts.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ownerPorts.owner.setBindResult(result); await ownerCoordinator.receiveCallback(SyntheticAuthFixture.ingress())
-            let ownerSnapshot = await ownerCoordinator.snapshot(); let ownerWipe = await ownerPorts.wipeSummary(); XCTAssertEqual(ownerSnapshot.state, .safeTerminalError); XCTAssertFalse(ownerSnapshot.hasVerifiedOwnerState); XCTAssertEqual(ownerWipe, "callback_headers_vault_owner_confirm")
+            let ownerSnapshot = await ownerCoordinator.snapshot(); let ownerWipe = await ownerPorts.wipeSummary(); try requireCorpusAssertion(ownerSnapshot.state == .safeTerminalError); try requireCorpusAssertion(!ownerSnapshot.hasVerifiedOwnerState); try requireCorpusAssertion(ownerWipe == "callback_headers_vault_owner_confirm")
         }
     }
 
     private func verifySwitchFencesInFlight() async throws {
-        func assertSwitched(_ coordinator: AuthRuntimeCoordinator) async { let snapshot = await coordinator.snapshot(); let trace = await coordinator.normalizedTrace(); XCTAssertEqual(snapshot.state, .accountSwitching); XCTAssertTrue(trace.contains(.staleRejected)) }
+        func assertSwitched(_ coordinator: AuthRuntimeCoordinator) async throws { let snapshot = await coordinator.snapshot(); let trace = await coordinator.normalizedTrace(); try requireCorpusAssertion(snapshot.state == .accountSwitching); try requireCorpusAssertion(trace.contains(.staleRejected)) }
         do {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.provider.setSuspendExchange(true)
             let switchExchangeIngress = SyntheticAuthFixture.ingress()
-            async let work: Void = coordinator.receiveCallback(switchExchangeIngress); await ports.provider.waitExchangeStarted(); await coordinator.switchAccount(); await ports.provider.releaseExchange(); _ = await work; await assertSwitched(coordinator)
+            async let work: Void = coordinator.receiveCallback(switchExchangeIngress); await ports.provider.waitExchangeStarted(); await coordinator.switchAccount(); await ports.provider.releaseExchange(); _ = await work; try await assertSwitched(coordinator)
         }
         do {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setResult(.consumed(SyntheticAuthFixture.candidate())); await ports.vault.setSuspendReplace(true)
             let switchReplaceIngress = SyntheticAuthFixture.ingress()
-            async let work: Void = coordinator.receiveCallback(switchReplaceIngress); await ports.vault.waitReplaceStarted(); await coordinator.switchAccount(); await ports.vault.releaseReplace(); _ = await work; await assertSwitched(coordinator); let staleWrites = await ports.vault.staleWriteCount(); XCTAssertEqual(staleWrites, 1)
+            async let work: Void = coordinator.receiveCallback(switchReplaceIngress); await ports.vault.waitReplaceStarted(); await coordinator.switchAccount(); await ports.vault.releaseReplace(); _ = await work; try await assertSwitched(coordinator); let staleWrites = await ports.vault.staleWriteCount(); try requireCorpusAssertion(staleWrites == 1)
         }
         do {
             let ports = ScriptPorts(times: [0, 15_000]); let coordinator = makeCoordinator(ports); await ports.clock.setSuspendSleep(true)
-            async let work: Void = coordinator.scheduleTimeout(.providerOrApiStep); await ports.clock.waitSleepStarted(); await coordinator.switchAccount(); await ports.clock.releaseSleep(); _ = await work; await assertSwitched(coordinator)
+            async let work: Void = coordinator.scheduleTimeout(.providerOrApiStep); await ports.clock.waitSleepStarted(); await coordinator.switchAccount(); await ports.clock.releaseSleep(); _ = await work; try await assertSwitched(coordinator)
         }
     }
 
@@ -505,13 +488,13 @@ final class AuthRuntimeKernelTests: XCTestCase {
             if generations.comparisonReleaseTimedOut() {
                 try failInvariant("generation_change_cancels_work_and_blocks_stale_writes", "comparison_release_timeout")
             }
-            XCTAssertEqual(applied, .applied); let pendingAfterMutation = await p.callback.hasPending(); XCTAssertFalse(pendingAfterMutation)
-            await p.callback.seed(); let stale = await p.callback.purge(generation: 1), pendingAfterStale = await p.callback.hasPending(); XCTAssertEqual(stale, .staleGeneration); XCTAssertTrue(pendingAfterStale)
+            try requireCorpusAssertion(applied == .applied); let pendingAfterMutation = await p.callback.hasPending(); try requireCorpusAssertion(!pendingAfterMutation)
+            await p.callback.seed(); let stale = await p.callback.purge(generation: 1), pendingAfterStale = await p.callback.hasPending(); try requireCorpusAssertion(stale == .staleGeneration); try requireCorpusAssertion(pendingAfterStale)
         }
-        do { let p = ScriptPorts(times: [0]); await p.vault.seed(); p.generations.activate(2); let outcome = await p.vault.clear(generation: 1), stored = await p.vault.hasStoredCandidate(); XCTAssertEqual(outcome, .staleGeneration); XCTAssertTrue(stored) }
-        do { let p = ScriptPorts(times: [0]); p.generations.activate(2); let outcome = await p.owner.bind(.init("private"), generation: 1), owner = await p.owner.hasOwner(); XCTAssertEqual(outcome, .staleGeneration); XCTAssertFalse(owner) }
-        do { let p = ScriptPorts(times: [0]); await p.owner.seed(); p.generations.activate(2); let outcome = await p.owner.clearHeadersAndRequests(generation: 1), headers = await p.owner.hasHeaders(); XCTAssertEqual(outcome, .staleGeneration); XCTAssertTrue(headers) }
-        do { let p = ScriptPorts(times: [0]); await p.owner.seed(); p.generations.activate(2); let outcome = await p.owner.purgeOwnerData(generation: 1), owner = await p.owner.hasOwner(); XCTAssertEqual(outcome, .staleGeneration); XCTAssertTrue(owner) }
+        do { let p = ScriptPorts(times: [0]); await p.vault.seed(); p.generations.activate(2); let outcome = await p.vault.clear(generation: 1), stored = await p.vault.hasStoredCandidate(); try requireCorpusAssertion(outcome == .staleGeneration); try requireCorpusAssertion(stored) }
+        do { let p = ScriptPorts(times: [0]); p.generations.activate(2); let outcome = await p.owner.bind(.init("private"), generation: 1), owner = await p.owner.hasOwner(); try requireCorpusAssertion(outcome == .staleGeneration); try requireCorpusAssertion(!owner) }
+        do { let p = ScriptPorts(times: [0]); await p.owner.seed(); p.generations.activate(2); let outcome = await p.owner.clearHeadersAndRequests(generation: 1), headers = await p.owner.hasHeaders(); try requireCorpusAssertion(outcome == .staleGeneration); try requireCorpusAssertion(headers) }
+        do { let p = ScriptPorts(times: [0]); await p.owner.seed(); p.generations.activate(2); let outcome = await p.owner.purgeOwnerData(generation: 1), owner = await p.owner.hasOwner(); try requireCorpusAssertion(outcome == .staleGeneration); try requireCorpusAssertion(owner) }
     }
 
     private func verifyCallbackValidationCancellationPrecedesPurge() async throws {
@@ -519,7 +502,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setSuspendValidation(true)
         let validationIngress = SyntheticAuthFixture.ingress()
         async let work: Void = coordinator.receiveCallback(validationIngress); await ports.callback.waitValidationStarted(); await coordinator.signOut(); _ = await work
-        let canceled = await ports.callback.validationCancellationDidComplete(), purgeAfter = await ports.callback.purgeObservedCancellation(); XCTAssertTrue(canceled); XCTAssertTrue(purgeAfter)
+        let canceled = await ports.callback.validationCancellationDidComplete(), purgeAfter = await ports.callback.purgeObservedCancellation(); try requireCorpusAssertion(canceled); try requireCorpusAssertion(purgeAfter)
     }
 
     private func verifyCleanupReservationLiveness() async throws {
@@ -527,7 +510,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
         await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await coordinator.signOut()
         await ports.callback.setResult(.duplicate); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
         await ports.provider.setRefreshResult(.transientFailure); await coordinator.handle401(SyntheticAuthFixture.candidate())
-        let trace = await coordinator.normalizedTrace(), refreshes = await ports.provider.refreshCallCount(); XCTAssertTrue(trace.contains(.callbackReserved)); XCTAssertEqual(refreshes, 1)
+        let trace = await coordinator.normalizedTrace(), refreshes = await ports.provider.refreshCallCount(); try requireCorpusAssertion(trace.contains(.callbackReserved)); try requireCorpusAssertion(refreshes == 1)
     }
 
     private func verifyPostFenceCancellationIsIrrevocable() async throws {
@@ -536,8 +519,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
             await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.callback.setSuspendActivation(true)
             let work = Task { await coordinator.signOut() }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
             let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), persistence = await ports.persistence(), wipe = await ports.wipeSummary(), activationCanceled = await ports.callback.activationWasCancelled()
-            XCTAssertEqual(snapshot.state, .signedOut); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(persistence, [false, false, false, false]); XCTAssertEqual(wipe, "callback_headers_vault_owner_confirm"); XCTAssertFalse(activationCanceled)
+            try requireCorpusAssertion(snapshot.state == .signedOut); try requireCorpusAssertion(snapshot.hasSessionCandidate == .absent); try requireCorpusAssertion(!snapshot.hasVerifiedOwnerState)
+            try requireCorpusAssertion(generation == 2); try requireCorpusAssertion(!terminal); try requireCorpusAssertion(persistence == [false, false, false, false]); try requireCorpusAssertion(wipe == "callback_headers_vault_owner_confirm"); try requireCorpusAssertion(!activationCanceled)
         }
         do {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
@@ -545,8 +528,8 @@ final class AuthRuntimeKernelTests: XCTestCase {
             let activationIngress = SyntheticAuthFixture.ingress()
             let work = Task { await coordinator.receiveCallback(activationIngress) }; await ports.callback.waitActivationStarted(); work.cancel(); await ports.callback.releaseActivation(); await work.value
             let snapshot = await coordinator.snapshot(), generation = await coordinator.currentGeneration(), terminal = await coordinator.isTerminalFenced(), history = await coordinator.presentationEffectHistory(), activationCanceled = await ports.callback.activationWasCancelled()
-            XCTAssertEqual(snapshot.state, .unusableLink); XCTAssertEqual(snapshot.hasSessionCandidate, .absent); XCTAssertFalse(snapshot.hasVerifiedOwnerState)
-            XCTAssertEqual(generation, 2); XCTAssertFalse(terminal); XCTAssertEqual(history.count, 1); XCTAssertFalse(activationCanceled)
+            try requireCorpusAssertion(snapshot.state == .unusableLink); try requireCorpusAssertion(snapshot.hasSessionCandidate == .absent); try requireCorpusAssertion(!snapshot.hasVerifiedOwnerState)
+            try requireCorpusAssertion(generation == 2); try requireCorpusAssertion(!terminal); try requireCorpusAssertion(history.count == 1); try requireCorpusAssertion(!activationCanceled)
         }
     }
 
@@ -556,7 +539,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
             await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.callback.setResult(.malformed)
             await coordinator.receiveCallback(SyntheticAuthFixture.ingress()); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
             let trace = await coordinator.normalizedTrace()
-            XCTAssertEqual(trace.filter { $0 == .generationFence }.count, 2); XCTAssertFalse(trace.contains(.staleRejected))
+            try requireCorpusAssertion(trace.filter { $0 == .generationFence }.count == 2); try requireCorpusAssertion(!trace.contains(.staleRejected))
         }
         do {
             let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports)
@@ -574,7 +557,7 @@ final class AuthRuntimeKernelTests: XCTestCase {
             await ports.callback.releaseActivation()
             _ = await (rejected, terminalCleanup)
             let terminal = await coordinator.isTerminalFenced(), trace = await coordinator.normalizedTrace()
-            XCTAssertTrue(terminal); XCTAssertFalse(trace.contains(.staleRejected))
+            try requireCorpusAssertion(terminal); try requireCorpusAssertion(!trace.contains(.staleRejected))
         }
     }
 
@@ -582,21 +565,21 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let ports = ScriptPorts(times: [0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true)
         await ports.callback.setResult(.failed); await coordinator.receiveCallback(SyntheticAuthFixture.ingress())
         let snapshot = await coordinator.snapshot(); let audit = await ports.audit.values(); let terminal = await coordinator.isTerminalFenced()
-        XCTAssertEqual(snapshot.fixedOutcomeCategory, .transientFailure); XCTAssertEqual(audit, ["callback", "callback_confirm"]); XCTAssertFalse(terminal)
+        try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .transientFailure); try requireCorpusAssertion(audit == ["callback", "callback_confirm"]); try requireCorpusAssertion(!terminal)
         for confirmFailure in [false, true] {
             let failing = ScriptPorts(times: [0]); let fenced = makeCoordinator(failing); await failing.vault.setReadCandidate(false); await fenced.initialize(online: true); await failing.callback.setResult(.failed)
             if confirmFailure { await failing.callback.setConfirm(false) } else { await failing.callback.setPurgeResult(.failed) }; await fenced.receiveCallback(SyntheticAuthFixture.ingress())
             let isTerminal = await fenced.isTerminalFenced(); let failedSnapshot = await fenced.snapshot(); let failedAudit = await failing.audit.values()
-            XCTAssertTrue(isTerminal); XCTAssertEqual(failedSnapshot.fixedOutcomeCategory, .transientFailure); XCTAssertEqual(failedAudit, confirmFailure ? ["callback", "callback_confirm"] : ["callback"])
+            try requireCorpusAssertion(isTerminal); try requireCorpusAssertion(failedSnapshot.fixedOutcomeCategory == .transientFailure); try requireCorpusAssertion(failedAudit == (confirmFailure ? ["callback", "callback_confirm"] : ["callback"]))
         }
     }
 
     private func verifyDelayedEffectCancellation() async throws {
         let ports = ScriptPorts(times: [0, 500]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(false); await coordinator.initialize(online: true); await ports.clock.setSuspendSleep(true)
         async let delayed: Void = coordinator.scheduleDelayedAnnouncement(.safeTerminalError, priority: .polite); await ports.clock.waitSleepStarted(); await coordinator.handle403(); await ports.clock.releaseSleep(); _ = await delayed
-        let generation = await coordinator.currentGeneration(); let effects = await coordinator.drainPresentationEffects(for: generation); XCTAssertEqual(effects.count, 1)
-        let effect = try XCTUnwrap(effects.first); XCTAssertEqual(effect.originatingState, .safeTerminalError); XCTAssertEqual(effect.payload.focus, .heading); XCTAssertEqual(effect.payload.announcement, .safeTerminalError); XCTAssertEqual(effect.payload.priority, .assertive); XCTAssertNil(effect.payload.navigation)
-        let history = await coordinator.presentationEffectHistory(); XCTAssertEqual(history.count, 1); XCTAssertEqual(history.first?.sequence, effect.sequence)
+        let generation = await coordinator.currentGeneration(); let effects = await coordinator.drainPresentationEffects(for: generation); try requireCorpusAssertion(effects.count == 1)
+        guard let effect = effects.first else { try failCurrentStageAssertion() }; try requireCorpusAssertion(effect.originatingState == .safeTerminalError); try requireCorpusAssertion(effect.payload.focus == .heading); try requireCorpusAssertion(effect.payload.announcement == .safeTerminalError); try requireCorpusAssertion(effect.payload.priority == .assertive); try requireCorpusAssertion(effect.payload.navigation == nil)
+        let history = await coordinator.presentationEffectHistory(); try requireCorpusAssertion(history.count == 1); try requireCorpusAssertion(history.first?.sequence == effect.sequence)
     }
 
     private func exerciseTerminalEntryPoints(_ coordinator: AuthRuntimeCoordinator) async throws {
@@ -663,59 +646,66 @@ final class AuthRuntimeKernelTests: XCTestCase {
         return "[auth_corpus_\(corpusId)_stage_\(stage.rawValue)_assertion_recorded]"
     }
     private func observeStage<T>(_ corpusId: String, _ stage: CorpusCheckpointStage, observer: CorpusStageObserver?, operation: () async throws -> T) async throws -> T {
-        guard let observer else { return try await operation() }
-        try closeObservedStage(observer)
+        guard let observer else {
+            do {
+                return try await operation()
+            } catch CorpusError.diagnosticAbort {
+                throw CorpusError.diagnosticAbort
+            } catch {
+                throw CorpusError.diagnosticAbort
+            }
+        }
+        closeObservedStage(observer)
         observer.begin(corpusId, stage)
         emitCorpusCheckpoint(corpusId, stage)
         do {
             let result = try await operation()
-            try checkObservedStage(observer)
+            _ = observer.finishStage()
             return result
         } catch CorpusError.diagnosticAbort {
             observer.reset()
             throw CorpusError.diagnosticAbort
         } catch {
             if let active = observer.finishStage() { try failRecordedAssertion(active) }
-            throw error
+            throw CorpusError.diagnosticAbort
         }
     }
-    private func checkObservedStage(_ observer: CorpusStageObserver) throws {
-        guard let active = observer.finishStage() else { return }
-        try failRecordedAssertion(active)
+    private func closeObservedStage(_ observer: CorpusStageObserver) { _ = observer.finishStage() }
+    private func requireCorpusAssertion(_ matches: @autoclosure () -> Bool) throws {
+        guard matches() else { try failCurrentStageAssertion() }
     }
-    private func closeObservedStage(_ observer: CorpusStageObserver) throws {
-        try checkObservedStage(observer)
+    private func failCurrentStageAssertion() throws -> Never {
+        guard let active = corpusStageObserver.currentStage() else { throw CorpusError.invalid }
+        try failRecordedAssertion(active)
     }
     private func failRecordedAssertion(_ active: CorpusStageObserver.ActiveStage) throws -> Never {
         let marker = selectRecordedAssertionDiagnostic(active.corpusId, active.stage)
         print(marker)
         throw CorpusError.diagnosticAbort
     }
-    private func failInvariant(_ corpusId: String, _ mismatch: String, file: StaticString = #filePath, line: UInt = #line) throws -> Never {
+    private func failInvariant(_ corpusId: String, _ mismatch: String) throws -> Never {
         let marker = selectInvariantDiagnostic(corpusId, mismatch)
         print(marker)
-        corpusStageObserver.withNamedDiagnostic { XCTFail(marker, file: file, line: line) }
         throw CorpusError.diagnosticAbort
     }
     private func emitCorpusCheckpoint(_ corpusId: String, _ stage: CorpusCheckpointStage, enabled: Bool = true) {
         guard enabled else { return }
         print(selectCorpusCheckpoint(corpusId, stage))
     }
-    private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ stage: DiagnosticStage, _ boundedMismatch: String, file: StaticString = #filePath, line: UInt = #line) throws {
+    private func requireCorpusMatch(_ matches: Bool, _ corpusId: String, _ stage: DiagnosticStage, _ boundedMismatch: String) throws {
         guard !matches else { return }
         let boundedMarker = selectBoundedDiagnostic(corpusId, stage, boundedMismatch)
         print(boundedMarker)
-        corpusStageObserver.withNamedDiagnostic { XCTFail(boundedMarker, file: file, line: line) }
         throw CorpusError.diagnosticAbort
     }
     private let boundedDiagnosticPattern = #"^\[auth_corpus_cold_start_without_candidate_stage_(?:snapshot_(?:count|shape|state|candidate|owner|destination|outcome|generation)|trace_(?:sequence_unavailable|count_expected_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)_actual_(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)|sequence_index_(?:[0-9]|[1-5][0-9]|6[0-3])_expected_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)_actual_(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)))\]$"#
-    private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(effect.generation, generation, file: file, line: line)
-        XCTAssertEqual(effect.originatingState, .safeTerminalError, file: file, line: line)
-        XCTAssertEqual(effect.payload.focus, .heading, file: file, line: line)
-        XCTAssertEqual(effect.payload.announcement, .safeTerminalError, file: file, line: line)
-        XCTAssertEqual(effect.payload.priority, .assertive, file: file, line: line)
-        XCTAssertNil(effect.payload.navigation, file: file, line: line)
+    private func assertTerminalEffect(_ effect: AuthPresentationEffect, _ generation: UInt64) throws {
+        try requireCorpusAssertion(effect.generation == generation)
+        try requireCorpusAssertion(effect.originatingState == .safeTerminalError)
+        try requireCorpusAssertion(effect.payload.focus == .heading)
+        try requireCorpusAssertion(effect.payload.announcement == .safeTerminalError)
+        try requireCorpusAssertion(effect.payload.priority == .assertive)
+        try requireCorpusAssertion(effect.payload.navigation == nil)
     }
     private func normalize(_ effect: AuthPresentationEffect) -> String {
         let payload = "aggregate:\(effect.payload.focus?.rawValue ?? "none"):\(effect.payload.announcement?.rawValue ?? "none"):\(effect.payload.priority?.rawValue ?? "none"):\(effect.payload.navigation?.rawValue ?? "none")"
@@ -723,10 +713,10 @@ final class AuthRuntimeKernelTests: XCTestCase {
     }
     private func loadCorpus() throws -> [Vector] {
         var root = URL(fileURLWithPath: #filePath); for _ in 0..<4 { root.deleteLastPathComponent() }
-        let data = try Data(contentsOf: root.appendingPathComponent("contracts/mobile/auth-runtime-synthetic/v1/vectors.tsv")); XCTAssertFalse(data.starts(with: [0xef, 0xbb, 0xbf]))
-        let text = try XCTUnwrap(String(data: data, encoding: .utf8)); XCTAssertFalse(text.contains("\r")); XCTAssertTrue(text.hasSuffix("\n"))
-        let lines = text.dropLast().split(separator: "\n", omittingEmptySubsequences: false); XCTAssertEqual(String(lines[0]), "kind\tid\tinitial\tsteps\tmonotonicTimes\tportCompletions\texpectedSnapshots\texpectedEffects\texpectedTrace\twipeOrder\trejectedWrites\tfinalGeneration\tterminal\tcontractFingerprint")
-        let rows = try lines.dropFirst().map { try Vector($0.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)) }; XCTAssertEqual(Set(rows.map(\.id)).count, 41); return rows
+        let data = try Data(contentsOf: root.appendingPathComponent("contracts/mobile/auth-runtime-synthetic/v1/vectors.tsv")); try requireCorpusAssertion(!data.starts(with: [0xef, 0xbb, 0xbf]))
+        guard let text = String(data: data, encoding: .utf8) else { try failCurrentStageAssertion() }; try requireCorpusAssertion(!text.contains("\r")); try requireCorpusAssertion(text.hasSuffix("\n"))
+        let lines = text.dropLast().split(separator: "\n", omittingEmptySubsequences: false); guard let header = lines.first else { try failCurrentStageAssertion() }; try requireCorpusAssertion(String(header) == "kind\tid\tinitial\tsteps\tmonotonicTimes\tportCompletions\texpectedSnapshots\texpectedEffects\texpectedTrace\twipeOrder\trejectedWrites\tfinalGeneration\tterminal\tcontractFingerprint")
+        let rows = try lines.dropFirst().map { try Vector($0.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)) }; try requireCorpusAssertion(Set(rows.map(\.id)).count == 41); return rows
     }
     private static let digest = "0e273eeddffd655f44ad86514da715c8925fadc99f093047e6d6ee1f6d33f214"
 }
