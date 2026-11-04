@@ -1988,3 +1988,51 @@ protected CI passes on that exact head, the PR body is reconciled, and Adriana c
 specialist, Elana, platform, and mergeability gates. No production, deployment, signing, store,
 credential, spending, destructive, publication, or external-account action was taken. **Marlon
 action required: none.**
+
+## PR #72 portable Windows-authority import repair candidate — 2026-11-04
+
+This entry supersedes the prior PR #72 terminal-diagnosis status without rewriting its chronology.
+Draft PR [#72](https://github.com/r1ruffrider/Fluyo/pull/72) remains open and blocked at exact pushed
+head `9a9810008e93ec9f0e4670a2dd740d363c8726cb`. The last terminal protected ledger on that old head
+contains **17** checks: **13 success**, **3 failure** (`Tests`, `Tests (Windows native)`, and current
+Android API 37 emulator evidence), and **1 skipped** sanitized Android result. Those results describe
+the pushed head only; they do not certify the local repair below.
+
+The current compatibility repair is local, uncommitted, unpushed, and based on
+`9a9810008e93ec9f0e4670a2dd740d363c8726cb`. It changes exactly six files:
+
+- `scripts/r4b-evidence/preflight-attempts.test.mjs`;
+- `scripts/r4b-evidence/windows-native-boundary.test.mjs`;
+- `scripts/r4b-evidence/windows-native-client.mjs`;
+- `scripts/r4b-evidence/windows-native-test-journal-runner.mjs`;
+- `scripts/r4b-evidence/windows-native-test-journal-runner.test.mjs`;
+- `scripts/r4b-evidence/windows-trusted-temp-root.mjs`.
+
+The six-file binary diff has Git SHA-1 `480378cc65338ce6316b0874c50fd4ccf9fe8bdb`, SHA-256
+`e8a86d66c678a0ae4c66364c1bbc0f787cf4c8d7c712c8c8c7439ce9e9b40193`, and a stat of **281
+insertions / 36 deletions**. It makes Windows temp authority lazy and import-safe on non-Windows
+systems, requires authority before every Windows-native mutating or test operation, permanently
+fails closed after an invalid capture, freezes the cleanup environment, and preserves the existing
+handle-identity, 8.3-alias, reparse, identity-swap, protocol-v3, cleanup, workflow, timeout,
+dependency, and product-runtime boundaries.
+
+Independent exact-diff evidence reports PASS: Catalina **106/106**; Natalia **45/45**; Renata
+**24/24**, including **888/888** core executions and Windows-native **89/89** in **228.524 seconds**
+with zero active lanes or test-journal residue and the production journal unchanged; and Julieta
+**109/109**. Portable tests passed **71/71**, audit-policy unit tests passed **188/188** with the
+installed-tree check PASS, and shared tests passed **468/468**. Lint, all-workspace typecheck,
+formatting, audit policy, and diff checks passed. These command scopes overlap and are intentionally
+reported separately.
+
+Gabriela provenance review and Elana's sole independent final exact-candidate QA remain pending at
+this record boundary. No repair commit or protected run exists yet. PR #72 must remain draft/HOLD;
+any candidate-byte change resets the applicable gates. After exact-candidate PASS, the unchanged
+candidate still requires commit/push gates, protected portable, Windows-native, Android,
+minimum/current iOS, sanitized platform evidence, live PR-body reconciliation, and a fresh final
+Elana exact-head merge gate. No production, deployment, signing, store, credential, spending,
+destructive, publication, or external-account action is authorized or implied. **Marlon action
+required: none.**
+
+Gabriela's exact six-file provenance/platform review subsequently completed **PASS 99/99**, with
+zero defects and zero required-unattempted cases within that gate; only Elana's final
+exact-candidate QA remains pending at this record boundary.

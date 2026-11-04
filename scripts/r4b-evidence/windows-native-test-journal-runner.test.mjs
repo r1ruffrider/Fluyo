@@ -31,14 +31,18 @@ import {
   testJournalRunPath,
 } from "./windows-native-test-journal-runner.mjs";
 import {
-  WINDOWS_TRUSTED_TEMP_ROOT,
+  windowsTrustedTempRoot,
   windowsTrustedTempEnvironment,
 } from "./windows-trusted-temp-root.mjs";
 
 const CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
 const TRUSTED_TEMP_URL = new URL("./windows-trusted-temp-root.mjs", import.meta.url).href;
 const RUNNER_URL = new URL("./windows-native-test-journal-runner.mjs", import.meta.url).href;
-const CANONICAL_TEMP_ROOT = WINDOWS_TRUSTED_TEMP_ROOT;
+const RUNNER_SOURCE = readFileSync(
+  new URL("./windows-native-test-journal-runner.mjs", import.meta.url),
+  "utf8",
+);
+const CANONICAL_TEMP_ROOT = windowsTrustedTempRoot();
 const LEGACY_PARENT = resolve(CANONICAL_TEMP_ROOT, "fluyo-native-broker-journals");
 const TEST_PARENT = resolve(CANONICAL_TEMP_ROOT, "fluyo-native-test-broker-journals");
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -190,22 +194,47 @@ test("keeps production and test journal namespaces closed and distinct", () => {
   assert.notEqual(production, testPath);
 });
 
-test("captures one native temp identity and does not follow later environment mutation", () => {
+test("captures one native temp identity and frozen cleanup environment", async () => {
   const before = windowsTrustedTempEnvironment();
   const originalTemp = process.env.TEMP;
   const originalTmp = process.env.TMP;
+  const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
   try {
     process.env.TEMP = resolve(CANONICAL_TEMP_ROOT, "caller-temp-override");
     process.env.TMP = resolve(CANONICAL_TEMP_ROOT, "caller-tmp-override");
+    Object.defineProperty(process, "platform", { ...platformDescriptor, value: "linux" });
     assert.deepEqual(windowsTrustedTempEnvironment(), before);
-    assert.equal(before.TEMP, WINDOWS_TRUSTED_TEMP_ROOT);
-    assert.equal(before.TMP, WINDOWS_TRUSTED_TEMP_ROOT);
+    assert.equal(before.TEMP, windowsTrustedTempRoot());
+    assert.equal(before.TMP, windowsTrustedTempRoot());
     assert.equal(Object.isFrozen(before), true);
   } finally {
+    Object.defineProperty(process, "platform", platformDescriptor);
     if (originalTemp === undefined) delete process.env.TEMP;
     else process.env.TEMP = originalTemp;
     if (originalTmp === undefined) delete process.env.TMP;
     else process.env.TMP = originalTmp;
+  }
+  assert.match(RUNNER_SOURCE, /const CANONICAL_SYSTEM_ROOT = process\.env\.SystemRoot/u);
+  assert.match(RUNNER_SOURCE, /const CANONICAL_COMSPEC = process\.env\.ComSpec/u);
+  assert.match(RUNNER_SOURCE, /ComSpec: CANONICAL_COMSPEC/u);
+  assert.match(RUNNER_SOURCE, /SystemRoot: CANONICAL_SYSTEM_ROOT/u);
+  const originalComSpec = process.env.ComSpec;
+  const originalSystemRoot = process.env.SystemRoot;
+  try {
+    const pending = runTestJournalChild(["-e", "setTimeout(() => {}, 250)"], {
+      stdio: "ignore",
+    });
+    process.env.ComSpec = resolve(CANONICAL_TEMP_ROOT, "caller-comspec-override.exe");
+    process.env.SystemRoot = resolve(CANONICAL_TEMP_ROOT, "caller-system-root-override");
+    const result = await pending;
+    assert.equal(result.code, 0);
+    assert.equal(result.cleanupFailed, false);
+    assert.equal(existsSync(testJournalRunPath(result.runId)), false);
+  } finally {
+    if (originalComSpec === undefined) delete process.env.ComSpec;
+    else process.env.ComSpec = originalComSpec;
+    if (originalSystemRoot === undefined) delete process.env.SystemRoot;
+    else process.env.SystemRoot = originalSystemRoot;
   }
 });
 
@@ -261,16 +290,30 @@ test("rejects an initial temp ancestor junction before broker or cleanup mutatio
   mkdirSync(resolve(target, "child"));
   symlinkSync(target, junction, "junction");
   const script = `
+    const originalTemp = process.env.TEMP;
+    const originalTmp = process.env.TMP;
+    let rejected = false;
     try {
-      await import(${JSON.stringify(TRUSTED_TEMP_URL)});
-      process.exitCode = 72;
+      const { windowsTrustedTempRoot } = await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+      try { windowsTrustedTempRoot(); } catch (error) {
+        if (error?.message !== "WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY") process.exitCode = 73;
+        rejected = true;
+      }
+      process.env.TEMP = process.env.FLUYO_VALID_TEMP;
+      process.env.TMP = process.env.FLUYO_VALID_TEMP;
+      try { windowsTrustedTempRoot(); process.exitCode = 74; } catch (error) {
+        if (error?.message !== "WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY") process.exitCode = 75;
+      }
     } catch (error) {
-      if (error?.message !== "WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY") process.exitCode = 73;
+      process.exitCode = 76;
     }
+    if (!rejected) process.exitCode = 72;
+    process.env.TEMP = originalTemp;
+    process.env.TMP = originalTmp;
   `;
   try {
     const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
-      env: { ...process.env, TEMP: child, TMP: child },
+      env: { ...process.env, TEMP: child, TMP: child, FLUYO_VALID_TEMP: CANONICAL_TEMP_ROOT },
       encoding: "utf8",
       windowsHide: true,
       timeout: 30000,
@@ -323,7 +366,8 @@ test("blocks or rejects capture-to-create and capture-to-adopt identity replacem
   const runId = createTestJournalRunId();
   const script = `
     import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
-    await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+    const { windowsTrustedTempRoot } = await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+    windowsTrustedTempRoot();
     const original = process.env.FLUYO_CAPTURE_TEMP;
     const moved = process.env.FLUYO_CAPTURE_MOVED;
     const root = process.cwd();

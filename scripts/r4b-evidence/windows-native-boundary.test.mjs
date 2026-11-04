@@ -1646,6 +1646,10 @@ test("derives the journal only from a handle-proven local temp identity", () => 
   assert.match(trustedTemp, /fstatSync\(descriptor, \{ bigint: true \}\)/u);
   assert.match(trustedTemp, /sameIdentity\(before, opened\)/u);
   assert.match(trustedTemp, /heldDescriptors: Object\.freeze\(heldDescriptors\)/u);
+  assert.match(trustedTemp, /trustedWindowsTempState = "UNATTEMPTED"/u);
+  assert.match(trustedTemp, /process\.platform !== "win32"/u);
+  assert.match(trustedTemp, /export function windowsTrustedTempRoot\(\)/u);
+  assert.doesNotMatch(trustedTemp, /const TRUSTED_WINDOWS_TEMP = captureTrustedWindowsTempRoot/u);
   assert.match(client, /\.\.\.windowsTrustedTempEnvironment\(\)/u);
   assert.match(client, /FLUYO_BROKER_TEST_RUN_ID/u);
   assert.doesNotMatch(client, /RunPipeServer\([^\n]*testRunId/u);

@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  WINDOWS_TRUSTED_TEMP_ROOT,
+  windowsTrustedTempRoot,
   windowsTrustedTempEnvironment,
 } from "./windows-trusted-temp-root.mjs";
 
@@ -15,10 +15,8 @@ const EXPECTED_CLEANUP_SOURCE_SHA256 =
   "7376078454fc47b3b6bd257c5436f7b67a71ee688ffe45191189df5b65568ab8";
 const POWERSHELL = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const RUN_ID_PATTERN = /^[0-9a-f]{64}$/u;
-const CANONICAL_TEMP_ROOT = WINDOWS_TRUSTED_TEMP_ROOT;
 const CANONICAL_SYSTEM_ROOT = process.env.SystemRoot ?? "C:\\Windows";
 const CANONICAL_COMSPEC = process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe";
-const TEST_PARENT = resolve(CANONICAL_TEMP_ROOT, "fluyo-native-test-broker-journals");
 const ALLOWED_CHILD_OPTION_KEYS = new Set(["stdio"]);
 
 const CLEANUP_BOOTSTRAP = [
@@ -36,17 +34,18 @@ function sha256(bytes) {
 }
 
 export function createTestJournalRunId() {
+  windowsTrustedTempRoot();
   return randomBytes(32).toString("hex");
 }
 
 export function testJournalRunPath(runId) {
+  const testParent = resolve(windowsTrustedTempRoot(), "fluyo-native-test-broker-journals");
   if (!RUN_ID_PATTERN.test(runId ?? "")) throw new Error("invalid test journal run identity");
-  return resolve(TEST_PARENT, runId);
+  return resolve(testParent, runId);
 }
 
 function cleanupTestJournalRun(runId) {
   testJournalRunPath(runId);
-  if (process.platform !== "win32") return Object.freeze({ outcome: "ABSENT" });
   const source = readFileSync(CLEANUP_SOURCE);
   if (source.length === 0 || source.length > 512 * 1024) {
     throw new Error("test journal cleanup source is invalid");
@@ -97,6 +96,7 @@ function normalizedChildOptions(options) {
 }
 
 export async function runTestJournalChild(argv, options = {}) {
+  const trustedEnvironment = windowsTrustedTempEnvironment();
   const args = normalizedChildArguments(argv);
   const childOptions = normalizedChildOptions(options);
   const runId = createTestJournalRunId();
@@ -105,7 +105,7 @@ export async function runTestJournalChild(argv, options = {}) {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      ...windowsTrustedTempEnvironment(),
+      ...trustedEnvironment,
       FLUYO_TEST_JOURNAL_RUN_ID: runId,
     },
     stdio: childOptions.stdio ?? "inherit",

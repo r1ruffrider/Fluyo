@@ -72,14 +72,42 @@ function captureTrustedWindowsTempRoot() {
   }
 }
 
-const TRUSTED_WINDOWS_TEMP = captureTrustedWindowsTempRoot();
+let trustedWindowsTempState = "UNATTEMPTED";
+let trustedWindowsTempCapability;
 
-export const WINDOWS_TRUSTED_TEMP_ROOT = TRUSTED_WINDOWS_TEMP.root;
+function trustedWindowsTempFailure() {
+  throw new Error("WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY");
+}
+
+function requireTrustedWindowsTempCapability() {
+  if (trustedWindowsTempState === "READY") return trustedWindowsTempCapability;
+  if (trustedWindowsTempState === "FAILED") return trustedWindowsTempFailure();
+  if (process.platform !== "win32") {
+    trustedWindowsTempState = "FAILED";
+    return trustedWindowsTempFailure();
+  }
+  try {
+    trustedWindowsTempCapability = captureTrustedWindowsTempRoot();
+    trustedWindowsTempState = "READY";
+    return trustedWindowsTempCapability;
+  } catch {
+    trustedWindowsTempState = "FAILED";
+    trustedWindowsTempCapability = undefined;
+    return trustedWindowsTempFailure();
+  }
+}
+
+export function windowsTrustedTempRoot() {
+  if (arguments.length !== 0) return trustedWindowsTempFailure();
+  return requireTrustedWindowsTempCapability().root;
+}
 
 export function windowsTrustedTempEnvironment() {
+  if (arguments.length !== 0) return trustedWindowsTempFailure();
+  const trustedWindowsTemp = requireTrustedWindowsTempCapability();
   return Object.freeze({
-    TEMP: TRUSTED_WINDOWS_TEMP.root,
-    TMP: TRUSTED_WINDOWS_TEMP.root,
-    FLUYO_TRUSTED_TEMP_FILE_INDEX: TRUSTED_WINDOWS_TEMP.fileIndex,
+    TEMP: trustedWindowsTemp.root,
+    TMP: trustedWindowsTemp.root,
+    FLUYO_TRUSTED_TEMP_FILE_INDEX: trustedWindowsTemp.fileIndex,
   });
 }

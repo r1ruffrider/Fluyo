@@ -9,7 +9,7 @@ import { Worker } from "node:worker_threads";
 
 import { validateNativeResponseFrame } from "./windows-native-response.mjs";
 import {
-  WINDOWS_TRUSTED_TEMP_ROOT,
+  windowsTrustedTempRoot,
   windowsTrustedTempEnvironment,
 } from "./windows-trusted-temp-root.mjs";
 
@@ -257,6 +257,7 @@ function loadBoundaryContract() {
 }
 
 function requireTestJournalRunId() {
+  windowsTrustedTempRoot();
   const runId = process.env.FLUYO_TEST_JOURNAL_RUN_ID;
   if (!TEST_JOURNAL_RUN_ID_PATTERN.test(runId ?? "")) {
     throw new Error("test native boundary requires an outer-runner journal identity");
@@ -265,13 +266,10 @@ function requireTestJournalRunId() {
 }
 
 function journalPathFor(root, testMode) {
+  const trustedTempRoot = windowsTrustedTempRoot();
   const directory = testMode
-    ? resolve(
-        WINDOWS_TRUSTED_TEMP_ROOT,
-        "fluyo-native-test-broker-journals",
-        requireTestJournalRunId(),
-      )
-    : resolve(WINDOWS_TRUSTED_TEMP_ROOT, "fluyo-native-broker-journals");
+    ? resolve(trustedTempRoot, "fluyo-native-test-broker-journals", requireTestJournalRunId())
+    : resolve(trustedTempRoot, "fluyo-native-broker-journals");
   return resolve(
     directory,
     `${sha256(Buffer.from(`${normalizeRoot(root)}\0${testMode ? "test" : "production"}`))}.journal`,
@@ -410,7 +408,7 @@ function responseResultVariant(operation, argumentsJson) {
 }
 
 function executeNative(operation, rootId, root, relativePath, options = {}) {
-  if (process.platform !== "win32") throw new Error("Windows native boundary requires win32");
+  windowsTrustedTempRoot();
   const testMode = rootId === "TEST_ROOT";
   if (testMode && options.testCapability !== testRootCapability) {
     throw new Error("TEST_ROOT requires the in-process non-production test capability");
@@ -625,6 +623,7 @@ function rootForTarget(target, repositoryRoot, mutation) {
 }
 
 export function nativeReadBounded(path, repositoryRoot, maximumBytes, label) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, false);
   const response = executeNative(
     "READ_BOUNDED",
@@ -641,6 +640,7 @@ export function nativeReadBounded(path, repositoryRoot, maximumBytes, label) {
 }
 
 export function nativeHashBounded(path, repositoryRoot, maximumBytes, label) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, false);
   return executeNative("HASH_BOUNDED", root.id, repositoryRoot, relativeSegments(root.base, path), {
     maximumBytes,
@@ -650,6 +650,7 @@ export function nativeHashBounded(path, repositoryRoot, maximumBytes, label) {
 }
 
 export function nativeCreateDirectory(path, repositoryRoot) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, true);
   return executeNative(
     "CREATE_DIRECTORY",
@@ -661,6 +662,7 @@ export function nativeCreateDirectory(path, repositoryRoot) {
 }
 
 export function nativeWrite(path, repositoryRoot, bytes, options = {}) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, true);
   const operation = options.flag === "a" ? "APPEND_DURABLE" : "WRITE_NEW";
   const identity = operation === "APPEND_DURABLE" ? nativePin(path, repositoryRoot) : null;
@@ -673,6 +675,7 @@ export function nativeWrite(path, repositoryRoot, bytes, options = {}) {
 }
 
 export function nativeOverwriteExisting(path, repositoryRoot, bytes, options = {}) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, true);
   const identity = nativePin(path, repositoryRoot);
   return executeNative(
@@ -690,6 +693,7 @@ export function nativeOverwriteExisting(path, repositoryRoot, bytes, options = {
 }
 
 export function nativeRename(source, destination, repositoryRoot) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(source, repositoryRoot, true);
   const destinationRoot = rootForTarget(destination, repositoryRoot, true);
   if (root.id !== destinationRoot.id) throw new Error("native rename cannot cross a closed root");
@@ -709,6 +713,7 @@ export function nativeRename(source, destination, repositoryRoot) {
 }
 
 export function nativeUnlink(path, repositoryRoot) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, true);
   const identity = nativePin(path, repositoryRoot);
   return executeNative("UNLINK_EXACT", root.id, repositoryRoot, relativeSegments(root.base, path), {
@@ -719,6 +724,7 @@ export function nativeUnlink(path, repositoryRoot) {
 }
 
 export function nativeInventory(path, repositoryRoot, options = {}) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, false);
   return executeNative(
     "INVENTORY_TREE",
@@ -737,6 +743,7 @@ export function nativeInventory(path, repositoryRoot, options = {}) {
 }
 
 export function nativeReleaseInventory(path, repositoryRoot, inventory) {
+  windowsTrustedTempRoot();
   if (!inventory?.inventoryLeaseId || !inventory?.inventoryTokenBase64) {
     throw new Error("inventory release requires the original retained lease and token");
   }
@@ -748,6 +755,7 @@ export function nativeReleaseInventory(path, repositoryRoot, inventory) {
 }
 
 export function nativeRemoveTree(path, repositoryRoot, expectedDigest, options = {}) {
+  windowsTrustedTempRoot();
   const root = rootForTarget(path, repositoryRoot, true);
   const prior = options.inventory;
   if (!prior?.inventoryTokenBase64) {
@@ -774,6 +782,7 @@ export function nativeRemoveTree(path, repositoryRoot, expectedDigest, options =
 }
 
 export function nativeSynchronizedSwapTest(root, operation) {
+  windowsTrustedTempRoot();
   return executeNative("TEST_SYNCHRONIZED_SWAP", "TEST_ROOT", root, "owned", {
     testOperation: operation,
     testCapability: testRootCapability,
@@ -789,11 +798,13 @@ function nativePin(path, repositoryRoot) {
 }
 
 function enableTestRoot() {
+  windowsTrustedTempRoot();
   if (testRootCapability === null) testRootCapability = randomBytes(32).toString("hex");
   return testRootCapability;
 }
 
 function runDirectFrameForTest(request) {
+  windowsTrustedTempRoot();
   const output = execFileSync(
     POWERSHELL,
     [
@@ -820,6 +831,7 @@ function runDirectFrameForTest(request) {
 }
 
 function executeTestNative(operation, root, relativePath = "", options = {}) {
+  windowsTrustedTempRoot();
   enableTestRoot();
   return executeNative(operation, "TEST_ROOT", root, relativePath, {
     ...options,
@@ -828,6 +840,7 @@ function executeTestNative(operation, root, relativePath = "", options = {}) {
 }
 
 function brokerStateForTest(root) {
+  windowsTrustedTempRoot();
   const broker = BROKERS.get(brokerKey(root, true));
   if (!broker) throw new Error("test broker is not active");
   return Object.freeze({
@@ -837,6 +850,7 @@ function brokerStateForTest(root) {
 }
 
 async function terminateBrokerForTest(root) {
+  windowsTrustedTempRoot();
   const key = brokerKey(root, true);
   const broker = BROKERS.get(key);
   if (!broker) return;
@@ -855,6 +869,7 @@ async function terminateBrokerForTest(root) {
 }
 
 function crashBrokerForTest(root) {
+  windowsTrustedTempRoot();
   const key = brokerKey(root, true);
   const broker = BROKERS.get(key);
   if (!broker) return Promise.resolve();
@@ -928,6 +943,7 @@ function recoverNativeSessionAt(
 }
 
 export function recoverNativeSession(record) {
+  windowsTrustedTempRoot();
   return recoverNativeSessionAt("FROZEN_REPOSITORY_READ", REPOSITORY_ROOT, undefined, record);
 }
 
@@ -961,6 +977,7 @@ function recoverValidatedFailureAt(rootId, root, testCapability, failureRecord) 
 }
 
 export function recoverNativeSessionFromFailureRecord(failureRecord) {
+  windowsTrustedTempRoot();
   return recoverValidatedFailureAt(
     "FROZEN_REPOSITORY_READ",
     REPOSITORY_ROOT,
@@ -970,6 +987,7 @@ export function recoverNativeSessionFromFailureRecord(failureRecord) {
 }
 
 export function recoverNativeFailure(error, failureEvent) {
+  windowsTrustedTempRoot();
   if (error?.nativeRecoveryRequired !== true) return null;
   if (error.nativeTransportFailure === true) {
     const key = brokerKey(REPOSITORY_ROOT, false);
@@ -984,7 +1002,7 @@ export function recoverNativeFailure(error, failureEvent) {
 }
 
 function spawnNativeJobBoundaryWith(arguments_, options, invoke) {
-  if (process.platform !== "win32") throw new Error("Windows native boundary requires win32");
+  windowsTrustedTempRoot();
   if (!Array.isArray(arguments_) || arguments_.length !== 23) {
     throw new Error("native Job boundary requires exactly 23 closed caller arguments");
   }
@@ -1113,13 +1131,14 @@ function spawnNativeJobBoundaryWith(arguments_, options, invoke) {
 }
 
 export function spawnNativeJobBoundary(arguments_, options = {}) {
+  windowsTrustedTempRoot();
   return spawnNativeJobBoundaryWith(arguments_, options, (operation, nativeOptions) =>
     executeNative(operation, "FROZEN_REPOSITORY_READ", REPOSITORY_ROOT, "", nativeOptions),
   );
 }
 
 export function spawnNativeNvdaBoundary(arguments_, options = {}) {
-  if (process.platform !== "win32") throw new Error("Windows native boundary requires win32");
+  windowsTrustedTempRoot();
   if (!Array.isArray(arguments_) || arguments_.length !== 13) {
     throw new Error("native NVDA boundary requires exactly 13 closed arguments");
   }
@@ -1225,9 +1244,18 @@ export const windowsNativeBoundaryTesting = Object.freeze({
   journalPathFor,
   requireTestJournalRunId,
   runDirectFrameForTest,
-  shutdownBrokers,
-  loadBoundarySource,
-  loadBoundaryContract,
+  shutdownBrokers: () => {
+    windowsTrustedTempRoot();
+    return shutdownBrokers();
+  },
+  loadBoundarySource: () => {
+    windowsTrustedTempRoot();
+    return loadBoundarySource();
+  },
+  loadBoundaryContract: () => {
+    windowsTrustedTempRoot();
+    return loadBoundaryContract();
+  },
   relativeSegments,
   sourcePath: SOURCE_PATH,
 });

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -21,7 +21,148 @@ import {
 } from "./preflight-attempts.mjs";
 import { PREFLIGHT_SCHEMAS } from "./preflight-contracts.mjs";
 
+const TRUSTED_TEMP_URL = new URL("./windows-trusted-temp-root.mjs", import.meta.url).href;
+const WINDOWS_CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
+const WINDOWS_RUNNER_URL = new URL("./windows-native-test-journal-runner.mjs", import.meta.url)
+  .href;
+const PORTABLE_IMPORT_GRAPHS = Object.freeze([
+  Object.freeze([
+    new URL("./nvda-adapter/protocol.mjs", import.meta.url).href,
+    new URL("./nvda-adapter/index.mjs", import.meta.url).href,
+  ]),
+  Object.freeze([new URL("./preflight-attempts.mjs", import.meta.url).href]),
+  Object.freeze([new URL("./preflight-executor.mjs", import.meta.url).href]),
+  Object.freeze([new URL("./preflight-observer.mjs", import.meta.url).href]),
+  Object.freeze([new URL("./preflight-plan.mjs", import.meta.url).href]),
+  Object.freeze([new URL("./production-exclusion.mjs", import.meta.url).href]),
+]);
+
+function assertWindowsAuthorityImportsAreInert() {
+  const script = `
+    await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+    await import(${JSON.stringify(WINDOWS_CLIENT_URL)});
+    await import(${JSON.stringify(WINDOWS_RUNNER_URL)});
+  `;
+  const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+    encoding: "utf8",
+    timeout: 30000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "");
+}
+
+function assertPortableEntrypointGraphsAreInert() {
+  for (const [index, graph] of PORTABLE_IMPORT_GRAPHS.entries()) {
+    const marker = resolve(tmpdir(), `fluyo-portable-import-${process.pid}-${index}`);
+    rmSync(marker, { recursive: true, force: true });
+    const script = `
+      import { existsSync } from "node:fs";
+      const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+      Object.defineProperty(process, "platform", { ...platformDescriptor, value: "linux" });
+      for (const url of ${JSON.stringify(graph)}) await import(url);
+      if (existsSync(process.env.FLUYO_PORTABLE_MUTATION_MARKER)) process.exitCode = 73;
+    `;
+    try {
+      const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+        env: { ...process.env, TEMP: marker, TMP: marker, FLUYO_PORTABLE_MUTATION_MARKER: marker },
+        encoding: "utf8",
+        timeout: 30000,
+      });
+      assert.equal(result.status, 0, `${graph.join(", ")}\n${result.stderr}`);
+      assert.equal(result.stdout, "", graph.join(", "));
+      assert.equal(result.stderr, "", graph.join(", "));
+      assert.equal(existsSync(marker), false, graph.join(", "));
+    } finally {
+      rmSync(marker, { recursive: true, force: true });
+    }
+  }
+}
+
+function assertNonWindowsOperationSurfaceFailsBeforeMutation() {
+  const operations = [
+    "trusted.windowsTrustedTempRoot()",
+    "trusted.windowsTrustedTempEnvironment()",
+    "runner.createTestJournalRunId()",
+    'runner.testJournalRunPath("0".repeat(64))',
+    'runner.runTestJournalChild(["-e", "process.exit(0)"])',
+    'client.nativeReadBounded(process.cwd(), process.cwd(), 1, "x")',
+    'client.nativeHashBounded(process.cwd(), process.cwd(), 1, "x")',
+    "client.nativeCreateDirectory(process.env.FLUYO_PORTABLE_MUTATION_MARKER, process.cwd())",
+    'client.nativeWrite(process.env.FLUYO_PORTABLE_MUTATION_MARKER, process.cwd(), "x")',
+    'client.nativeOverwriteExisting(process.env.FLUYO_PORTABLE_MUTATION_MARKER, process.cwd(), "x")',
+    "client.nativeRename(process.env.FLUYO_PORTABLE_MUTATION_MARKER, process.env.FLUYO_PORTABLE_MUTATION_MARKER + '-2', process.cwd())",
+    "client.nativeUnlink(process.env.FLUYO_PORTABLE_MUTATION_MARKER, process.cwd())",
+    "client.nativeInventory(process.cwd(), process.cwd())",
+    "client.nativeReleaseInventory(process.cwd(), process.cwd(), {})",
+    'client.nativeRemoveTree(process.env.FLUYO_PORTABLE_MUTATION_MARKER, process.cwd(), "0".repeat(64), {})',
+    'client.nativeSynchronizedSwapTest(process.cwd(), "RENAME_SOURCE")',
+    "client.recoverNativeSession({})",
+    "client.recoverNativeSessionFromFailureRecord({})",
+    'client.recoverNativeFailure({}, "NATIVE_TRANSACTION_FAILED")',
+    "client.spawnNativeJobBoundary([])",
+    "client.spawnNativeNvdaBoundary([])",
+    "client.windowsNativeBoundaryTesting.executeNative('HELLO', 'TEST_ROOT', process.cwd(), '')",
+    "client.windowsNativeBoundaryTesting.enableTestRoot()",
+    "client.windowsNativeBoundaryTesting.executeTestNative('HELLO', process.cwd())",
+    "client.windowsNativeBoundaryTesting.renameTestNativeWithDroppedAck(process.cwd(), 'a', 'b')",
+    "client.windowsNativeBoundaryTesting.recoverTestNativeSessionFromFailureRecord(process.cwd(), {})",
+    "client.windowsNativeBoundaryTesting.spawnTestJobBoundary([], process.cwd())",
+    "client.windowsNativeBoundaryTesting.brokerStateForTest(process.cwd())",
+    "client.windowsNativeBoundaryTesting.terminateBrokerForTest(process.cwd())",
+    "client.windowsNativeBoundaryTesting.crashBrokerForTest(process.cwd())",
+    "client.windowsNativeBoundaryTesting.journalPathFor(process.cwd(), false)",
+    "client.windowsNativeBoundaryTesting.requireTestJournalRunId()",
+    "client.windowsNativeBoundaryTesting.runDirectFrameForTest(Buffer.alloc(0))",
+    "client.windowsNativeBoundaryTesting.shutdownBrokers()",
+    "client.windowsNativeBoundaryTesting.loadBoundarySource()",
+    "client.windowsNativeBoundaryTesting.loadBoundaryContract()",
+  ];
+  for (const [index, operation] of operations.entries()) {
+    const marker = resolve(tmpdir(), `fluyo-portable-authority-${process.pid}-${index}`);
+    rmSync(marker, { recursive: true, force: true });
+    const script = `
+      import { existsSync } from "node:fs";
+      const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+      Object.defineProperty(process, "platform", { ...platformDescriptor, value: "linux" });
+      const trusted = await import(${JSON.stringify(TRUSTED_TEMP_URL)});
+      const client = await import(${JSON.stringify(WINDOWS_CLIENT_URL)});
+      const runner = await import(${JSON.stringify(WINDOWS_RUNNER_URL)});
+      try {
+        await (${operation});
+        process.exitCode = 71;
+      } catch (error) {
+        if (error?.message !== "WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY") process.exitCode = 72;
+      }
+      Object.defineProperty(process, "platform", platformDescriptor);
+      try {
+        client.windowsNativeBoundaryTesting.enableTestRoot();
+        process.exitCode = 74;
+      } catch (error) {
+        if (error?.message !== "WINDOWS_TRUSTED_TEMP_ROOT_IDENTITY") process.exitCode = 75;
+      }
+      if (existsSync(process.env.FLUYO_PORTABLE_MUTATION_MARKER)) process.exitCode = 73;
+    `;
+    try {
+      const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+        env: { ...process.env, TEMP: marker, TMP: marker, FLUYO_PORTABLE_MUTATION_MARKER: marker },
+        encoding: "utf8",
+        timeout: 30000,
+      });
+      assert.equal(result.status, 0, `${operation}\n${result.stderr}`);
+      assert.equal(result.stdout, "", operation);
+      assert.equal(result.stderr, "", operation);
+      assert.equal(existsSync(marker), false, operation);
+    } finally {
+      rmSync(marker, { recursive: true, force: true });
+    }
+  }
+}
+
 test("closes attempts to immutable 001 smoke and internally derived 002 observer", () => {
+  assertWindowsAuthorityImportsAreInert();
+  assertPortableEntrypointGraphsAreInert();
+  assertNonWindowsOperationSurfaceFailsBeforeMutation();
   assert.deepEqual(PREFLIGHT_ATTEMPT_IDS, ["attempt-001-smoke", "attempt-002-observer"]);
   assert.deepEqual(PREFLIGHT_ATTEMPT_002_STATES, [
     "NOT_STARTED",
