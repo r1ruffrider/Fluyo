@@ -14,7 +14,9 @@ import {
 import { createDiscardedPreflightPlan, discardedPreflightPlanDigest } from "./preflight-plan.mjs";
 import { windowsNativeBoundaryTesting } from "./windows-native-client.mjs";
 
-windowsNativeBoundaryTesting.enableTestRoot();
+if (process.platform === "win32") {
+  windowsNativeBoundaryTesting.enableTestRoot();
+}
 
 function createMandatoryJunction(target, junction) {
   symlinkSync(target, junction, process.platform === "win32" ? "junction" : "dir");

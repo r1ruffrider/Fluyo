@@ -23,6 +23,8 @@ const RESPONSE_MAGIC = "FLUYONS1";
 const VERSION = 1;
 const MAX_SOURCE_BYTES = 512 * 1024;
 const MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
+const ORDINARY_NATIVE_TRANSACTION_TIMEOUT_MILLISECONDS = 30_000;
+const FIRST_BROKER_HELLO_BOOTSTRAP_TIMEOUT_MILLISECONDS = 120_000;
 // Updated only after the C# source has passed the native compile and protocol suite.
 // The PowerShell loader independently recomputes this value before Add-Type.
 const EXPECTED_SOURCE_SHA256 = "9b6e6c796d6c5432bdd45cd78787616d31c193cf3bfe1bcbfa3b293c39633ce2";
@@ -346,7 +348,18 @@ function ensureBroker(repositoryRoot, testMode) {
   return broker;
 }
 
-function transactWithBroker(broker, request, options = {}, timeoutMilliseconds = 30000) {
+function nativeTransactionTimeoutMilliseconds(operation, sequence) {
+  return operation === "HELLO" && sequence === 1n
+    ? FIRST_BROKER_HELLO_BOOTSTRAP_TIMEOUT_MILLISECONDS
+    : ORDINARY_NATIVE_TRANSACTION_TIMEOUT_MILLISECONDS;
+}
+
+function transactWithBroker(
+  broker,
+  request,
+  options = {},
+  timeoutMilliseconds = ORDINARY_NATIVE_TRANSACTION_TIMEOUT_MILLISECONDS,
+) {
   const controlBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 4);
   const dataBuffer = new SharedArrayBuffer(MAX_RESPONSE_BYTES);
   const control = new Int32Array(controlBuffer);
@@ -475,17 +488,22 @@ function executeNative(operation, rootId, root, relativePath, options = {}) {
   );
   let output;
   try {
-    output = transactWithBroker(broker, request, {
-      ...options,
-      expected: {
-        sessionNonce,
-        sequence: String(sequence),
-        operation,
-        requestSha256: sha256(request),
-        resultVariant: responseResultVariant(operation, options.argumentsJson),
-        mutation: MUTATION_OPERATIONS.has(operation),
+    output = transactWithBroker(
+      broker,
+      request,
+      {
+        ...options,
+        expected: {
+          sessionNonce,
+          sequence: String(sequence),
+          operation,
+          requestSha256: sha256(request),
+          resultVariant: responseResultVariant(operation, options.argumentsJson),
+          mutation: MUTATION_OPERATIONS.has(operation),
+        },
       },
-    });
+      nativeTransactionTimeoutMilliseconds(operation, sequence),
+    );
   } catch (error) {
     error.nativeRecoveryRequired = true;
     error.nativeTransportFailure = true;
@@ -1206,6 +1224,9 @@ export function spawnNativeNvdaBoundary(arguments_, options = {}) {
 }
 
 export const windowsNativeBoundaryTesting = Object.freeze({
+  ORDINARY_NATIVE_TRANSACTION_TIMEOUT_MILLISECONDS,
+  FIRST_BROKER_HELLO_BOOTSTRAP_TIMEOUT_MILLISECONDS,
+  nativeTransactionTimeoutMilliseconds,
   BROKER_BOOTSTRAP,
   DIRECT_TEST_BOOTSTRAP,
   FIELD_IDS,

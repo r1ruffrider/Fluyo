@@ -20,7 +20,9 @@ import {
   validateNvdaPreSpeechRequest,
 } from "./protocol.mjs";
 
-windowsNativeBoundaryTesting.enableTestRoot();
+if (process.platform === "win32") {
+  windowsNativeBoundaryTesting.enableTestRoot();
+}
 
 const observationId = "a".repeat(64);
 const pluginSha256 = "b".repeat(64);

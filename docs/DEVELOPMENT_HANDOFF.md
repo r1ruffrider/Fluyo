@@ -2036,3 +2036,55 @@ required: none.**
 Gabriela's exact six-file provenance/platform review subsequently completed **PASS 99/99**, with
 zero defects and zero required-unattempted cases within that gate; only Elana's final
 exact-candidate QA remains pending at this record boundary.
+
+## PR #72 combined portable-fixture and cold-HELLO repair candidate — 2026-11-04
+
+This append-only entry supersedes the obsolete PR #72 candidate and protected-ledger wording
+above without rewriting that chronology. Draft PR
+[#72](https://github.com/r1ruffrider/Fluyo/pull/72) remains open and blocked at exact pushed head
+`ddc7c508eb62f002763db7c760a4b10d8aebd45c`. Its terminal protected ledger contains exactly
+**17** checks: **13 success**, **2 failure** (`Tests` and `Tests (Windows native)`), **1 cancelled**
+current iOS check, and **1 skipped** sanitized iOS result. The current-iOS job acquired no hosted
+runner, executed **0** steps, produced no job log, and reported an explicit macOS arm64 hosted-runner
+capacity constraint. It is therefore platform-unattempted rather than a product or candidate test
+failure. The minimum-iOS check passed. A future immutable candidate head must obtain successful
+current-iOS execution and sanitized aggregate evidence before merge.
+
+The current combined repair remains local, uncommitted, unstaged, and unpushed on base
+`ddc7c508eb62f002763db7c760a4b10d8aebd45c`. Before this records entry, it changed exactly four
+files with **67 insertions / 13 deletions** and Git binary-diff fingerprint
+`db470c514aacc27582d70796a95f64fd9d46ce46`:
+
+- `scripts/r4b-evidence/nvda-adapter/protocol.test.mjs` — SHA-256
+  `4c507024db7663753e8b6d565b6c224b4f3fdd05d1254afb9c3a8e9ae54f05c9`;
+- `scripts/r4b-evidence/preflight-executor.test.mjs` — SHA-256
+  `97aba7899c23ce32ce537fddcae7a19e0e734e137fdc4b765f7e6d4163b39843`;
+- `scripts/r4b-evidence/windows-native-boundary.test.mjs` — SHA-256
+  `63fd41c0f2fd426457f5f4938e54fb7ee5e5e886c0668cbabc72690b8b696f92`;
+- `scripts/r4b-evidence/windows-native-client.mjs` — SHA-256
+  `2514c99d4b4c019a6c8c9a2a608bc08eec772a259d79e60e05eb9e7be6204e8b`.
+
+The two test-fixture files enable the Windows test-root capability only when
+`process.platform === "win32"`, preserving the fixture's Windows behavior while allowing the
+portable Linux lane to load the files without widening authority. The client repair gives only the
+first broker `HELLO` at sequence `1n` a **120,000 ms (120 second / 2 minute)** deadline. Later
+`HELLO` requests, all non-`HELLO` operations, and the ordinary default remain **30,000 ms
+(30 seconds)**. There is no retry, fallback, global timeout increase, workflow, protocol, C#,
+fixed-root, cleanup, dependency, lockfile, production-runtime, or authority change.
+
+Independent frozen-byte evidence reports PASS: Catalina **191/191**; Natalia **24/24**; and Renata
+with Windows-native **90/90** in **266.549 seconds**, including the formerly failing fixed-root
+byte-bound subtest in **2.128 seconds**. Renata also reproduced portable **71/71**, audit policy
+**188/188** plus portable **71/71** and exactly one installed-tree PASS, and shared **468/468**.
+Post-run evidence showed **0** active lanes, **0** test-journal residue, and the historical
+production journal unchanged. Julieta's independent **67-check** audit passed all candidate
+identity, timing, arithmetic, evidence, and protected-ledger checks; its records-only failures are
+superseded by this entry. The command scopes overlap and remain deliberately reported separately.
+
+**HOLD:** adding this handoff produces a fifth candidate path and therefore requires a new exact
+candidate fingerprint plus bounded records/applicable specialist rebinds before Elana's sole final
+exact-candidate QA. Do not stage, commit, push, mark ready, or merge yet. After an unchanged commit
+and push, reconcile the live PR body to that immutable head and require fresh protected portable,
+Windows-native, Android, minimum/current iOS, and sanitized platform evidence before the final
+Elana merge gate. No production, deployment, signing, store, credential, spending, destructive,
+publication, or external-account action was taken or authorized. **Marlon action required: none.**

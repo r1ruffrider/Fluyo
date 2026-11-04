@@ -32,6 +32,35 @@ test.after(() => windowsNativeBoundaryTesting.shutdownBrokers());
 const POWERSHELL = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
 
+test("bounds the longer cold-bootstrap deadline to the first broker HELLO", () => {
+  assert.equal(
+    windowsNativeBoundaryTesting.ORDINARY_NATIVE_TRANSACTION_TIMEOUT_MILLISECONDS,
+    30_000,
+  );
+  assert.equal(
+    windowsNativeBoundaryTesting.FIRST_BROKER_HELLO_BOOTSTRAP_TIMEOUT_MILLISECONDS,
+    120_000,
+  );
+  assert.equal(
+    windowsNativeBoundaryTesting.nativeTransactionTimeoutMilliseconds("HELLO", 1n),
+    120_000,
+  );
+  assert.equal(
+    windowsNativeBoundaryTesting.nativeTransactionTimeoutMilliseconds("HELLO", 2n),
+    30_000,
+  );
+  assert.equal(
+    windowsNativeBoundaryTesting.nativeTransactionTimeoutMilliseconds("READ_BOUNDED", 1n),
+    30_000,
+  );
+
+  const source = readFileSync(new URL("./windows-native-client.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(
+    source,
+    /function transactWithBroker\([^)]*timeoutMilliseconds\s*=\s*(?:120000|120_000)/su,
+  );
+});
+
 function validateTestPythonBinding() {
   const configured = process.env.FLUYO_R4B_TEST_PYTHON;
   const expectedSha256 = process.env.FLUYO_R4B_TEST_PYTHON_SHA256;
