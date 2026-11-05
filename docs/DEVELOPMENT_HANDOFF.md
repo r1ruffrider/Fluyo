@@ -2255,3 +2255,27 @@ minimum/current/aggregate evidence and **3 consecutive independent canonical cur
 current-job/corpus PASS runs** with no hidden retries remain mandatory, together with all protected
 checks, mergeability, and Elana's final exact-head PASS before ready or merge. PR #72 remains
 draft/**HOLD**. **Marlon action required: none.**
+
+## PR #72 committed iOS candidate status — 2026-11-05
+
+This append-only entry supersedes the operational precommit state above without rewriting its
+chronology. The candidate commit is complete at exact HEAD
+`64594890c278465318e172c676b63f5aca3d4508`, with parent
+`e21a2e112a0033c0ae44c5b8a7915a9aa554b406` and tree
+`c8989df1ed23da8873f28d8fde186cae96bfc267`. It changes exactly the four recorded paths with **232
+insertions / 10 deletions**. At the verified post-commit checkpoint, the index and worktree were
+clean, the branch was **ahead 1 / behind 0**, and HEAD remained unpushed. Clean shared evidence
+passed **17/17 files** and **469/469 tests** in **449.18 seconds** with exit **0**.
+
+Clean-head gates report Bianca **28/28 PASS**, Catalina **60/60 PASS**, Renata **32/32 PASS**, and
+Natalia **90/90 PASS**. Julieta's code and numerical review passes, but her combined verdict remains
+**FAIL 86/90** on records pending this correction.
+
+The candidate commit is complete; push remains closed. This exact records-only candidate is not
+authorized for commit until fresh Bianca records, Natalia security/authority, and Julieta
+numerical/claims rebinds all pass and Elana issues an exact-candidate **COMMIT-ONLY PASS**. An
+unchanged records commit must then receive a clean exact-head **PUSH-ONLY** gate before push. After
+an immutable push, native minimum-iOS, current-iOS, and sanitized iOS aggregate evidence plus **3
+consecutive independent canonical current-Xcode current-job/corpus PASS runs** remain mandatory,
+together with all protected checks, mergeability, and Elana's final exact-head PASS before ready or
+merge. PR #72 remains draft/**HOLD**. **Marlon action required: none.**
