@@ -1,5 +1,5 @@
-name: iOS current canonical proof
-run-name: ios-current-canonical-proof target=${{ inputs.target_sha }} pr=${{ inputs.pr_number }} pass=${{ inputs.pass_ordinal }} predecessor=${{ inputs.previous_run_id }} digest=${{ inputs.expected_workflow_sha256 }}
+name: iOS current canonical proof v2
+run-name: ios-current-canonical-proof-v2 target=${{ inputs.target_sha }} pr=72 pass=${{ inputs.pass_ordinal }} predecessor=${{ inputs.previous_run_id }} digest=${{ inputs.expected_workflow_sha256 }}
 
 on:
   workflow_dispatch:
@@ -8,19 +8,16 @@ on:
         description: Frozen PR 72 exact-head SHA
         required: true
         type: string
-      pr_number:
-        description: Frozen pull-request number
-        required: true
-        type: string
       pass_ordinal:
         description: Controlled canonical-proof pass
         required: true
         type: choice
         options:
+          - "1"
           - "2"
           - "3"
       previous_run_id:
-        description: Exact successful predecessor workflow run
+        description: Literal none for pass 1; exact successful predecessor workflow run ID for passes 2 and 3
         required: true
         type: string
       expected_workflow_sha256:
@@ -31,12 +28,12 @@ on:
 permissions: {}
 
 concurrency:
-  group: ios-current-canonical-proof-${{ inputs.target_sha }}
+  group: ios-current-canonical-proof-v2-${{ inputs.target_sha }}
   cancel-in-progress: false
 
 jobs:
   preflight:
-    name: iOS current canonical preflight
+    name: iOS current canonical preflight v2
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -48,7 +45,6 @@ jobs:
         shell: bash
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
-          PR_NUMBER: ${{ inputs.pr_number }}
           PASS_ORDINAL: ${{ inputs.pass_ordinal }}
           PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
           EXPECTED_WORKFLOW_SHA256: ${{ inputs.expected_workflow_sha256 }}
@@ -57,11 +53,13 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          [[ "$PASS_ORDINAL" == "2" || "$PASS_ORDINAL" == "3" ]]
-          [[ "$PREVIOUS_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$PASS_ORDINAL" == "1" || "$PASS_ORDINAL" == "2" || "$PASS_ORDINAL" == "3" ]]
+          if [[ "$PASS_ORDINAL" == "1" ]]; then
+            test "$PREVIOUS_RUN_ID" = "none"
+          else
+            [[ "$PREVIOUS_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          fi
           [[ "$EXPECTED_WORKFLOW_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          test "$PR_NUMBER" = "72"
           test "$DISPATCH_REF" = "refs/heads/main"
           test "$RUN_ATTEMPT" = "1"
 
@@ -69,7 +67,6 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
-          PR_NUMBER: ${{ inputs.pr_number }}
           PASS_ORDINAL: ${{ inputs.pass_ordinal }}
           PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
           EXPECTED_WORKFLOW_SHA256: ${{ inputs.expected_workflow_sha256 }}
@@ -106,20 +103,30 @@ jobs:
             };
             const { owner, repo } = context.repo;
             const targetSha = process.env.TARGET_SHA;
-            const prNumber = canonicalId(process.env.PR_NUMBER, "pr_number");
+            const prNumber = 72;
             const passOrdinal = Number(process.env.PASS_ORDINAL);
-            const previousRunId = canonicalId(process.env.PREVIOUS_RUN_ID, "previous_run_id");
+            const previousRunId =
+              passOrdinal === 1
+                ? process.env.PREVIOUS_RUN_ID
+                : canonicalId(process.env.PREVIOUS_RUN_ID, "previous_run_id");
             const currentRunId = canonicalId(context.runId, "current run ID");
             const expectedDigest = process.env.EXPECTED_WORKFLOW_SHA256;
             const workflowPath = ".github/workflows/ios-current-canonical-proof.yml";
-            const protectedTarget = "8a9c1ed4aae8e49b13669fa72c727528893bd76a";
-            const protectedPassOneRunId = 41958844191;
-            const protectedPassOneJobId = 127020104917;
-            const protectedPassOneArtifactId = 13385296010;
-            const canonicalJobName = "iOS current canonical exact-head proof";
+            const workflowId = "ios-current-canonical-proof.yml";
+            const identityPrefix = "ios-current-canonical-proof-v2";
+            const canonicalJobName = "iOS current canonical exact-head proof v2";
+            const expectedJobNames = [
+              "iOS current canonical preflight v2",
+              canonicalJobName,
+              "iOS current canonical postflight v2",
+            ];
 
             assert(context.ref === "refs/heads/main", "Dispatch ref must be main");
-            assert(targetSha === protectedTarget, "target_sha is not the frozen PR 72 head");
+            assert([1, 2, 3].includes(passOrdinal), "Pass ordinal is not closed");
+            assert(
+              passOrdinal === 1 ? previousRunId === "none" : Number.isSafeInteger(previousRunId),
+              "Predecessor syntax does not match pass ordinal",
+            );
 
             const workflowFile = await github.rest.repos.getContent({
               owner,
@@ -136,7 +143,7 @@ jobs:
             const { data: pull } = await github.rest.pulls.get({
               owner,
               repo,
-              pull_number: prNumber,
+              pull_number: 72,
             });
             assert(canonicalId(pull.number, "pull request API ID") === prNumber, "Pull request ID mismatch");
             assert(pull.state === "open", "Pull request must remain open");
@@ -150,145 +157,217 @@ jobs:
               {
                 owner,
                 repo,
-                workflow_id: "ios-current-canonical-proof.yml",
+                workflow_id: workflowId,
                 event: "workflow_dispatch",
                 branch: "main",
               },
               "workflow_runs",
               "workflow runs",
             );
-            const duplicatePrefix =
-              `ios-current-canonical-proof target=${targetSha} pr=${prNumber} pass=${passOrdinal} `;
-            for (const run of priorRuns) canonicalId(run.id, "workflow run API ID");
+            const titlePattern =
+              /^ios-current-canonical-proof-v2 target=([0-9a-f]{40}) pr=72 pass=([123]) predecessor=(none|[1-9][0-9]*) digest=([0-9a-f]{64})$/;
+            const parseV2Title = (run, label) => {
+              canonicalId(run.id, `${label} API ID`);
+              const title = String(run.display_title ?? "");
+              if (!title.startsWith(identityPrefix)) return null;
+              const match = title.match(titlePattern);
+              assert(match, `${label} has malformed v2 identity`);
+              const ordinal = Number(match[2]);
+              const predecessor =
+                match[3] === "none"
+                  ? "none"
+                  : canonicalId(match[3], `${label} title predecessor ID`);
+              assert(
+                ordinal === 1 ? predecessor === "none" : Number.isSafeInteger(predecessor),
+                `${label} has invalid predecessor semantics`,
+              );
+              assert(Number.isSafeInteger(run.run_attempt), `${label} attempt is invalid`);
+              assert(typeof run.status === "string", `${label} status is invalid`);
+              assert(
+                run.conclusion === null || typeof run.conclusion === "string",
+                `${label} conclusion is invalid`,
+              );
+              return {
+                target: match[1],
+                ordinal,
+                predecessor,
+                digest: match[4],
+                title,
+              };
+            };
+            const parsedHistory = priorRuns.map((run) => ({ run, identity: parseV2Title(run, "workflow run") }));
             assert(
-              !priorRuns.some(
-                (run) =>
+              !parsedHistory.some(
+                ({ run, identity }) =>
+                  identity !== null &&
                   canonicalId(run.id, "workflow run API ID") !== currentRunId &&
-                  run.display_title.startsWith(duplicatePrefix),
+                  identity.target === targetSha &&
+                  identity.ordinal === passOrdinal,
               ),
               `Pass ${passOrdinal} has already been dispatched for this target`,
             );
 
-            const { data: predecessor } = await github.rest.actions.getWorkflowRun({
+            const { data: currentRun } = await github.rest.actions.getWorkflowRun({
               owner,
               repo,
-              run_id: previousRunId,
+              run_id: currentRunId,
             });
-            assert(
-              canonicalId(predecessor.id, "predecessor run API ID") === previousRunId,
-              "Predecessor API ID mismatch",
-            );
-            const predecessorJobs = await safePaginate(
-              "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs",
-              { owner, repo, run_id: previousRunId, filter: "latest" },
-              "jobs",
-              "predecessor jobs",
-            );
-            const predecessorArtifacts = await safePaginate(
-              "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts",
-              { owner, repo, run_id: previousRunId },
-              "artifacts",
-              "predecessor artifacts",
-            );
-            for (const job of predecessorJobs) canonicalId(job.id, "predecessor job API ID");
-            for (const artifact of predecessorArtifacts) {
-              canonicalId(artifact.id, "predecessor artifact API ID");
-              canonicalId(
-                artifact.workflow_run?.id,
-                "predecessor artifact workflow run API ID",
-              );
-            }
+            assert(canonicalId(currentRun.id, "current run API ID") === currentRunId, "Current run ID mismatch");
+            assert(currentRun.event === "workflow_dispatch", "Current run event mismatch");
+            assert(currentRun.path === workflowPath, "Current run workflow path mismatch");
+            assert(currentRun.head_branch === "main", "Current run branch mismatch");
+            assert(currentRun.head_sha === context.sha, "Current run workflow revision mismatch");
+            assert(currentRun.run_attempt === 1, "Current run must be attempt 1");
+            const currentIdentity = parseV2Title(currentRun, "current run");
+            assert(currentIdentity !== null, "Current run is not a v2 identity");
+            assert(currentIdentity.target === targetSha, "Current run target identity mismatch");
+            assert(currentIdentity.ordinal === passOrdinal, "Current run ordinal identity mismatch");
+            assert(currentIdentity.predecessor === previousRunId, "Current run predecessor identity mismatch");
+            assert(currentIdentity.digest === expectedDigest, "Current run digest identity mismatch");
 
-            assert(predecessor.status === "completed", "Predecessor run must be terminal");
-            assert(predecessor.conclusion === "success", "Predecessor run must conclude SUCCESS");
-            assert(predecessor.run_attempt === 1, "Predecessor run must be attempt 1");
-
-            if (passOrdinal === 2) {
-              assert(previousRunId === protectedPassOneRunId, "Pass 2 predecessor run ID mismatch");
-              assert(predecessor.head_sha === targetSha, "Protected pass 1 target SHA mismatch");
-              assert(predecessor.event === "pull_request", "Protected pass 1 event mismatch");
-              assert(predecessor.path === ".github/workflows/ios.yml", "Protected pass 1 workflow mismatch");
-              const protectedJob = predecessorJobs.filter(
-                (job) => canonicalId(job.id, "protected job API ID") === protectedPassOneJobId,
+            const validatePredecessor = async (
+              runId,
+              ordinal,
+              expectedPredecessor,
+              successorStartedAt,
+              label,
+            ) => {
+              const ancestorMatches = parsedHistory.filter(
+                ({ identity }) =>
+                  identity !== null && identity.target === targetSha && identity.ordinal === ordinal,
               );
-              assert(protectedJob.length === 1, "Protected pass 1 canonical job is not unique");
+              assert(ancestorMatches.length === 1, `${label} ancestor identity is not unique`);
               assert(
-                protectedJob[0].name === "current unsigned simulator build and tests",
-                "Protected pass 1 canonical job name mismatch",
+                canonicalId(ancestorMatches[0].run.id, `${label} history run API ID`) === runId,
+                `${label} ancestor ID does not match supplied predecessor`,
               );
-              assert(protectedJob[0].status === "completed", "Protected pass 1 job must be terminal");
-              assert(protectedJob[0].conclusion === "success", "Protected pass 1 job must conclude SUCCESS");
-              const protectedArtifact = predecessorArtifacts.filter(
-                (artifact) =>
-                  canonicalId(artifact.id, "protected artifact API ID") ===
-                  protectedPassOneArtifactId,
-              );
-              assert(protectedArtifact.length === 1, "Protected pass 1 artifact is not unique");
-              assert(
-                protectedArtifact[0].name === `ios-foundation-current-${targetSha}`,
-                "Protected pass 1 artifact name mismatch",
-              );
-              assert(protectedArtifact[0].expired === false, "Protected pass 1 artifact is expired");
-              assert(
-                canonicalId(
-                  protectedArtifact[0].workflow_run?.id,
-                  "protected artifact workflow run API ID",
-                ) === protectedPassOneRunId,
-                "Protected pass 1 artifact run binding mismatch",
-              );
-            } else {
-              assert(previousRunId !== currentRunId, "Pass 3 cannot name itself as predecessor");
-              assert(predecessor.event === "workflow_dispatch", "Pass 3 predecessor event mismatch");
-              assert(predecessor.path === workflowPath, "Pass 3 predecessor workflow mismatch");
-              assert(predecessor.head_branch === "main", "Pass 3 predecessor branch mismatch");
-              const expectedTitle =
-                `ios-current-canonical-proof target=${targetSha} pr=${prNumber} pass=2 ` +
-                `predecessor=${protectedPassOneRunId} digest=${expectedDigest}`;
-              assert(predecessor.display_title === expectedTitle, "Pass 3 predecessor identity mismatch");
+              const { data: run } = await github.rest.actions.getWorkflowRun({ owner, repo, run_id: runId });
+              assert(canonicalId(run.id, `${label} run API ID`) === runId, `${label} run ID mismatch`);
+              assert(run.status === "completed", `${label} run must be terminal`);
+              assert(run.conclusion === "success", `${label} run must conclude SUCCESS`);
+              assert(run.run_attempt === 1, `${label} run must be attempt 1`);
+              assert(run.event === "workflow_dispatch", `${label} event mismatch`);
+              assert(run.path === workflowPath, `${label} workflow path mismatch`);
+              assert(run.head_branch === "main", `${label} branch mismatch`);
+              const identity = parseV2Title(run, `${label} run`);
+              assert(identity !== null, `${label} is not a v2 identity`);
+              assert(identity.target === targetSha, `${label} target mismatch`);
+              assert(identity.ordinal === ordinal, `${label} ordinal mismatch`);
+              if (expectedPredecessor !== null) {
+                assert(identity.predecessor === expectedPredecessor, `${label} predecessor mismatch`);
+              }
+              assert(identity.digest === expectedDigest, `${label} digest identity mismatch`);
 
               const predecessorWorkflowFile = await github.rest.repos.getContent({
                 owner,
                 repo,
                 path: workflowPath,
-                ref: predecessor.head_sha,
+                ref: run.head_sha,
               });
               assert(
                 !Array.isArray(predecessorWorkflowFile.data) &&
                   predecessorWorkflowFile.data.encoding === "base64",
-                "Pass 3 predecessor workflow content is invalid",
+                `${label} workflow content is invalid`,
               );
               const predecessorBytes = Buffer.from(
                 predecessorWorkflowFile.data.content.replaceAll("\n", ""),
                 "base64",
               );
-              const predecessorDigest = createHash("sha256").update(predecessorBytes).digest("hex");
-              assert(predecessorDigest === expectedDigest, "Pass 3 predecessor workflow digest mismatch");
+              assert(
+                createHash("sha256").update(predecessorBytes).digest("hex") === expectedDigest,
+                `${label} workflow digest mismatch`,
+              );
 
-              const canonicalJobs = predecessorJobs.filter((job) => job.name === canonicalJobName);
-              assert(canonicalJobs.length === 1, "Pass 3 predecessor canonical job is not unique");
-              assert(canonicalJobs[0].status === "completed", "Pass 3 predecessor job must be terminal");
-              assert(
-                canonicalJobs[0].conclusion === "success",
-                "Pass 3 predecessor canonical job must conclude SUCCESS",
+              const jobs = await safePaginate(
+                "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs",
+                { owner, repo, run_id: runId, filter: "latest" },
+                "jobs",
+                `${label} jobs`,
               );
-              const expectedArtifactName =
-                `ios-current-canonical-proof-${targetSha}-pass-2-run-${previousRunId}`;
-              const canonicalArtifacts = predecessorArtifacts.filter(
-                (artifact) => artifact.name === expectedArtifactName,
-              );
-              assert(canonicalArtifacts.length === 1, "Pass 3 predecessor artifact is not unique");
-              assert(canonicalArtifacts[0].expired === false, "Pass 3 predecessor artifact is expired");
+              assert(jobs.length === 3, `${label} must contain exactly three jobs`);
+              assert(new Set(jobs.map((job) => job.name)).size === 3, `${label} job names are duplicated`);
               assert(
-                canonicalId(
-                  canonicalArtifacts[0].workflow_run?.id,
-                  "pass 2 artifact workflow run API ID",
-                ) === previousRunId,
-                "Pass 3 predecessor artifact run binding mismatch",
+                [...jobs.map((job) => job.name)].sort().join("\n") === [...expectedJobNames].sort().join("\n"),
+                `${label} job topology mismatch`,
+              );
+              for (const job of jobs) {
+                canonicalId(job.id, `${label} job API ID`);
+                assert(job.status === "completed", `${label} job must be terminal`);
+                assert(job.conclusion === "success", `${label} job must conclude SUCCESS`);
+                assert(job.run_attempt === 1, `${label} job must be attempt 1`);
+              }
+              const postflightJob = jobs.find(
+                (job) => job.name === "iOS current canonical postflight v2",
+              );
+              assert(postflightJob, `${label} postflight job is missing`);
+              const completedAt = Date.parse(postflightJob.completed_at);
+              const successorAt = Date.parse(successorStartedAt);
+              assert(Number.isFinite(completedAt) && Number.isFinite(successorAt), `${label} timestamps invalid`);
+              assert(completedAt <= successorAt, `${label} completed after successor started`);
+
+              const artifacts = await safePaginate(
+                "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts",
+                { owner, repo, run_id: runId },
+                "artifacts",
+                `${label} artifacts`,
+              );
+              assert(artifacts.length === 1, `${label} must contain exactly one artifact`);
+              const artifact = artifacts[0];
+              canonicalId(artifact.id, `${label} artifact API ID`);
+              assert(
+                artifact.name ===
+                  `ios-current-canonical-proof-v2-${targetSha}-pass-${ordinal}-run-${runId}`,
+                `${label} artifact name mismatch`,
+              );
+              assert(artifact.expired === false, `${label} artifact is expired`);
+              assert(
+                Number.isSafeInteger(artifact.size_in_bytes) &&
+                  artifact.size_in_bytes >= 1 &&
+                  artifact.size_in_bytes <= 283115520,
+                `${label} artifact size is out of bounds`,
+              );
+              assert(
+                canonicalId(artifact.workflow_run?.id, `${label} artifact workflow run API ID`) === runId,
+                `${label} artifact run binding mismatch`,
+              );
+              return { run, identity };
+            };
+
+            if (passOrdinal === 1) {
+              assert(previousRunId === "none", "Pass 1 predecessor must be none");
+            } else if (passOrdinal === 2) {
+              assert(previousRunId !== currentRunId, "Pass 2 predecessor must differ from current run");
+              await validatePredecessor(
+                previousRunId,
+                1,
+                "none",
+                currentRun.run_started_at,
+                "pass 1 predecessor",
+              );
+            } else {
+              assert(previousRunId !== currentRunId, "Pass 3 predecessor must differ from current run");
+              const passTwo = await validatePredecessor(
+                previousRunId,
+                2,
+                null,
+                currentRun.run_started_at,
+                "pass 2 predecessor",
+              );
+              const passOneRunId = passTwo.identity.predecessor;
+              assert(Number.isSafeInteger(passOneRunId), "Pass 2 predecessor title does not bind pass 1");
+              assert(passOneRunId !== previousRunId, "Pass 1 and pass 2 run IDs must differ");
+              assert(passOneRunId !== currentRunId, "Pass 1 and pass 3 run IDs must differ");
+              await validatePredecessor(
+                passOneRunId,
+                1,
+                "none",
+                passTwo.run.run_started_at,
+                "transitive pass 1 predecessor",
               );
             }
 
   canonical-current-ios:
-    name: iOS current canonical exact-head proof
+    name: iOS current canonical exact-head proof v2
     needs: preflight
     runs-on: macos-26
     timeout-minutes: 45
@@ -970,13 +1049,13 @@ jobs:
       - name: Upload sanitized current-runtime evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ios-current-canonical-proof-${{ inputs.target_sha }}-pass-${{ inputs.pass_ordinal }}-run-${{ github.run_id }}
+          name: ios-current-canonical-proof-v2-${{ inputs.target_sha }}-pass-${{ inputs.pass_ordinal }}-run-${{ github.run_id }}
           path: artifacts/ios-current
           if-no-files-found: error
           retention-days: 7
 
   postflight:
-    name: iOS current canonical postflight
+    name: iOS current canonical postflight v2
     needs: [preflight, canonical-current-ios]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -988,7 +1067,7 @@ jobs:
       - name: Download exact run-unique sanitized artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: ios-current-canonical-proof-${{ inputs.target_sha }}-pass-${{ inputs.pass_ordinal }}-run-${{ github.run_id }}
+          name: ios-current-canonical-proof-v2-${{ inputs.target_sha }}-pass-${{ inputs.pass_ordinal }}-run-${{ github.run_id }}
           path: artifacts/ios-current-postflight
 
       - name: Independently validate final proof and draft HOLD state
@@ -1001,12 +1080,11 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           TARGET_SHA: ${{ inputs.target_sha }}
-          PR_NUMBER: ${{ inputs.pr_number }}
           PASS_ORDINAL: ${{ inputs.pass_ordinal }}
           PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
           EXPECTED_BUILD_IDENTIFIER: ${{ github.run_id }}-1-current
           EXPECTED_WORKFLOW_SHA256: ${{ inputs.expected_workflow_sha256 }}
-          EXPECTED_ARTIFACT_NAME: ios-current-canonical-proof-${{ inputs.target_sha }}-pass-${{ inputs.pass_ordinal }}-run-${{ github.run_id }}
+          EXPECTED_ARTIFACT_NAME: ios-current-canonical-proof-v2-${{ inputs.target_sha }}-pass-${{ inputs.pass_ordinal }}-run-${{ github.run_id }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -1615,19 +1693,28 @@ jobs:
           };
           const [owner, repo] = process.env.REPOSITORY.split("/");
           const runId = canonicalId(process.env.RUN_ID, "current run ID");
-          const prNumber = canonicalId(process.env.PR_NUMBER, "pr_number");
+          const prNumber = 72;
           const passOrdinal = Number(process.env.PASS_ORDINAL);
-          const previousRunId = canonicalId(process.env.PREVIOUS_RUN_ID, "previous_run_id");
+          const previousRunId =
+            passOrdinal === 1
+              ? process.env.PREVIOUS_RUN_ID
+              : canonicalId(process.env.PREVIOUS_RUN_ID, "previous_run_id");
           const expectedDigest = process.env.EXPECTED_WORKFLOW_SHA256;
           const workflowPath = ".github/workflows/ios-current-canonical-proof.yml";
-          const protectedTarget = "8a9c1ed4aae8e49b13669fa72c727528893bd76a";
-          const protectedPassOneRunId = 41958844191;
-          const protectedPassOneJobId = 127020104917;
-          const protectedPassOneArtifactId = 13385296010;
-          const canonicalJobName = "iOS current canonical exact-head proof";
+          const identityPrefix = "ios-current-canonical-proof-v2";
+          const canonicalJobName = "iOS current canonical exact-head proof v2";
+          const expectedJobNames = [
+            "iOS current canonical preflight v2",
+            canonicalJobName,
+            "iOS current canonical postflight v2",
+          ];
           assert(process.env.WORKFLOW_REF === "refs/heads/main", "Postflight workflow ref mismatch");
           assert(process.env.RUN_ATTEMPT === "1", "Postflight run attempt mismatch");
-          assert(expectedSha === protectedTarget, "Postflight target mismatch");
+          assert([1, 2, 3].includes(passOrdinal), "Postflight pass ordinal mismatch");
+          assert(
+            passOrdinal === 1 ? previousRunId === "none" : Number.isSafeInteger(previousRunId),
+            "Postflight predecessor syntax does not match pass ordinal",
+          );
 
           const run = await api(`/repos/${owner}/${repo}/actions/runs/${runId}`);
           assert(canonicalId(run.id, "current run API ID") === runId, "Current run API ID mismatch");
@@ -1645,108 +1732,202 @@ jobs:
           const workflowDigest = createHash("sha256").update(workflowBytes).digest("hex");
           assert(workflowDigest === expectedDigest, "Postflight workflow SHA-256 mismatch");
 
+          const titlePattern =
+            /^ios-current-canonical-proof-v2 target=([0-9a-f]{40}) pr=72 pass=([123]) predecessor=(none|[1-9][0-9]*) digest=([0-9a-f]{64})$/;
+          const parseV2Title = (candidate, label) => {
+            canonicalId(candidate.id, `${label} API ID`);
+            const title = String(candidate.display_title ?? "");
+            if (!title.startsWith(identityPrefix)) return null;
+            const match = title.match(titlePattern);
+            assert(match, `${label} has malformed v2 identity`);
+            const ordinal = Number(match[2]);
+            const predecessor =
+              match[3] === "none"
+                ? "none"
+                : canonicalId(match[3], `${label} title predecessor ID`);
+            assert(
+              ordinal === 1 ? predecessor === "none" : Number.isSafeInteger(predecessor),
+              `${label} has invalid predecessor semantics`,
+            );
+            assert(Number.isSafeInteger(candidate.run_attempt), `${label} attempt is invalid`);
+            assert(typeof candidate.status === "string", `${label} status is invalid`);
+            assert(
+              candidate.conclusion === null || typeof candidate.conclusion === "string",
+              `${label} conclusion is invalid`,
+            );
+            return {
+              target: match[1],
+              ordinal,
+              predecessor,
+              digest: match[4],
+              title,
+            };
+          };
+          const currentIdentity = parseV2Title(run, "current run");
+          assert(currentIdentity !== null, "Current run is not a v2 identity");
+          assert(currentIdentity.target === expectedSha, "Current run target identity mismatch");
+          assert(currentIdentity.ordinal === passOrdinal, "Current run ordinal identity mismatch");
+          assert(currentIdentity.predecessor === previousRunId, "Current run predecessor identity mismatch");
+          assert(currentIdentity.digest === expectedDigest, "Current run digest identity mismatch");
+
           const priorRuns = await safePaginate(
             `/repos/${owner}/${repo}/actions/workflows/ios-current-canonical-proof.yml/runs?event=workflow_dispatch&branch=main`,
             "workflow_runs",
             "workflow runs",
           );
-          const duplicatePrefix =
-            `ios-current-canonical-proof target=${expectedSha} pr=${prNumber} pass=${passOrdinal} `;
-          for (const prior of priorRuns) canonicalId(prior.id, "workflow run API ID");
+          const parsedHistory = priorRuns.map((prior) => ({
+            prior,
+            identity: parseV2Title(prior, "workflow run"),
+          }));
           assert(
-            !priorRuns.some(
-              (prior) =>
+            !parsedHistory.some(
+              ({ prior, identity }) =>
+                identity !== null &&
                 canonicalId(prior.id, "workflow run API ID") !== runId &&
-                prior.display_title.startsWith(duplicatePrefix),
+                identity.target === expectedSha &&
+                identity.ordinal === passOrdinal,
             ),
             `Pass ${passOrdinal} was duplicated for this target`,
           );
 
-          const predecessor = await api(`/repos/${owner}/${repo}/actions/runs/${previousRunId}`);
-          assert(
-            canonicalId(predecessor.id, "predecessor run API ID") === previousRunId,
-            "Predecessor API ID mismatch",
-          );
-          assert(predecessor.status === "completed", "Predecessor run must be terminal");
-          assert(predecessor.conclusion === "success", "Predecessor run must conclude SUCCESS");
-          assert(predecessor.run_attempt === 1, "Predecessor run must be attempt 1");
-          const predecessorJobs = await safePaginate(
-            `/repos/${owner}/${repo}/actions/runs/${previousRunId}/jobs?filter=latest`,
-            "jobs",
-            "predecessor jobs",
-          );
-          const predecessorArtifacts = await safePaginate(
-            `/repos/${owner}/${repo}/actions/runs/${previousRunId}/artifacts`,
-            "artifacts",
-            "predecessor artifacts",
-          );
-          for (const job of predecessorJobs) canonicalId(job.id, "predecessor job API ID");
-          for (const candidate of predecessorArtifacts) {
-            canonicalId(candidate.id, "predecessor artifact API ID");
-            canonicalId(
-              candidate.workflow_run?.id,
-              "predecessor artifact workflow run API ID",
+          const validatePredecessor = async (
+            predecessorRunId,
+            ordinal,
+            expectedPredecessor,
+            successorStartedAt,
+            label,
+          ) => {
+            const ancestorMatches = parsedHistory.filter(
+              ({ identity }) =>
+                identity !== null && identity.target === expectedSha && identity.ordinal === ordinal,
             );
-          }
-          if (passOrdinal === 2) {
-            assert(previousRunId === protectedPassOneRunId, "Pass 2 predecessor run ID mismatch");
-            assert(predecessor.event === "pull_request", "Protected pass 1 event mismatch");
-            assert(predecessor.path === ".github/workflows/ios.yml", "Protected pass 1 workflow mismatch");
-            assert(predecessor.head_sha === expectedSha, "Protected pass 1 target mismatch");
-            const jobs = predecessorJobs.filter(
-              (job) => canonicalId(job.id, "protected job API ID") === protectedPassOneJobId,
-            );
-            assert(jobs.length === 1, "Protected pass 1 canonical job is not unique");
-            assert(jobs[0].name === "current unsigned simulator build and tests", "Protected job name mismatch");
-            assert(jobs[0].status === "completed", "Protected job must be terminal");
-            assert(jobs[0].conclusion === "success", "Protected job must conclude SUCCESS");
-            const bound = predecessorArtifacts.filter(
-              (candidate) =>
-                canonicalId(candidate.id, "protected artifact API ID") === protectedPassOneArtifactId,
-            );
-            assert(bound.length === 1, "Protected pass 1 artifact is not unique");
-            assert(bound[0].name === `ios-foundation-current-${expectedSha}`, "Protected artifact name mismatch");
-            assert(bound[0].expired === false, "Protected pass 1 artifact expired");
+            assert(ancestorMatches.length === 1, `${label} ancestor identity is not unique`);
             assert(
-              canonicalId(bound[0].workflow_run?.id, "protected artifact workflow run API ID") ===
-                protectedPassOneRunId,
-              "Protected artifact run binding mismatch",
+              canonicalId(ancestorMatches[0].prior.id, `${label} history run API ID`) ===
+                predecessorRunId,
+              `${label} ancestor ID does not match supplied predecessor`,
             );
-          } else {
-            assert(passOrdinal === 3, "Postflight pass ordinal mismatch");
-            assert(previousRunId !== runId, "Pass 3 predecessor cannot be current run");
-            assert(predecessor.event === "workflow_dispatch", "Pass 3 predecessor event mismatch");
-            assert(predecessor.path === workflowPath, "Pass 3 predecessor workflow mismatch");
-            assert(predecessor.head_branch === "main", "Pass 3 predecessor branch mismatch");
-            const expectedTitle =
-              `ios-current-canonical-proof target=${expectedSha} pr=${prNumber} pass=2 ` +
-              `predecessor=${protectedPassOneRunId} digest=${expectedDigest}`;
-            assert(predecessor.display_title === expectedTitle, "Pass 3 predecessor identity mismatch");
+            const predecessor = await api(
+              `/repos/${owner}/${repo}/actions/runs/${predecessorRunId}`,
+            );
+            assert(
+              canonicalId(predecessor.id, `${label} run API ID`) === predecessorRunId,
+              `${label} run ID mismatch`,
+            );
+            assert(predecessor.status === "completed", `${label} run must be terminal`);
+            assert(predecessor.conclusion === "success", `${label} run must conclude SUCCESS`);
+            assert(predecessor.run_attempt === 1, `${label} run must be attempt 1`);
+            assert(predecessor.event === "workflow_dispatch", `${label} event mismatch`);
+            assert(predecessor.path === workflowPath, `${label} workflow path mismatch`);
+            assert(predecessor.head_branch === "main", `${label} branch mismatch`);
+            const identity = parseV2Title(predecessor, `${label} run`);
+            assert(identity !== null, `${label} is not a v2 identity`);
+            assert(identity.target === expectedSha, `${label} target mismatch`);
+            assert(identity.ordinal === ordinal, `${label} ordinal mismatch`);
+            if (expectedPredecessor !== null) {
+              assert(identity.predecessor === expectedPredecessor, `${label} predecessor mismatch`);
+            }
+            assert(identity.digest === expectedDigest, `${label} digest identity mismatch`);
+
             const predecessorWorkflow = await api(
               `/repos/${owner}/${repo}/contents/${workflowPath}?ref=${predecessor.head_sha}`,
             );
-            assert(predecessorWorkflow.encoding === "base64", "Predecessor workflow encoding mismatch");
+            assert(predecessorWorkflow.encoding === "base64", `${label} workflow encoding mismatch`);
             const predecessorBytes = Buffer.from(
               predecessorWorkflow.content.replaceAll("\n", ""),
               "base64",
             );
             assert(
               createHash("sha256").update(predecessorBytes).digest("hex") === expectedDigest,
-              "Pass 3 predecessor workflow digest mismatch",
+              `${label} workflow digest mismatch`,
             );
-            const jobs = predecessorJobs.filter((job) => job.name === canonicalJobName);
-            assert(jobs.length === 1, "Pass 3 predecessor canonical job is not unique");
-            assert(jobs[0].status === "completed", "Pass 3 predecessor job must be terminal");
-            assert(jobs[0].conclusion === "success", "Pass 3 predecessor job must conclude SUCCESS");
-            const expectedName =
-              `ios-current-canonical-proof-${expectedSha}-pass-2-run-${previousRunId}`;
-            const bound = predecessorArtifacts.filter((candidate) => candidate.name === expectedName);
-            assert(bound.length === 1, "Pass 3 predecessor artifact is not unique");
-            assert(bound[0].expired === false, "Pass 3 predecessor artifact expired");
+
+            const jobs = await safePaginate(
+              `/repos/${owner}/${repo}/actions/runs/${predecessorRunId}/jobs?filter=latest`,
+              "jobs",
+              `${label} jobs`,
+            );
+            assert(jobs.length === 3, `${label} must contain exactly three jobs`);
+            assert(new Set(jobs.map((job) => job.name)).size === 3, `${label} job names are duplicated`);
             assert(
-              canonicalId(bound[0].workflow_run?.id, "pass 2 artifact workflow run API ID") ===
-                previousRunId,
-              "Pass 3 predecessor artifact run binding mismatch",
+              [...jobs.map((job) => job.name)].sort().join("\n") === [...expectedJobNames].sort().join("\n"),
+              `${label} job topology mismatch`,
+            );
+            for (const job of jobs) {
+              canonicalId(job.id, `${label} job API ID`);
+              assert(job.status === "completed", `${label} job must be terminal`);
+              assert(job.conclusion === "success", `${label} job must conclude SUCCESS`);
+              assert(job.run_attempt === 1, `${label} job must be attempt 1`);
+            }
+            const postflightJob = jobs.find(
+              (job) => job.name === "iOS current canonical postflight v2",
+            );
+            assert(postflightJob, `${label} postflight job is missing`);
+            const completedAt = Date.parse(postflightJob.completed_at);
+            const successorAt = Date.parse(successorStartedAt);
+            assert(Number.isFinite(completedAt) && Number.isFinite(successorAt), `${label} timestamps invalid`);
+            assert(completedAt <= successorAt, `${label} completed after successor started`);
+
+            const predecessorArtifacts = await safePaginate(
+              `/repos/${owner}/${repo}/actions/runs/${predecessorRunId}/artifacts`,
+              "artifacts",
+              `${label} artifacts`,
+            );
+            assert(predecessorArtifacts.length === 1, `${label} must contain exactly one artifact`);
+            const predecessorArtifact = predecessorArtifacts[0];
+            canonicalId(predecessorArtifact.id, `${label} artifact API ID`);
+            assert(
+              predecessorArtifact.name ===
+                `ios-current-canonical-proof-v2-${expectedSha}-pass-${ordinal}-run-${predecessorRunId}`,
+              `${label} artifact name mismatch`,
+            );
+            assert(predecessorArtifact.expired === false, `${label} artifact expired`);
+            assert(
+              Number.isSafeInteger(predecessorArtifact.size_in_bytes) &&
+                predecessorArtifact.size_in_bytes >= 1 &&
+                predecessorArtifact.size_in_bytes <= 283115520,
+              `${label} artifact size is out of bounds`,
+            );
+            assert(
+              canonicalId(
+                predecessorArtifact.workflow_run?.id,
+                `${label} artifact workflow run API ID`,
+              ) === predecessorRunId,
+              `${label} artifact run binding mismatch`,
+            );
+            return { run: predecessor, identity };
+          };
+
+          if (passOrdinal === 1) {
+            assert(previousRunId === "none", "Pass 1 predecessor must be none");
+          } else if (passOrdinal === 2) {
+            assert(previousRunId !== runId, "Pass 2 predecessor must differ from current run");
+            await validatePredecessor(
+              previousRunId,
+              1,
+              "none",
+              run.run_started_at,
+              "pass 1 predecessor",
+            );
+          } else {
+            assert(previousRunId !== runId, "Pass 3 predecessor must differ from current run");
+            const passTwo = await validatePredecessor(
+              previousRunId,
+              2,
+              null,
+              run.run_started_at,
+              "pass 2 predecessor",
+            );
+            const passOneRunId = passTwo.identity.predecessor;
+            assert(Number.isSafeInteger(passOneRunId), "Pass 2 predecessor title does not bind pass 1");
+            assert(passOneRunId !== previousRunId, "Pass 1 and pass 2 run IDs must differ");
+            assert(passOneRunId !== runId, "Pass 1 and pass 3 run IDs must differ");
+            await validatePredecessor(
+              passOneRunId,
+              1,
+              "none",
+              passTwo.run.run_started_at,
+              "transitive pass 1 predecessor",
             );
           }
 
