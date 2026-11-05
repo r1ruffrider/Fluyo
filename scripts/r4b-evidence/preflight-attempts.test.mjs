@@ -11,6 +11,7 @@ import {
   PREFLIGHT_ATTEMPT_IDS,
   PREFLIGHT_ATTEMPT_002_STATES,
   FROZEN_HARNESS_FILES,
+  assertAttempt002ToolManifestSourceCommit,
   resolveAttempt002State,
   validateAuthorityOnlyCheckout,
   validateAttempt002Authority,
@@ -452,6 +453,29 @@ test("rejects dirty, multi-parent, and non-authority-only A2 fixture checkouts",
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("binds Attempt-002 tool manifests to the frozen product source in both authority paths", () => {
+  assert.doesNotThrow(() =>
+    assertAttempt002ToolManifestSourceCommit("fea1f5fadb2307ca611379f30461a7ee47861fff"),
+  );
+  assert.throws(
+    () => assertAttempt002ToolManifestSourceCommit("0".repeat(40)),
+    new Error("attempt-002 tool manifest sourceCommit does not match frozen product source"),
+  );
+
+  const source = readFileSync(new URL("./preflight-attempts.mjs", import.meta.url), "utf8");
+  const assertion = "assertAttempt002ToolManifestSourceCommit(toolManifest.sourceCommit);";
+  const deriveStart = source.indexOf("export function deriveAttempt002AuthorityRecord");
+  const verifyStart = source.indexOf("export function verifyAttempt002AuthorityCheckout");
+  const checkoutStart = source.indexOf("export function validateAuthorityOnlyCheckout");
+  assert.ok(deriveStart >= 0 && deriveStart < verifyStart && verifyStart < checkoutStart);
+
+  const deriveSource = source.slice(deriveStart, verifyStart);
+  const verifySource = source.slice(verifyStart, checkoutStart);
+  assert.equal(deriveSource.split(assertion).length - 1, 1);
+  assert.equal(verifySource.split(assertion).length - 1, 1);
+  assert.equal(source.split(assertion).length - 1, 2);
 });
 
 test("verifies the sealed predecessor and validates the exact authority-v3 H/A2 record", () => {

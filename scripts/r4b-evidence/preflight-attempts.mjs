@@ -148,6 +148,12 @@ export const FROZEN_HARNESS_FILES = Object.freeze([
   "scripts/r4b-evidence/production-exclusion.test.mjs",
 ]);
 
+export function assertAttempt002ToolManifestSourceCommit(sourceCommit) {
+  if (sourceCommit !== PRODUCT_SOURCE_COMMIT) {
+    throw new Error("attempt-002 tool manifest sourceCommit does not match frozen product source");
+  }
+}
+
 const AUTHORITY_KEYS = Object.freeze([
   "schema",
   "creditable",
@@ -578,6 +584,7 @@ export function deriveAttempt002AuthorityRecord(...args) {
   verifyAttempt001Seals();
   const toolManifest = readJson(ATTEMPT_002_SOURCE_TOOL_MANIFEST);
   validateAttempt002ToolManifest(toolManifest);
+  assertAttempt002ToolManifestSourceCommit(toolManifest.sourceCommit);
   return validateAttempt002Authority({
     schema: PREFLIGHT_SCHEMAS.attemptAuthority,
     creditable: false,
@@ -631,6 +638,7 @@ export function verifyAttempt002AuthorityCheckout() {
   verifyAttempt001Seals();
   const toolManifest = readJson(ATTEMPT_002_SOURCE_TOOL_MANIFEST);
   validateAttempt002ToolManifest(toolManifest);
+  assertAttempt002ToolManifestSourceCommit(toolManifest.sourceCommit);
   return Object.freeze({
     authority,
     authorityCommit,
