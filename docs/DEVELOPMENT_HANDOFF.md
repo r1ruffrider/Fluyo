@@ -2279,3 +2279,34 @@ an immutable push, native minimum-iOS, current-iOS, and sanitized iOS aggregate 
 consecutive independent canonical current-Xcode current-job/corpus PASS runs** remain mandatory,
 together with all protected checks, mergeability, and Elana's final exact-head PASS before ready or
 merge. PR #72 remains draft/**HOLD**. **Marlon action required: none.**
+
+## PR #72 final non-recursive records transition — 2026-11-05
+
+This append-only entry preserves the chronology above and anchors the exact clean checkpoint at HEAD
+`138402ffb4d3190875976a6c1f2637a041a4c2db`, parent
+`64594890c278465318e172c676b63f5aca3d4508`, tree
+`0772166e8ede6579fe15148270f118db996f6e4b`, with the branch **ahead 2 / behind 0** and unpushed. The
+preceding records commit from `64594890…` to `138402ff…` changes only this handoff by **24 insertions
+/ 0 deletions**, with Git binary-diff fingerprint `9bb28343c6d35cafffef0ea8b3b5fe06a89a8f6f`,
+stable patch ID `2edf81f94353da76ea5d5cd935eea91aad09edde`, handoff SHA-256
+`206a7d9a10a55a0267f241e9116e120eff84cb704d54107509619e6dcadde84e`, and blob
+`928762c3545339f077bf7995abe7c2dad5cce101`.
+
+The clean shared result of **469/469 tests** ran at unchanged-code HEAD `64594890…`. It transfers to
+`138402ff…` as code evidence because the intervening commit is records-only; it is not claimed as an
+exact-`138402ff…` test execution.
+
+The commit containing this entry is the final records transition and **MUST** have parent
+`138402ffb4d3190875976a6c1f2637a041a4c2db`. Its resulting HEAD, tree, handoff hash, diff fingerprint,
+and patch ID are intentionally derived after commit and reported externally in gate evidence; they
+are not embedded or self-hashed here. No further append may be created solely to restate those
+derived identifiers.
+
+Before this final records commit, fresh Bianca records, Natalia security/authority, and Julieta
+numerical/claims rebinds must all pass, and Elana must issue an exact-candidate **COMMIT-ONLY PASS**.
+Push remains closed. After an unchanged records commit, a clean exact-head rebind and **PUSH-ONLY**
+gate are required before push. After an immutable push, native minimum-iOS, current-iOS, and
+sanitized iOS aggregate evidence plus **3 consecutive independent canonical current-Xcode
+current-job/corpus PASS runs**, all protected checks, mergeability, and Elana's final exact-head PASS
+remain mandatory before ready or merge. PR #72 remains draft/**HOLD**. **Marlon action required:
+none.**
