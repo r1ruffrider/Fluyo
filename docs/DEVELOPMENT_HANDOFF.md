@@ -2183,3 +2183,75 @@ commit, a clean-tree exact-head rebind is required before push.
 PR #72 remains draft/**HOLD**. After an unchanged push, fresh protected API 29, API 37, sanitized
 Android aggregate, all other required protected-platform checks, mergeability, and Elana's final
 exact-head gate remain mandatory before ready or merge. **Marlon action required: none.**
+
+## PR #72 current-iOS protected failure and test-only candidate — 2026-11-05
+
+At base `e21a2e112a0033c0ae44c5b8a7915a9aa554b406`, the terminal protected ledger is **18** checks:
+**16 success**, **1 current-iOS failure**, and **1 aggregate skipped**. Android API 29, API 37, and
+the sanitized Android aggregate passed; minimum iOS passed. Current-iOS job `126982548586` compiled
+successfully, then exited **1** and skipped evidence upload. Its exact sanitized signature is
+`phase=test_current; category=auth_contract; corpus=transient_refresh_failure_preserves_candidate; stage=step; mismatch=assertion_recorded`.
+The iOS aggregate job `126987286193` was skipped.
+
+Catalina diagnosed a test-observation race: the provider-start barrier does not prove that the
+delayed 500 ms clock path has been evaluated or that its presentation effect is observable before
+the immediate history read. The frozen repair remains test-only in
+`apps/ios/FluyoTests/AuthRuntimeKernelTests.swift` and
+`packages/shared/src/ios-foundation-structure.test.ts`: a per-instance one-shot signal marks delayed
+500 ms evaluation, and one bounded 64-yield observation helper reads the existing history. It does
+not change production/runtime code, workflows, dependencies, the platform matrix, corpus
+assertions, or add sleeps, retries, hidden retries, or assertion weakening.
+
+The exact unstaged two-file candidate is **122 insertions / 4 deletions**, stable patch ID
+`b493b9d9c5dc1fc054ed46c223bf3f9536f63987`, and Git binary-diff fingerprint
+`17c9a996a6a12c9c4961c786bb28c23ca05e2af5`. The Swift file has SHA-256
+`4c3c8ff23c89acfd95f4b4d27f3cff2c381e933b71a695bac8e53d662853a6fa` and blob
+`32128584af415c279416aadc5b78541517b7df88`; the structure test has SHA-256
+`e692cf9b20d3999a02f0e7dc6d897b3cc2c9924d5ac93b7b461bf6086ee9755b` and blob
+`55d08febee76f832181c2100da787fa71f16e182`. Development evidence reports structure **12/12**,
+static **29/29**, and lint, typecheck, format, and diff checks PASS. The candidate shared total is
+expected to be **469**, but it has not been run. Native Xcode is unavailable locally.
+
+Specialist gates report Catalina **36/36 PASS**, Natalia **46/46 PASS**, Julieta **62/62 PASS**, and
+Renata **47/47 PASS**. This candidate is not authorized for commit or push: it still requires
+Bianca's exact records rebind and Elana's **COMMIT-ONLY** exact-candidate PASS. After an unchanged
+commit, a clean-head exact-candidate rebind is required before push. After an immutable push, fresh
+minimum-iOS, current-iOS, and sanitized iOS aggregate evidence must pass, including **3 consecutive
+independent canonical current-Xcode current-job/corpus PASS runs** with no hidden retries. All other
+protected checks, mergeability, and Elana's final exact-head PASS remain mandatory before ready or
+merge. PR #72 remains draft/**HOLD**. **Marlon action required: none.**
+
+## PR #72 four-path iOS candidate and evidence status — 2026-11-05
+
+This append-only entry supersedes the three-path candidate identity and evidence above without
+rewriting that chronology. Immediately before this records append, the exact candidate on base
+`e21a2e112a0033c0ae44c5b8a7915a9aa554b406` had four paths and **197 insertions / 10 deletions**:
+Swift **18/4**, the prior handoff
+**37/0**, auth-runtime synthetic contract **38/6**, and iOS structure **104/0**. Its Git binary-diff
+fingerprint is `ad1155070c07108c8dba314d71327423a38991e5`, and its stable patch ID is
+`26cf1371704474894bf7bd18e396c379af9a1d25`.
+
+The Swift file retains SHA-256
+`4c3c8ff23c89acfd95f4b4d27f3cff2c381e933b71a695bac8e53d662853a6fa` and blob
+`32128584af415c279416aadc5b78541517b7df88`; the prior handoff retains SHA-256
+`da7d2da5a9af45f0c4bc512f48de95da701b42ff4e8fe02cec10679fb55d2d55` and blob
+`2b17a0f5baea946b472b9c7d68b6b24518794622`; the auth-runtime synthetic contract has SHA-256
+`ebae1cce33a150c7e56ac7685a57b9c12f923038c3a03cc5eed69816f8bd8e08` and blob
+`d6e56700eb13d35955e565eba01577a83337d4d9`; and the iOS structure test retains SHA-256
+`e692cf9b20d3999a02f0e7dc6d897b3cc2c9924d5ac93b7b461bf6086ee9755b` and blob
+`55d08febee76f832181c2100da787fa71f16e182`.
+
+Targeted tests pass **9/9**. Full shared tests report **468/469**, with the sole failure being the
+expected dirty-tree guard; an unchanged clean commit is expected to report **469/469**. Lint,
+typecheck, format, and diff checks pass. The fourth-path freeze passes **24/24**, and Catalina's final
+architecture gate passes **42/42**. Natalia's code/security review passes, but her combined records
+verdict is **FAIL 72/74** pending this correction.
+
+Commit and push authority remain closed. This new exact combined candidate requires fresh
+applicable records, security, numerical/claims, infrastructure, and architecture rebinds plus
+Elana's **COMMIT-ONLY** exact-candidate PASS before commit. After an unchanged commit, a clean-head
+exact-candidate rebind is required before push. After an immutable push, the required native iOS
+minimum/current/aggregate evidence and **3 consecutive independent canonical current-Xcode
+current-job/corpus PASS runs** with no hidden retries remain mandatory, together with all protected
+checks, mergeability, and Elana's final exact-head PASS before ready or merge. PR #72 remains
+draft/**HOLD**. **Marlon action required: none.**

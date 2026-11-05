@@ -434,12 +434,25 @@ final class AuthRuntimeKernelTests: XCTestCase {
         let snapshot = await coordinator.snapshot(); try requireCorpusAssertion(snapshot.state == .offlineSessionCandidate); try requireCorpusAssertion(snapshot.fixedOutcomeCategory == .canceled)
     }
 
+    private let refreshTimerObservationYieldLimit = 64
+
+    private func observeRefreshTimerHistory(_ coordinator: AuthRuntimeCoordinator, expectedCount: Int) async -> [AuthPresentationEffect] {
+        var lastSnapshot = await coordinator.presentationEffectHistory()
+        if lastSnapshot.count == expectedCount { return lastSnapshot }
+        for _ in 0..<refreshTimerObservationYieldLimit {
+            await Task.yield()
+            lastSnapshot = await coordinator.presentationEffectHistory()
+            if lastSnapshot.count == expectedCount { return lastSnapshot }
+        }
+        return lastSnapshot
+    }
+
     private func verifyRefreshTimerBoundaries() async throws {
         for elapsed in [UInt64(499), 500, 501] {
             let ports = ScriptPorts(times: [0, 0]); let coordinator = makeCoordinator(ports); await ports.vault.setReadCandidate(true); await coordinator.initialize(online: true); await ports.clock.setDelayedElapsed(elapsed); await ports.provider.setSuspendRefresh(true)
             let timerCandidate = SyntheticAuthFixture.candidate()
-            async let work: Void = coordinator.handle401(timerCandidate); await ports.provider.waitRefreshStarted()
-            let history = await coordinator.presentationEffectHistory()
+            async let work: Void = coordinator.handle401(timerCandidate); await ports.provider.waitRefreshStarted(); await ports.clock.waitDelayed500SleepEvaluated()
+            let history = await observeRefreshTimerHistory(coordinator, expectedCount: elapsed < 500 ? 0 : 1)
             await ports.provider.releaseRefresh(); _ = await work
             try requireCorpusAssertion(history.count == (elapsed < 500 ? 0 : 1))
             if let effect = history.first { try requireCorpusAssertion(effect.originatingState == .refreshPending); try requireCorpusAssertion(effect.payload.focus == .heading); try requireCorpusAssertion(effect.payload.announcement == .refreshPending); try requireCorpusAssertion(effect.payload.priority == .polite); try requireCorpusAssertion(effect.payload.navigation == nil) }
@@ -842,13 +855,14 @@ private actor ScriptCallback: CallbackTransactionStorePort {
 }
 private actor ScriptClock: AuthClockPort {
     private final class SleepHandle: @unchecked Sendable { let generation: UInt64, gate = Gate(), cancellationObserved = OneShotSignal(); var canceled = false; init(_ generation: UInt64) { self.generation = generation } }
-    private let times: [UInt64]; private let registrationGate = Gate(); private let completions: CompletionAudit; private var index = 0, sleeps: [UInt64] = [], suspendSleep = false, suspendRegistration = false; private var delayedElapsed: UInt64?; private var active: [SleepHandle] = []
+    private let times: [UInt64]; private let registrationGate = Gate(), delayed500SleepEvaluated = OneShotSignal(); private let completions: CompletionAudit; private var index = 0, sleeps: [UInt64] = [], suspendSleep = false, suspendRegistration = false; private var delayedElapsed: UInt64?; private var active: [SleepHandle] = []
     init(_ times: [UInt64], _ completions: CompletionAudit) { self.times = times; self.completions = completions }
     func monotonicMilliseconds() async -> UInt64 { defer { index += 1 }; return times.indices.contains(index) ? times[index] : (times.last ?? 0) }
     func setSuspendSleep(_ value: Bool) { suspendSleep = value }
     func setSuspendRegistration(_ value: Bool) { suspendRegistration = value }
     func setDelayedElapsed(_ value: UInt64) { delayedElapsed = value }
     func waitRegistrationStarted() async { await registrationGate.waitUntilStarted() }
+    func waitDelayed500SleepEvaluated() async { await delayed500SleepEvaluated.wait() }
     func waitSleepStarted() async { while active.isEmpty { await Task.yield() }; if let handle = active.last { await handle.gate.waitUntilStarted() } }
     func releaseSleep() async { for handle in active { await handle.gate.release() } }
     func sleep(milliseconds: UInt64, generation: UInt64) async -> Bool {
@@ -861,7 +875,7 @@ private actor ScriptClock: AuthClockPort {
         let handle = SleepHandle(generation); active.append(handle); defer { active.removeAll { $0 === handle } }
         let fired: Bool
         if await completions.take(["timer_fired"]) == "timer_fired" { fired = !Task.isCancelled }
-        else if milliseconds == 500, let delayedElapsed { fired = delayedElapsed >= milliseconds && !Task.isCancelled }
+        else if milliseconds == 500, let delayedElapsed { await delayed500SleepEvaluated.signal(); fired = delayedElapsed >= milliseconds && !Task.isCancelled }
         else {
             let sleepSuspended = suspendSleep
             let pendingCommands: Bool

@@ -242,13 +242,45 @@ describe("native auth executable synthetic kernel", () => {
     expect(cancelBoundaries).toMatch(
       /let afterCancel = await coordinator\.snapshot\(\)[^]*if now < 500 \{ await coordinator\.signOut\(\) \}[^]*releaseExchange\(\); _ = await work[^]*try requireCorpusAssertion/,
     );
-    const refreshBoundaries = swift.slice(
-      swift.indexOf("private func verifyRefreshTimerBoundaries"),
-      swift.indexOf("private func verifyMutationBoundaries"),
+    const refreshHelperStart = swift.indexOf("private func observeRefreshTimerHistory");
+    const refreshBoundaryStart = swift.indexOf("private func verifyRefreshTimerBoundaries");
+    const refreshBoundaryEnd = swift.indexOf("private func verifyMutationBoundaries");
+    expect(refreshHelperStart).toBeGreaterThan(-1);
+    expect(refreshBoundaryStart).toBeGreaterThan(refreshHelperStart);
+    expect(refreshBoundaryEnd).toBeGreaterThan(refreshBoundaryStart);
+    const refreshHelper = swift.slice(refreshHelperStart, refreshBoundaryStart);
+    const refreshBoundaries = swift.slice(refreshBoundaryStart, refreshBoundaryEnd);
+    expect(refreshHelper.match(/coordinator\.presentationEffectHistory\(\)/g)).toHaveLength(2);
+    expect(refreshHelper).not.toMatch(/AuthPresentationEffect\s*\(|\.init\s*\(|return\s*\[/);
+    expect(refreshHelper).not.toMatch(
+      /scenarioResult|expectedResult|expectedVector|expectedEffects|expectedSnapshots|answerFactory|hardcodedResult/i,
     );
-    expect(refreshBoundaries).toMatch(
-      /let history = await coordinator\.presentationEffectHistory\(\)[^]*releaseRefresh\(\); _ = await work[^]*try requireCorpusAssertion/,
+    expect(
+      refreshBoundaries.match(
+        /let history = await observeRefreshTimerHistory\(coordinator, expectedCount: elapsed < 500 \? 0 : 1\)/g,
+      ),
+    ).toHaveLength(1);
+    expect(refreshBoundaries).not.toContain(
+      "let history = await coordinator.presentationEffectHistory()",
     );
+    const refreshProviderStarted = refreshBoundaries.indexOf("ports.provider.waitRefreshStarted()");
+    const refreshDelayedSignal = refreshBoundaries.indexOf(
+      "ports.clock.waitDelayed500SleepEvaluated()",
+    );
+    const refreshHelperCall = refreshBoundaries.indexOf(
+      "let history = await observeRefreshTimerHistory(coordinator, expectedCount: elapsed < 500 ? 0 : 1)",
+    );
+    const refreshProviderRelease = refreshBoundaries.indexOf("ports.provider.releaseRefresh()");
+    const refreshWorkJoin = refreshBoundaries.indexOf("_ = await work");
+    const refreshHistoryAssertion = refreshBoundaries.indexOf(
+      "try requireCorpusAssertion(history.count == (elapsed < 500 ? 0 : 1))",
+    );
+    expect(refreshProviderStarted).toBeGreaterThan(-1);
+    expect(refreshDelayedSignal).toBeGreaterThan(refreshProviderStarted);
+    expect(refreshHelperCall).toBeGreaterThan(refreshDelayedSignal);
+    expect(refreshProviderRelease).toBeGreaterThan(refreshHelperCall);
+    expect(refreshWorkJoin).toBeGreaterThan(refreshProviderRelease);
+    expect(refreshHistoryAssertion).toBeGreaterThan(refreshWorkJoin);
     expect(swift).toMatch(
       /private func failCurrentStageAssertion[^]*currentStage\(\)[^]*failRecordedAssertion\(active\)/,
     );

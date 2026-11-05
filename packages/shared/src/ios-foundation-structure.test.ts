@@ -197,6 +197,110 @@ describe("iOS unsigned foundation structure", () => {
     expect(kernelTests).toContain("setDelayedElapsed");
   });
 
+  it("observes the delayed refresh boundary with one bounded yield helper", () => {
+    const kernelTests = read("apps/ios/FluyoTests/AuthRuntimeKernelTests.swift");
+    expect(kernelTests).toContain("private let refreshTimerObservationYieldLimit = 64");
+    const observationHelper = kernelTests.match(
+      /private func observeRefreshTimerHistory\(_ coordinator: AuthRuntimeCoordinator, expectedCount: Int\) async -> \[AuthPresentationEffect\] \{([\s\S]*?)\n    \}\n\n    private func verifyRefreshTimerBoundaries/,
+    )?.[1];
+    expect(observationHelper).toBeDefined();
+    expect(observationHelper).toContain(
+      "var lastSnapshot = await coordinator.presentationEffectHistory()",
+    );
+    expect(observationHelper).toContain("for _ in 0..<refreshTimerObservationYieldLimit {");
+    expect(observationHelper!.match(/await Task\.yield\(\)/g)).toHaveLength(1);
+    expect(observationHelper!.match(/coordinator\.presentationEffectHistory\(\)/g)).toHaveLength(2);
+    expect(
+      observationHelper!.match(
+        /if lastSnapshot\.count == expectedCount \{ return lastSnapshot \}/g,
+      ),
+    ).toHaveLength(2);
+    expect(observationHelper!.match(/return lastSnapshot/g)).toHaveLength(3);
+    const initialSnapshot = observationHelper!.indexOf(
+      "var lastSnapshot = await coordinator.presentationEffectHistory()",
+    );
+    const initialMatch = observationHelper!.indexOf(
+      "if lastSnapshot.count == expectedCount { return lastSnapshot }",
+    );
+    const yieldLoop = observationHelper!.indexOf(
+      "for _ in 0..<refreshTimerObservationYieldLimit {",
+    );
+    const taskYield = observationHelper!.indexOf("await Task.yield()");
+    const postYieldSnapshot = observationHelper!.lastIndexOf(
+      "lastSnapshot = await coordinator.presentationEffectHistory()",
+    );
+    const postYieldMatch = observationHelper!.lastIndexOf(
+      "if lastSnapshot.count == expectedCount { return lastSnapshot }",
+    );
+    const finalReturn = observationHelper!.lastIndexOf("return lastSnapshot");
+    expect(initialSnapshot).toBeLessThan(initialMatch);
+    expect(initialMatch).toBeLessThan(yieldLoop);
+    expect(yieldLoop).toBeLessThan(taskYield);
+    expect(taskYield).toBeLessThan(postYieldSnapshot);
+    expect(postYieldSnapshot).toBeLessThan(postYieldMatch);
+    expect(postYieldMatch).toBeLessThan(finalReturn);
+    expect(observationHelper).not.toMatch(/\b(?:while|repeat|retry)\b/);
+    expect(observationHelper).not.toMatch(/(?:Task|Thread)\.sleep|\busleep\b/);
+    expect(observationHelper).not.toMatch(/\bTask\s*\{/);
+    expect(observationHelper).not.toMatch(/\bTask\.detached\b|\basync\s+let\b/);
+    expect(observationHelper).not.toMatch(
+      /\b(?:withTaskGroup|withThrowingTaskGroup|withDiscardingTaskGroup|withThrowingDiscardingTaskGroup)\b/,
+    );
+    expect(observationHelper).not.toContain("observeRefreshTimerHistory(");
+    expect(observationHelper).not.toMatch(/try\?|\bcatch\b|XCTSkip/);
+
+    const timerBoundary = kernelTests.match(
+      /private func verifyRefreshTimerBoundaries\(\) async throws \{([\s\S]*?)\n    \}\n\n    private func verifyMutationBoundaries/,
+    )?.[1];
+    expect(timerBoundary).toBeDefined();
+    expect(timerBoundary).toContain("for elapsed in [UInt64(499), 500, 501] {");
+    expect(
+      timerBoundary!.match(
+        /observeRefreshTimerHistory\(coordinator, expectedCount: elapsed < 500 \? 0 : 1\)/g,
+      ),
+    ).toHaveLength(1);
+    expect(kernelTests.match(/observeRefreshTimerHistory\(/g)).toHaveLength(2);
+    const providerStarted = timerBoundary!.indexOf("ports.provider.waitRefreshStarted()");
+    const delayedEvaluated = timerBoundary!.indexOf("ports.clock.waitDelayed500SleepEvaluated()");
+    const observation = timerBoundary!.indexOf(
+      "observeRefreshTimerHistory(coordinator, expectedCount: elapsed < 500 ? 0 : 1)",
+    );
+    const providerReleased = timerBoundary!.indexOf("ports.provider.releaseRefresh()");
+    const workAwaited = timerBoundary!.indexOf("_ = await work");
+    const firstAssertion = timerBoundary!.indexOf("try requireCorpusAssertion");
+    expect(providerStarted).toBeLessThan(delayedEvaluated);
+    expect(delayedEvaluated).toBeLessThan(observation);
+    expect(observation).toBeLessThan(providerReleased);
+    expect(providerReleased).toBeLessThan(workAwaited);
+    expect(workAwaited).toBeLessThan(firstAssertion);
+    expect(timerBoundary).toContain("history.count == (elapsed < 500 ? 0 : 1)");
+    expect(timerBoundary).toContain("effect.originatingState == .refreshPending");
+    expect(timerBoundary).toContain("effect.payload.focus == .heading");
+    expect(timerBoundary).toContain("effect.payload.announcement == .refreshPending");
+    expect(timerBoundary).toContain("effect.payload.priority == .polite");
+    expect(timerBoundary).toContain("effect.payload.navigation == nil");
+    expect(timerBoundary).toContain("drained.isEmpty");
+    expect(timerBoundary).toContain("finalHistory.count == (elapsed < 500 ? 0 : 1)");
+    expect(timerBoundary).not.toMatch(/try\?|\bcatch\b|XCTSkip/);
+
+    const scriptClock = kernelTests.match(
+      /private actor ScriptClock: AuthClockPort \{([\s\S]*?)\n\}\nprivate actor ScriptOwner/,
+    )?.[1];
+    expect(scriptClock).toBeDefined();
+    expect(scriptClock!.match(/delayed500SleepEvaluated = OneShotSignal\(\)/g)).toHaveLength(1);
+    expect(scriptClock).not.toContain("static let delayed500SleepEvaluated");
+    expect(scriptClock).toContain(
+      "func waitDelayed500SleepEvaluated() async { await delayed500SleepEvaluated.wait() }",
+    );
+    expect(scriptClock).toContain(
+      "else if milliseconds == 500, let delayedElapsed { await delayed500SleepEvaluated.signal(); fired = delayedElapsed >= milliseconds && !Task.isCancelled }",
+    );
+    expect(scriptClock!.match(/delayed500SleepEvaluated\.signal\(\)/g)).toHaveLength(1);
+    expect(scriptClock!.indexOf("await delayed500SleepEvaluated.signal()")).toBeLessThan(
+      scriptClock!.indexOf("fired = delayedElapsed >= milliseconds && !Task.isCancelled"),
+    );
+  });
+
   it("keeps synthetic values out of XCTestCase concurrency captures", () => {
     const kernelTests = read("apps/ios/FluyoTests/AuthRuntimeKernelTests.swift");
     const fixtureIndex = kernelTests.indexOf("private enum SyntheticAuthFixture");
