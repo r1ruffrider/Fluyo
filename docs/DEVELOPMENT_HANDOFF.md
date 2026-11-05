@@ -2161,3 +2161,25 @@ on that new head. Do not mark PR #72 ready and do not merge until the PR body is
 final exact-head specialist, platform, mergeability, and Elana gates pass. No production,
 deployment, signing, store, credential, spending, destructive, publication, or external-account
 action was taken or authorized. **Marlon action required: none.**
+
+## PR #72 post-commit records status — 2026-11-05
+
+This append-only status supersedes the operational precommit wording above without erasing its
+chronology. The exact local repair is now committed at HEAD
+`2ec80c6954fa9c277e277ac21fa755e6b8a6aef3`, with parent
+`50ccc3422a441e16ac6658a131d56001f797bd82` and tree
+`f7f41827b14d8c6daa4ae1de330a2a23cc3d2f61`. The commit changes exactly the four recorded files with
+**151 insertions / 5 deletions**. At the post-commit checkpoint, the index and worktree were clean;
+this entry is now the sole unstaged records-only diff. The branch is **ahead 1 / behind 0** and
+remains unpushed. Post-commit clean-tree shared tests passed **468/468** in **525.80 seconds**.
+
+The committed repair's exact-head rebinds report Catalina **36/36 PASS**, Renata **29/29 PASS**,
+Natalia **60/60 PASS**, and Bianca **21/21 PASS**. Julieta's strict records-only verdict remains
+**FAIL** pending this correction. This entry creates a new exact records-only candidate that is not
+authorized for commit or push until the applicable Bianca records, Natalia security, and Julieta
+numerical/claims rebinds pass and Elana issues an exact-candidate **PASS**. After an unchanged records
+commit, a clean-tree exact-head rebind is required before push.
+
+PR #72 remains draft/**HOLD**. After an unchanged push, fresh protected API 29, API 37, sanitized
+Android aggregate, all other required protected-platform checks, mergeability, and Elana's final
+exact-head gate remain mandatory before ready or merge. **Marlon action required: none.**
