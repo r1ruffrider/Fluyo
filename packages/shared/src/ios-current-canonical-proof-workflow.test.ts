@@ -12,27 +12,31 @@ const canonical = workflow.slice(
   workflow.indexOf("  canonical-current-ios:"),
   workflow.indexOf("  postflight:"),
 );
+const preflight = workflow.slice(
+  workflow.indexOf("  preflight:"),
+  workflow.indexOf("  canonical-current-ios:"),
+);
 const postflight = workflow.slice(workflow.indexOf("  postflight:"));
 const actionUses = [...workflow.matchAll(/^\s+uses:\s+([^\s]+)\s*$/gm)].map((match) => match[1]);
 
-describe("iOS current canonical proof security workflow", () => {
-  it("keeps the frozen closed dispatch, target-only serialization, and three-job topology", () => {
+describe("iOS current canonical proof v2 security workflow", () => {
+  it("keeps the closed four-input dispatch, target-only serialization, and three-job topology", () => {
     const inputs = workflow.slice(
       workflow.indexOf("    inputs:"),
       workflow.indexOf("\npermissions:"),
     );
     expect(
       [...inputs.matchAll(/^      ([a-z][a-z0-9_]+):\r?$/gm)].map((match) => match[1]),
-    ).toEqual([
-      "target_sha",
-      "pr_number",
-      "pass_ordinal",
-      "previous_run_id",
-      "expected_workflow_sha256",
-    ]);
-    expect(inputs.match(/required: true/g)).toHaveLength(5);
-    expect(workflow).toContain("group: ios-current-canonical-proof-${{ inputs.target_sha }}");
+    ).toEqual(["target_sha", "pass_ordinal", "previous_run_id", "expected_workflow_sha256"]);
+    expect(inputs.match(/required: true/g)).toHaveLength(4);
+    expect(inputs).not.toContain("pr_number:");
+    expect(inputs).toMatch(/options:\r?\n          - "1"\r?\n          - "2"\r?\n          - "3"/);
+    expect(workflow).toContain("group: ios-current-canonical-proof-v2-${{ inputs.target_sha }}");
     expect(workflow).toContain("cancel-in-progress: false");
+    expect(workflow).toContain("name: iOS current canonical proof v2");
+    expect(workflow).toContain(
+      "run-name: ios-current-canonical-proof-v2 target=${{ inputs.target_sha }} pr=72 pass=${{ inputs.pass_ordinal }} predecessor=${{ inputs.previous_run_id }} digest=${{ inputs.expected_workflow_sha256 }}",
+    );
     expect(
       [...workflow.matchAll(/^  ([a-z][a-z0-9-]+):\r?\n    name:/gm)].map((match) => match[1]),
     ).toEqual(["preflight", "canonical-current-ios", "postflight"]);
@@ -51,6 +55,23 @@ describe("iOS current canonical proof security workflow", () => {
     expect(canonical).not.toContain("pull-requests: read");
     expect(workflow).not.toMatch(/^\s+[a-z-]+: write\s*$/m);
     expect(workflow).not.toMatch(/secrets\.|id-token:|deployments:|environment:/);
+  });
+
+  it("binds fixed PR 72 to a dynamic target and closes ordinal predecessor syntax", () => {
+    expect(workflow).toContain('[[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]');
+    expect(workflow).toContain(
+      '[[ "$PASS_ORDINAL" == "1" || "$PASS_ORDINAL" == "2" || "$PASS_ORDINAL" == "3" ]]',
+    );
+    expect(workflow).toContain('test "$PREVIOUS_RUN_ID" = "none"');
+    expect(workflow).toContain('[[ "$PREVIOUS_RUN_ID" =~ ^[1-9][0-9]*$ ]]');
+    expect(workflow).toContain('[[ "$EXPECTED_WORKFLOW_SHA256" =~ ^[0-9a-f]{64}$ ]]');
+    expect(workflow.match(/pull_number: 72/g)).toHaveLength(1);
+    expect(workflow.match(/\/pulls\/\$\{prNumber\}/g)).toHaveLength(1);
+    expect(workflow.match(/const prNumber = 72;/g)).toHaveLength(2);
+    expect(workflow).not.toMatch(/inputs\.pr_number|PR_NUMBER:/);
+    expect(workflow).not.toMatch(
+      /protectedTarget|protectedPassOneRunId|protectedPassOneJobId|protectedPassOneArtifactId|ios-foundation-current/,
+    );
   });
 
   it("pins exactly the four reviewed transport and control actions", () => {
@@ -315,28 +336,87 @@ describe("iOS current canonical proof security workflow", () => {
     expect(workflow.match(/exceeds 100 pages/g)).toHaveLength(2);
   });
 
-  it("rechecks duplicates and fully rebinds the predecessor after local postflight validation", () => {
+  it("rechecks v2 duplicates and fully rebinds the ordinal chain after local validation", () => {
     const local = postflight.indexOf('const directory = "artifacts/ios-current-postflight"');
     const run = postflight.indexOf("const run = await api(");
     const duplicates = postflight.indexOf("const priorRuns = await safePaginate(");
-    const predecessor = postflight.indexOf("const predecessor = await api(");
-    const predecessorJobs = postflight.indexOf("const predecessorJobs = await safePaginate(");
-    const currentArtifacts = postflight.indexOf(
-      "const artifacts = await safePaginate(",
-      predecessorJobs,
-    );
+    const predecessor = postflight.indexOf("const validatePredecessor = async (");
+    const chain = postflight.indexOf("if (passOrdinal === 1)", predecessor);
+    const currentArtifacts = postflight.indexOf("const artifacts = await safePaginate(", chain);
     const pull = postflight.indexOf("const pull = await api(");
     expect(local).toBeGreaterThan(-1);
     expect(run).toBeGreaterThan(local);
     expect(duplicates).toBeGreaterThan(run);
     expect(predecessor).toBeGreaterThan(duplicates);
-    expect(predecessorJobs).toBeGreaterThan(predecessor);
-    expect(currentArtifacts).toBeGreaterThan(predecessorJobs);
+    expect(chain).toBeGreaterThan(predecessor);
+    expect(currentArtifacts).toBeGreaterThan(chain);
     expect(pull).toBeGreaterThan(currentArtifacts);
-    expect(postflight).toContain('predecessor.conclusion === "success"');
-    expect(postflight).toContain("protectedPassOneJobId = 127020104917");
-    expect(postflight).toContain("protectedPassOneArtifactId = 13385296010");
-    expect(postflight).toContain("Pass 3 predecessor workflow digest mismatch");
+    expect(workflow.match(/const validatePredecessor = async \(/g)).toHaveLength(2);
+    expect(
+      workflow.match(/run\.conclusion === "success"|predecessor\.conclusion === "success"/g),
+    ).toHaveLength(2);
+    expect(workflow.match(/must contain exactly three jobs/g)).toHaveLength(2);
+    expect(workflow.match(/must contain exactly one artifact/g)).toHaveLength(3);
+    expect(workflow.match(/const ancestorMatches = parsedHistory\.filter\(/g)).toHaveLength(2);
+    expect(workflow.match(/ancestor identity is not unique/g)).toHaveLength(2);
+    expect(workflow.match(/ancestor ID does not match supplied predecessor/g)).toHaveLength(2);
+    expect(
+      workflow.match(
+        /identity !== null && identity\.target === (?:targetSha|expectedSha) && identity\.ordinal === ordinal/g,
+      ),
+    ).toHaveLength(2);
+    expect(workflow.match(/Date\.parse\(postflightJob\.completed_at\)/g)).toHaveLength(2);
+    expect(workflow.match(/completedAt <= successorAt/g)).toHaveLength(2);
+    expect(workflow.match(/completed after successor started/g)).toHaveLength(2);
+    expect(workflow).not.toMatch(/Date\.parse\((?:run|predecessor)\.updated_at\)/);
+    expect((workflow.match(/transitive pass 1 predecessor/g) ?? []).length).toBeGreaterThanOrEqual(
+      2,
+    );
+    expect(workflow.match(/await validatePredecessor\(/g)).toHaveLength(6);
+    expect(workflow.match(/const passTwo = await validatePredecessor\(/g)).toHaveLength(2);
+    expect(workflow.match(/passTwo\.run\.run_started_at/g)).toHaveLength(2);
+    for (const control of [preflight, postflight]) {
+      const passOne = control.slice(
+        control.indexOf("if (passOrdinal === 1)"),
+        control.indexOf("} else if (passOrdinal === 2)"),
+      );
+      expect(passOne).toContain('previousRunId === "none"');
+      expect(passOne).not.toMatch(/validatePredecessor|actions\/runs\/\$\{previousRunId\}/);
+    }
+  });
+
+  it("uses strict v2 history identities while ignoring historical v1 titles", () => {
+    expect(
+      workflow.match(/const identityPrefix = "ios-current-canonical-proof-v2";/g),
+    ).toHaveLength(2);
+    expect(workflow.match(/const titlePattern =/g)).toHaveLength(2);
+    expect(workflow.match(/has malformed v2 identity/g)).toHaveLength(2);
+    expect(
+      workflow.match(/if \(!title\.startsWith\(identityPrefix\)\) return null;/g),
+    ).toHaveLength(2);
+    expect(workflow.match(/identity\.target === (?:targetSha|expectedSha)/g)).toHaveLength(6);
+    expect(workflow.match(/identity\.ordinal === passOrdinal/g)).toHaveLength(2);
+    expect(workflow.match(/currentIdentity\.predecessor === previousRunId/g)).toHaveLength(2);
+    expect(workflow.match(/identity\.digest === expectedDigest/g)).toHaveLength(2);
+    expect(workflow.match(/currentIdentity\.digest === expectedDigest/g)).toHaveLength(2);
+    expect(workflow.match(/Pass 1 predecessor must be none/g)).toHaveLength(2);
+    expect(workflow.match(/Pass 1 and pass 2 run IDs must differ/g)).toHaveLength(2);
+    expect(workflow.match(/Pass 1 and pass 3 run IDs must differ/g)).toHaveLength(2);
+    expect(workflow).not.toContain("ios-current-canonical-proof target=");
+  });
+
+  it("versions job and artifact identities and encodes the three-run acceptance totals", () => {
+    expect(workflow).toContain("name: iOS current canonical preflight v2");
+    expect(workflow).toContain("name: iOS current canonical exact-head proof v2");
+    expect(workflow).toContain("name: iOS current canonical postflight v2");
+    expect(
+      workflow.match(/ios-current-canonical-proof-v2-\$\{\{ inputs\.target_sha \}\}-pass-/g),
+    ).toHaveLength(3);
+    expect(workflow.match(/retention-days: 7/g)).toHaveLength(1);
+    const acceptedRuns = 3;
+    expect(acceptedRuns * 3).toBe(9);
+    expect(acceptedRuns * 2).toBe(6);
+    expect(acceptedRuns).toBe(3);
   });
 
   it("queries and accepts PR 72 exactly twice with postflight PR assertions last", () => {
