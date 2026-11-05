@@ -45,6 +45,58 @@ const authCorpusIds = new Set([
   "no_op_telemetry_has_zero_retention_and_zero_transport",
   "evidence_is_closed_and_mutation_safe",
 ]);
+const checkpointCorpusIds = new Set(["corpus_manifest", ...authCorpusIds]);
+const checkpointStages = new Set([
+  "manifest",
+  "fingerprint",
+  "step",
+  "snapshot",
+  "effects",
+  "drain",
+  "trace",
+  "wipe",
+  "rejected_writes",
+  "completions",
+  "exchange",
+  "generation",
+  "terminal",
+  "invariant",
+]);
+const invariantDiagnosticsByCorpus = new Map([
+  [
+    "generation_change_cancels_work_and_blocks_stale_writes",
+    new Set(["comparison_start_timeout", "comparison_release_timeout"]),
+  ],
+  [
+    "evidence_is_closed_and_mutation_safe",
+    new Set([
+      "terminal_not_fenced_after_initialize",
+      "terminal_not_fenced_after_receive_callback",
+      "terminal_not_fenced_after_cancel_callback",
+      "terminal_not_fenced_after_handle_401",
+      "terminal_not_fenced_after_handle_403",
+      "terminal_not_fenced_after_schedule_timeout",
+      "terminal_not_fenced_after_delayed_announcement",
+      "terminal_not_fenced_after_sign_out",
+      "terminal_not_fenced_after_switch_account",
+      "terminal_not_fenced_after_entrypoint_sequence",
+    ]),
+  ],
+]);
+const recordedAssertionRegularStages = new Set([
+  "fingerprint",
+  "step",
+  "snapshot",
+  "effects",
+  "drain",
+  "trace",
+  "wipe",
+  "rejected_writes",
+  "completions",
+  "generation",
+  "terminal",
+  "invariant",
+]);
 const traceValuePattern =
   "(?:init_read|callback_reserved|callback_consumed|callback_rejected|callback_duplicate|callback_overlap|provider_exchange|provider_refresh|owner_verify|vault_replace|owner_bind|timer_500|timer_15000|timer_30000|generation_fence|callback_purge|headers_clear|vault_clear|owner_purge|callback_confirm|vault_confirm|owner_confirm|stale_rejected|snapshot_published|effect_enqueued|terminal_latched)";
 const traceCountPattern = "(?:[0-9]|[1-5][0-9]|6[0-3]|64_plus)";
@@ -55,6 +107,12 @@ const authDiagnosticPattern = new RegExp(
 const diagnosticFallbackPattern =
   /\[auth_corpus_stage_(snapshot|trace)_(diagnostic_inconsistent|diagnostic_rejected)\](?![A-Za-z0-9_])/;
 const diagnosticUnavailablePattern = /\[auth_corpus_diagnostic_unavailable\]/;
+const checkpointCandidatePattern =
+  /\[auth_corpus_([^\]\r\n]{1,128})_stage_([^\]\r\n]{1,64})_checkpoint([^\]\r\n]{0,128})\]([A-Za-z0-9_]?)/g;
+const invariantDiagnosticCandidatePattern =
+  /\[auth_corpus_([^\]\r\n]{1,128})_stage_invariant_([^\]\r\n]{1,128})\]([A-Za-z0-9_]?)/g;
+const recordedAssertionCandidatePattern =
+  /\[auth_corpus_([^\]\r\n]{1,128})_stage_([^\]\r\n]{1,64})_assertion_recorded([^\]\r\n]{0,128})\]([A-Za-z0-9_]?)/g;
 
 const args = process.argv.slice(2);
 const githubAnnotationIndex = args.indexOf("--github-annotation");
@@ -70,6 +128,8 @@ const phases = new Set([
   "build_debug",
   "build_staging",
   "build_release",
+  "compile_tests_minimum",
+  "compile_tests_current",
   "test_minimum",
   "test_current",
 ]);
@@ -135,6 +195,8 @@ const allowedTests = [
   "testExactStepAndTotalTimeoutBoundariesAndGenerationOverflowFailClosed",
   "testDiagnosticGrammarAndFallbackSelectionAreTotalAndClosed",
 ];
+const aggregateCorpusTest =
+  "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups";
 const test =
   allowedTests.find((name) => {
     const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -146,12 +208,66 @@ const test =
 const authDiagnosticMatch = raw.match(authDiagnosticPattern);
 const authDiagnostic =
   authDiagnosticMatch && authCorpusIds.has(authDiagnosticMatch[1]) ? authDiagnosticMatch : null;
+const invariantDiagnosticCandidates = [...raw.matchAll(invariantDiagnosticCandidatePattern)].filter(
+  (candidate) =>
+    !(
+      candidate[2] === "checkpoint" &&
+      candidate[3] === "" &&
+      checkpointCorpusIds.has(candidate[1])
+    ),
+);
+const invariantDiagnosticCandidate = invariantDiagnosticCandidates.at(-1);
+const invariantDiagnostic =
+  invariantDiagnosticCandidate &&
+  invariantDiagnosticCandidate[3] === "" &&
+  invariantDiagnosticsByCorpus
+    .get(invariantDiagnosticCandidate[1])
+    ?.has(invariantDiagnosticCandidate[2])
+    ? invariantDiagnosticCandidate
+    : null;
+const recordedAssertionCandidates = [...raw.matchAll(recordedAssertionCandidatePattern)];
+const validRecordedAssertion = (candidate) => {
+  if (candidate[3] !== "" || candidate[4] !== "") return false;
+  const corpusId = candidate[1];
+  const stage = candidate[2];
+  if (corpusId === "corpus_manifest") return stage === "manifest";
+  if (corpusId === "warm_callback_success" && stage === "exchange") return true;
+  return authCorpusIds.has(corpusId) && recordedAssertionRegularStages.has(stage);
+};
+const recordedAssertionKeys = new Set(
+  recordedAssertionCandidates
+    .filter(validRecordedAssertion)
+    .map((candidate) => `${candidate[1]}\0${candidate[2]}`),
+);
+const recordedAssertion =
+  test === aggregateCorpusTest &&
+  recordedAssertionCandidates.length > 0 &&
+  recordedAssertionCandidates.every(validRecordedAssertion) &&
+  recordedAssertionKeys.size === 1
+    ? recordedAssertionCandidates.at(-1)
+    : null;
+const checkpointCandidates = [...raw.matchAll(checkpointCandidatePattern)];
+const checkpointCandidate = checkpointCandidates.at(-1);
+const checkpoint =
+  checkpointCandidate &&
+  test === aggregateCorpusTest &&
+  checkpointCandidate[3] === "" &&
+  checkpointCandidate[4] === "" &&
+  checkpointCorpusIds.has(checkpointCandidate[1]) &&
+  checkpointStages.has(checkpointCandidate[2])
+    ? checkpointCandidate
+    : null;
 const diagnosticFallback = raw.match(diagnosticFallbackPattern);
 const diagnosticUnavailable = diagnosticUnavailablePattern.test(raw);
 const compileFailurePattern =
   /(?:\b(?:SwiftCompile|SwiftEmitModule|EmitSwiftModule)\b[^\r\n]*(?:failed|failure|nonzero exit)|failed to build module|\.swift:\d+:\d+:\s*error:)/i;
 const category =
-  authDiagnostic || diagnosticFallback || diagnosticUnavailable
+  invariantDiagnostic ||
+  authDiagnostic ||
+  recordedAssertion ||
+  checkpoint ||
+  diagnosticFallback ||
+  diagnosticUnavailable
     ? "auth_contract"
     : /linker command failed|undefined symbol/i.test(raw)
       ? "link"
@@ -168,22 +284,34 @@ const category =
                 : /XCTAssert|assertion failed|test case .* failed/i.test(raw)
                   ? "assertion"
                   : "unknown";
-const boundedDiagnostic = authDiagnostic
-  ? authDiagnostic[2]
-    ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
-    : authDiagnostic[3]
-      ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence_unavailable`
-      : authDiagnostic[4]
-        ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
-        : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
-  : diagnosticFallback
-    ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
-    : diagnosticUnavailable
-      ? "; stage=diagnostic; mismatch=unavailable"
-      : "";
+const boundedDiagnostic = invariantDiagnostic
+  ? `; corpus=${invariantDiagnostic[1]}; stage=invariant; mismatch=${invariantDiagnostic[2]}`
+  : authDiagnostic
+    ? authDiagnostic[2]
+      ? `; corpus=${authDiagnostic[1]}; stage=snapshot; mismatch=${authDiagnostic[2]}`
+      : authDiagnostic[3]
+        ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence_unavailable`
+        : authDiagnostic[4]
+          ? `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=count; expected_count=${authDiagnostic[4]}; actual_count=${authDiagnostic[5]}`
+          : `; corpus=${authDiagnostic[1]}; stage=trace; mismatch=sequence; index=${authDiagnostic[6]}; expected=${authDiagnostic[7]}; actual=${authDiagnostic[8]}`
+    : diagnosticFallback
+      ? `; stage=${diagnosticFallback[1]}; mismatch=${diagnosticFallback[2]}`
+      : diagnosticUnavailable
+        ? "; stage=diagnostic; mismatch=unavailable"
+        : recordedAssertion
+          ? `; corpus=${recordedAssertion[1]}; stage=${recordedAssertion[2]}; mismatch=assertion_recorded`
+          : checkpoint
+            ? `; corpus=${checkpoint[1]}; stage=${checkpoint[2]}; mismatch=assertion`
+            : "";
 if (githubAnnotation) {
   const fields = [`phase=${phase}`, `category=${category}`];
-  if (authDiagnostic) {
+  if (invariantDiagnostic) {
+    fields.push(
+      `corpus=${invariantDiagnostic[1]}`,
+      "stage=invariant",
+      `mismatch=${invariantDiagnostic[2]}`,
+    );
+  } else if (authDiagnostic) {
     fields.push(`corpus=${authDiagnostic[1]}`);
     if (authDiagnostic[2]) {
       fields.push("stage=snapshot", `mismatch=${authDiagnostic[2]}`);
@@ -211,6 +339,14 @@ if (githubAnnotation) {
   } else if (diagnosticUnavailable) {
     if (test !== "unknown") fields.push(`test=${test}`);
     fields.push("stage=diagnostic", "mismatch=unavailable");
+  } else if (recordedAssertion) {
+    fields.push(
+      `corpus=${recordedAssertion[1]}`,
+      `stage=${recordedAssertion[2]}`,
+      "mismatch=assertion_recorded",
+    );
+  } else if (checkpoint) {
+    fields.push(`corpus=${checkpoint[1]}`, `stage=${checkpoint[2]}`, "mismatch=assertion");
   } else if (test !== "unknown" && category === "auth_contract") {
     fields.push(`test=${test}`);
   }

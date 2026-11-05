@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -23,6 +23,44 @@ try {
     "/Users/private/DerivedData/result.xcresult",
     "ProviderPrivateException",
   ];
+  for (const compilePhase of ["compile_tests_minimum", "compile_tests_current"]) {
+    writeFileSync(
+      file,
+      `/Users/private/DerivedData/Fluyo/AuthRuntimeKernelTests.swift:55:13: error: cannot find 'PrivateSymbol' in scope ${privateValues.join(" ")}\n::warning title=owned::private`,
+    );
+    const boundedCompile = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", compilePhase],
+      { encoding: "utf8" },
+    );
+    const boundedCompileOutput = `${boundedCompile.stdout}${boundedCompile.stderr}`;
+    assert.equal(boundedCompile.status, 0);
+    assert.equal(
+      boundedCompileOutput,
+      `iOS phase failed; phase=${compilePhase}; category=compile; test=unknown; raw output discarded\n`,
+    );
+    assert.equal(boundedCompileOutput.length <= 160, true);
+    for (const value of privateValues) {
+      assert.equal(boundedCompileOutput.includes(value), false);
+    }
+    assert.doesNotMatch(boundedCompileOutput, /warning|owned|private/i);
+
+    const annotatedCompile = summarizeAnnotation(file, compilePhase);
+    assert.equal(annotatedCompile.status, 0);
+    assert.equal(annotatedCompile.stderr, "");
+    assert.equal(
+      annotatedCompile.stdout,
+      `::error title=${githubWorkflowAnnotationTitle}::phase=${compilePhase}; category=compile; source=AuthRuntimeKernelTests.swift; line=55; column=13; reason=missing_member\n`,
+    );
+    assert.equal(annotatedCompile.stdout.length <= 220, true);
+    for (const value of privateValues) {
+      assert.equal(annotatedCompile.stdout.includes(value), false);
+    }
+    assert.doesNotMatch(
+      annotatedCompile.stdout,
+      /example\.test|DerivedData|warning|owned|private/i,
+    );
+  }
   writeFileSync(file, `AuthRuntimeKernelTests assertion failed ${privateValues.join(" ")}`);
   const result = spawnSync(
     process.execPath,
@@ -100,6 +138,698 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
     /phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; raw output discarded/,
   );
   for (const value of privateValues) assert.equal(allowlistedFailureOutput.includes(value), false);
+
+  const aggregateFailure =
+    "Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups]' failed (0.001 seconds).";
+  writeFileSync(
+    file,
+    `[auth_corpus_cold_start_without_candidate_stage_step_checkpoint]\n[auth_corpus_callback_cancel_stage_invariant_checkpoint]\n${aggregateFailure} ${privateValues.join(" ")}`,
+  );
+  const checkpointFailure = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const checkpointFailureOutput = `${checkpointFailure.stdout}${checkpointFailure.stderr}`;
+  assert.equal(
+    checkpointFailureOutput,
+    "iOS phase failed; phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; corpus=callback_cancel; stage=invariant; mismatch=assertion; raw output discarded\n",
+  );
+  for (const value of privateValues) assert.equal(checkpointFailureOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `[auth_corpus_callback_cancel_stage_invariant_checkpoint]\nTest Case '-[FluyoTests.AuthRuntimeKernelTests testCleanupFailureIsFencedAndDelayedEffectsAreGenerationBoundOneShot]' failed (0.001 seconds). ${privateValues.join(" ")}`,
+  );
+  const checkpointFromPassingAggregate = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  const checkpointFromPassingAggregateOutput = `${checkpointFromPassingAggregate.stdout}${checkpointFromPassingAggregate.stderr}`;
+  assert.doesNotMatch(checkpointFromPassingAggregateOutput, /corpus=|stage=|mismatch=/);
+  for (const value of privateValues)
+    assert.equal(checkpointFromPassingAggregateOutput.includes(value), false);
+
+  writeFileSync(
+    file,
+    `[auth_corpus_corpus_manifest_stage_manifest_checkpoint]\n${aggregateFailure} ${privateValues.join(" ")}`,
+  );
+  const manifestCheckpoint = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_minimum"],
+    { encoding: "utf8" },
+  );
+  assert.equal(
+    `${manifestCheckpoint.stdout}${manifestCheckpoint.stderr}`,
+    "iOS phase failed; phase=test_minimum; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; corpus=corpus_manifest; stage=manifest; mismatch=assertion; raw output discarded\n",
+  );
+
+  const checkpointStages = [
+    "manifest",
+    "fingerprint",
+    "step",
+    "snapshot",
+    "effects",
+    "drain",
+    "trace",
+    "wipe",
+    "rejected_writes",
+    "completions",
+    "exchange",
+    "generation",
+    "terminal",
+    "invariant",
+  ];
+  for (const stage of checkpointStages) {
+    writeFileSync(
+      file,
+      `[auth_corpus_callback_cancel_stage_${stage}_checkpoint]\n${aggregateFailure} ${privateValues.join(" ")}`,
+    );
+    const checkpointStage = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    assert.match(
+      `${checkpointStage.stdout}${checkpointStage.stderr}`,
+      new RegExp(`corpus=callback_cancel; stage=${stage}; mismatch=assertion`),
+    );
+  }
+
+  const invariantDiagnosticCases = [
+    ["generation_change_cancels_work_and_blocks_stale_writes", "comparison_start_timeout"],
+    ["generation_change_cancels_work_and_blocks_stale_writes", "comparison_release_timeout"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_initialize"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_receive_callback"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_cancel_callback"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_handle_401"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_handle_403"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_schedule_timeout"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_delayed_announcement"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_sign_out"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_switch_account"],
+    ["evidence_is_closed_and_mutation_safe", "terminal_not_fenced_after_entrypoint_sequence"],
+  ];
+  assert.equal(invariantDiagnosticCases.length, 12);
+  for (const [corpusId, mismatch] of invariantDiagnosticCases) {
+    const marker = `[auth_corpus_${corpusId}_stage_invariant_${mismatch}]`;
+    writeFileSync(file, `${marker}\n${aggregateFailure} ${privateValues.join(" ")}`);
+    const invariantDiagnostic = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const invariantDiagnosticOutput = `${invariantDiagnostic.stdout}${invariantDiagnostic.stderr}`;
+    assert.equal(
+      invariantDiagnosticOutput,
+      `iOS phase failed; phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; corpus=${corpusId}; stage=invariant; mismatch=${mismatch}; raw output discarded\n`,
+    );
+    for (const value of privateValues)
+      assert.equal(invariantDiagnosticOutput.includes(value), false);
+  }
+
+  const [validInvariantCorpus, validInvariantMismatch] = invariantDiagnosticCases[0];
+  const validInvariantMarker = `[auth_corpus_${validInvariantCorpus}_stage_invariant_${validInvariantMismatch}]`;
+  for (const invalidInvariantMarker of [
+    "[auth_corpus_evidence_is_closed_and_mutation_safe_stage_invariant_comparison_start_timeout]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_terminal_not_fenced_after_initialize]",
+    "[auth_corpus_private_value_stage_invariant_comparison_start_timeout]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_private_value]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_comparison_start_timeout_private]",
+    "[auth_corpus_generation_change_cancels_work_and_blocks_stale_writes_stage_invariant_comparison_start_timeout]_private",
+  ]) {
+    writeFileSync(
+      file,
+      `${validInvariantMarker}\n${invalidInvariantMarker}\n${aggregateFailure} ${privateValues.join(" ")}`,
+    );
+    const rejectedInvariant = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const rejectedInvariantOutput = `${rejectedInvariant.stdout}${rejectedInvariant.stderr}`;
+    assert.doesNotMatch(rejectedInvariantOutput, /corpus=|stage=|mismatch=/);
+    for (const value of privateValues) assert.equal(rejectedInvariantOutput.includes(value), false);
+  }
+
+  writeFileSync(
+    file,
+    `${validInvariantMarker}\n[auth_corpus_callback_cancel_stage_invariant_checkpoint]\n${aggregateFailure} ${privateValues.join(" ")}`,
+  );
+  const invariantOutranksCheckpoint = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${invariantOutranksCheckpoint.stdout}${invariantOutranksCheckpoint.stderr}`,
+    new RegExp(
+      `corpus=${validInvariantCorpus}; stage=invariant; mismatch=${validInvariantMismatch}`,
+    ),
+  );
+
+  for (const invalidCheckpoint of [
+    "[auth_corpus_private_value_stage_step_checkpoint]",
+    "[auth_corpus_callback_cancel_stage_private_value_checkpoint]",
+    "[auth_corpus_callback_cancel_stage_step_checkpoint_private]",
+    "[auth_corpus_callback_cancel_stage_step_checkpoint]_private",
+  ]) {
+    writeFileSync(
+      file,
+      `[auth_corpus_cold_start_without_candidate_stage_step_checkpoint]\n${invalidCheckpoint}\n${aggregateFailure} ${privateValues.join(" ")}`,
+    );
+    const rejectedCheckpoint = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const rejectedCheckpointOutput = `${rejectedCheckpoint.stdout}${rejectedCheckpoint.stderr}`;
+    assert.doesNotMatch(rejectedCheckpointOutput, /corpus=|stage=|mismatch=/);
+    for (const value of privateValues)
+      assert.equal(rejectedCheckpointOutput.includes(value), false);
+  }
+
+  writeFileSync(
+    file,
+    `[auth_corpus_callback_cancel_stage_invariant_checkpoint]\n[auth_corpus_callback_cancel_stage_snapshot_state]\n${aggregateFailure} ${privateValues.join(" ")}`,
+  );
+  const detailedOutranksCheckpoint = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${detailedOutranksCheckpoint.stdout}${detailedOutranksCheckpoint.stderr}`,
+    /corpus=callback_cancel; stage=snapshot; mismatch=state; raw output discarded/,
+  );
+
+  const swiftTestSource = readFileSync(
+    join("apps", "ios", "FluyoTests", "AuthRuntimeKernelTests.swift"),
+    "utf8",
+  );
+  const checkpointAllowlistSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private static let checkpointCorpusIds"),
+    swiftTestSource.indexOf("private struct Vector"),
+  );
+  const swiftCheckpointIds = [...checkpointAllowlistSource.matchAll(/"([a-z0-9_]+)"/g)].map(
+    (match) => match[1],
+  );
+  const corpusRows = readFileSync(
+    join("contracts", "mobile", "auth-runtime-synthetic", "v1", "vectors.tsv"),
+    "utf8",
+  )
+    .trimEnd()
+    .split("\n")
+    .slice(1)
+    .map((line) => line.split("\t")[1]);
+  assert.equal(corpusRows.length, 41);
+  assert.equal(new Set(corpusRows).size, 41);
+  const recordedAssertionRegularStages = [
+    "fingerprint",
+    "step",
+    "snapshot",
+    "effects",
+    "drain",
+    "trace",
+    "wipe",
+    "rejected_writes",
+    "completions",
+    "generation",
+    "terminal",
+    "invariant",
+  ];
+  const recordedAssertionPairs = [
+    ["corpus_manifest", "manifest"],
+    ...corpusRows.flatMap((corpusId) =>
+      recordedAssertionRegularStages.map((stage) => [corpusId, stage]),
+    ),
+    ["warm_callback_success", "exchange"],
+  ];
+  assert.equal(recordedAssertionPairs.length, 494);
+  assert.equal(
+    new Set(recordedAssertionPairs.map(([corpusId, stage]) => `${corpusId}\0${stage}`)).size,
+    494,
+  );
+  for (const [corpusId, stage] of recordedAssertionPairs) {
+    const marker = `[auth_corpus_${corpusId}_stage_${stage}_assertion_recorded]`;
+    writeFileSync(file, `${marker}\n${aggregateFailure} ${privateValues.join(" ")}`);
+    const recordedAssertion = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const recordedAssertionOutput = `${recordedAssertion.stdout}${recordedAssertion.stderr}`;
+    assert.equal(
+      recordedAssertionOutput,
+      `iOS phase failed; phase=test_current; category=auth_contract; test=testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups; corpus=${corpusId}; stage=${stage}; mismatch=assertion_recorded; raw output discarded\n`,
+    );
+    for (const value of privateValues) assert.equal(recordedAssertionOutput.includes(value), false);
+  }
+
+  const validRecordedMarker = "[auth_corpus_callback_cancel_stage_step_assertion_recorded]";
+  const inconsistentRecordedMarker =
+    "[auth_corpus_callback_cancel_stage_snapshot_assertion_recorded]";
+  for (const invalidRecordedMarker of [
+    "[auth_corpus_corpus_manifest_stage_step_assertion_recorded]",
+    "[auth_corpus_callback_cancel_stage_manifest_assertion_recorded]",
+    "[auth_corpus_callback_cancel_stage_exchange_assertion_recorded]",
+    "[auth_corpus_warm_callback_success_stage_manifest_assertion_recorded]",
+    "[auth_corpus_private_value_stage_step_assertion_recorded]",
+    "[auth_corpus_callback_cancel_stage_private_value_assertion_recorded]",
+    "[auth_corpus_callback_cancel_stage_step_assertion_recorded_private]",
+    "[auth_corpus_callback_cancel_stage_step_assertion_recorded]_private",
+  ]) {
+    writeFileSync(
+      file,
+      `${validRecordedMarker}\n${invalidRecordedMarker}\n${aggregateFailure} ${privateValues.join(" ")}`,
+    );
+    const rejectedRecorded = spawnSync(
+      process.execPath,
+      ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+      { encoding: "utf8" },
+    );
+    const rejectedRecordedOutput = `${rejectedRecorded.stdout}${rejectedRecorded.stderr}`;
+    assert.doesNotMatch(rejectedRecordedOutput, /corpus=|stage=|mismatch=/);
+    for (const value of privateValues) assert.equal(rejectedRecordedOutput.includes(value), false);
+  }
+  writeFileSync(file, `${validRecordedMarker}\n${inconsistentRecordedMarker}\n${aggregateFailure}`);
+  const inconsistentRecorded = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.doesNotMatch(
+    `${inconsistentRecorded.stdout}${inconsistentRecorded.stderr}`,
+    /corpus=|stage=|mismatch=/,
+  );
+  writeFileSync(file, `${validRecordedMarker}\n${validRecordedMarker}\n${aggregateFailure}`);
+  const duplicateRecorded = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${duplicateRecorded.stdout}${duplicateRecorded.stderr}`,
+    /corpus=callback_cancel; stage=step; mismatch=assertion_recorded/,
+  );
+  writeFileSync(
+    file,
+    `${validRecordedMarker}\nTest Case '-[FluyoTests.AuthRuntimeKernelTests testCleanupFailureIsFencedAndDelayedEffectsAreGenerationBoundOneShot]' failed (0.001 seconds).`,
+  );
+  const recordedFromOtherTest = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.doesNotMatch(
+    `${recordedFromOtherTest.stdout}${recordedFromOtherTest.stderr}`,
+    /corpus=|stage=|mismatch=/,
+  );
+
+  writeFileSync(
+    file,
+    `${validRecordedMarker}\n[auth_corpus_callback_cancel_stage_invariant_checkpoint]\n${aggregateFailure}`,
+  );
+  const recordedOutranksCheckpoint = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${recordedOutranksCheckpoint.stdout}${recordedOutranksCheckpoint.stderr}`,
+    /corpus=callback_cancel; stage=step; mismatch=assertion_recorded/,
+  );
+  writeFileSync(
+    file,
+    `${validRecordedMarker}\n[auth_corpus_cold_start_without_candidate_stage_snapshot_state]\n${aggregateFailure}`,
+  );
+  const snapshotOutranksRecorded = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${snapshotOutranksRecorded.stdout}${snapshotOutranksRecorded.stderr}`,
+    /corpus=cold_start_without_candidate; stage=snapshot; mismatch=state/,
+  );
+  writeFileSync(file, `${validRecordedMarker}\n${validInvariantMarker}\n${aggregateFailure}`);
+  const invariantOutranksRecorded = spawnSync(
+    process.execPath,
+    ["scripts/summarize-ios-test-failures.mjs", file, "--phase", "test_current"],
+    { encoding: "utf8" },
+  );
+  assert.match(
+    `${invariantOutranksRecorded.stdout}${invariantOutranksRecorded.stderr}`,
+    new RegExp(
+      `corpus=${validInvariantCorpus}; stage=invariant; mismatch=${validInvariantMismatch}`,
+    ),
+  );
+
+  const summarizerSource = readFileSync("scripts/summarize-ios-test-failures.mjs", "utf8");
+  const parseSetDeclaration = (name) => {
+    const prefix = `const ${name} = new Set([`;
+    const start = summarizerSource.indexOf(prefix);
+    assert.notEqual(start, -1, `${name} declaration is required`);
+    assert.equal(
+      summarizerSource.indexOf(prefix, start + prefix.length),
+      -1,
+      `${name} declaration must be unique`,
+    );
+    const bodyStart = start + prefix.length;
+    const bodyEnd = summarizerSource.indexOf("]);", bodyStart);
+    assert.notEqual(bodyEnd, -1, `${name} declaration must be closed`);
+    return summarizerSource
+      .slice(bodyStart, bodyEnd)
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean);
+  };
+  const authCorpusTokens = parseSetDeclaration("authCorpusIds");
+  assert.equal(authCorpusTokens.length, 41);
+  for (const token of authCorpusTokens) assert.match(token, /^"[a-z0-9_]+"$/);
+  const summarizerAuthCorpusIds = authCorpusTokens.map((token) => JSON.parse(token));
+  assert.equal(new Set(summarizerAuthCorpusIds).size, 41);
+  assert.deepEqual([...summarizerAuthCorpusIds].sort(), [...corpusRows].sort());
+
+  const checkpointCorpusTokens = parseSetDeclaration("checkpointCorpusIds");
+  assert.deepEqual(checkpointCorpusTokens, ['"corpus_manifest"', "...authCorpusIds"]);
+  const summarizerCheckpointCorpusIds = ["corpus_manifest", ...summarizerAuthCorpusIds];
+  assert.equal(new Set(summarizerCheckpointCorpusIds).size, 42);
+  assert.deepEqual(
+    [...summarizerCheckpointCorpusIds].sort(),
+    ["corpus_manifest", ...corpusRows].sort(),
+  );
+  const recordedAssertionStageTokens = parseSetDeclaration("recordedAssertionRegularStages");
+  assert.deepEqual(
+    recordedAssertionStageTokens.map((token) => JSON.parse(token)).sort(),
+    [...recordedAssertionRegularStages].sort(),
+  );
+  const expectedInvariantDeclarationStrings = [
+    ...new Set(invariantDiagnosticCases.flatMap(([corpusId, mismatch]) => [corpusId, mismatch])),
+  ].sort();
+  const summarizerInvariantStart = summarizerSource.indexOf(
+    "const invariantDiagnosticsByCorpus = new Map([",
+  );
+  const summarizerInvariantEnd = summarizerSource.indexOf(
+    "]);\nconst recordedAssertionRegularStages",
+    summarizerInvariantStart,
+  );
+  assert.notEqual(summarizerInvariantStart, -1);
+  assert.notEqual(summarizerInvariantEnd, -1);
+  const summarizerInvariantDeclaration = summarizerSource.slice(
+    summarizerInvariantStart,
+    summarizerInvariantEnd,
+  );
+  const summarizerInvariantStrings = [
+    ...summarizerInvariantDeclaration.matchAll(/"([a-z0-9_]+)"/g),
+  ].map((match) => match[1]);
+  assert.equal(summarizerInvariantStrings.length, 14);
+  assert.deepEqual([...summarizerInvariantStrings].sort(), expectedInvariantDeclarationStrings);
+
+  assert.deepEqual(
+    [...new Set(swiftCheckpointIds)].sort(),
+    ["corpus_manifest", ...new Set(corpusRows)].sort(),
+  );
+  const swiftRegularStageSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private static let regularFailureStages"),
+    swiftTestSource.indexOf("private static let invariantDiagnosticsByCorpus"),
+  );
+  const swiftRegularStages = [...swiftRegularStageSource.matchAll(/\.([A-Za-z][A-Za-z0-9]*)/g)].map(
+    (match) => (match[1] === "rejectedWrites" ? "rejected_writes" : match[1]),
+  );
+  assert.equal(swiftRegularStages.length, 12);
+  assert.deepEqual([...swiftRegularStages].sort(), [...recordedAssertionRegularStages].sort());
+  assert.match(
+    swiftTestSource,
+    /guard Self\.checkpointCorpusIds\.contains\(corpusId\) else \{ return "\[auth_corpus_stage_diagnostic_rejected\]" \}/,
+  );
+  assert.match(
+    swiftTestSource,
+    /let isManifest = corpusId == "corpus_manifest" && stage == \.manifest[\s\S]*let isRegular = corpusId != "corpus_manifest"[\s\S]*let isExchange = corpusId == "warm_callback_success" && stage == \.exchange/,
+  );
+  const aggregateMethod = swiftTestSource.slice(
+    swiftTestSource.indexOf(
+      "func testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups()",
+    ),
+    swiftTestSource.indexOf(
+      "func testSerializedCoordinatorFencesEveryCleanupAwaitAndPublishesOnlyAfterConfirmation()",
+    ),
+  );
+  assert.match(
+    aggregateMethod,
+    /let observer = corpusStageObserver[\s\S]*observer\.reset\(\)[\s\S]*defer \{ observer\.reset\(\) \}[\s\S]*observeStage\("corpus_manifest", \.manifest, observer: observer\)[\s\S]*let rows = try loadCorpus\(\)/,
+  );
+  assert.doesNotMatch(aggregateMethod, /continueAfterFailure/);
+  assert.match(aggregateMethod, /run\(vector, observer: observer\)/);
+  assert.match(aggregateMethod, /closeObservedStage\(observer\)/);
+  const runMethod = swiftTestSource.slice(
+    swiftTestSource.indexOf(
+      "private func run(_ vector: Vector, observer: CorpusStageObserver? = nil)",
+    ),
+    swiftTestSource.indexOf("private func assertFenceTraceSemantics"),
+  );
+  const requiredRunStages = [
+    "fingerprint",
+    "step",
+    "snapshot",
+    "effects",
+    "drain",
+    "trace",
+    "wipe",
+    "rejectedWrites",
+    "completions",
+    "exchange",
+    "generation",
+    "terminal",
+    "invariant",
+  ];
+  for (const stage of requiredRunStages) {
+    assert.match(
+      runMethod,
+      new RegExp(`observeStage\\(vector\\.id, \\.${stage}, observer: observer\\)`),
+    );
+  }
+  assert.equal(
+    [...runMethod.matchAll(/observeStage\(vector\.id, \.[A-Za-z]+, observer: observer\)/g)].length,
+    requiredRunStages.length,
+  );
+  assert.match(
+    runMethod,
+    /var rejected = 0\s*for step in vector\.steps \{\s*rejected \+= try await observeStage\(vector\.id, \.step, observer: observer\) \{\s*try await execute\(step, coordinator, ports\)\s*\}\s*\}/,
+  );
+  assert.doesNotMatch(
+    runMethod,
+    /observeStage\(vector\.id, \.step, observer: observer\) \{[\s\S]*for step in vector\.steps/,
+  );
+  assert.doesNotMatch(runMethod, /emitCorpusCheckpoint/);
+
+  const observerClassSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private final class CorpusStageObserver"),
+    swiftTestSource.indexOf("private static let regularFailureStages"),
+  );
+  const observerSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private func observeStage"),
+    swiftTestSource.indexOf("private func failInvariant"),
+  );
+  assert.doesNotMatch(swiftTestSource, /override func record\(_ issue: XCTIssue\)/);
+  assert.doesNotMatch(swiftTestSource, /super\.record\(issue\)/);
+  assert.doesNotMatch(swiftTestSource, /override func recordFailure/);
+  assert.doesNotMatch(swiftTestSource, /XCTestRun|failureCount|totalFailureCount/);
+  assert.doesNotMatch(swiftTestSource, /\[auth_corpus_diagnostic_unavailable\]/);
+  assert.doesNotMatch(observerClassSource, /NSLock|assertionRecorded|withNamedDiagnostic/);
+  assert.match(observerClassSource, /func currentStage\(\) -> ActiveStage\?/);
+  assert.match(
+    observerSource,
+    /guard let observer else \{[\s\S]*catch CorpusError\.diagnosticAbort[\s\S]*throw CorpusError\.diagnosticAbort[\s\S]*catch \{[\s\S]*throw CorpusError\.diagnosticAbort[\s\S]*catch CorpusError\.diagnosticAbort[\s\S]*observer\.reset\(\)[\s\S]*throw CorpusError\.diagnosticAbort[\s\S]*catch \{[\s\S]*observer\.finishStage\(\)[\s\S]*failRecordedAssertion[\s\S]*throw CorpusError\.diagnosticAbort/,
+  );
+  assert.match(
+    observerSource,
+    /let result = try await operation\(\)[\s\S]*observer\.finishStage\(\)[\s\S]*return result/,
+  );
+  assert.match(
+    observerSource,
+    /private func requireCorpusAssertion\(_ matches: Bool\) throws \{[\s\S]*guard matches else \{ try failCurrentStageAssertion\(\) \}/,
+  );
+  assert.doesNotMatch(observerSource, /@autoclosure/);
+  const asyncChildStarts = [...swiftTestSource.matchAll(/\basync let\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+  assert.equal(asyncChildStarts.length, 16);
+  for (const startMatch of asyncChildStarts) {
+    const start = startMatch.index;
+    const child = startMatch[1];
+    assert.ok(child);
+    const joinMatch = new RegExp(`_ = await[^\\n]*\\b${child}\\b`).exec(
+      swiftTestSource.slice(start),
+    );
+    const join = joinMatch === null ? -1 : start + joinMatch.index;
+    assert.equal(join > start, true);
+    assert.doesNotMatch(swiftTestSource.slice(start, join), /\btry\b/);
+  }
+  assert.match(
+    observerSource,
+    /private func failCurrentStageAssertion[\s\S]*currentStage\(\)[\s\S]*failRecordedAssertion\(active\)/,
+  );
+  assert.match(
+    observerSource,
+    /private func failRecordedAssertion[\s\S]*print\(marker\)[\s\S]*throw CorpusError\.diagnosticAbort/,
+  );
+  const genericFailureSource = observerSource.slice(
+    observerSource.indexOf("private func failRecordedAssertion"),
+  );
+  assert.doesNotMatch(genericFailureSource, /XCTFail|\.record\(/);
+
+  const swiftFunctions = new Map();
+  const swiftFunctionPattern =
+    /(?:^|\n)\s*(?:private\s+)?(?:override\s+)?func\s+([A-Za-z_][A-Za-z0-9_]*)[^\{]*\{/g;
+  for (const match of swiftTestSource.matchAll(swiftFunctionPattern)) {
+    const open = match.index + match[0].lastIndexOf("{");
+    let depth = 1;
+    let end = open + 1;
+    while (end < swiftTestSource.length && depth > 0) {
+      if (swiftTestSource[end] === "{") depth += 1;
+      if (swiftTestSource[end] === "}") depth -= 1;
+      end += 1;
+    }
+    const name = match[1];
+    swiftFunctions.set(name, [
+      ...(swiftFunctions.get(name) ?? []),
+      swiftTestSource.slice(open + 1, end - 1),
+    ]);
+  }
+  const aggregateReachable = new Set([
+    "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups",
+  ]);
+  const aggregatePending = [...aggregateReachable];
+  while (aggregatePending.length > 0) {
+    const name = aggregatePending.pop();
+    for (const body of swiftFunctions.get(name) ?? []) {
+      for (const call of body.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+        const callee = call[1];
+        if (swiftFunctions.has(callee) && !aggregateReachable.has(callee)) {
+          aggregateReachable.add(callee);
+          aggregatePending.push(callee);
+        }
+      }
+    }
+  }
+  for (const required of [
+    "run",
+    "execute",
+    "validateInvariant",
+    "loadCorpus",
+    "observeStage",
+    "requireCorpusAssertion",
+    "failCurrentStageAssertion",
+  ]) {
+    assert.equal(aggregateReachable.has(required), true);
+  }
+  const aggregateReachableSource = [...aggregateReachable]
+    .flatMap((name) => swiftFunctions.get(name) ?? [])
+    .join("\n");
+  assert.doesNotMatch(
+    aggregateReachableSource,
+    /\b(?:XCTAssert[A-Za-z]*|XCTFail|XCTUnwrap|XCTSkip[A-Za-z]*)\s*\(/,
+  );
+  assert.doesNotMatch(aggregateReachableSource, /\bthrow\s+error\b/);
+  const swiftInitializerBodies = [];
+  const swiftInitializerPattern =
+    /(?<!\.)\binit[!?]?\s*\([^{}]*\)(?:\s+(?:async|throws|rethrows))*\s*\{/g;
+  for (const match of swiftTestSource.matchAll(swiftInitializerPattern)) {
+    const open = match.index + match[0].lastIndexOf("{");
+    let depth = 1;
+    let end = open + 1;
+    while (end < swiftTestSource.length && depth > 0) {
+      if (swiftTestSource[end] === "{") depth += 1;
+      if (swiftTestSource[end] === "}") depth -= 1;
+      end += 1;
+    }
+    swiftInitializerBodies.push(swiftTestSource.slice(open + 1, end - 1));
+  }
+  assert.equal(swiftInitializerBodies.length >= 10, true);
+  assert.equal(
+    swiftInitializerBodies.some((body) => body.includes("guard f.count == 14")),
+    true,
+  );
+  assert.doesNotMatch(
+    swiftInitializerBodies.join("\n"),
+    /\b(?:XCTAssert[A-Za-z]*|XCTFail|XCTUnwrap|XCTSkip[A-Za-z]*)\s*\(/,
+  );
+  assert.match(
+    swiftTestSource,
+    /func testUnexpectedCorpusErrorIsConvertedToPayloadFreeSentinel\(\) async[\s\S]*private_unexpected_corpus_token[\s\S]*observeStage\("callback_cancel", \.step, observer: nil\)[\s\S]*catch CorpusError\.diagnosticAbort/,
+  );
+
+  const invariantDiagnosticSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private static let invariantDiagnosticsByCorpus"),
+    swiftTestSource.indexOf("private static let diagnosticCorpusId"),
+  );
+  const swiftInvariantStrings = [...invariantDiagnosticSource.matchAll(/"([a-z0-9_]+)"/g)].map(
+    (match) => match[1],
+  );
+  assert.equal(swiftInvariantStrings.length, 14);
+  assert.deepEqual([...swiftInvariantStrings].sort(), expectedInvariantDeclarationStrings);
+  for (const [, mismatch] of invariantDiagnosticCases) {
+    assert.equal([...swiftTestSource.matchAll(new RegExp(`"${mismatch}"`, "g"))].length >= 2, true);
+  }
+  const generationCoordination = swiftTestSource.slice(
+    swiftTestSource.indexOf("private func verifyEveryDestructiveMutationRejectsStaleGeneration()"),
+    swiftTestSource.indexOf("private func verifyCallbackValidationCancellationPrecedesPurge()"),
+  );
+  assert.match(
+    generationCoordination,
+    /if !comparisonStarted \{[\s\S]*generations\.releaseComparison\(\)[\s\S]*_ = await mutation\.value[\s\S]*comparison_start_timeout/,
+  );
+  assert.match(
+    generationCoordination,
+    /let applied = await mutation\.value; await activation\.value[\s\S]*comparisonReleaseTimedOut\(\)[\s\S]*comparison_release_timeout/,
+  );
+  const generationCell = swiftTestSource.slice(
+    swiftTestSource.indexOf("private final class GenerationCell"),
+    swiftTestSource.indexOf("private actor ScriptProvider"),
+  );
+  assert.doesNotMatch(generationCell, /XCTAssert/);
+  assert.match(generationCell, /func waitComparisonStarted\(\) -> Bool/);
+  assert.match(generationCell, /releaseTimedOut = !released/);
+  const terminalEntryPoints = swiftTestSource.slice(
+    swiftTestSource.indexOf("private func exerciseTerminalEntryPoints"),
+    swiftTestSource.indexOf("private func makeCoordinator"),
+  );
+  const entrypointMismatches = invariantDiagnosticCases
+    .filter(
+      ([corpusId, mismatch]) =>
+        corpusId === "evidence_is_closed_and_mutation_safe" &&
+        mismatch !== "terminal_not_fenced_after_entrypoint_sequence",
+    )
+    .map(([, mismatch]) => mismatch);
+  assert.equal(entrypointMismatches.length, 9);
+  for (const mismatch of entrypointMismatches) {
+    assert.match(
+      terminalEntryPoints,
+      new RegExp(`try await requireTerminalFence\\(coordinator, "${mismatch}"\\)`),
+    );
+  }
+  assert.match(
+    swiftTestSource,
+    /case "evidence_is_closed_and_mutation_safe":[\s\S]*let terminal = await coordinator\.isTerminalFenced\(\)[\s\S]*if !terminal \{ try failInvariant\(id, "terminal_not_fenced_after_entrypoint_sequence"\) \}/,
+  );
+  const evidenceInvariant = swiftTestSource.slice(
+    swiftTestSource.indexOf('case "evidence_is_closed_and_mutation_safe":'),
+    swiftTestSource.indexOf('case "no_op_telemetry_has_zero_retention_and_zero_transport"'),
+  );
+  assert.doesNotMatch(evidenceInvariant, /XCTAssertTrue\(terminal\)/);
+  assert.match(
+    swiftTestSource,
+    /private func failInvariant[\s\S]*print\(marker\)[\s\S]*throw CorpusError\.diagnosticAbort/,
+  );
+  assert.match(
+    swiftTestSource,
+    /private func requireCorpusMatch[\s\S]*print\(boundedMarker\)[\s\S]*throw CorpusError\.diagnosticAbort/,
+  );
+  const namedDiagnosticFailureSource = swiftTestSource.slice(
+    swiftTestSource.indexOf("private func failInvariant"),
+    swiftTestSource.indexOf("private let boundedDiagnosticPattern"),
+  );
+  assert.doesNotMatch(namedDiagnosticFailureSource, /XCTFail|XCTAssert|XCTUnwrap|XCTSkip/);
 
   writeFileSync(
     file,
@@ -314,6 +1044,18 @@ Test Case '-[FluyoTests.AuthRuntimeKernelTests testCanonicalCorpusRunsExactlyTwe
   const annotationTest =
     "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups";
   const annotationCases = [
+    [
+      "[auth_corpus_callback_cancel_stage_step_assertion_recorded]",
+      "corpus=callback_cancel; stage=step; mismatch=assertion_recorded",
+    ],
+    ...invariantDiagnosticCases.map(([corpusId, mismatch]) => [
+      `[auth_corpus_${corpusId}_stage_invariant_${mismatch}]`,
+      `corpus=${corpusId}; stage=invariant; mismatch=${mismatch}`,
+    ]),
+    [
+      "[auth_corpus_callback_cancel_stage_invariant_checkpoint]",
+      "corpus=callback_cancel; stage=invariant; mismatch=assertion",
+    ],
     [
       "[auth_corpus_cold_start_without_candidate_stage_snapshot_state]",
       "corpus=cold_start_without_candidate; stage=snapshot; mismatch=state",

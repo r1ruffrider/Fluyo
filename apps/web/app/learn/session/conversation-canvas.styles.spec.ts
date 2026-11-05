@@ -118,7 +118,8 @@ describe("Conversation Canvas static visual contract", () => {
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
     expect(reduced).toMatch(/\.dialog\s*\{\s*animation:\s*none;\s*transform:\s*none/u);
     expect(reduced).toMatch(
-      /\.exitButton:hover,\s*\.exitButton:active,\s*\.primaryButton:not\(:disabled\):hover,\s*\.primaryButton:not\(:disabled\):active,\s*\.secondaryButton:hover,\s*\.secondaryButton:active,\s*\.choice:has\(input:checked\)\s*\{\s*transform:\s*none;/u,
+      /\.exitButton:hover,\s*\.exitButton:active,\s*\.primaryButton:not\(\[aria-disabled="true"\]\):hover,\s*\.primaryButton:not\(\[aria-disabled="true"\]\):active,\s*\.secondaryButton:hover,\s*\.secondaryButton:active,\s*\.choice:has\(input:checked\)\s*\{\s*transform:\s*none;/u,
     );
+    expect(reduced).not.toMatch(/\.primaryButton:not\(:disabled\)/u);
   });
 });

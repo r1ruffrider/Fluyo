@@ -24,6 +24,8 @@ apps/android/**/screenshots/
 *.log
 npm-debug.log*
 results.sarif
+.r4b-preflight/
+apps/r4b-preflight-harness/.next-attempt-002/
 
 # Local databases and generated data
 *.db

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const EXPECTED_MULTER_VERSION = "2.5.0";
@@ -12,8 +12,27 @@ export const EXPECTED_NEST_MULTER_PIN = "2.4.0";
 export const EXPECTED_MULTER_RESOLVED = "https://registry.npmjs.org/multer/-/multer-2.5.0.tgz";
 export const EXPECTED_MULTER_INTEGRITY =
   "sha512-BsqOzYGVq49JcW2IzoSAxeKYRevb+dGGPPWleOR8Lrlk4igwxu1/9pwSXlByhCb7MVZDrNJFC0IBP5/O5nLYRw==";
-export const NPM_LS_TIMEOUT_MS = 15_000;
-export const NPM_LS_MAX_BUFFER_BYTES = 1024 * 1024;
+export const NPM_LS_TIMEOUT_MS = 30_000;
+export const NPM_LS_MAX_OUTPUT_BYTES = 1024 * 1024;
+export const NPM_LS_CLEANUP_TIMEOUT_MS = 5_000;
+
+export const NPM_LS_FAILURES = Object.freeze({
+  timeout: "NPM_LS_TIMEOUT",
+  outputOverflow: "NPM_LS_OUTPUT_OVERFLOW",
+  spawnError: "NPM_LS_SPAWN_ERROR",
+  signal: "NPM_LS_SIGNAL",
+  exit: "NPM_LS_EXIT",
+  nullStatus: "NPM_LS_NULL_STATUS",
+  invalidJson: "NPM_LS_INVALID_JSON",
+  cleanupFailure: "NPM_LS_CLEANUP_FAILURE",
+});
+
+function fixedFailure(code) {
+  const error = new Error(code);
+  error.code = code;
+  error.stack = `Error: ${code}`;
+  return error;
+}
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const mismatch = (errors, label, actual, expected) => {
@@ -179,47 +198,261 @@ export function validateScopedNpmLs({ status, tree, expectedMulterDirectory }) {
 const outputBytes = (value) =>
   Buffer.isBuffer(value) ? value.length : Buffer.byteLength(value ?? "", "utf8");
 
-export function parseScopedNpmLsResult(result, maxBuffer = NPM_LS_MAX_BUFFER_BYTES) {
+export function parseScopedNpmLsResult(result, maxOutputBytes = NPM_LS_MAX_OUTPUT_BYTES) {
   const code = result.error?.code;
-  if (code === "ETIMEDOUT")
-    throw new Error(`NPM_LS_TIMEOUT: scoped npm ls exceeded ${NPM_LS_TIMEOUT_MS}ms.`);
+  if (code === "ETIMEDOUT") throw fixedFailure(NPM_LS_FAILURES.timeout);
   if (
     code === "ENOBUFS" ||
-    outputBytes(result.stdout) > maxBuffer ||
-    outputBytes(result.stderr) > maxBuffer
+    outputBytes(result.stdout) + outputBytes(result.stderr) > maxOutputBytes
   )
-    throw new Error(`NPM_LS_OUTPUT_OVERFLOW: scoped npm ls exceeded ${maxBuffer} bytes.`);
-  if (result.error) throw new Error(`NPM_LS_SPAWN_ERROR: ${code ?? "unknown"}.`);
-  if (result.signal != null)
-    throw new Error(`NPM_LS_SIGNAL: scoped npm ls ended with ${result.signal}.`);
-  if (result.status == null)
-    throw new Error("NPM_LS_NULL_STATUS: scoped npm ls returned no exit status.");
+    throw fixedFailure(NPM_LS_FAILURES.outputOverflow);
+  if (result.error) throw fixedFailure(NPM_LS_FAILURES.spawnError);
+  if (result.signal != null) throw fixedFailure(NPM_LS_FAILURES.signal);
+  if (result.status == null) throw fixedFailure(NPM_LS_FAILURES.nullStatus);
+  if (result.status !== 0 && result.status !== 1) throw fixedFailure(NPM_LS_FAILURES.exit);
   try {
     return { status: result.status, tree: JSON.parse(result.stdout) };
-  } catch (error) {
-    throw new Error("NPM_LS_INVALID_JSON: scoped npm ls did not produce JSON.", { cause: error });
+  } catch {
+    throw fixedFailure(NPM_LS_FAILURES.invalidJson);
   }
 }
 
-function runScopedNpmLs(repoRoot) {
-  const npmArgs = ["ls", "@nestjs/platform-express", "multer", "--all", "--json"];
-  const win = process.platform === "win32";
-  return parseScopedNpmLsResult(
-    spawnSync(
-      win ? (process.env.ComSpec ?? "cmd.exe") : "npm",
-      win ? ["/d", "/s", "/c", "npm", ...npmArgs] : npmArgs,
-      {
-        cwd: repoRoot,
-        encoding: "utf8",
-        maxBuffer: NPM_LS_MAX_BUFFER_BYTES,
-        timeout: NPM_LS_TIMEOUT_MS,
-        windowsHide: true,
-      },
-    ),
-  );
+function childHasExited(child) {
+  return child.exitCode != null || child.signalCode != null;
 }
 
-export function checkMulterOverride(repoRoot) {
+function waitForChildExit(child, timeoutMs) {
+  if (childHasExited(child)) return Promise.resolve(true);
+  return new Promise((resolveWait) => {
+    let finished = false;
+    const finish = (value) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      child.off("close", onClose);
+      resolveWait(value);
+    };
+    const onClose = () => finish(true);
+    const timer = setTimeout(() => finish(childHasExited(child)), timeoutMs);
+    timer.unref?.();
+    child.once("close", onClose);
+  });
+}
+
+function runCleanupCommand(command, args, timeoutMs) {
+  return new Promise((resolveCleanup, rejectCleanup) => {
+    let terminal = false;
+    let cleanup;
+    try {
+      cleanup = spawn(command, args, {
+        detached: false,
+        shell: false,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    } catch {
+      rejectCleanup(fixedFailure(NPM_LS_FAILURES.cleanupFailure));
+      return;
+    }
+    const finish = (error) => {
+      if (terminal) return;
+      terminal = true;
+      clearTimeout(timer);
+      if (error) rejectCleanup(fixedFailure(NPM_LS_FAILURES.cleanupFailure));
+      else resolveCleanup();
+    };
+    const timer = setTimeout(() => {
+      cleanup.kill("SIGKILL");
+      finish(true);
+    }, timeoutMs);
+    timer.unref?.();
+    cleanup.once("error", () => finish(true));
+    cleanup.once("close", () => finish(false));
+  });
+}
+
+export async function terminateOwnedProcessTree(
+  child,
+  { platform = process.platform, cleanupTimeoutMs = NPM_LS_CLEANUP_TIMEOUT_MS } = {},
+) {
+  if (!Number.isSafeInteger(child.pid) || child.pid <= 0)
+    throw fixedFailure(NPM_LS_FAILURES.cleanupFailure);
+  if (childHasExited(child)) return;
+
+  if (platform === "win32") {
+    const taskkill = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "taskkill.exe");
+    await runCleanupCommand(taskkill, ["/PID", String(child.pid), "/T", "/F"], cleanupTimeoutMs);
+    if (!(await waitForChildExit(child, cleanupTimeoutMs)))
+      throw fixedFailure(NPM_LS_FAILURES.cleanupFailure);
+    return;
+  }
+
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch (error) {
+    if (error?.code !== "ESRCH") throw fixedFailure(NPM_LS_FAILURES.cleanupFailure);
+  }
+  if (await waitForChildExit(child, Math.min(500, cleanupTimeoutMs))) return;
+  try {
+    process.kill(-child.pid, "SIGKILL");
+  } catch (error) {
+    if (error?.code !== "ESRCH") throw fixedFailure(NPM_LS_FAILURES.cleanupFailure);
+  }
+  if (!(await waitForChildExit(child, cleanupTimeoutMs)))
+    throw fixedFailure(NPM_LS_FAILURES.cleanupFailure);
+}
+
+export function runBoundedSubprocess(
+  {
+    command,
+    args,
+    cwd,
+    timeoutMs = NPM_LS_TIMEOUT_MS,
+    maxOutputBytes = NPM_LS_MAX_OUTPUT_BYTES,
+    signal,
+  },
+  dependencies = {},
+) {
+  const spawnProcess = dependencies.spawnProcess ?? spawn;
+  const terminateTree = dependencies.terminateTree ?? terminateOwnedProcessTree;
+  const platform = dependencies.platform ?? process.platform;
+  return new Promise((resolveRun, rejectRun) => {
+    let child;
+    let timer;
+    let terminal = false;
+    let terminating = false;
+    let abortObserved = false;
+    let totalBytes = 0;
+    const stdout = [];
+    const stderr = [];
+
+    const finish = (error, result) => {
+      if (terminal) return;
+      terminal = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      if (error) rejectRun(error);
+      else resolveRun(result);
+    };
+    const terminate = async (failureCode) => {
+      if (terminal || terminating) return;
+      terminating = true;
+      try {
+        await terminateTree(child, { platform });
+      } catch {
+        finish(fixedFailure(NPM_LS_FAILURES.cleanupFailure));
+        return;
+      }
+      finish(fixedFailure(failureCode));
+    };
+    const onAbort = () => {
+      abortObserved = true;
+      if (child) void terminate(NPM_LS_FAILURES.timeout);
+    };
+    const onChunk = (target, chunk) => {
+      if (terminal || terminating) return;
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      totalBytes += bytes.length;
+      if (totalBytes > maxOutputBytes) {
+        void terminate(NPM_LS_FAILURES.outputOverflow);
+        return;
+      }
+      target.push(bytes);
+    };
+
+    if (signal?.aborted) {
+      finish(fixedFailure(NPM_LS_FAILURES.timeout));
+      return;
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted || abortObserved) {
+      finish(fixedFailure(NPM_LS_FAILURES.timeout));
+      return;
+    }
+    try {
+      child = spawnProcess(command, args, {
+        cwd,
+        detached: platform !== "win32",
+        shell: false,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      });
+    } catch {
+      finish(fixedFailure(NPM_LS_FAILURES.spawnError));
+      return;
+    }
+    timer = setTimeout(() => void terminate(NPM_LS_FAILURES.timeout), timeoutMs);
+    timer.unref?.();
+    child.stdout?.on("data", (chunk) => onChunk(stdout, chunk));
+    child.stderr?.on("data", (chunk) => onChunk(stderr, chunk));
+    child.once("error", () => {
+      if (!terminating) finish(fixedFailure(NPM_LS_FAILURES.spawnError));
+    });
+    child.once("close", (status, childSignal) => {
+      if (terminal || terminating) return;
+      finish(null, {
+        status,
+        signal: childSignal,
+        stdout: Buffer.concat(stdout).toString("utf8"),
+        stderr: Buffer.concat(stderr).toString("utf8"),
+      });
+    });
+    if (signal?.aborted || abortObserved) void terminate(NPM_LS_FAILURES.timeout);
+  });
+}
+
+export function resolveNpmCli({ env = process.env, nodeExecutable = process.execPath } = {}) {
+  let nodeDirectory;
+  try {
+    nodeDirectory = dirname(realpathSync(nodeExecutable));
+  } catch {
+    throw fixedFailure(NPM_LS_FAILURES.spawnError);
+  }
+  const candidates = [
+    join(nodeDirectory, "node_modules", "npm", "bin", "npm-cli.js"),
+    resolve(nodeDirectory, "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+    resolve(nodeDirectory, "..", "node_modules", "npm", "bin", "npm-cli.js"),
+  ];
+  const trusted = [];
+  for (const candidate of candidates) {
+    try {
+      const resolved = realpathSync(candidate);
+      if (basename(resolved) === "npm-cli.js" && !trusted.includes(resolved))
+        trusted.push(resolved);
+    } catch {
+      // Try only the next fixed layout derived from the current Node executable.
+    }
+  }
+  if (trusted.length === 0) throw fixedFailure(NPM_LS_FAILURES.spawnError);
+  if (env.npm_execpath && isAbsolute(env.npm_execpath)) {
+    try {
+      const configured = realpathSync(env.npm_execpath);
+      if (trusted.includes(configured)) return configured;
+    } catch {
+      // An environment value never expands the Node-derived trust set.
+    }
+  }
+  return trusted[0];
+}
+
+export async function runScopedNpmLs(repoRoot, options = {}) {
+  const npmArgs = ["ls", "@nestjs/platform-express", "multer", "--all", "--json"];
+  const npmCli = options.npmCli ?? resolveNpmCli();
+  const result = await runBoundedSubprocess(
+    {
+      command: realpathSync(process.execPath),
+      args: [npmCli, ...npmArgs],
+      cwd: repoRoot,
+      timeoutMs: options.timeoutMs,
+      maxOutputBytes: options.maxOutputBytes,
+      signal: options.signal,
+    },
+    options.dependencies,
+  );
+  return parseScopedNpmLsResult(result, options.maxOutputBytes);
+}
+
+export async function checkMulterOverride(repoRoot, options = {}) {
   const packageJson = readJson(join(repoRoot, "package.json"));
   const lock = readJson(join(repoRoot, "package-lock.json"));
   const nestPath = join(repoRoot, "node_modules", "@nestjs", "platform-express", "package.json");
@@ -244,7 +477,7 @@ export function checkMulterOverride(repoRoot) {
   });
   errors.push(
     ...validateScopedNpmLs({
-      ...runScopedNpmLs(repoRoot),
+      ...(await runScopedNpmLs(repoRoot, options)),
       expectedMulterDirectory: dirname(expectedResolvedPackage),
     }),
   );
@@ -252,9 +485,22 @@ export function checkMulterOverride(repoRoot) {
   return { multerVersion: installedMulter.version, nestVersion: nestPackage.version };
 }
 
+export function publicMulterFailure(error) {
+  return Object.values(NPM_LS_FAILURES).includes(error?.message)
+    ? error.message
+    : NPM_LS_FAILURES.exit;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const result = checkMulterOverride(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
-  console.log(
-    `Multer override policy passed: Multer ${result.multerVersion} with Nest ${result.nestVersion}.`,
-  );
+  try {
+    const result = await checkMulterOverride(
+      resolve(dirname(fileURLToPath(import.meta.url)), ".."),
+    );
+    console.log(
+      `Multer override policy passed: Multer ${result.multerVersion} with Nest ${result.nestVersion}.`,
+    );
+  } catch (error) {
+    process.stderr.write(`${publicMulterFailure(error)}\n`);
+    process.exitCode = 1;
+  }
 }

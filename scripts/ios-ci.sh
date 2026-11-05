@@ -224,12 +224,14 @@ PY
 if [[ "$LEG" == "minimum" ]]; then
   run_xcodebuild build-debug     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Debug" build "${PUBLIC_SETTINGS[@]}"
   validate_app_configuration "$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app" development
-  run_xcodebuild test-minimum     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests"     -resultBundlePath "$RESULTS_ROOT/minimum.xcresult" test "${PUBLIC_SETTINGS[@]}"
+  run_xcodebuild compile-tests-minimum     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests" build-for-testing "${PUBLIC_SETTINGS[@]}"
+  run_xcodebuild test-minimum     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests"     -resultBundlePath "$RESULTS_ROOT/minimum.xcresult" test-without-building "${PUBLIC_SETTINGS[@]}"
   validate_app_configuration "$DERIVED_ROOT/Tests/Build/Products/Debug-iphonesimulator/Fluyo.app" development
   APP_PATH="$DERIVED_ROOT/Debug/Build/Products/Debug-iphonesimulator/Fluyo.app"
   COMMAND_NAME="xcodebuild Debug build and full test on iOS 17"
 else
-  run_xcodebuild test-current     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests"     -resultBundlePath "$RESULTS_ROOT/current.xcresult" test "${PUBLIC_SETTINGS[@]}"
+  run_xcodebuild compile-tests-current     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests" build-for-testing "${PUBLIC_SETTINGS[@]}"
+  run_xcodebuild test-current     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Tests"     -resultBundlePath "$RESULTS_ROOT/current.xcresult" test-without-building "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-debug     -project "$PROJECT" -scheme "$SCHEME" -configuration Debug     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Debug" build "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-staging     -project "$PROJECT" -scheme "$SCHEME" -configuration Staging     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Staging" build "${PUBLIC_SETTINGS[@]}"
   run_xcodebuild build-release     -project "$PROJECT" -scheme "$SCHEME" -configuration Release     -destination "platform=iOS Simulator,id=$DEVICE_UDID"     -derivedDataPath "$DERIVED_ROOT/Release" build

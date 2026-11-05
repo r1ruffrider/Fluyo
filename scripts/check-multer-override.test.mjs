@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { EventEmitter, getEventListeners } from "node:events";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
@@ -11,8 +14,14 @@ import {
   EXPECTED_MULTER_VERSION,
   EXPECTED_NEST_MULTER_PIN,
   EXPECTED_NEST_VERSION,
-  checkMulterOverride,
+  NPM_LS_FAILURES,
+  NPM_LS_MAX_OUTPUT_BYTES,
+  NPM_LS_TIMEOUT_MS,
   parseScopedNpmLsResult,
+  publicMulterFailure,
+  resolveNpmCli,
+  runBoundedSubprocess,
+  terminateOwnedProcessTree,
   validateMulterOverrideState,
   validateScopedNpmLs,
 } from "./check-multer-override.mjs";
@@ -23,6 +32,25 @@ const testFile = fileURLToPath(import.meta.url);
 const repoRoot = resolve(dirname(testFile), "..");
 const multerDirectory = dirname(require.resolve("multer/package.json"));
 const delay = (milliseconds) => new Promise((done) => setTimeout(done, milliseconds));
+const packageJsonPath = join(repoRoot, "package.json");
+
+function processIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
+async function waitForProcessDeath(pid, timeout = 5_000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (!processIsAlive(pid)) return true;
+    await delay(25);
+  }
+  return !processIsAlive(pid);
+}
 
 function multipart(parts, boundary = "fluyo-boundary") {
   const chunks = [];
@@ -153,7 +181,21 @@ async function lateFilterFixture() {
   return { ...result, filterCallbacks };
 }
 
-if (process.argv.includes("--late-filter-fixture")) {
+function treeHangFixture(pidFile) {
+  const grandchild = spawn(process.execPath, [testFile, "--grandchild-hang-fixture"], {
+    detached: false,
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  writeFileSync(pidFile, JSON.stringify({ parentPid: process.pid, grandchildPid: grandchild.pid }));
+  setInterval(() => {}, 1_000);
+}
+
+if (process.argv.includes("--grandchild-hang-fixture")) {
+  setInterval(() => {}, 1_000);
+} else if (process.argv.includes("--tree-hang-fixture")) {
+  treeHangFixture(process.argv.at(-1));
+} else if (process.argv.includes("--late-filter-fixture")) {
   console.log(JSON.stringify(await lateFilterFixture()));
 } else {
   test("accepts the exact override, runtime resolution, and both safe scoped npm modes", () => {
@@ -278,17 +320,316 @@ if (process.argv.includes("--late-filter-fixture")) {
     }
   });
 
-  test("bounds scoped npm process failures and output", () => {
-    for (const [result, pattern] of [
-      [{ error: { code: "ETIMEDOUT" } }, /NPM_LS_TIMEOUT/],
-      [{ error: { code: "ENOBUFS" } }, /NPM_LS_OUTPUT_OVERFLOW/],
-      [{ error: { code: "ENOENT" } }, /NPM_LS_SPAWN_ERROR/],
-      [{ signal: "SIGTERM" }, /NPM_LS_SIGNAL/],
-      [{ status: null }, /NPM_LS_NULL_STATUS/],
-      [{ status: 1, signal: null, stdout: "xxxx", stderr: "" }, /NPM_LS_OUTPUT_OVERFLOW/],
-      [{ status: 1, signal: null, stdout: "x", stderr: "" }, /NPM_LS_INVALID_JSON/],
+  test("uses fixed sanitized npm-ls failures and a shared combined output cap", () => {
+    for (const [result, expected] of [
+      [{ error: { code: "ETIMEDOUT" } }, NPM_LS_FAILURES.timeout],
+      [{ error: { code: "ENOBUFS" } }, NPM_LS_FAILURES.outputOverflow],
+      [{ error: { code: "ENOENT" } }, NPM_LS_FAILURES.spawnError],
+      [{ signal: "SIGTERM" }, NPM_LS_FAILURES.signal],
+      [{ status: 2, signal: null, stdout: "{}", stderr: "" }, NPM_LS_FAILURES.exit],
+      [{ status: null }, NPM_LS_FAILURES.nullStatus],
+      [{ status: 1, signal: null, stdout: "xx", stderr: "xx" }, NPM_LS_FAILURES.outputOverflow],
+      [{ status: 1, signal: null, stdout: "x", stderr: "" }, NPM_LS_FAILURES.invalidJson],
     ])
-      assert.throws(() => parseScopedNpmLsResult(result, 3), pattern);
+      assert.throws(
+        () => parseScopedNpmLsResult(result, 3),
+        (error) => error.message === expected && error.stack === `Error: ${expected}`,
+      );
+  });
+
+  test("drops invalid-JSON secret, path, and command sentinels without a cause", () => {
+    const sentinels = ["SECRET_SENTINEL", "C:\\private\\sentinel", "npm ls sentinel-command"];
+    let caught;
+    try {
+      parseScopedNpmLsResult({
+        status: 1,
+        signal: null,
+        stdout: sentinels.join(" "),
+        stderr: "",
+      });
+    } catch (error) {
+      caught = error;
+    }
+    assert.equal(caught.message, NPM_LS_FAILURES.invalidJson);
+    assert.equal(caught.cause, undefined);
+    const serialized = `${caught.message}\n${caught.stack}\n${JSON.stringify(caught)}`;
+    for (const sentinel of sentinels) assert.equal(serialized.includes(sentinel), false);
+    assert.equal(publicMulterFailure(new Error(sentinels.join(" "))), NPM_LS_FAILURES.exit);
+  });
+
+  test("resolves the trusted npm CLI from the current Node installation without npm_execpath", () => {
+    const direct = resolveNpmCli({ env: {}, nodeExecutable: process.execPath });
+    assert.match(direct.replaceAll("\\", "/"), /\/npm\/bin\/npm-cli\.js$/u);
+    assert.equal(
+      resolveNpmCli({ env: { npm_execpath: direct }, nodeExecutable: process.execPath }),
+      direct,
+    );
+    assert.throws(
+      () => resolveNpmCli({ env: {}, nodeExecutable: join(repoRoot, "missing-node") }),
+      (error) =>
+        error.message === NPM_LS_FAILURES.spawnError &&
+        error.stack === `Error: ${NPM_LS_FAILURES.spawnError}`,
+    );
+
+    const root = mkdtempSync(join(tmpdir(), "fluyo-untrusted-npm-cli-"));
+    const arbitraryCli = join(root, "npm-cli.js");
+    try {
+      writeFileSync(arbitraryCli, "throw new Error('untrusted')\n");
+      assert.equal(
+        resolveNpmCli({
+          env: { npm_execpath: arbitraryCli },
+          nodeExecutable: process.execPath,
+        }),
+        direct,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("times out once without retry and kills the exact owned child", async () => {
+    let spawns = 0;
+    await assert.rejects(
+      runBoundedSubprocess(
+        {
+          command: process.execPath,
+          args: ["-e", "setInterval(() => {}, 1000)"],
+          cwd: repoRoot,
+          timeoutMs: 50,
+        },
+        {
+          spawnProcess(...args) {
+            spawns += 1;
+            return spawn(...args);
+          },
+        },
+      ),
+      (error) => error.message === NPM_LS_FAILURES.timeout,
+    );
+    assert.equal(spawns, 1);
+    assert.equal(NPM_LS_TIMEOUT_MS, 30_000);
+  });
+
+  test("enforces one MiB across stdout and stderr together", async () => {
+    const script =
+      "process.stdout.write('o'.repeat(614400));process.stderr.write('e'.repeat(614400));setInterval(()=>{},1000)";
+    await assert.rejects(
+      runBoundedSubprocess({
+        command: process.execPath,
+        args: ["-e", script],
+        cwd: repoRoot,
+        timeoutMs: 2_000,
+      }),
+      (error) => error.message === NPM_LS_FAILURES.outputOverflow,
+    );
+    assert.equal(NPM_LS_MAX_OUTPUT_BYTES, 1024 * 1024);
+  });
+
+  test("aborts once and cleans the owned process tree", async () => {
+    const controller = new AbortController();
+    let spawns = 0;
+    const pending = runBoundedSubprocess(
+      {
+        command: process.execPath,
+        args: ["-e", "setInterval(() => {}, 1000)"],
+        cwd: repoRoot,
+        timeoutMs: 2_000,
+        signal: controller.signal,
+      },
+      {
+        spawnProcess(...args) {
+          spawns += 1;
+          return spawn(...args);
+        },
+      },
+    );
+    controller.abort();
+    await assert.rejects(pending, (error) => error.message === NPM_LS_FAILURES.timeout);
+    assert.equal(spawns, 1);
+  });
+
+  test("rejects a pre-aborted signal before spawning", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    let spawns = 0;
+    await assert.rejects(
+      runBoundedSubprocess(
+        {
+          command: process.execPath,
+          args: ["-e", "setInterval(() => {}, 1000)"],
+          cwd: repoRoot,
+          signal: controller.signal,
+        },
+        {
+          spawnProcess() {
+            spawns += 1;
+            throw new Error("must not spawn");
+          },
+        },
+      ),
+      (error) => error.message === NPM_LS_FAILURES.timeout,
+    );
+    assert.equal(spawns, 0);
+    assert.equal(getEventListeners(controller.signal, "abort").length, 0);
+  });
+
+  test("settles a spawn-time abort once and removes its listener", async () => {
+    const controller = new AbortController();
+    const fakeChild = new EventEmitter();
+    fakeChild.pid = 4243;
+    fakeChild.exitCode = null;
+    fakeChild.signalCode = null;
+    fakeChild.stdout = new PassThrough();
+    fakeChild.stderr = new PassThrough();
+    let spawns = 0;
+    let cleanups = 0;
+    await assert.rejects(
+      runBoundedSubprocess(
+        {
+          command: process.execPath,
+          args: [],
+          cwd: repoRoot,
+          timeoutMs: 2_000,
+          signal: controller.signal,
+        },
+        {
+          spawnProcess() {
+            spawns += 1;
+            controller.abort();
+            return fakeChild;
+          },
+          async terminateTree(child) {
+            cleanups += 1;
+            child.exitCode = 1;
+            child.emit("close", 1, null);
+          },
+        },
+      ),
+      (error) => error.message === NPM_LS_FAILURES.timeout,
+    );
+    assert.equal(spawns, 1);
+    assert.equal(cleanups, 1);
+    assert.equal(getEventListeners(controller.signal, "abort").length, 0);
+  });
+
+  test("kills a timed-out child and grandchild without touching an unrelated process", async () => {
+    const root = mkdtempSync(join(tmpdir(), "fluyo-multer-tree-"));
+    const pidFile = join(root, "tree.json");
+    const unrelated = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+      detached: false,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    try {
+      await assert.rejects(
+        runBoundedSubprocess({
+          command: process.execPath,
+          args: [testFile, "--tree-hang-fixture", pidFile],
+          cwd: repoRoot,
+          timeoutMs: 500,
+        }),
+        (error) => error.message === NPM_LS_FAILURES.timeout,
+      );
+      const identities = JSON.parse(readFileSync(pidFile, "utf8"));
+      assert.equal(await waitForProcessDeath(identities.parentPid), true);
+      assert.equal(await waitForProcessDeath(identities.grandchildPid), true);
+      assert.equal(processIsAlive(unrelated.pid), true);
+    } finally {
+      unrelated.kill("SIGKILL");
+      await waitForProcessDeath(unrelated.pid);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports only cleanup failure when owned-tree cleanup fails", async () => {
+    let ownedChild;
+    await assert.rejects(
+      runBoundedSubprocess(
+        {
+          command: process.execPath,
+          args: ["-e", "setInterval(() => {}, 1000)"],
+          cwd: repoRoot,
+          timeoutMs: 50,
+        },
+        {
+          spawnProcess(...args) {
+            ownedChild = spawn(...args);
+            return ownedChild;
+          },
+          async terminateTree() {
+            throw new Error("SECRET CLEANUP DIAGNOSTIC");
+          },
+        },
+      ),
+      (error) =>
+        error.message === NPM_LS_FAILURES.cleanupFailure &&
+        error.stack === `Error: ${NPM_LS_FAILURES.cleanupFailure}` &&
+        error.cause === undefined,
+    );
+    await terminateOwnedProcessTree(ownedChild);
+  });
+
+  test("settles once when output arrives after termination begins", async () => {
+    const fakeChild = new EventEmitter();
+    fakeChild.pid = 4242;
+    fakeChild.exitCode = null;
+    fakeChild.signalCode = null;
+    fakeChild.stdout = new PassThrough();
+    fakeChild.stderr = new PassThrough();
+    let cleanupCalls = 0;
+    await assert.rejects(
+      runBoundedSubprocess(
+        {
+          command: process.execPath,
+          args: [],
+          cwd: repoRoot,
+          timeoutMs: 10,
+          maxOutputBytes: 3,
+        },
+        {
+          spawnProcess: () => fakeChild,
+          async terminateTree() {
+            cleanupCalls += 1;
+            fakeChild.stdout.write("late-secret");
+            fakeChild.stderr.write("late-path");
+            fakeChild.exitCode = 1;
+            fakeChild.emit("close", 1, null);
+          },
+        },
+      ),
+      (error) => error.message === NPM_LS_FAILURES.timeout,
+    );
+    assert.equal(cleanupCalls, 1);
+  });
+
+  test("keeps the installed-tree probe in one ordered integration phase", () => {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+    assert.equal(
+      packageJson.scripts["test:audit-policy"],
+      "npm run test:audit-policy:unit && npm run test:audit-policy:installed-tree",
+    );
+    assert.equal(
+      packageJson.scripts["test:audit-policy:installed-tree"],
+      "node scripts/check-multer-override.integration.mjs",
+    );
+    assert.doesNotMatch(packageJson.scripts["test:audit-policy:unit"], /test-concurrency|retry/iu);
+    const unitSource = readFileSync(testFile, "utf8");
+    const integrationSource = readFileSync(
+      join(repoRoot, "scripts", "check-multer-override.integration.mjs"),
+      "utf8",
+    );
+    const installedTreeCall = ["checkMulter", "Override(repoRoot)"].join("");
+    assert.equal(unitSource.includes(installedTreeCall), false);
+    assert.equal(integrationSource.match(/checkMulterOverride\(repoRoot\)/gu)?.length, 1);
+    const checkerSource = readFileSync(
+      join(repoRoot, "scripts", "check-multer-override.mjs"),
+      "utf8",
+    );
+    assert.doesNotMatch(checkerSource, /spawnSync|cmd\.exe|ComSpec/u);
+    assert.match(checkerSource, /command:\s*realpathSync\(process\.execPath\)/u);
+    assert.match(checkerSource, /args:\s*\[npmCli,\s*\.\.\.npmArgs\]/u);
+    const workflow = readFileSync(join(repoRoot, ".github", "workflows", "ci.yml"), "utf8");
+    assert.match(workflow, /test:\s*\n\s*name:\s*Tests\s*\n[\s\S]*?timeout-minutes:\s*15/u);
   });
 
   test("survives asynchronous two-file filter teardown with one terminal result", () => {
@@ -359,12 +700,5 @@ if (process.argv.includes("--late-filter-fixture")) {
       runUpload(() => {}, multipart([{ name: "value", value: "x" }]), { timeout: 50 }),
       /REQUEST_TIMEOUT/,
     );
-  });
-
-  test("passes against the installed dependency tree", () => {
-    assert.deepEqual(checkMulterOverride(repoRoot), {
-      multerVersion: "2.5.0",
-      nestVersion: "11.2.7",
-    });
   });
 }

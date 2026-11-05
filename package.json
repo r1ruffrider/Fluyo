@@ -20,8 +20,15 @@
     "prisma:validate": "npm run prisma:validate --workspace @fluyo/api",
     "db:migrate": "dotenv -e .env -- npm run prisma:migrate --workspace @fluyo/api",
     "db:seed": "dotenv -e .env -- npm run prisma:seed --workspace @fluyo/api",
-    "test": "npm run test:audit-policy && npm run test --workspace @fluyo/shared && npm run test --workspace @fluyo/api && npm run test --workspace @fluyo/web",
-    "test:audit-policy": "node --test scripts/*.test.mjs scripts/r4b-evidence/*.test.mjs",
+    "test": "npm run test:ci:portable",
+    "test:ci:portable": "npm run test:audit-policy && npm run test --workspace @fluyo/shared && npm run test --workspace @fluyo/api && npm run test --workspace @fluyo/web",
+    "test:ci:windows-native": "npm run test:r4b:windows-native",
+    "test:audit-policy": "npm run test:audit-policy:unit && npm run test:audit-policy:installed-tree",
+    "test:audit-policy:unit": "node --test scripts/*.test.mjs && npm run test:r4b:portable",
+    "test:audit-policy:installed-tree": "node scripts/check-multer-override.integration.mjs",
+    "test:r4b:portable": "node scripts/r4b-evidence/r4b-test-lanes.mjs portable",
+    "test:r4b:windows-native": "node scripts/r4b-evidence/r4b-test-lanes.mjs windows-native",
+    "test:r4b:exact": "node scripts/r4b-evidence/r4b-test-lanes.mjs exact",
     "typecheck": "npm run typecheck --workspace @fluyo/shared && npm run typecheck --workspace @fluyo/api && npm run typecheck --workspace @fluyo/web"
   },
   "engines": {

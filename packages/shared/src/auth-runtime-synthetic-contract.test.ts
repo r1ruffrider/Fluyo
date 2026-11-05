@@ -19,6 +19,9 @@ const acceptance = JSON.parse(
 const phaseBase = "e2197c597a9a49f3685ceb2c2010cd5d067ff299";
 const phaseCompletion = "a5658045cd7d780665cf11cedfb5daccc2c6fc82";
 const authReadinessApprovalTemporaryRootPrefix = ".tmp-auth-readiness-approval-";
+const authorizedPostCompletionExactPaths = new Set([
+  "scripts/r4b-evidence/windows-trusted-temp-root.mjs",
+]);
 
 const phaseUntrackedPaths = (paths: string[]) =>
   paths.filter(
@@ -26,7 +29,8 @@ const phaseUntrackedPaths = (paths: string[]) =>
       Boolean(path) &&
       !path.startsWith(".tmp/") &&
       !path.startsWith(".security-tmp/") &&
-      !path.startsWith(authReadinessApprovalTemporaryRootPrefix),
+      !path.startsWith(authReadinessApprovalTemporaryRootPrefix) &&
+      !authorizedPostCompletionExactPaths.has(path),
   );
 
 const strings = (value: unknown, label: string): string[] => {
@@ -189,14 +193,173 @@ describe("native auth executable synthetic kernel", () => {
       expect(source).toContain("validationCancellation");
       expect(source).toContain("pauseAfterComparison");
     }
-    expect(swift).toContain("XCTAssertEqual(fullEffectHistory, vector.effects");
+    expect(swift).toContain("requireCorpusAssertion(fullEffectHistory == vector.effects");
     expect(swift).toContain("requireCorpusMatch(trace == vector.trace");
-    expect(swift).toContain("XCTFail(boundedMarker");
     expect(swift).toContain("print(boundedMarker)");
     expect(swift).toContain("diagnostic_inconsistent");
     expect(swift).toContain("diagnostic_rejected");
     expect(swift).not.toContain("[auth_corpus_diagnostic_unavailable]");
-    expect(swift).toContain("XCTAssertEqual(completions, vector.completions");
+    expect(swift).not.toContain("XCTestRun");
+    expect(swift).not.toContain("failureCount");
+    expect(swift).not.toContain("continueAfterFailure");
+    expect(swift).not.toContain("override func record(_ issue: XCTIssue)");
+    expect(swift).not.toContain("super.record(issue)");
+    expect(swift).not.toContain("override func recordFailure");
+    const observerClass = swift.slice(
+      swift.indexOf("private final class CorpusStageObserver"),
+      swift.indexOf("private static let regularFailureStages"),
+    );
+    expect(observerClass).not.toContain("NSLock");
+    expect(observerClass).not.toContain("assertionRecorded");
+    expect(observerClass).not.toContain("withNamedDiagnostic");
+    expect(observerClass).toContain("func currentStage() -> ActiveStage?");
+    const recordedAssertionFailure = swift.slice(
+      swift.indexOf("private func failRecordedAssertion"),
+      swift.indexOf("private func failInvariant"),
+    );
+    expect(recordedAssertionFailure).toContain("print(marker)");
+    expect(recordedAssertionFailure).toContain("throw CorpusError.diagnosticAbort");
+    expect(recordedAssertionFailure).not.toContain("XCTFail");
+    expect(swift).toMatch(
+      /private func requireCorpusAssertion\(_ matches: Bool\) throws \{\s*guard matches else \{ try failCurrentStageAssertion\(\) \}/,
+    );
+    expect(swift).not.toContain("@autoclosure");
+    const asyncChildStarts = [...swift.matchAll(/\basync let\s+([A-Za-z_][A-Za-z0-9_]*)/g)];
+    expect(asyncChildStarts).toHaveLength(16);
+    for (const start of asyncChildStarts) {
+      const child = start[1];
+      expect(child).toBeTruthy();
+      const tail = swift.slice(start.index!);
+      const joinMatch = new RegExp(`_ = await[^\\n]*\\b${child}\\b`).exec(tail);
+      const join = joinMatch === null ? -1 : start.index! + joinMatch.index;
+      expect(join).toBeGreaterThan(start.index!);
+      expect(swift.slice(start.index!, join)).not.toMatch(/\btry\b/);
+    }
+    const cancelBoundaries = swift.slice(
+      swift.indexOf("private func verifyCancelAvailabilityBoundaries"),
+      swift.indexOf("private func verifyTotalTimeoutBoundary"),
+    );
+    expect(cancelBoundaries).toMatch(
+      /let afterCancel = await coordinator\.snapshot\(\)[^]*if now < 500 \{ await coordinator\.signOut\(\) \}[^]*releaseExchange\(\); _ = await work[^]*try requireCorpusAssertion/,
+    );
+    const refreshHelperStart = swift.indexOf("private func observeRefreshTimerHistory");
+    const refreshBoundaryStart = swift.indexOf("private func verifyRefreshTimerBoundaries");
+    const refreshBoundaryEnd = swift.indexOf("private func verifyMutationBoundaries");
+    expect(refreshHelperStart).toBeGreaterThan(-1);
+    expect(refreshBoundaryStart).toBeGreaterThan(refreshHelperStart);
+    expect(refreshBoundaryEnd).toBeGreaterThan(refreshBoundaryStart);
+    const refreshHelper = swift.slice(refreshHelperStart, refreshBoundaryStart);
+    const refreshBoundaries = swift.slice(refreshBoundaryStart, refreshBoundaryEnd);
+    expect(refreshHelper.match(/coordinator\.presentationEffectHistory\(\)/g)).toHaveLength(2);
+    expect(refreshHelper).not.toMatch(/AuthPresentationEffect\s*\(|\.init\s*\(|return\s*\[/);
+    expect(refreshHelper).not.toMatch(
+      /scenarioResult|expectedResult|expectedVector|expectedEffects|expectedSnapshots|answerFactory|hardcodedResult/i,
+    );
+    expect(
+      refreshBoundaries.match(
+        /let history = await observeRefreshTimerHistory\(coordinator, expectedCount: elapsed < 500 \? 0 : 1\)/g,
+      ),
+    ).toHaveLength(1);
+    expect(refreshBoundaries).not.toContain(
+      "let history = await coordinator.presentationEffectHistory()",
+    );
+    const refreshProviderStarted = refreshBoundaries.indexOf("ports.provider.waitRefreshStarted()");
+    const refreshDelayedSignal = refreshBoundaries.indexOf(
+      "ports.clock.waitDelayed500SleepEvaluated()",
+    );
+    const refreshHelperCall = refreshBoundaries.indexOf(
+      "let history = await observeRefreshTimerHistory(coordinator, expectedCount: elapsed < 500 ? 0 : 1)",
+    );
+    const refreshProviderRelease = refreshBoundaries.indexOf("ports.provider.releaseRefresh()");
+    const refreshWorkJoin = refreshBoundaries.indexOf("_ = await work");
+    const refreshHistoryAssertion = refreshBoundaries.indexOf(
+      "try requireCorpusAssertion(history.count == (elapsed < 500 ? 0 : 1))",
+    );
+    expect(refreshProviderStarted).toBeGreaterThan(-1);
+    expect(refreshDelayedSignal).toBeGreaterThan(refreshProviderStarted);
+    expect(refreshHelperCall).toBeGreaterThan(refreshDelayedSignal);
+    expect(refreshProviderRelease).toBeGreaterThan(refreshHelperCall);
+    expect(refreshWorkJoin).toBeGreaterThan(refreshProviderRelease);
+    expect(refreshHistoryAssertion).toBeGreaterThan(refreshWorkJoin);
+    expect(swift).toMatch(
+      /private func failCurrentStageAssertion[^]*currentStage\(\)[^]*failRecordedAssertion\(active\)/,
+    );
+    expect(swift).toMatch(
+      /guard let observer else \{[^]*catch CorpusError\.diagnosticAbort[^]*throw CorpusError\.diagnosticAbort[^]*catch \{[^]*throw CorpusError\.diagnosticAbort[^]*catch CorpusError\.diagnosticAbort[^]*throw CorpusError\.diagnosticAbort[^]*catch \{[^]*observer\.finishStage\(\)[^]*failRecordedAssertion\(active\)[^]*throw CorpusError\.diagnosticAbort/,
+    );
+    expect(swift).toMatch(
+      /func testUnexpectedCorpusErrorIsConvertedToPayloadFreeSentinel\(\) async[^]*private_unexpected_corpus_token[^]*observeStage\("callback_cancel", \.step, observer: nil\)[^]*catch CorpusError\.diagnosticAbort/,
+    );
+    const functions = new Map<string, string[]>();
+    const functionPattern =
+      /(?:^|\n)\s*(?:private\s+)?(?:override\s+)?func\s+([A-Za-z_][A-Za-z0-9_]*)[^\{]*\{/g;
+    for (const match of swift.matchAll(functionPattern)) {
+      const open = match.index! + match[0].lastIndexOf("{");
+      let depth = 1;
+      let end = open + 1;
+      while (end < swift.length && depth > 0) {
+        if (swift[end] === "{") depth += 1;
+        if (swift[end] === "}") depth -= 1;
+        end += 1;
+      }
+      const name = match[1]!;
+      functions.set(name, [...(functions.get(name) ?? []), swift.slice(open + 1, end - 1)]);
+    }
+    const reachable = new Set([
+      "testCanonicalCorpusRunsExactlyTwentyEightScenariosAndThirteenInvariantGroups",
+    ]);
+    const pending = [...reachable];
+    while (pending.length > 0) {
+      const name = pending.pop()!;
+      for (const body of functions.get(name) ?? []) {
+        for (const call of body.matchAll(/\b([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+          const callee = call[1]!;
+          if (functions.has(callee) && !reachable.has(callee)) {
+            reachable.add(callee);
+            pending.push(callee);
+          }
+        }
+      }
+    }
+    for (const required of [
+      "run",
+      "execute",
+      "validateInvariant",
+      "loadCorpus",
+      "observeStage",
+      "requireCorpusAssertion",
+      "failCurrentStageAssertion",
+    ]) {
+      expect(reachable.has(required)).toBe(true);
+    }
+    const reachableSource = [...reachable].flatMap((name) => functions.get(name) ?? []).join("\n");
+    expect(reachableSource).not.toMatch(
+      /\b(?:XCTAssert[A-Za-z]*|XCTFail|XCTUnwrap|XCTSkip[A-Za-z]*)\s*\(/,
+    );
+    expect(reachableSource).not.toMatch(/\bthrow\s+error\b/);
+    const initializerBodies: string[] = [];
+    const initializerPattern =
+      /(?<!\.)\binit[!?]?\s*\([^{}]*\)(?:\s+(?:async|throws|rethrows))*\s*\{/g;
+    for (const match of swift.matchAll(initializerPattern)) {
+      const open = match.index! + match[0].lastIndexOf("{");
+      let depth = 1;
+      let end = open + 1;
+      while (end < swift.length && depth > 0) {
+        if (swift[end] === "{") depth += 1;
+        if (swift[end] === "}") depth -= 1;
+        end += 1;
+      }
+      initializerBodies.push(swift.slice(open + 1, end - 1));
+    }
+    expect(initializerBodies.length).toBeGreaterThanOrEqual(10);
+    expect(initializerBodies.some((body) => body.includes("guard f.count == 14"))).toBe(true);
+    expect(initializerBodies.join("\n")).not.toMatch(
+      /\b(?:XCTAssert[A-Za-z]*|XCTFail|XCTUnwrap|XCTSkip[A-Za-z]*)\s*\(/,
+    );
+    expect(swift).toMatch(
+      /for step in vector\.steps \{\s*rejected \+= try await observeStage\(vector\.id, \.step, observer: observer\)/,
+    );
+    expect(swift).toContain("requireCorpusAssertion(completions == vector.completions");
     expect(swift).toContain("entries.count < commands.count");
     expect(swift).toContain("verifyLateTimerRegistrationCancellation");
     expect(swift).toContain("withTaskCancellationHandler");
@@ -433,12 +596,34 @@ describe("native auth executable synthetic kernel", () => {
     expect(workflow).toContain(
       "FLUYO_CI_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
+    expect(workflow.match(/- name: Checkout/g)).toHaveLength(9);
+    expect(workflow.match(/uses: actions\/checkout@v4/g)).toHaveLength(9);
     expect(
       workflow.match(/ref: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g),
-    ).toHaveLength(8);
-    expect(workflow.match(/fetch-depth: 0/g)).toHaveLength(8);
-    expect(workflow.match(/- name: Verify exact checkout/g)).toHaveLength(8);
+    ).toHaveLength(9);
+    expect(workflow.match(/fetch-depth: 0/g)).toHaveLength(9);
+    expect(workflow.match(/- name: Verify exact checkout/g)).toHaveLength(9);
     expect(workflow.match(/test "\$\(git rev-parse HEAD\)" = "\$FLUYO_CI_HEAD"/g)).toHaveLength(8);
+    expect(workflow.match(/\$actualHead = git rev-parse HEAD/g)).toHaveLength(1);
+    expect(workflow.match(/\$actualHead -ne \$env:FLUYO_CI_HEAD/g)).toHaveLength(1);
+
+    const windowsNativeJob = workflow
+      .split(/\n(?=  [a-z_]+:\n)/u)
+      .find((job) => job.startsWith("  test_windows_native:\n"));
+    expect(windowsNativeJob).toBeDefined();
+    expect(windowsNativeJob).toContain("name: Tests (Windows native)");
+    expect(windowsNativeJob).toContain("runs-on: windows-latest");
+    expect(windowsNativeJob).toContain("- name: Test Windows-native suite");
+
+    const verifyStart = windowsNativeJob!.indexOf("      - name: Verify exact checkout\n");
+    const verifyEnd = windowsNativeJob!.indexOf("\n      - name:", verifyStart + 1);
+    expect(verifyStart).toBeGreaterThanOrEqual(0);
+    expect(verifyEnd).toBeGreaterThan(verifyStart);
+    const windowsVerify = windowsNativeJob!.slice(verifyStart, verifyEnd);
+    expect(windowsVerify).toContain("shell: pwsh");
+    expect(windowsVerify).toContain("$actualHead = git rev-parse HEAD");
+    expect(windowsVerify).toContain("if ($actualHead -ne $env:FLUYO_CI_HEAD)");
+    expect(windowsVerify).not.toContain('test "$(git rev-parse HEAD)" = "$FLUYO_CI_HEAD"');
   });
 
   it("carries only validated auth diagnostics and removes the Android sidecar", () => {
@@ -520,9 +705,17 @@ describe("native auth executable synthetic kernel", () => {
       phaseUntrackedPaths([
         ".tmp-auth-readiness-approval-abc123/",
         ".tmp-auth-readiness-approvals-abc123/policy.json",
+        "scripts/r4b-evidence/windows-trusted-temp-root.mjs",
+        "scripts/r4b-evidence/windows-trusted-temp-root.mjs.bak",
+        "scripts/r4b-evidence/windows-trusted-temp-root.test.mjs",
         "unexpected.txt",
       ]),
-    ).toEqual([".tmp-auth-readiness-approvals-abc123/policy.json", "unexpected.txt"]);
+    ).toEqual([
+      ".tmp-auth-readiness-approvals-abc123/policy.json",
+      "scripts/r4b-evidence/windows-trusted-temp-root.mjs.bak",
+      "scripts/r4b-evidence/windows-trusted-temp-root.test.mjs",
+      "unexpected.txt",
+    ]);
 
     const allowed = [
       ".github/workflows/android.yml",

@@ -1,0 +1,77 @@
+/*
+ * Exact minimal presentation context copied from apps/web/app/globals.css.
+ * The harness deliberately excludes Tailwind and all product-shell rules while
+ * preserving the production typography, sizing, link/form, and focus contract.
+ */
+:root {
+  color-scheme: light;
+  --ink: #17133f;
+  --ink-soft: #4f4b6d;
+  --cobalt: #2639b6;
+  --cobalt-deep: #142174;
+  --coral: #ff6b72;
+  --coral-deep: #d63f52;
+  --sun: #ffd34e;
+  --mint: #7de2c4;
+  --paper: #fffaf0;
+  --white: #ffffff;
+  --border: rgb(23 19 63 / 14%);
+  --display: "Arial Rounded MT Bold", "Trebuchet MS", ui-rounded, system-ui, sans-serif;
+  --body:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--body);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+  background: var(--paper);
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+}
+
+@media (max-width: 319px) {
+  html,
+  body {
+    min-width: 0;
+  }
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

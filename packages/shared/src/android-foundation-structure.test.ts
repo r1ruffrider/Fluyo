@@ -223,6 +223,19 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain("waitForSystemFontScale(1.9f)");
     expect(responsive).toContain('throw AssertionError("font scale")');
     expect(responsive).toContain('throw AssertionError("runtime launch")');
+    expect(responsive).toContain(
+      "private fun waitForDisplayOrientation(expectedLandscape: Boolean, sentinel: String)",
+    );
+    const orientationSettlement = responsive.match(
+      /private fun waitForDisplayOrientation\(expectedLandscape: Boolean, sentinel: String\) \{([\s\S]*?)\n    \}\n\n    private inline fun boundedStage/,
+    )?.[1];
+    expect(orientationSettlement).toBeDefined();
+    expect(orientationSettlement).toContain("repeat(20)");
+    expect(orientationSettlement).toContain("Thread.sleep(250)");
+    expect(orientationSettlement).toContain("device.displayWidth > device.displayHeight");
+    expect(orientationSettlement).toContain("if (isLandscape == expectedLandscape) return");
+    expect(orientationSettlement).toContain("throw AssertionError(sentinel)");
+    expect(responsive.match(/waitForDisplayOrientation\(/g)).toHaveLength(3);
     expect(responsive).toContain('boundedStage("font scale")');
     expect(responsive).toContain('boundedStage("runtime launch")');
     expect(responsive).toContain('boundedStage("node missing")');
@@ -248,6 +261,47 @@ describe("Android foundation structure", () => {
     expect(responsive).toContain(
       "it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED",
     );
+    const responsiveResize = responsive.match(
+      /@Test fun resizePreservesTheNewestStateAcrossWindowClasses\(\) \{([\s\S]*?)\n    \}\n\}/,
+    )?.[1];
+    expect(responsiveResize).toBeDefined();
+    expect(responsiveResize).toContain('boundedStage("runtime launch")');
+    expect(responsiveResize).toContain(
+      'waitForDisplayOrientation(expectedLandscape = true, sentinel = "runtime launch")',
+    );
+    expect(responsiveResize).toContain("scenario.recreate()");
+    expect(responsiveResize!.match(/scenario\.onActivity \{ \}/g)).toHaveLength(2);
+    const resizeLandscape = responsiveResize!.indexOf("SCREEN_ORIENTATION_LANDSCAPE");
+    const resizeWait = responsiveResize!.indexOf(
+      'waitForDisplayOrientation(expectedLandscape = true, sentinel = "runtime launch")',
+    );
+    const resizeFirstBarrier = responsiveResize!.indexOf("scenario.onActivity { }");
+    const resizeRecreate = responsiveResize!.indexOf("scenario.recreate()");
+    const resizeLastBarrier = responsiveResize!.lastIndexOf("scenario.onActivity { }");
+    expect(resizeLandscape).toBeLessThan(resizeWait);
+    expect(resizeWait).toBeLessThan(resizeFirstBarrier);
+    expect(resizeFirstBarrier).toBeLessThan(resizeRecreate);
+    expect(resizeRecreate).toBeLessThan(resizeLastBarrier);
+    const responsiveCleanup = responsive.match(
+      /@After fun restoreRuntimeSettings\(\) \{([\s\S]*?)\n    \}\n\n    private fun waitForNode/,
+    )?.[1];
+    expect(responsiveCleanup).toBeDefined();
+    expect(responsiveCleanup).toContain(
+      'waitForDisplayOrientation(expectedLandscape = false, sentinel = "runtime cleanup")',
+    );
+    expect(responsiveCleanup!.match(/activeScenario\?\.onActivity \{ \}/g)).toHaveLength(1);
+    const cleanupUnspecified = responsiveCleanup!.indexOf("SCREEN_ORIENTATION_UNSPECIFIED");
+    const cleanupWait = responsiveCleanup!.indexOf(
+      'waitForDisplayOrientation(expectedLandscape = false, sentinel = "runtime cleanup")',
+    );
+    const cleanupBarrier = responsiveCleanup!.indexOf("activeScenario?.onActivity { }");
+    const cleanupClose = responsiveCleanup!.indexOf("activeScenario?.close()");
+    expect(cleanupUnspecified).toBeLessThan(cleanupWait);
+    expect(cleanupWait).toBeLessThan(cleanupBarrier);
+    expect(cleanupBarrier).toBeLessThan(cleanupClose);
+    for (const forbidden of ["test.skip", "runCatching", "retry", "catch (_: Throwable) { }"]) {
+      expect(responsive).not.toContain(forbidden);
+    }
     expect(instrumentation).not.toContain("resources.assets.locales");
     expect(responsive).toContain("resizePreservesTheNewestStateAcrossWindowClasses");
     expect(instrumentation).toContain(

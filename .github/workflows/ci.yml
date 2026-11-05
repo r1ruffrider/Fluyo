@@ -183,11 +183,49 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
-      - name: Test
-        run: npm test
+      - name: Test portable suite
+        run: npm run test:ci:portable
 
-      - name: Test auth approval history validator
-        run: node --test scripts/check-auth-approval-history.test.mjs
+  test_windows_native:
+    name: Tests (Windows native)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      FLUYO_PACKET_VALIDATION_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact checkout
+        shell: pwsh
+        run: |
+          $actualHead = git rev-parse HEAD
+          if ($actualHead -ne $env:FLUYO_CI_HEAD) {
+            throw "Exact-head mismatch: expected $env:FLUYO_CI_HEAD, got $actualHead"
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Test Windows-native suite
+        run: npm run test:ci:windows-native
 
   build:
     name: Build

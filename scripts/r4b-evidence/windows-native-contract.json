@@ -1,0 +1,415 @@
+{
+  "schema": "fluyo:r4b:windows-native-contract:v3",
+  "protocolVersion": 3,
+  "transport": {
+    "kind": "inherited-anonymous-pipes",
+    "requestPipe": "broker-stdin",
+    "responsePipe": "broker-stdout",
+    "frameLengthEncoding": "uint32-le",
+    "maximumFrameBytes": 67174400,
+    "authoritativeFilesystemMessages": false,
+    "persistentBrokerPerCommand": true
+  },
+  "transaction": {
+    "states": ["INTENT_DURABLE", "APPLIED_UNACKED_DURABLE", "ACKED_COMMITTED_DURABLE"],
+    "ack": "sha256(response-frame)-over-request-pipe",
+    "finalCommitConfirmation": "COMMIT_CONFIRMED-bound-to-post-ack-journal-sequence-and-digest",
+    "replay": "same-session-sequence-request-digest-returns-identical-response-without-reapply",
+    "controllerLoss": "JOURNAL_PERMANENT_HELD",
+    "orphanedJournal": "ORPHANED_PERMANENT_HELD",
+    "permanentHeldRecovery": "forbidden-with-zero-mutation-retry-or-cleanup",
+    "recoveryOperation": "RECOVER_SESSION",
+    "recoveryOutcomes": [
+      "VERIFIED_APPLIED_UNACKED",
+      "VERIFIED_NOT_APPLIED",
+      "VERIFIED_COMMITTED",
+      "AMBIGUOUS_PERMANENT_HELD",
+      "JOURNAL_PERMANENT_HELD"
+    ],
+    "recoveryBinding": "caller-supplies-failure-event+request-id+controller-creation-identity+journal-anchor;broker-derives-outcome-from-journal+retained-handle-or-filesystem-identity",
+    "journalFormat": "J2|state|requestSequence|sessionNonce|operation|requestSha256|rootId|relativePathBase64|relativePath2Base64|beforeIdentity|afterIdentity|responseSha256|responseByteLength|responseBase64|previousRecordSha256|recordSha256",
+    "journalRecordSha256": "sha256-utf8-pipe-join-fields-0-through-14",
+    "preResponseAnchor": "durable-predecessor-only-never-predicted-post-ack",
+    "legacyJournal": "nonempty-non-J2-permanent-held-with-zero-action",
+    "jobCloseDurability": "canonical-JOB_CLOSED-receipt-is-hash-chained-before-job-release",
+    "renameRecovery": "source-absence+exact-destination-volume-file-id-content-digest",
+    "cleanupTombstone": "internally-issued-original-lease-bound-no-op-only",
+    "nvdaControlFlow": "one-control+one-ready-ack-before-each-observation"
+  },
+  "roots": [
+    {
+      "id": "BUILD_OUTPUT_ROOT",
+      "relative": "apps/r4b-preflight-harness/.next-attempt-002",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin",
+        "job-output"
+      ]
+    },
+    {
+      "id": "BUILD_TEMP_ROOT",
+      "relative": ".r4b-preflight/runtime/attempt-002-build-temp",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin",
+        "job-temp"
+      ]
+    },
+    {
+      "id": "NVDA_CONFIG_ROOT",
+      "relative": ".r4b-preflight/runtime/attempts/attempt-002-observer/raw/nvda/config",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin",
+        "nvda-config"
+      ]
+    },
+    {
+      "id": "NVDA_PORTABLE_ROOT",
+      "relative": ".r4b-preflight/runtime/attempts/attempt-002-observer/raw/nvda/portable",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin",
+        "nvda-runtime"
+      ]
+    },
+    {
+      "id": "NVDA_RAW_ROOT",
+      "relative": ".r4b-preflight/runtime/attempts/attempt-002-observer/raw/nvda",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin",
+        "nvda-evidence"
+      ]
+    },
+    {
+      "id": "RAW_ROOT",
+      "relative": ".r4b-preflight/runtime/attempts/attempt-002-observer/raw",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin"
+      ]
+    },
+    {
+      "id": "ATTEMPT_ROOT",
+      "relative": ".r4b-preflight/runtime/attempts/attempt-002-observer",
+      "rights": ["read", "inventory", "create", "write", "append", "rename", "unlink", "pin"]
+    },
+    {
+      "id": "RUNTIME_CONTROL_ROOT",
+      "relative": ".r4b-preflight/runtime",
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "pin",
+        "journal"
+      ]
+    },
+    {
+      "id": "TOOLS_READ",
+      "relative": ".r4b-preflight/tools",
+      "rights": ["read", "inventory", "pin", "job-tool", "nvda-tool"]
+    },
+    {
+      "id": "DOWNLOADS_READ",
+      "relative": ".r4b-preflight/downloads",
+      "rights": ["read", "inventory", "pin"]
+    },
+    {
+      "id": "FROZEN_REPOSITORY_READ",
+      "relative": ".",
+      "rights": ["read", "inventory", "pin", "job-source"]
+    },
+    {
+      "id": "TEST_ROOT",
+      "relative": "$explicit-test-root",
+      "testOnly": true,
+      "rights": [
+        "read",
+        "inventory",
+        "create",
+        "write",
+        "append",
+        "rename",
+        "unlink",
+        "remove-tree",
+        "pin",
+        "test"
+      ]
+    }
+  ],
+  "exactRelativeAllowlists": {
+    "ATTEMPT_ROOT": [
+      "",
+      "authority.json",
+      "tool-manifest.json",
+      "synthetic-observation-aggregate.json",
+      "sanitized-result.json",
+      "discard-receipt.json",
+      "failed-held.json",
+      "server-ready.json",
+      "driver-ready.json",
+      "nvda-ready.json"
+    ],
+    "RUNTIME_CONTROL_ROOT": [
+      "attempt-002-lifecycle.jsonl",
+      "attempt-002-tool-manifest.json",
+      "attempt-002-build-failed-held.json",
+      "attempt-002-builder-ownership.jsonl",
+      "attempt-002-build-failure-recovery.json",
+      "attempt-002-build-ready.json",
+      "sanitized-result.json",
+      "discard-receipt.json",
+      "tool-manifest.json"
+    ],
+    "BUILD_OUTPUT_ROOT": [
+      "",
+      "BUILD_ID",
+      "required-server-files.json",
+      "routes-manifest.json",
+      "prerender-manifest.json"
+    ],
+    "BUILD_TEMP_ROOT": [""],
+    "NVDA_CONFIG_ROOT": [
+      "",
+      "nvda.ini",
+      "scratchpad",
+      "scratchpad/globalPlugins",
+      "scratchpad/globalPlugins/fluyoPreflightSpeech.py"
+    ],
+    "NVDA_RAW_ROOT": ["", "pre-speech-requests.jsonl", "diagnostics.log", "protocol.sha256"],
+    "RAW_ROOT": [
+      "",
+      "observation-plan.json",
+      "browser-console.jsonl",
+      "o",
+      "o/{observationId}",
+      "o/{observationId}/cells",
+      "o/{observationId}/cells/{sha256}",
+      "o/{observationId}/cells/{sha256}/{closed-artifact-name}",
+      "checks",
+      "checks/risk",
+      "checks/risk/{sha256}",
+      "checks/transition",
+      "checks/transition/{sha256}",
+      "profiles",
+      "profiles/{observationId}"
+    ]
+  },
+  "jobAuthority": {
+    "infrastructurePlanDigestSlot": 22,
+    "outputAuthorityCanonical": "BUILD_OUTPUT_ROOT\\nnormalized-output-path-sha256\\nretained-cwd-parent-volume-file-id\\ninfrastructure-plan-sha256\\n.next-attempt-002",
+    "assignmentReceipt": "canonical-complete-durable-JOB_ASSIGNED",
+    "closedReceiptBinding": "assignment-receipt-sha256+output-authority-sha256+infrastructure-plan-sha256+tool-identities"
+  },
+  "fields": [
+    "sessionNonce",
+    "rootId",
+    "relativePath",
+    "relativePath2",
+    "maximumBytes",
+    "maximumEntries",
+    "maximumDirectories",
+    "maximumDepth",
+    "maximumTotalBytes",
+    "expectedDigest",
+    "expectedVolumeSerial",
+    "expectedFileId",
+    "testOperation",
+    "environmentDigest",
+    "argvDigest",
+    "inventoryToken",
+    "idempotencyKey",
+    "controllerPid",
+    "controllerCreationIdentity",
+    "expectedJournalSequence",
+    "expectedJournalDigest",
+    "capability",
+    "argumentsJson",
+    "recoveryRecord"
+  ],
+  "operations": [
+    { "code": 1, "name": "HELLO", "fields": [1, 17, 18, 19, 20, 21], "maximumPayloadBytes": 0 },
+    {
+      "code": 2,
+      "name": "READ_BOUNDED",
+      "fields": [1, 2, 3, 5, 10, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 3,
+      "name": "HASH_BOUNDED",
+      "fields": [1, 2, 3, 5, 10, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 4,
+      "name": "INVENTORY_TREE",
+      "fields": [1, 2, 3, 5, 6, 7, 8, 9, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 5,
+      "name": "CREATE_DIRECTORY",
+      "fields": [1, 2, 3, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 6,
+      "name": "WRITE_NEW",
+      "fields": [1, 2, 3, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 67108864
+    },
+    {
+      "code": 7,
+      "name": "APPEND_DURABLE",
+      "fields": [1, 2, 3, 11, 12, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 67108864
+    },
+    {
+      "code": 8,
+      "name": "RENAME_EXCLUSIVE",
+      "fields": [1, 2, 3, 4, 11, 12, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 9,
+      "name": "UNLINK_EXACT",
+      "fields": [1, 2, 3, 11, 12, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 10,
+      "name": "REMOVE_TREE_EXACT",
+      "fields": [1, 2, 3, 5, 6, 7, 8, 9, 10, 16, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 11,
+      "name": "PIN_FILE",
+      "fields": [1, 2, 3, 5, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 12,
+      "name": "UNPIN_FILE",
+      "fields": [1, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 13,
+      "name": "JOB_CREATE_SUSPENDED",
+      "fields": [1, 14, 15, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 14,
+      "name": "JOB_RESUME",
+      "fields": [1, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 15,
+      "name": "JOB_STATUS",
+      "fields": [1, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 16,
+      "name": "JOB_TERMINATE",
+      "fields": [1, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 17,
+      "name": "NVDA_START_WITH_HANDLES",
+      "fields": [1, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 18,
+      "name": "NVDA_STOP",
+      "fields": [1, 17, 18, 19, 20, 21, 22, 23],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 19,
+      "name": "TEST_SYNCHRONIZED_SWAP",
+      "fields": [1, 2, 3, 13, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    { "code": 20, "name": "SHUTDOWN", "fields": [1, 17, 18, 19, 20, 21], "maximumPayloadBytes": 0 },
+    {
+      "code": 21,
+      "name": "RECOVER_SESSION",
+      "fields": [1, 17, 18, 19, 20, 21, 24],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 22,
+      "name": "TEST_CRASH_AFTER_INTENT",
+      "fields": [1, 2, 3, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0
+    },
+    {
+      "code": 23,
+      "name": "REPLACE_EXISTING_EXACT",
+      "fields": [1, 2, 3, 11, 12, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 67108864
+    },
+    {
+      "code": 24,
+      "name": "TEST_POST_ACK_JOURNAL_FAILURE",
+      "fields": [1, 17, 18, 19, 20, 21, 22],
+      "maximumPayloadBytes": 0,
+      "testOnly": true
+    }
+  ]
+}
