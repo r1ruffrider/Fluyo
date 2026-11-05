@@ -28,6 +28,8 @@ class FoundationResponsiveDeviceTest {
                 activeScenario?.onActivity {
                     it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 }
+                waitForDisplayOrientation(expectedLandscape = false, sentinel = "runtime cleanup")
+                activeScenario?.onActivity { }
             } catch (_: Throwable) {
                 cleanupFailed = true
             }
@@ -67,6 +69,15 @@ class FoundationResponsiveDeviceTest {
         throw AssertionError("font scale")
     }
 
+    private fun waitForDisplayOrientation(expectedLandscape: Boolean, sentinel: String) {
+        repeat(20) {
+            val isLandscape = device.displayWidth > device.displayHeight
+            if (isLandscape == expectedLandscape) return
+            Thread.sleep(250)
+        }
+        throw AssertionError(sentinel)
+    }
+
     private inline fun boundedStage(sentinel: String, block: () -> Unit) {
         try {
             block()
@@ -99,11 +110,17 @@ class FoundationResponsiveDeviceTest {
 
     @Test fun resizePreservesTheNewestStateAcrossWindowClasses() {
         changedOrientation = true
-        val scenario = ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
-        scenario.onActivity {
-            it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        boundedStage("runtime launch") {
+            val scenario =
+                ActivityScenario.launch(MainActivity::class.java).also { activeScenario = it }
+            scenario.onActivity {
+                it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            }
+            waitForDisplayOrientation(expectedLandscape = true, sentinel = "runtime launch")
+            scenario.onActivity { }
+            scenario.recreate()
+            scenario.onActivity { }
         }
-        scenario.recreate()
         waitForNode("signed-out-state")
         val action = waitForNode("review-build-button", scroll = true)
         assertTrue(action.visibleBounds.width() > 0 && action.visibleBounds.height() > 0)

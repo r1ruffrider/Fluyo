@@ -31,6 +31,7 @@ test.after(() => windowsNativeBoundaryTesting.shutdownBrokers());
 
 const POWERSHELL = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
+const NVDA_PLUGIN_LATCH_FIXTURE_TIMEOUT_MILLISECONDS = 30_000;
 
 test("bounds the longer cold-bootstrap deadline to the first broker HELLO", () => {
   assert.equal(
@@ -993,6 +994,7 @@ test("passes only inherited handles to a compiled Python consumer fixture", () =
 
 test("latches one NVDA control across multiple speech and cancel callbacks", () => {
   assertTestPythonBinding();
+  assert.equal(NVDA_PLUGIN_LATCH_FIXTURE_TIMEOUT_MILLISECONDS, 30_000);
   const root = mkdtempSync(resolve(tmpdir(), "fluyo-nvda-plugin-latch-"));
   try {
     const fixture = resolve(
@@ -1016,7 +1018,7 @@ test("latches one NVDA control across multiple speech and cancel callbacks", () 
         execFileSync(PYTHON, [fixture, plugin, resolve(root, `transcript-${ordinal}.jsonl`)], {
           encoding: "utf8",
           windowsHide: true,
-          timeout: 10_000,
+          timeout: NVDA_PLUGIN_LATCH_FIXTURE_TIMEOUT_MILLISECONDS,
         }).trim(),
         "PASS",
       );

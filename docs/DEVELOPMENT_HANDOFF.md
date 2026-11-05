@@ -2088,3 +2088,76 @@ and push, reconcile the live PR body to that immutable head and require fresh pr
 Windows-native, Android, minimum/current iOS, and sanitized platform evidence before the final
 Elana merge gate. No production, deployment, signing, store, credential, spending, destructive,
 publication, or external-account action was taken or authorized. **Marlon action required: none.**
+
+## PR #72 Android lifecycle and Windows fixture repair candidate — 2026-11-05
+
+This append-only entry supersedes the stale PR #72 head, candidate-scope, evidence, and protected
+ledger statements above without rewriting their chronology. Draft PR
+[#72](https://github.com/r1ruffrider/Fluyo/pull/72) remains open and blocked at exact pushed head
+`50ccc3422a441e16ac6658a131d56001f797bd82`. Its terminal protected ledger contains exactly **17**
+checks: **14 success**, **2 failure**, and **1 skipped**. Minimum Android API 29 failed with the
+sanitized category `summary_mismatch` in
+`FoundationResponsiveDeviceTest#resizePreservesTheNewestStateAcrossWindowClasses`; Windows-native
+failed after **89/90** passes when the two-ordinal NVDA latch fixture's Python child exceeded its
+test-only **10-second** limit; the sanitized Android aggregate was skipped because the minimum leg
+failed. Current Android API 37, minimum and current iOS, sanitized iOS, portable CI, and the other
+protected checks passed. These results apply only to pushed head `50ccc342…` and do not certify the
+local repair below.
+
+The current repair is local, uncommitted, unstaged, and unpushed on base
+`50ccc3422a441e16ac6658a131d56001f797bd82`. Before this records entry it changes exactly three
+test/evidence paths with **78 insertions / 5 deletions**, Git binary-diff fingerprint
+`a72eae477b19e957cf2a64b70cced0d66a4c6580`, and stable patch ID
+`d41477dc44a37c8a00dab1aaf5c80ffad7a31e5d`:
+
+- `apps/android/app/src/androidTest/java/com/fluyo/app/FoundationResponsiveDeviceTest.kt` —
+  SHA-256 `baf52f03f581e71410c27c56437626afdb50efb3ca965cae1fa78419ab91f338`;
+- `packages/shared/src/android-foundation-structure.test.ts` — SHA-256
+  `b2931a167242bb17aea17da3ed96d787a0c3d941b54cd6343f5010c43d2d2c6a`;
+- `scripts/r4b-evidence/windows-native-boundary.test.mjs` — SHA-256
+  `986017ecfd3df5d186fe49277f2147dcc8d9775ca647f7be7973d649924fd5d2`.
+
+The Android test repair uses **20 probes** with an **up-to-5-second sleep budget** per orientation
+settlement, excluding probe and dispatch overhead. A successful settlement may consume from **0 to
+4.75 seconds** of sleep. It settles landscape geometry and executes a resumed-activity barrier
+before the explicit recreation, then executes a second resumed barrier before retaining the
+existing signed-out-state, action, and visible-geometry assertions. Cleanup settles portrait
+geometry and executes its resumed barrier before closing. The structural test locks both exact
+orders, helper bounds, barrier counts, sentinels, explicit recreation, and forbidden weakening
+patterns. No application runtime, API matrix, workflow parser, method timeout, retry, or assertion
+was changed.
+
+The Windows repair gives only the existing latch-fixture Python child a named **30-second maximum
+per ordinal**. Its two ordinals therefore have a **60-second sequential ceiling**; this is a bound,
+not an actual-duration claim. Each ordinal retains **120 observation cycles** and **360 accepted
+transcript callbacks**, for **240 generations**, **480 control-phase frames**, and **720 accepted
+callbacks** across both ordinals. Exact PASS comparison, interpreter binding, bytecode exclusion,
+cleanup, and fail-closed timeout termination remain unchanged. There is no retry, fixture/plugin,
+client/runtime, broker, workflow, dependency, or global-timeout change.
+
+Independent exact-byte evidence reports: Catalina architecture **24/24 PASS**; Natalia security and
+scope **36/36 PASS**; and Renata reproducibility PASS with Android structure **10/10**, offline
+Android compile and both development assemblies successful across **71 actionable Gradle tasks**,
+three focused latch passes at **17.346 / 17.845 / 17.216 seconds**, Windows-native **90/90** in
+**243.071 seconds**, portable **71/71**, audit policy **188/188** plus its required portable
+**71/71** and one installed-tree PASS, and lint/typecheck/format/diff checks PASS. Renata reported
+**0** test-journal entries, **0** production-journal entries, and **0** active test handles after
+the run. Shared tests reported **467/468**; the sole failure was the expected pre-commit clean-tree
+guard observing this approved dirty diff, with **0 unexpected failures**. The command scopes overlap
+and are intentionally reported separately.
+
+Julieta conducted **70** audit checks: **67 passed** and **3 records/wording checks failed**. This
+entry supersedes those three discrepancies by correcting the Android sleep-budget language, the
+NVDA cycle/frame/callback denominators, and the authoritative head/scope/protected ledger. Julieta
+found no candidate-code, privacy, credential, production, signing, store, dependency, workflow,
+parser, or global-timeout defect. The installed local Android SDK has no API 29 image or AVD, so no
+faithful local API 29 execution is claimed. A future immutable candidate head still requires fresh
+protected API 29 and API 37 legs plus sanitized Android aggregate evidence.
+
+**HOLD:** this handoff is the fourth candidate path and requires a new exact four-path fingerprint,
+records/applicable specialist rebinds, and Elana's sole exact-candidate PASS before any commit.
+After an unchanged commit and exact-head push gate, all protected CI and platform evidence must rerun
+on that new head. Do not mark PR #72 ready and do not merge until the PR body is reconciled and the
+final exact-head specialist, platform, mergeability, and Elana gates pass. No production,
+deployment, signing, store, credential, spending, destructive, publication, or external-account
+action was taken or authorized. **Marlon action required: none.**
