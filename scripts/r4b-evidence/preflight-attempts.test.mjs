@@ -5,6 +5,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { getFileInfo } from "prettier";
 import {
   ATTEMPT_001_SEALS,
   ATTEMPT_002_PATHS,
@@ -26,6 +28,12 @@ const TRUSTED_TEMP_URL = new URL("./windows-trusted-temp-root.mjs", import.meta.
 const WINDOWS_CLIENT_URL = new URL("./windows-native-client.mjs", import.meta.url).href;
 const WINDOWS_RUNNER_URL = new URL("./windows-native-test-journal-runner.mjs", import.meta.url)
   .href;
+const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const ATTEMPT_002_AUTHORITY_RELATIVE = "scripts/r4b-evidence/attempt-002-authority.json";
+const PREFLIGHT_SOURCE_RELATIVE = "scripts/r4b-evidence/preflight-attempts.mjs";
+const PREFLIGHT_TEST_RELATIVE = "scripts/r4b-evidence/preflight-attempts.test.mjs";
+const FORMATTER_SCOPE_SENTINEL_RELATIVE =
+  "scripts/r4b-evidence/__prettier-ignore-scope-sentinel__.json";
 const PORTABLE_IMPORT_GRAPHS = Object.freeze([
   Object.freeze([
     new URL("./nvda-adapter/protocol.mjs", import.meta.url).href,
@@ -556,4 +564,66 @@ test("verifies the sealed predecessor and validates the exact authority-v3 H/A2 
     ],
   );
   assert.equal(resolveAttempt002State(), "NOT_STARTED");
+});
+
+test("keeps the canonical Attempt-002 authority inside its exact formatter boundary", async () => {
+  const prettierIgnorePath = resolve(REPOSITORY_ROOT, ".prettierignore");
+  const authorityPath = resolve(REPOSITORY_ROOT, ATTEMPT_002_AUTHORITY_RELATIVE);
+  const preflightSourcePath = resolve(REPOSITORY_ROOT, PREFLIGHT_SOURCE_RELATIVE);
+  const preflightTestPath = resolve(REPOSITORY_ROOT, PREFLIGHT_TEST_RELATIVE);
+  const sentinelPath = resolve(REPOSITORY_ROOT, FORMATTER_SCOPE_SENTINEL_RELATIVE);
+  const ignoreEntries = readFileSync(prettierIgnorePath, "utf8")
+    .split(/\r?\n/u)
+    .filter((entry) => entry === ATTEMPT_002_AUTHORITY_RELATIVE);
+
+  assert.equal(ATTEMPT_002_PATHS.authoritySource, authorityPath);
+  assert.equal(ignoreEntries.length, 1);
+  assert.equal(existsSync(sentinelPath), false);
+  assert.equal(
+    (await getFileInfo(authorityPath, { ignorePath: prettierIgnorePath })).ignored,
+    true,
+  );
+  assert.equal(
+    (await getFileInfo(preflightSourcePath, { ignorePath: prettierIgnorePath })).ignored,
+    false,
+  );
+  assert.equal(
+    (await getFileInfo(preflightTestPath, { ignorePath: prettierIgnorePath })).ignored,
+    false,
+  );
+  assert.equal(
+    (await getFileInfo(sentinelPath, { ignorePath: prettierIgnorePath })).ignored,
+    false,
+  );
+
+  const validatedAuthority = validateAttempt002Authority({
+    schema: PREFLIGHT_SCHEMAS.attemptAuthority,
+    creditable: false,
+    evidenceStatus: "NON_EVIDENCE",
+    attemptId: "attempt-002-observer",
+    ordinal: 2,
+    mode: "DISCARDED_SYNTHETIC_OBSERVER",
+    productSourceCommit: "fea1f5fadb2307ca611379f30461a7ee47861fff",
+    productTreeDigest: "1".repeat(64),
+    harnessSourceCommit: "2".repeat(40),
+    harnessTreeDigest: "3".repeat(64),
+    infrastructurePlanDigest: "4".repeat(64),
+    observationPlanDigest: "5".repeat(64),
+    toolManifestDigest: "6".repeat(64),
+    predecessorResultFileSha256: ATTEMPT_001_SEALS.result,
+    predecessorReceiptFileSha256: ATTEMPT_001_SEALS.receipt,
+    predecessorStatus: "BLOCKED",
+    requiredCheckCount: 144,
+    rawPolicy: "DISCARD_AFTER_VALIDATED_RESULT",
+  });
+  const canonicalAuthorityBytes = `${JSON.stringify(validatedAuthority)}\n`;
+
+  assert.equal(canonicalAuthorityBytes.endsWith("\n"), true);
+  assert.equal(canonicalAuthorityBytes.match(/\n/gu)?.length, 1);
+  assert.equal(canonicalAuthorityBytes.includes("\r"), false);
+  assert.equal(canonicalAuthorityBytes.slice(0, -1).includes("\n"), false);
+  assert.deepEqual(
+    validateAttempt002Authority(JSON.parse(canonicalAuthorityBytes)),
+    validatedAuthority,
+  );
 });
