@@ -10,3 +10,4 @@ docs/~$*
 contracts/mobile/auth-readiness/v2/decision-values/*.json
 contracts/mobile/auth-readiness/v2/material-decision-history/records/*.json
 contracts/mobile/auth-readiness/v2/material-decision-history/schema.json
+scripts/r4b-evidence/attempt-002-authority.json
