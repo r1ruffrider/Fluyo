@@ -27,7 +27,7 @@ const ORDINARY_NATIVE_TRANSACTION_TIMEOUT_MILLISECONDS = 30_000;
 const FIRST_BROKER_HELLO_BOOTSTRAP_TIMEOUT_MILLISECONDS = 120_000;
 // Updated only after the C# source has passed the native compile and protocol suite.
 // The PowerShell loader independently recomputes this value before Add-Type.
-const EXPECTED_SOURCE_SHA256 = "9b6e6c796d6c5432bdd45cd78787616d31c193cf3bfe1bcbfa3b293c39633ce2";
+const EXPECTED_SOURCE_SHA256 = "f8457acbd177b9f1179ef6ce39fd401569eadab14ef6c5a71cf94715581c2b28";
 const EXPECTED_CONTRACT_SHA256 = "828b1756539f143369b728ef0ac27c4dd379346e664199153eea8be82b72e1d6";
 const BROKERS = new Map();
 const SESSION_ANCHORS = new Map();

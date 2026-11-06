@@ -495,7 +495,9 @@ public static class FluyoNativeBoundary
                     "scripts/r4b-evidence/windows-native-boundary.cs", "scripts/r4b-evidence/windows-native-client.mjs",
                     "scripts/r4b-evidence/windows-native-contract.json", "scripts/r4b-evidence/windows-native-worker.mjs"
                 };
-                allowed = readOperations.Contains(operation) && frozenFiles.Contains(relative, StringComparer.Ordinal);
+                allowed = (operation == "READ_BOUNDED" &&
+                    relative == "scripts/r4b-evidence/attempt-002-authority.json") ||
+                    readOperations.Contains(operation) && frozenFiles.Contains(relative, StringComparer.Ordinal);
                 break;
             case "TOOLS_READ":
                 allowed = readOperations.Contains(operation) && new[] { "", "chromedriver.exe", "nvda/nvda.exe" }.Contains(relative, StringComparer.Ordinal);

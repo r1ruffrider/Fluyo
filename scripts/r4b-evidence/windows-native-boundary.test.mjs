@@ -342,6 +342,19 @@ test("compiles the frozen native retained-handle boundary", () => {
   );
 });
 
+test("locks the reviewed native source digest to the sole client literal", () => {
+  const boundaryBytes = readFileSync(windowsNativeBoundaryTesting.sourcePath);
+  const boundarySha256 = createHash("sha256").update(boundaryBytes).digest("hex");
+  const clientBytes = readFileSync(new URL("./windows-native-client.mjs", import.meta.url));
+  const clientSource = clientBytes.toString("utf8");
+  const literals = [
+    ...clientSource.matchAll(/const EXPECTED_SOURCE_SHA256 = "(?<sha256>[0-9a-f]{64})";/gu),
+  ];
+  assert.equal(literals.length, 1);
+  assert.equal(literals[0].groups.sha256, boundarySha256);
+  assert.deepEqual(windowsNativeBoundaryTesting.loadBoundarySource(), boundaryBytes);
+});
+
 test("validates the strict non-circular J2 record and response schema", () => {
   const valid = j2Fixture();
   const bytes = Buffer.from(`${valid.intent.join("|")}\n${valid.applied.join("|")}\n`);
@@ -560,6 +573,72 @@ test("enforces the exact C# root-operation-relative-path denial matrix", () => {
     ["DOWNLOADS_READ", "HASH_BOUNDED", "nvda_2026.3.exe", false, "PASS"],
     ["DOWNLOADS_READ", "HASH_BOUNDED", "nested/nvda_2026.3.exe", false, "ROOT_RIGHT_DENIED"],
     ["FROZEN_REPOSITORY_READ", "READ_BOUNDED", "package.json", false, "PASS"],
+    [
+      "FROZEN_REPOSITORY_READ",
+      "READ_BOUNDED",
+      "scripts/r4b-evidence/attempt-002-authority.json",
+      false,
+      "PASS",
+    ],
+    [
+      "FROZEN_REPOSITORY_READ",
+      "HASH_BOUNDED",
+      "scripts/r4b-evidence/attempt-002-authority.json",
+      false,
+      "ROOT_RIGHT_DENIED",
+    ],
+    [
+      "FROZEN_REPOSITORY_READ",
+      "INVENTORY_TREE",
+      "scripts/r4b-evidence/attempt-002-authority.json",
+      false,
+      "ROOT_RIGHT_DENIED",
+    ],
+    [
+      "FROZEN_REPOSITORY_READ",
+      "PIN_FILE",
+      "scripts/r4b-evidence/attempt-002-authority.json",
+      false,
+      "ROOT_RIGHT_DENIED",
+    ],
+    ...[
+      "CREATE_DIRECTORY",
+      "WRITE_NEW",
+      "APPEND_DURABLE",
+      "RENAME_EXCLUSIVE",
+      "UNLINK_EXACT",
+      "REPLACE_EXISTING_EXACT",
+      "REMOVE_TREE_EXACT",
+      "UNPIN_FILE",
+      "JOB_CREATE_SUSPENDED",
+      "JOB_RESUME",
+      "JOB_STATUS",
+      "JOB_TERMINATE",
+      "NVDA_START_WITH_HANDLES",
+      "NVDA_STOP",
+      "TEST_CRASH_AFTER_INTENT",
+      "TEST_POST_ACK_JOURNAL_FAILURE",
+    ].map((operation) => [
+      "FROZEN_REPOSITORY_READ",
+      operation,
+      "scripts/r4b-evidence/attempt-002-authority.json",
+      false,
+      "ROOT_RIGHT_DENIED",
+    ]),
+    ...[
+      "scripts/r4b-evidence/attempt-002-authority.json/child",
+      "scripts/r4b-evidence/attempt-002-authority.json.sibling",
+      "scripts/r4b-evidence/attempt-002-authority.json.bak",
+      "scripts/r4b-evidence/Attempt-002-authority.json",
+      "scripts/r4b-evidence//attempt-002-authority.json",
+      "scripts/r4b-evidence/./attempt-002-authority.json",
+    ].map((relativePath) => [
+      "FROZEN_REPOSITORY_READ",
+      "READ_BOUNDED",
+      relativePath,
+      false,
+      "ROOT_RIGHT_DENIED",
+    ]),
     ["FROZEN_REPOSITORY_READ", "WRITE_NEW", "value.txt", false, "ROOT_RIGHT_DENIED"],
     ["BUILD_OUTPUT_ROOT", "REMOVE_TREE_EXACT", "", false, "PASS"],
     ["TEST_ROOT", "WRITE_NEW", "value.txt", false, "TEST_ROOT_DISABLED"],
