@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { Script } from "node:vm";
 import {
@@ -12,6 +14,7 @@ import {
   nativeRadioArrowModel,
   nativeSequentialFocusModel,
   preflightPageAuditScriptForTesting,
+  reconstructObserverOwnership,
   resolveAccessibleNameEvidence,
   rgbaContrastRatio,
   validateRtlNotchGeometry,
@@ -22,6 +25,117 @@ import {
   validateRepresentativeFocusFixture,
 } from "./preflight-observer.mjs";
 import { createDiscardedPreflightPlan } from "./preflight-plan.mjs";
+
+test("preserves Node, driver, Chrome, and future NVDA identities across reconstruction", () => {
+  const root = mkdtempSync(join(tmpdir(), "fluyo-observer-identities-"));
+  try {
+    const node = resolve(root, "node", "node.exe");
+    const driver = resolve(root, "driver", "chromedriver.exe");
+    const chrome = resolve(root, "chrome", "chrome.exe");
+    const nvda = resolve(root, "nvda", "nvda.exe");
+    for (const path of [node, driver, chrome, nvda]) {
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, Buffer.from(`identity:${path}`));
+    }
+
+    const web = reconstructObserverOwnership(null, [10], [dirname(node)], [node]);
+    const browser = reconstructObserverOwnership(
+      web,
+      [10, 20],
+      [dirname(node), dirname(driver), dirname(chrome)],
+      [driver, chrome],
+    );
+    const browserIdentities = browser.allowedExecutableIdentities.map(
+      ({ absolutePath }) => absolutePath,
+    );
+    assert.deepEqual(browserIdentities, [node, driver, chrome]);
+    assert.equal(Object.isFrozen(browser.allowedExecutableIdentities), true);
+    assert.equal(Object.isFrozen(browser.allowedExecutableIdentities[2]), true);
+
+    const withNvda = reconstructObserverOwnership(
+      browser,
+      [10, 20, 30],
+      [...browser.allowedRoots, dirname(nvda)],
+      [nvda, chrome],
+    );
+    assert.deepEqual(
+      withNvda.allowedExecutableIdentities.slice(0, 3),
+      browser.allowedExecutableIdentities,
+    );
+    assert.deepEqual(
+      withNvda.allowedExecutableIdentities.map(({ absolutePath }) => absolutePath),
+      [node, driver, chrome, nvda],
+    );
+
+    writeFileSync(chrome, Buffer.from("changed chrome bytes"));
+    assert.throws(
+      () =>
+        reconstructObserverOwnership(withNvda, withNvda.rootPids, withNvda.allowedRoots, [chrome]),
+      /identity changed during ownership reconstruction/u,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("threads no-default exact identities through every observer lifecycle phase", () => {
+  const source = readFileSync(new URL("./preflight-observer.mjs", import.meta.url), "utf8").replace(
+    /\s+/gu,
+    " ",
+  );
+  for (const control of [
+    "createExecutableIdentity(NVDA_ADAPTER_PATHS.installer)",
+    "createExecutableIdentity(defender)",
+    "[process.execPath]",
+    "[DRIVER, CHROME]",
+    "[nvdaWriter.executable]",
+    'waitForOwnedExit( installer, "NVDA portable creation", 120000, installerRegistry, "nvda-installer", installerIdentities, )',
+    'waitForOwnedExit( scanner, "NVDA portable malware scan", 120000, scannerRegistry, "defender-scanner", scannerIdentities, )',
+    "appendImmutableOwnershipRole(registry, descriptor, snapshot, allowedExecutableIdentities)",
+    "validateImmutableOwnershipRegistry(snapshot, next, [], allowedExecutableIdentities)",
+    'terminateRegisteredOwnedChild( child, writerRegistry, "nvda-writer", inspectWindowsProcessSocketSnapshot, [], writerIdentities, )',
+    "exactPhaseExecutableIdentities(ownership, [nvdaWriter.executable])",
+    "exactPhaseExecutableIdentities(ownership, [DRIVER, CHROME])",
+    "exactPhaseExecutableIdentities(ownership, [process.execPath])",
+    "captureRegisteredOwnedExitSet( initialSnapshot, registry, role, child.pid, [], allowedExecutableIdentities, )",
+    "proveRegisteredOwnedProcessSetAbsent( inspectWindowsProcessSocketSnapshot, registry, role, captured, [], allowedExecutableIdentities, )",
+    "terminateRegisteredOwnedChild( child, registry, role, inspectWindowsProcessSocketSnapshot, [], allowedExecutableIdentities, captured, )",
+    "} else { await proveRegisteredOwnedProcessSetAbsent( inspectWindowsProcessSocketSnapshot, registry, role, captured, [], allowedExecutableIdentities, ); } throw error;",
+  ]) {
+    assert.ok(source.includes(control), control);
+  }
+  assert.doesNotMatch(source, /waitForRoleRegistration\([^)]*allowedExecutableIdentities\s*=/u);
+  assert.doesNotMatch(source, /stopNvdaWriter\([^)]*allowedExecutableIdentities\s*=/u);
+});
+
+test("freezes each phase executable identity before spawning and revalidates at registration", () => {
+  const source = readFileSync(new URL("./preflight-observer.mjs", import.meta.url), "utf8");
+  for (const [identity, spawn] of [
+    [
+      "const installerIdentities = Object.freeze([\n    createExecutableIdentity(NVDA_ADAPTER_PATHS.installer),\n  ]);",
+      "const installer = spawn(NVDA_ADAPTER_PATHS.installer",
+    ],
+    [
+      "const scannerIdentities = Object.freeze([createExecutableIdentity(defender)]);",
+      "const scanner = spawn(",
+    ],
+    [
+      "const writerIdentities = Object.freeze([createExecutableIdentity(executable)]);",
+      "const child = await spawnNativeNvdaBoundary(",
+    ],
+    ["const webIdentity = createExecutableIdentity(process.execPath);", "const web = spawn("],
+    ["const driverIdentity = createExecutableIdentity(DRIVER);", "driver = spawn(DRIVER"],
+    ["const chromeIdentity = createExecutableIdentity(CHROME);", "driver = spawn(DRIVER"],
+  ]) {
+    assert.ok(source.indexOf(identity) >= 0, identity);
+    assert.ok(source.indexOf(identity) < source.indexOf(spawn), `${identity} before ${spawn}`);
+  }
+  assert.match(source, /reconstructObserverOwnershipFromFrozenIdentities/u);
+  assert.match(
+    source,
+    /validateImmutableOwnershipRegistry\(snapshot, next, \[\], allowedExecutableIdentities\)/u,
+  );
+});
 
 test("maps every sampled accepted state variant to a closed development fixture", () => {
   const plan = createDiscardedPreflightPlan();
