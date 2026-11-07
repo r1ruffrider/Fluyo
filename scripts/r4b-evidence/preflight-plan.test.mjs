@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
@@ -7,6 +9,7 @@ import { loadAcceptedR4aCatalog } from "./catalog.mjs";
 import { isPhysicalArtifactKey } from "./identity.mjs";
 import {
   PREFLIGHT_RELATIVE_ROOTS,
+  createAttempt002PreparationSummary,
   createPreflightInfrastructureHandshake,
   runPreflightCli,
 } from "./preflight-cli.mjs";
@@ -189,6 +192,106 @@ test("holds execution before any attempt-002 mutation until A2 and all gates are
     runPreflightCli(["execute"]),
     /requires OBSERVED, RESULT_RECORDED, CLEANING, or FAILED_HELD state/u,
   );
+});
+
+test("exposes one fixed PREP-only CLI command and sanitized summary", () => {
+  const source = readFileSync(new URL("./preflight-cli.mjs", import.meta.url), "utf8");
+  const prepareCase = source.slice(
+    source.indexOf('case "prepare-attempt-002"'),
+    source.indexOf('case "execute"'),
+  );
+  const summaryFunction = source.slice(
+    source.indexOf("export function createAttempt002PreparationSummary"),
+    source.indexOf("export async function runPreflightCli"),
+  );
+  assert.match(prepareCase, /prepareAttempt002Runtime\(\)/u);
+  assert.match(summaryFunction, /fluyo:r4b:preflight-preparation-summary:v1/u);
+  for (const key of [
+    "schema",
+    "evidenceStatus",
+    "status",
+    "receiptDigest",
+    "nativeNvdaLaunchStatus",
+  ]) {
+    assert.match(
+      summaryFunction,
+      new RegExp(key === "receiptDigest" ? "receiptDigest," : `${key}:`, "u"),
+    );
+  }
+  assert.doesNotMatch(prepareCase, /observeDiscardedPreflight|executeAttempt002Preflight/u);
+  assert.equal(
+    PREFLIGHT_RELATIVE_ROOTS.attempt002.preparationReceipt,
+    ".r4b-preflight/runtime/attempts/attempt-002-observer/preparation-receipt.json",
+  );
+});
+
+test("binds the CLI preparation summary to exact newline-terminated receipt bytes", () => {
+  const receipt = { status: "PASS", nativeNvdaLaunchStatus: "UNATTEMPTED" };
+  const exactBytes = `${JSON.stringify(receipt)}\n`;
+  const exactDigest = createHash("sha256").update(exactBytes, "utf8").digest("hex");
+  const summary = createAttempt002PreparationSummary(receipt, exactDigest);
+  assert.equal(summary.receiptDigest, exactDigest);
+  assert.notEqual(
+    summary.receiptDigest,
+    createHash("sha256").update(JSON.stringify(receipt), "utf8").digest("hex"),
+  );
+  const cli = readFileSync(new URL("./preflight-cli.mjs", import.meta.url), "utf8");
+  assert.match(
+    cli,
+    /createAttempt002PreparationSummary\(\s*receipt,\s*attempt002PreparationReceiptDigest\(\)\s*\)/u,
+  );
+});
+
+test("locks PREP to authority-bound manifest, sealed lifecycle receipt, and no observation launch", () => {
+  const observer = readFileSync(new URL("./preflight-observer.mjs", import.meta.url), "utf8");
+  const attempts = readFileSync(new URL("./preflight-attempts.mjs", import.meta.url), "utf8");
+  for (const marker of [
+    "validatePreparationManifestAuthorityBinding",
+    "canonicalPreparationClosureDigest",
+    "directExecutableSha256",
+    "spawnAndRegisterPreparationProcess",
+    "proveFailedSpawnRegistrationAbsent",
+    "registrationCapture.records",
+    "capturedOwnerView(captured)",
+    "attempt002PreparationReceiptDigest() !== currentAttempt002PreparedReceiptDigest()",
+  ]) {
+    assert.equal(observer.includes(marker), true, marker);
+  }
+  assert.equal(attempts.includes('"preparationReceiptSha256"'), true);
+  assert.equal(
+    attempts.includes("preparationReceiptSha256 === attempt002PreparationReceiptDigest()"),
+    true,
+  );
+  const prepare = observer.slice(
+    observer.indexOf("async function prepareNvdaPortable"),
+    observer.indexOf("async function launchPreparedNvdaWriter"),
+  );
+  assert.doesNotMatch(prepare, /spawnNativeNvdaBoundary|spawn\(DRIVER|createChromeSession/u);
+  const ownershipRegressions = readFileSync(
+    new URL("./preflight-process-owner.test.mjs", import.meta.url),
+    "utf8",
+  );
+  const observerRegressions = readFileSync(
+    new URL("./preflight-observer.test.mjs", import.meta.url),
+    "utf8",
+  );
+  for (const title of [
+    "never terminates recycled root or descendant PIDs with changed immutable identities",
+    "fails closed on unreadable or pre-inspection reused roots and binds registration records",
+    "unions successful registration closure through normal, exited, timeout, and error exit paths",
+  ]) {
+    assert.equal(observerRegressions.includes(title), true, title);
+  }
+  for (const title of [
+    "accepts already-exited only when absent",
+    "proves absence afterward",
+    "surviving reparented Chrome child",
+    "late descendant that appears after the root exits",
+    "pre-wait child reparented before graceful termination",
+    "cancels operations at the closed timeout",
+  ]) {
+    assert.equal(ownershipRegressions.includes(title), true, title);
+  }
 });
 
 test("git excludes every raw discarded-preflight root from accidental staging", () => {

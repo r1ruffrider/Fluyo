@@ -1,10 +1,13 @@
 import { fileURLToPath } from "node:url";
 
 import { validatePreflightToolManifest } from "./preflight-contracts.mjs";
-import { deriveAttempt002AuthorityRecord } from "./preflight-attempts.mjs";
+import {
+  attempt002PreparationReceiptDigest,
+  deriveAttempt002AuthorityRecord,
+} from "./preflight-attempts.mjs";
 import { runAttempt002BuildTransaction } from "./preflight-build.mjs";
 import { PREFLIGHT_EXECUTOR_PATHS, executeAttempt002Preflight } from "./preflight-executor.mjs";
-import { observeDiscardedPreflight } from "./preflight-observer.mjs";
+import { observeDiscardedPreflight, prepareAttempt002Runtime } from "./preflight-observer.mjs";
 import { readBoundedRegularFile } from "./fixed-root-guard.mjs";
 import {
   APPROVED_PREFLIGHT_SOURCE_COMMIT,
@@ -27,6 +30,8 @@ export const PREFLIGHT_RELATIVE_ROOTS = Object.freeze({
     sourceToolManifest: ".r4b-preflight/runtime/attempt-002-tool-manifest.json",
     authority: ".r4b-preflight/runtime/attempts/attempt-002-observer/authority.json",
     toolManifest: ".r4b-preflight/runtime/attempts/attempt-002-observer/tool-manifest.json",
+    preparationReceipt:
+      ".r4b-preflight/runtime/attempts/attempt-002-observer/preparation-receipt.json",
     raw: ".r4b-preflight/runtime/attempts/attempt-002-observer/raw",
     build: "apps/r4b-preflight-harness/.next-attempt-002",
     buildTemp: ".r4b-preflight/runtime/attempt-002-build-temp",
@@ -79,6 +84,24 @@ function printJson(value) {
   process.stdout.write(`${JSON.stringify(value)}\n`);
 }
 
+export function createAttempt002PreparationSummary(receipt, receiptDigest) {
+  if (
+    !receipt ||
+    receipt.status !== "PASS" ||
+    receipt.nativeNvdaLaunchStatus !== "UNATTEMPTED" ||
+    !/^[0-9a-f]{64}$/u.test(receiptDigest)
+  ) {
+    throw new Error("attempt-002 preparation summary inputs are malformed");
+  }
+  return Object.freeze({
+    schema: "fluyo:r4b:preflight-preparation-summary:v1",
+    evidenceStatus: "NON_EVIDENCE",
+    status: receipt.status,
+    receiptDigest,
+    nativeNvdaLaunchStatus: receipt.nativeNvdaLaunchStatus,
+  });
+}
+
 function fixedManifestPath() {
   return fileURLToPath(new URL("../../.r4b-preflight/runtime/tool-manifest.json", import.meta.url));
 }
@@ -86,7 +109,7 @@ function fixedManifestPath() {
 export async function runPreflightCli(args) {
   if (args.length !== 1) {
     throw new Error(
-      "expected exactly one fixed command: describe, emit-plan, emit-attempt-002-authority, validate-tool-manifest, build-attempt-002, observe, or execute",
+      "expected exactly one fixed command: describe, emit-plan, emit-attempt-002-authority, validate-tool-manifest, build-attempt-002, prepare-attempt-002, observe, or execute",
     );
   }
   switch (args[0]) {
@@ -119,6 +142,11 @@ export async function runPreflightCli(args) {
     case "build-attempt-002":
       printJson(await runAttempt002BuildTransaction());
       return;
+    case "prepare-attempt-002": {
+      const receipt = await prepareAttempt002Runtime();
+      printJson(createAttempt002PreparationSummary(receipt, attempt002PreparationReceiptDigest()));
+      return;
+    }
     case "execute": {
       const { result, receipt } = executeAttempt002Preflight();
       printJson({
@@ -146,7 +174,7 @@ export async function runPreflightCli(args) {
     }
     default:
       throw new Error(
-        "unknown command; expected describe, emit-plan, emit-attempt-002-authority, validate-tool-manifest, build-attempt-002, observe, or execute",
+        "unknown command; expected describe, emit-plan, emit-attempt-002-authority, validate-tool-manifest, build-attempt-002, prepare-attempt-002, observe, or execute",
       );
   }
 }

@@ -19,6 +19,7 @@ import {
   validateAttempt002Authority,
   validateAttempt002Lifecycle,
   validateAttempt002BuildAbortRecords,
+  validateAttempt002PreparationReceipt,
   validateAttempt002ReadinessReceipt,
   validateAttempt001SealedBytes,
 } from "./preflight-attempts.mjs";
@@ -317,6 +318,7 @@ test("closes pre-build failure only through a zero-residual BUILD_ABORTED receip
       attemptId: "attempt-002-observer",
       ordinal: index + 1,
       state,
+      preparationReceiptSha256: null,
       previousRecordSha256,
     };
     buildAbortRecords.push(record);
@@ -334,6 +336,7 @@ test("closes pre-build failure only through a zero-residual BUILD_ABORTED receip
           attemptId: "attempt-002-observer",
           ordinal: 4,
           state: "BUILDING",
+          preparationReceiptSha256: null,
           previousRecordSha256,
         },
       ]),
@@ -366,6 +369,7 @@ test("validates the append-only build/readiness/observe/cleanup lifecycle and re
       attemptId: "attempt-002-observer",
       ordinal: index + 1,
       state,
+      preparationReceiptSha256: state === "PREPARED" ? "f".repeat(64) : null,
       previousRecordSha256,
     };
     records.push(record);
@@ -373,7 +377,31 @@ test("validates the append-only build/readiness/observe/cleanup lifecycle and re
       .update(JSON.stringify(record), "utf8")
       .digest("hex");
   }
-  assert.equal(validateAttempt002Lifecycle(records).state, "SEALED");
+  const validatedLifecycle = validateAttempt002Lifecycle(records);
+  assert.equal(validatedLifecycle.state, "SEALED");
+  assert.equal(validatedLifecycle.preparationReceiptSha256, "f".repeat(64));
+  assert.throws(
+    () =>
+      validateAttempt002Lifecycle(
+        records.map((record) =>
+          record.state === "PREPARED"
+            ? { ...record, preparationReceiptSha256: "e".repeat(64) }
+            : record,
+        ),
+      ),
+    /lifecycle/u,
+  );
+  assert.throws(
+    () =>
+      validateAttempt002Lifecycle(
+        records.map((record) =>
+          record.state === "OBSERVING"
+            ? { ...record, preparationReceiptSha256: "f".repeat(64) }
+            : record,
+        ),
+      ),
+    /lifecycle/u,
+  );
   assert.throws(
     () =>
       validateAttempt002Lifecycle(
@@ -392,6 +420,7 @@ test("validates the append-only build/readiness/observe/cleanup lifecycle and re
         attemptId: "attempt-002-observer",
         ordinal: index + 1,
         state,
+        preparationReceiptSha256: state === "PREPARED" ? "f".repeat(64) : null,
         previousRecordSha256,
       };
       failureRecords.push(record);
@@ -422,6 +451,82 @@ test("closes persistent server, driver, and NVDA readiness receipts before sampl
       () => validateAttempt002ReadinessReceipt({ ...receipt, identityDigest: "b" }, readiness),
       /readiness receipt/u,
     );
+  }
+});
+
+test("closes portable preparation to one exact zero-launch receipt", () => {
+  const receipt = {
+    schema: "fluyo:r4b:attempt-002-preparation:v1",
+    attemptId: "attempt-002-observer",
+    authorityDigest: "1".repeat(64),
+    toolManifestDigest: "2".repeat(64),
+    installerIdentityDigest: "3".repeat(64),
+    defenderIdentityDigest: "4".repeat(64),
+    installerClosureDigest: "5".repeat(64),
+    defenderClosureDigest: "6".repeat(64),
+    portableExecutableIdentityDigest: "7".repeat(64),
+    portableInventoryDigest: "8".repeat(64),
+    configInventoryDigest: "9".repeat(64),
+    installerExitCode: 0,
+    defenderExitCode: 0,
+    installerAbsenceStatus: "PASS",
+    defenderAbsenceStatus: "PASS",
+    malwareStatus: "PASS",
+    serverLaunchStatus: "UNATTEMPTED",
+    driverLaunchStatus: "UNATTEMPTED",
+    chromeLaunchStatus: "UNATTEMPTED",
+    nativeNvdaLaunchStatus: "UNATTEMPTED",
+    status: "PASS",
+  };
+  assert.equal(validateAttempt002PreparationReceipt(receipt), receipt);
+  assert.match(ATTEMPT_002_PATHS.preparationReceipt, /preparation-receipt\.json$/u);
+  for (const omittedKey of Object.keys(receipt)) {
+    assert.throws(
+      () =>
+        validateAttempt002PreparationReceipt(
+          Object.fromEntries(Object.entries(receipt).filter(([key]) => key !== omittedKey)),
+        ),
+      /preparation receipt/u,
+    );
+  }
+  for (const digestField of [
+    "authorityDigest",
+    "toolManifestDigest",
+    "installerIdentityDigest",
+    "defenderIdentityDigest",
+    "installerClosureDigest",
+    "defenderClosureDigest",
+    "portableExecutableIdentityDigest",
+    "portableInventoryDigest",
+    "configInventoryDigest",
+  ]) {
+    assert.throws(
+      () => validateAttempt002PreparationReceipt({ ...receipt, [digestField]: "x" }),
+      /preparation receipt/u,
+    );
+  }
+  const mutations = [
+    null,
+    [],
+    Object.fromEntries(Object.entries(receipt).slice(1)),
+    Object.fromEntries([...Object.entries(receipt).slice(1), Object.entries(receipt)[0]]),
+    { ...receipt, unexpected: true },
+    { ...receipt, authorityDigest: "A".repeat(64) },
+    { ...receipt, installerExitCode: 1 },
+    { ...receipt, installerExitCode: "0" },
+    { ...receipt, defenderExitCode: null },
+    { ...receipt, defenderExitCode: -1 },
+    { ...receipt, installerAbsenceStatus: "UNATTEMPTED" },
+    { ...receipt, defenderAbsenceStatus: "FAIL" },
+    { ...receipt, malwareStatus: "UNATTEMPTED" },
+    { ...receipt, serverLaunchStatus: "PASS" },
+    { ...receipt, driverLaunchStatus: "PASS" },
+    { ...receipt, chromeLaunchStatus: "PASS" },
+    { ...receipt, nativeNvdaLaunchStatus: "PASS" },
+    { ...receipt, status: "FAIL" },
+  ];
+  for (const mutation of mutations) {
+    assert.throws(() => validateAttempt002PreparationReceipt(mutation), /preparation receipt/u);
   }
 });
 
