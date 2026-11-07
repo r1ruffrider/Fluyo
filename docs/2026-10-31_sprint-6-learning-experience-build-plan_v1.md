@@ -1571,21 +1571,21 @@ capture, provider, production, or external-action authority.
 
 **Today**
 
-- PR #78 repaired the formatter boundary without changing the canonical one-line authority
-  contract and merged as trusted harness commit `4c94dfbe5cc04ac0b12043220c2dbe9d8563cede`
-  (`H3`).
-- PR #79 freshly derived the sole-path Attempt-002 authority from `H3` and merged as `main`
-  `f34b2ffab74e0973b1053ca2f01586ce3c4d0936`. Post-main CI run `42316447797`
-  passed all nine jobs; approval-history run `42316447878` and material-decision run
-  `42316448000` also passed.
+- PR #81 repaired executable-identity ownership without launching any runtime and merged as trusted
+  harness commit `e5f7d4a5049084b446df3cf574f6083859e4eae7` (`H4`).
+- PR #82 freshly derived the sole-path Attempt-002 authority from `H4` and merged as `main`
+  `62351eace4391705ffb319b154f6b047835f75af`. Post-main CI run `42364162306`
+  passed all nine jobs; approval-history run `42364162301` and material-decision run
+  `42364162291` also passed.
 - The merged authority is
   `scripts/r4b-evidence/attempt-002-authority.json`: 1,062 bytes, one terminal LF, blob
-  `26b4480d4b9db3fabec445d8ce669d4e1f8d878a`, file SHA-256
-  `a53fb609993409cb31daded82eafc01439d74cfa80f05b025213f07bb4f7a273`, and canonical
-  digest `4b44bd9de3ab626bae17c1425b79bd46ccc7bd208e9747d33587dea7aeeec2a1`.
+  `3567243a615aeff8264dd8b36b9023b373a4d247`, file SHA-256
+  `45eb6e5e2afa465df73398ff5747ca93fe4c9a8a9df980dacead9ec9252d0135`, and canonical
+  digest `88209c97744bb9c03b7b1310a8e385d287c33cff1c07cd8a85f912171ef53e7a`.
   It remains `NON_EVIDENCE`, `creditable: false`, predecessor `BLOCKED`, with 144 required
-  checks and zero evidence credit. The `PartialChain`/`NoCheck` provenance limitations remain
-  limitations and do not become stronger online revocation-chain claims.
+  checks and zero evidence credit. Runtime accounting remains 0 conducted, 0 passed, 0 failed,
+  144 blocked, and 144 required-unattempted. The `PartialChain`/`NoCheck` provenance limitations
+  remain limitations and do not become stronger online revocation-chain claims.
 - PR #77 remains an open draft frozen at
   `b8e4bfadb3b24b1390536b8108712fb310018fd8`; its historical formatting failure is not to
   be rerun, rewritten, or reused.
@@ -1595,6 +1595,8 @@ capture, provider, production, or external-action authority.
 - Attempt-002 tool, harness, and observer launch and runtime capture remain explicitly
   unapproved and unattempted. The authority merge does not convert any of the 144 required
   statuses to PASS and does not complete R4-B2, aggregate R4-B, or Sprint 6.
+- Prior runtime approval for `f34b2ffab74e0973b1053ca2f01586ce3c4d0936` does not transfer to
+  the new executable A2 `62351eace4391705ffb319b154f6b047835f75af`.
 - OCR remains `BLOCKED` and outside Attempt-002. Provider configuration, runner registration,
   administrator/firewall action, storage expansion, credentials, spending, and external-account
   actions remain separately gated.
@@ -1603,8 +1605,9 @@ capture, provider, production, or external-action authority.
 
 - Nothing for this repository-only handoff reconciliation.
 - The next non-record action requires Marlon's explicit approval of the exact bounded local
-  runtime scope before any cached Chrome, Chromedriver, or NVDA byte is launched or executed,
-  any portable NVDA preparation occurs, or the isolated harness/observer captures observations.
+  runtime scope on executable A2 `62351eace4391705ffb319b154f6b047835f75af` before any cached
+  Chrome, Chromedriver, or NVDA byte is launched or executed, any portable NVDA preparation occurs,
+  or the isolated harness/observer captures observations.
 - Production, signing, stores, spending, credentials, provider/admin/firewall/storage actions,
   external accounts, publication, and other previously excluded actions remain unapproved.
 
@@ -1612,9 +1615,9 @@ capture, provider, production, or external-action authority.
 
 - Hold runtime execution until the runtime choice is explicit. Any future runtime must use a clean
   checkout whose `HEAD` is exactly the immutable executable A2 commit
-  `f34b2ffab74e0973b1053ca2f01586ce3c4d0936`.
-- Any later commit produced from this records-only handoff is documentation only. It is not
-  executable A2, must never be substituted as runtime `HEAD`, and cannot satisfy the direct-child
+  `62351eace4391705ffb319b154f6b047835f75af`.
+- This records-only handoff branch and any resulting or future records commit are non-executable.
+  Their `HEAD` must never be substituted for executable A2 and cannot satisfy the direct-child
   verifier.
 - If Marlon approves the bounded local runtime, require Catalina, Natalia, Camila, Daniela,
   Julieta, Gabriela, Renata, and Elana to pass their applicable pre-execution gates against that
