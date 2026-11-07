@@ -683,7 +683,8 @@ test("fails closed on unreadable or pre-inspection reused roots and binds regist
       /registration closure/u,
     );
     await assert.rejects(run([]), /registration closure/u);
-    const { executableSha256: _removedHash, ...missingHashRecord } = rootRecord;
+    const missingHashRecord = { ...rootRecord };
+    delete missingHashRecord.executableSha256;
     await assert.rejects(
       run([Object.freeze(missingHashRecord)]),
       /records changed or are incomplete/u,
