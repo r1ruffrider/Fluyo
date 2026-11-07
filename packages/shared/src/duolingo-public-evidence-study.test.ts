@@ -2429,19 +2429,19 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
       "The authority merge does not convert any of the 144 required statuses to PASS and does not complete R4-B2, aggregate R4-B, or Sprint 6.",
     );
     expect(status).toContain(
-      "The next non-record action requires Marlon's explicit approval of the exact bounded local runtime scope on executable A2 `62351eace4391705ffb319b154f6b047835f75af` before any cached Chrome, Chromedriver, or NVDA byte is launched or executed, any portable NVDA preparation occurs, or the isolated harness/observer captures observations.",
+      "The next non-record action requires Marlon's explicit approval of the exact bounded local runtime scope on executable A2 `8b6274c3f53d60f8781a4dc082bc04023e2f6447` before any cached Chrome, Chromedriver, or NVDA byte is launched or executed, any portable NVDA preparation occurs, or the isolated harness/observer captures observations.",
     );
     expect(status).toContain(
       "Attempt-002 tool, harness, and observer launch and runtime capture remain explicitly unapproved and unattempted.",
     );
     expect(status).toContain(
-      "checkout whose `HEAD` is exactly the immutable executable A2 commit `62351eace4391705ffb319b154f6b047835f75af`.",
+      "checkout whose `HEAD` is exactly the immutable executable A2 commit `8b6274c3f53d60f8781a4dc082bc04023e2f6447`.",
     );
     expect(status).toContain(
       "This records-only handoff branch and any resulting or future records commit are non-executable. Their `HEAD` must never be substituted for executable A2 and cannot satisfy the direct-child verifier.",
     );
     expect(status).toContain(
-      "Prior runtime approval for `f34b2ffab74e0973b1053ca2f01586ce3c4d0936` does not transfer to the new executable A2 `62351eace4391705ffb319b154f6b047835f75af`.",
+      "Prior runtime approval for `62351eace4391705ffb319b154f6b047835f75af` does not transfer to the new executable A2 `8b6274c3f53d60f8781a4dc082bc04023e2f6447`.",
     );
     expect(status).toContain(
       "Provider configuration, runner registration, administrator/firewall action, storage expansion, credentials, spending, and external-account actions remain separately gated.",
