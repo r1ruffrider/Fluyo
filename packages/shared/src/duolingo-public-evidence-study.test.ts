@@ -2407,12 +2407,42 @@ describe("Sprint 6 R0 public-evidence boundary", () => {
     expect(handoff).toContain("Elana remains the sole independent exact-head QA");
   });
 
-  it("preserves zero implementation and the separate PR 61 boundary", () => {
-    expect(plan).toContain("Runtime implementation remains zero");
-    expect(plan).toContain("PR #61 and its required-check blocker remain separate and untouched");
+  it("preserves immutable handoff boundaries and locks the current R4-B2 status", () => {
     expect(handoff).toContain("PR #61 remains a separate draft");
     expect(handoff).toContain("native runtime remains zero");
     expect(handoff).toContain("all 24 live-auth rows remain unattempted");
+    expect(plan).toContain("It does not modify or clear PR #61.");
+
+    expect(plan.match(/^## Status$/gmu) ?? []).toHaveLength(1);
+    const status = (plan.split("## Status")[1] ?? "").replace(/\s+/gu, " ").trim();
+
+    expect(status).toContain(
+      "This status is the current repository handoff as of 2026-11-07. It does not amend the digest-bound Attempt-002 infrastructure plan or authority record, and it grants no runtime, capture, provider, production, or external-action authority.",
+    );
+    expect(status).toContain(
+      "It remains `NON_EVIDENCE`, `creditable: false`, predecessor `BLOCKED`, with 144 required checks and zero evidence credit.",
+    );
+    expect(status).toContain(
+      "The authority merge does not convert any of the 144 required statuses to PASS and does not complete R4-B2, aggregate R4-B, or Sprint 6.",
+    );
+    expect(status).toContain(
+      "The next non-record action requires Marlon's explicit approval of the exact bounded local runtime scope before any cached Chrome, Chromedriver, or NVDA byte is launched or executed, any portable NVDA preparation occurs, or the isolated harness/observer captures observations.",
+    );
+    expect(status).toContain(
+      "Attempt-002 tool, harness, and observer launch and runtime capture remain explicitly unapproved and unattempted.",
+    );
+    expect(status).toContain(
+      "checkout whose `HEAD` is exactly the immutable executable A2 commit `f34b2ffab74e0973b1053ca2f01586ce3c4d0936`.",
+    );
+    expect(status).toContain(
+      "Any later commit produced from this records-only handoff is documentation only. It is not executable A2, must never be substituted as runtime `HEAD`, and cannot satisfy the direct-child verifier.",
+    );
+    expect(status).toContain(
+      "Provider configuration, runner registration, administrator/firewall action, storage expansion, credentials, spending, and external-account actions remain separately gated.",
+    );
+    expect(status).toContain(
+      "Production, signing, stores, spending, credentials, provider/admin/firewall/storage actions, external accounts, publication, and other previously excluded actions remain unapproved.",
+    );
   });
 
   it("links the canonical R0 records from the roadmap and handoff", () => {
