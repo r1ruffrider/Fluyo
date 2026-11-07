@@ -1571,17 +1571,19 @@ capture, provider, production, or external-action authority.
 
 **Today**
 
-- PR #81 repaired executable-identity ownership without launching any runtime and merged as trusted
-  harness commit `e5f7d4a5049084b446df3cf574f6083859e4eae7` (`H4`).
-- PR #82 freshly derived the sole-path Attempt-002 authority from `H4` and merged as `main`
-  `62351eace4391705ffb319b154f6b047835f75af`. Post-main CI run `42364162306`
-  passed all nine jobs; approval-history run `42364162301` and material-decision run
-  `42364162291` also passed.
+- PR #84 repaired the PREP process-identity closure without launching any runtime and merged as
+  trusted harness commit `4a2b5658b6ed252775e54807ef3f8a4c7ac2ff06` (`H5`). Post-main CI
+  run `42406059958` passed all nine jobs; approval-history run `42406059935` and
+  material-decision run `42406059969` also passed.
+- PR #85 freshly derived the sole-path Attempt-002 authority from `H5` and merged as `main`
+  `8b6274c3f53d60f8781a4dc082bc04023e2f6447`. Post-main CI run `42409623474`
+  passed all nine jobs; approval-history run `42409623477` and material-decision run
+  `42409623595` also passed.
 - The merged authority is
   `scripts/r4b-evidence/attempt-002-authority.json`: 1,062 bytes, one terminal LF, blob
-  `3567243a615aeff8264dd8b36b9023b373a4d247`, file SHA-256
-  `45eb6e5e2afa465df73398ff5747ca93fe4c9a8a9df980dacead9ec9252d0135`, and canonical
-  digest `88209c97744bb9c03b7b1310a8e385d287c33cff1c07cd8a85f912171ef53e7a`.
+  `9b91dfdeee5a8051f7547a297a4f4f0b578c9c0f`, file SHA-256
+  `91de3dfe1c139ede4c529a89374ebec9136ff2946dc02e8c3ed73ad708d51e05`, and canonical
+  digest `fea0c920a476d4dbab965c881ef6e2ceab66f1dbcf1808fc0cf13450c7f22dfb`.
   It remains `NON_EVIDENCE`, `creditable: false`, predecessor `BLOCKED`, with 144 required
   checks and zero evidence credit. Runtime accounting remains 0 conducted, 0 passed, 0 failed,
   144 blocked, and 144 required-unattempted. The `PartialChain`/`NoCheck` provenance limitations
@@ -1595,8 +1597,8 @@ capture, provider, production, or external-action authority.
 - Attempt-002 tool, harness, and observer launch and runtime capture remain explicitly
   unapproved and unattempted. The authority merge does not convert any of the 144 required
   statuses to PASS and does not complete R4-B2, aggregate R4-B, or Sprint 6.
-- Prior runtime approval for `f34b2ffab74e0973b1053ca2f01586ce3c4d0936` does not transfer to
-  the new executable A2 `62351eace4391705ffb319b154f6b047835f75af`.
+- Prior runtime approval for `62351eace4391705ffb319b154f6b047835f75af` does not transfer to
+  the new executable A2 `8b6274c3f53d60f8781a4dc082bc04023e2f6447`.
 - OCR remains `BLOCKED` and outside Attempt-002. Provider configuration, runner registration,
   administrator/firewall action, storage expansion, credentials, spending, and external-account
   actions remain separately gated.
@@ -1605,7 +1607,7 @@ capture, provider, production, or external-action authority.
 
 - Nothing for this repository-only handoff reconciliation.
 - The next non-record action requires Marlon's explicit approval of the exact bounded local
-  runtime scope on executable A2 `62351eace4391705ffb319b154f6b047835f75af` before any cached
+  runtime scope on executable A2 `8b6274c3f53d60f8781a4dc082bc04023e2f6447` before any cached
   Chrome, Chromedriver, or NVDA byte is launched or executed, any portable NVDA preparation occurs,
   or the isolated harness/observer captures observations.
 - Production, signing, stores, spending, credentials, provider/admin/firewall/storage actions,
@@ -1615,7 +1617,7 @@ capture, provider, production, or external-action authority.
 
 - Hold runtime execution until the runtime choice is explicit. Any future runtime must use a clean
   checkout whose `HEAD` is exactly the immutable executable A2 commit
-  `62351eace4391705ffb319b154f6b047835f75af`.
+  `8b6274c3f53d60f8781a4dc082bc04023e2f6447`.
 - This records-only handoff branch and any resulting or future records commit are non-executable.
   Their `HEAD` must never be substituted for executable A2 and cannot satisfy the direct-child
   verifier.
