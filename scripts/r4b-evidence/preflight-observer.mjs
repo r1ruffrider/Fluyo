@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { basename, dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -14,8 +14,10 @@ import {
 } from "./preflight-contracts.mjs";
 import {
   ATTEMPT_002_PATHS,
+  attempt002PreparationReceiptDigest,
   createAttempt002Authority,
   currentAttempt002LifecycleState,
+  currentAttempt002PreparedReceiptDigest,
   recordAttempt002DriverReady,
   recordAttempt002FailedHeld,
   recordAttempt002NvdaReady,
@@ -24,7 +26,9 @@ import {
   recordAttempt002Prepared,
   recordAttempt002Preparing,
   recordAttempt002ServerReady,
+  readAttempt002PreparationReceipt,
   resolveAttempt002State,
+  validateAttempt002PreparationReceipt,
   validateAttempt002ReadinessReceipt,
 } from "./preflight-attempts.mjs";
 import {
@@ -89,6 +93,7 @@ const MANIFEST = ATTEMPT_002_PATHS.toolManifest;
 const AGGREGATE = ATTEMPT_002_PATHS.aggregate;
 const CHROME = resolve(ROOT, ".r4b-preflight/tools/chrome-win64/chrome.exe");
 const DRIVER = resolve(ROOT, ".r4b-preflight/tools/chromedriver-win64/chromedriver.exe");
+const DEFENDER = "C:\\Program Files\\Windows Defender\\MpCmdRun.exe";
 const NEXT_CLI = fileURLToPath(import.meta.resolve("next/dist/bin/next"));
 const HARNESS = resolve(ROOT, "apps/r4b-preflight-harness");
 const HARNESS_BUILD = ATTEMPT_002_PATHS.build;
@@ -211,6 +216,60 @@ function sha256(path) {
   return createHash("sha256")
     .update(readBoundedRegularFile(path, ROOT, 512 * 1024 * 1024, "observer bounded digest"))
     .digest("hex");
+}
+function directExecutableSha256(path) {
+  const absolutePath = resolve(path);
+  let stats;
+  try {
+    stats = lstatSync(absolutePath);
+  } catch {
+    throw new Error("spawn registration executable bytes are unreadable");
+  }
+  if (
+    !stats.isFile() ||
+    stats.isSymbolicLink() ||
+    stats.size <= 0 ||
+    stats.size > 512 * 1024 * 1024
+  ) {
+    throw new Error("spawn registration executable is not a bounded direct regular file");
+  }
+  try {
+    return createHash("sha256").update(readFileSync(absolutePath)).digest("hex");
+  } catch {
+    throw new Error("spawn registration executable bytes are unreadable");
+  }
+}
+function valueDigest(value) {
+  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+}
+export function canonicalPreparationClosureDigest(
+  role,
+  identityDigest,
+  capturedSetDigest,
+  absenceStatus,
+) {
+  if (
+    !new Set(["nvda-installer", "defender-scanner"]).has(role) ||
+    !/^[0-9a-f]{64}$/u.test(identityDigest) ||
+    !/^[0-9a-f]{64}$/u.test(capturedSetDigest) ||
+    absenceStatus !== "PASS"
+  ) {
+    throw new Error("preparation closure identity, captured set, or absence status is malformed");
+  }
+  return valueDigest({ role, identityDigest, capturedSetDigest, absenceStatus });
+}
+
+export function validatePreparationManifestAuthorityBinding(
+  authorityToolManifestDigest,
+  copiedToolManifestDigest,
+) {
+  if (
+    !/^[0-9a-f]{64}$/u.test(authorityToolManifestDigest) ||
+    authorityToolManifestDigest !== copiedToolManifestDigest
+  ) {
+    throw new Error("copied attempt-002 manifest is not bound to immutable A2 authority");
+  }
+  return true;
 }
 export function reconstructObserverOwnership(
   priorOwnership,
@@ -390,14 +449,222 @@ function boundedLog(child) {
     });
   return () => output;
 }
-async function waitForOwnedExit(
+
+function syncAppendOnlyExecutableIdentities(phaseIdentities, nextIdentities) {
+  for (const identity of nextIdentities) {
+    const existing = phaseIdentities.find(
+      (candidate) => candidate.absolutePath.toLowerCase() === identity.absolutePath.toLowerCase(),
+    );
+    if (
+      existing &&
+      (existing.absolutePath !== identity.absolutePath || existing.sha256 !== identity.sha256)
+    ) {
+      throw ownedProcessHold("lower ownership executable identity collided or changed");
+    }
+    if (!existing) phaseIdentities.push(identity);
+  }
+  return phaseIdentities;
+}
+
+function canonicalOwnedClosureGeneration(frozenClosure, phaseIdentities) {
+  const sortedIdentities = [...phaseIdentities]
+    .map((identity) => Object.freeze({ ...identity }))
+    .sort((left, right) =>
+      left.absolutePath < right.absolutePath ? -1 : left.absolutePath > right.absolutePath ? 1 : 0,
+    );
+  return Object.freeze({
+    recordCount: frozenClosure.records.length,
+    pidCount: frozenClosure.pids.length,
+    socketCount: frozenClosure.sockets.length,
+    identityCount: sortedIdentities.length,
+    recordsDigest: valueDigest(frozenClosure.records),
+    pidsDigest: valueDigest(frozenClosure.pids),
+    socketsDigest: valueDigest(frozenClosure.sockets),
+    identitiesDigest: valueDigest(sortedIdentities),
+    closureDigest: valueDigest(frozenClosure),
+  });
+}
+
+function assertMonotonicOwnedGeneration(previous, next) {
+  if (
+    previous.frozenClosure.rootPid !== next.frozenClosure.rootPid ||
+    previous.frozenClosure.expectedRootIdentity.absolutePath !==
+      next.frozenClosure.expectedRootIdentity.absolutePath ||
+    previous.frozenClosure.expectedRootIdentity.sha256 !==
+      next.frozenClosure.expectedRootIdentity.sha256 ||
+    previous.frozenClosure.launchTimeMs !== next.frozenClosure.launchTimeMs ||
+    previous.frozenClosure.records.some(
+      (record) =>
+        !next.frozenClosure.records.some((candidate) => sameProcessRecord(record, candidate)),
+    ) ||
+    previous.frozenClosure.sockets.some((socket) => !next.frozenClosure.sockets.includes(socket)) ||
+    previous.executableIdentities.some(
+      (identity) =>
+        !next.executableIdentities.some(
+          (candidate) =>
+            candidate.absolutePath === identity.absolutePath &&
+            candidate.sha256 === identity.sha256,
+        ),
+    )
+  ) {
+    throw ownedProcessHold("owned closure generation was not append-only");
+  }
+}
+
+function closureExpanded(previous, next) {
+  return (
+    previous.generation.closureDigest !== next.generation.closureDigest ||
+    previous.generation.identitiesDigest !== next.generation.identitiesDigest
+  );
+}
+
+function ownedClosureExpanded() {
+  const error = new Error("owned closure expanded during bounded absence proof");
+  error.code = "OWNED_CLOSURE_EXPANDED";
+  return error;
+}
+
+function ownedProofDeadline() {
+  const error = new Error("owned absence proof exceeded its absolute deadline");
+  error.code = "OWNED_PROOF_DEADLINE";
+  return error;
+}
+
+export async function proveAbsenceFromFreshClosure({
+  closure,
+  phaseIdentities,
+  inspect,
+  proveAbsent,
+  registry,
+  role,
+  timeoutMs = 5000,
+  now = Date.now,
+}) {
+  if (
+    !closure ||
+    !Array.isArray(phaseIdentities) ||
+    !phaseIdentities.length ||
+    typeof inspect !== "function" ||
+    typeof proveAbsent !== "function" ||
+    !registry ||
+    !role ||
+    !Number.isFinite(timeoutMs) ||
+    timeoutMs <= 0 ||
+    typeof now !== "function"
+  ) {
+    throw new Error("fresh owned absence proof parameters are malformed");
+  }
+  const deadline = now() + timeoutMs;
+  const reconcile = () => {
+    const reconciled = reconcileOwnedClosureForTesting(closure, inspect());
+    syncAppendOnlyExecutableIdentities(phaseIdentities, reconciled.executableIdentities);
+    const frozenClosure = freezeSpawnClosure(closure);
+    const executableIdentities = Object.freeze(
+      [...phaseIdentities]
+        .map((identity) => Object.freeze({ ...identity }))
+        .sort((left, right) =>
+          left.absolutePath < right.absolutePath
+            ? -1
+            : left.absolutePath > right.absolutePath
+              ? 1
+              : 0,
+        ),
+    );
+    return Object.freeze({
+      frozenClosure,
+      executableIdentities,
+      ownerView: capturedOwnerView(frozenClosure),
+      filteredSnapshot: reconciled.filteredSnapshot,
+      generation: canonicalOwnedClosureGeneration(frozenClosure, executableIdentities),
+    });
+  };
+  while (true) {
+    const epoch = reconcile();
+    if (now() > deadline) throw ownedProofDeadline();
+    const identityAwareInspector = () => {
+      const current = reconcile();
+      assertMonotonicOwnedGeneration(epoch, current);
+      if (closureExpanded(epoch, current)) throw ownedClosureExpanded();
+      if (now() > deadline) throw ownedProofDeadline();
+      return current.filteredSnapshot;
+    };
+    let lowerError = null;
+    const remainingMs = deadline - now();
+    if (remainingMs <= 0) throw ownedProofDeadline();
+    let lowerTimer;
+    try {
+      await Promise.race([
+        Promise.resolve().then(() =>
+          proveAbsent(
+            identityAwareInspector,
+            registry,
+            role,
+            epoch.ownerView,
+            [],
+            epoch.executableIdentities,
+          ),
+        ),
+        new Promise((_, reject) => {
+          lowerTimer = setTimeout(() => reject(ownedProofDeadline()), remainingMs);
+        }),
+      ]);
+    } catch (error) {
+      if (error?.code === "OWNED_CLOSURE_EXPANDED") {
+        const expanded = Object.freeze({
+          frozenClosure: freezeSpawnClosure(closure),
+          executableIdentities: Object.freeze([...phaseIdentities]),
+        });
+        assertMonotonicOwnedGeneration(epoch, expanded);
+        if (now() > deadline) throw ownedProofDeadline();
+        continue;
+      }
+      if (error?.code === "OWNED_PROCESS_HOLD" || error?.code === "OWNED_PROOF_DEADLINE") {
+        throw error;
+      }
+      lowerError = error;
+    } finally {
+      clearTimeout(lowerTimer);
+    }
+
+    // A lower success or stable error is accepted only after one more fresh
+    // inspection. HOLD takes precedence; then the shared deadline; expansion
+    // retries under that same deadline.
+    const post = reconcile();
+    assertMonotonicOwnedGeneration(epoch, post);
+    if (now() > deadline) throw ownedProofDeadline();
+    if (closureExpanded(epoch, post)) continue;
+    if (lowerError) throw lowerError;
+    return post;
+  }
+}
+
+export async function waitForOwnedExitForTesting(
   child,
   label,
   timeoutMs,
   registry,
   role,
   allowedExecutableIdentities,
+  registrationCapture,
+  dependencies = {},
 ) {
+  const inspect = dependencies.inspect ?? inspectWindowsProcessSocketSnapshot;
+  const proveAbsent = dependencies.proveAbsent ?? proveRegisteredOwnedProcessSetAbsent;
+  const terminateOwned = dependencies.terminateOwned ?? terminateRegisteredOwnedChild;
+  const captureExitSet = dependencies.captureExitSet ?? captureRegisteredOwnedExitSet;
+  const waitForExit =
+    dependencies.waitForExit ??
+    (() =>
+      withBoundedTimeout(
+        () =>
+          new Promise((accept, reject) => {
+            child.once("error", reject);
+            child.once("exit", (code) => accept(code));
+          }),
+        timeoutMs,
+        label,
+        activeAttemptSignal,
+      ));
   if (!child || !Number.isSafeInteger(child.pid) || child.pid <= 0) {
     throw new Error(`${label} did not create an exact owned process`);
   }
@@ -405,75 +672,161 @@ async function waitForOwnedExit(
     !registry ||
     !role ||
     !Array.isArray(allowedExecutableIdentities) ||
-    allowedExecutableIdentities.length === 0
+    allowedExecutableIdentities.length === 0 ||
+    !registrationCapture ||
+    !Object.isFrozen(registrationCapture) ||
+    JSON.stringify(Object.keys(registrationCapture)) !==
+      JSON.stringify([
+        "rootPid",
+        "expectedRootIdentity",
+        "launchTimeMs",
+        "records",
+        "pids",
+        "sockets",
+      ]) ||
+    !Array.isArray(registrationCapture.records) ||
+    !Object.isFrozen(registrationCapture.records) ||
+    registrationCapture.records.length === 0 ||
+    registrationCapture.records.some((record) => !Object.isFrozen(record)) ||
+    registrationCapture.rootPid !== child.pid ||
+    !Object.isFrozen(registrationCapture.expectedRootIdentity) ||
+    JSON.stringify(Object.keys(registrationCapture.expectedRootIdentity)) !==
+      JSON.stringify(["absolutePath", "sha256"]) ||
+    !Number.isFinite(registrationCapture.launchTimeMs) ||
+    !Array.isArray(registrationCapture.pids) ||
+    !Object.isFrozen(registrationCapture.pids) ||
+    !Array.isArray(registrationCapture.sockets) ||
+    !Object.isFrozen(registrationCapture.sockets) ||
+    !registrationCapture.pids.includes(child.pid)
   ) {
-    throw new Error(`${label} requires exact phase executable identities`);
+    throw new Error(`${label} requires exact phase identities and registration closure`);
   }
-  const initialSnapshot = inspectWindowsProcessSocketSnapshot();
+  const registrationRoot = registrationCapture.records.find(
+    (registeredRecord) => registeredRecord.pid === child.pid,
+  );
+  const expectedRootIdentity = allowedExecutableIdentities.find(
+    (identity) => resolve(identity.absolutePath) === registrationRoot?.executablePath,
+  );
+  const recordPids = registrationCapture.records
+    .map(({ pid }) => pid)
+    .sort((left, right) => left - right);
+  if (
+    !registrationRoot ||
+    !expectedRootIdentity ||
+    resolve(registrationCapture.expectedRootIdentity.absolutePath) !==
+      registrationRoot.executablePath ||
+    registrationCapture.expectedRootIdentity.sha256 !== registrationRoot.executableSha256 ||
+    registrationRoot.executableSha256 !== expectedRootIdentity.sha256 ||
+    registrationCapture.records.some(
+      (registeredRecord) =>
+        JSON.stringify(Object.keys(registeredRecord)) !==
+          JSON.stringify([
+            "pid",
+            "parentPid",
+            "creationTimeUtc",
+            "executablePath",
+            "executableSha256",
+          ]) ||
+        !Number.isSafeInteger(registeredRecord.pid) ||
+        registeredRecord.pid <= 0 ||
+        typeof registeredRecord.executablePath !== "string" ||
+        !/^[0-9a-f]{64}$/u.test(registeredRecord.executableSha256 ?? "") ||
+        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(
+          registeredRecord.creationTimeUtc,
+        ) ||
+        resolve(registeredRecord.executablePath) !== registeredRecord.executablePath,
+    ) ||
+    JSON.stringify(recordPids) !== JSON.stringify(registrationCapture.pids)
+  ) {
+    throw new Error(`${label} registration closure records changed or are incomplete`);
+  }
+  const tracked = createSpawnClosure(
+    registrationCapture.rootPid,
+    registrationCapture.expectedRootIdentity,
+    registrationCapture.launchTimeMs,
+  );
+  for (const registeredRecord of registrationCapture.records) {
+    tracked.records.set(registeredRecord.pid, registeredRecord);
+  }
+  for (const socket of registrationCapture.sockets) tracked.sockets.add(socket);
+  const phaseIdentities = [...allowedExecutableIdentities];
+  const identityInspect = () => {
+    const reconciled = reconcileOwnedClosureForTesting(tracked, inspect());
+    syncAppendOnlyExecutableIdentities(phaseIdentities, reconciled.executableIdentities);
+    return reconciled.filteredSnapshot;
+  };
+  const initialSnapshot = identityInspect();
   const record = registry.find((entry) => entry.role === role && entry.pid === child.pid);
   if (!record) throw new Error(`${label} requires the exact registered process role`);
-  const captured = captureRegisteredOwnedExitSet(
+  const exitCapture = captureExitSet(
     initialSnapshot,
     registry,
     role,
     child.pid,
     [],
-    allowedExecutableIdentities,
+    phaseIdentities,
   );
+  for (const socket of exitCapture.sockets) tracked.sockets.add(socket);
+  const proveFresh = () =>
+    proveAbsenceFromFreshClosure({
+      closure: tracked,
+      phaseIdentities,
+      inspect,
+      proveAbsent,
+      registry,
+      role,
+      timeoutMs: dependencies.proofTimeoutMs ?? 5000,
+      now: dependencies.proofNow ?? Date.now,
+    });
+  const result = (exitCode, proof) => {
+    return Object.freeze({
+      exitCode,
+      // Receipt identity remains bound only to the originally approved root
+      // executable identities. Descendants bind the lower proof and closure.
+      identityDigest: valueDigest(allowedExecutableIdentities),
+      capturedSetDigest: valueDigest(proof.frozenClosure),
+      absenceStatus: "PASS",
+    });
+  };
   if (child.exitCode !== null) {
-    await proveRegisteredOwnedProcessSetAbsent(
-      inspectWindowsProcessSocketSnapshot,
-      registry,
-      role,
-      captured,
-      [],
-      allowedExecutableIdentities,
-    );
-    return child.exitCode;
+    const proof = await proveFresh();
+    return result(child.exitCode, proof);
   }
+  let exitCompleted = false;
   try {
-    const exitCode = await withBoundedTimeout(
-      () =>
-        new Promise((accept, reject) => {
-          child.once("error", reject);
-          child.once("exit", (code) => accept(code));
-        }),
-      timeoutMs,
-      label,
-      activeAttemptSignal,
-    );
-    await proveRegisteredOwnedProcessSetAbsent(
-      inspectWindowsProcessSocketSnapshot,
-      registry,
-      role,
-      captured,
-      [],
-      allowedExecutableIdentities,
-    );
-    return exitCode;
+    const exitCode = await waitForExit();
+    exitCompleted = true;
+    const proof = await proveFresh();
+    return result(exitCode, proof);
   } catch (error) {
+    if (error?.code === "OWNED_PROCESS_HOLD") throw error;
+    if (exitCompleted) throw error;
     if (child.exitCode === null) {
-      await terminateRegisteredOwnedChild(
+      // Reconcile immediately before the one permitted lower termination path.
+      identityInspect();
+      const captured = freezeSpawnClosure(tracked);
+      await terminateOwned(
         child,
         registry,
         role,
-        inspectWindowsProcessSocketSnapshot,
+        identityInspect,
         [],
-        allowedExecutableIdentities,
-        captured,
-      );
-    } else {
-      await proveRegisteredOwnedProcessSetAbsent(
-        inspectWindowsProcessSocketSnapshot,
-        registry,
-        role,
-        captured,
-        [],
-        allowedExecutableIdentities,
+        phaseIdentities,
+        capturedOwnerView(captured),
       );
     }
+    await proveFresh();
     throw error;
   }
+}
+
+const waitForOwnedExit = waitForOwnedExitForTesting;
+
+function capturedOwnerView(captured) {
+  return Object.freeze({
+    pids: Object.freeze([...captured.pids]),
+    sockets: Object.freeze([...captured.sockets]),
+  });
 }
 
 function assertNoPreexistingNvda(snapshot) {
@@ -487,6 +840,437 @@ function assertNoPreexistingNvda(snapshot) {
     throw new Error("preexisting NVDA process blocks attempt-002 single-writer ownership");
   }
 }
+
+function assertNoPreparationResidue(snapshot) {
+  const installer = resolve(NVDA_ADAPTER_PATHS.installer).toLowerCase();
+  const defender = resolve(DEFENDER).toLowerCase();
+  const portable = `${resolve(NVDA_ADAPTER_PATHS.portable).toLowerCase()}\\`;
+  const chrome = resolve(CHROME).toLowerCase();
+  const driver = resolve(DRIVER).toLowerCase();
+  const residue = snapshot.processes.filter((entry) => {
+    const executablePath =
+      typeof entry.executablePath === "string" ? resolve(entry.executablePath).toLowerCase() : "";
+    return (
+      executablePath === installer ||
+      executablePath === defender ||
+      executablePath.startsWith(portable) ||
+      executablePath === chrome ||
+      executablePath === driver
+    );
+  });
+  if (residue.length) throw new Error("portable preparation process residue blocks progression");
+}
+
+export function validatePreparationProcessSnapshot(snapshot) {
+  assertNoPreexistingNvda(snapshot);
+  assertNoPreparationResidue(snapshot);
+  return true;
+}
+
+function createSpawnClosure(rootPid, expectedRootIdentity, launchTimeMs, now = Date.now) {
+  if (
+    !Number.isSafeInteger(rootPid) ||
+    rootPid <= 0 ||
+    !expectedRootIdentity ||
+    typeof expectedRootIdentity.absolutePath !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(expectedRootIdentity.sha256 ?? "") ||
+    !Number.isFinite(launchTimeMs) ||
+    typeof now !== "function"
+  ) {
+    throw new Error("spawn registration root launch identity is malformed");
+  }
+  return {
+    rootPid,
+    expectedRootIdentity: Object.freeze({ ...expectedRootIdentity }),
+    launchTimeMs,
+    now,
+    allowedExecutableRoot: dirname(resolve(expectedRootIdentity.absolutePath)),
+    records: new Map(),
+    sockets: new Set(),
+  };
+}
+
+function ownedProcessHold(message) {
+  const error = new Error(`owned process HOLD: ${message}`);
+  error.code = "OWNED_PROCESS_HOLD";
+  return error;
+}
+
+function rawProcessShape(entry, label = "spawn registration process") {
+  if (
+    !entry ||
+    !Number.isSafeInteger(entry.pid) ||
+    entry.pid <= 0 ||
+    !Number.isSafeInteger(entry.parentPid) ||
+    entry.parentPid < 0 ||
+    typeof entry.executablePath !== "string" ||
+    !entry.executablePath ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(entry.creationTimeUtc)
+  ) {
+    throw ownedProcessHold(`${label} identity is malformed`);
+  }
+  return Object.freeze({
+    pid: entry.pid,
+    parentPid: entry.parentPid,
+    creationTimeUtc: entry.creationTimeUtc,
+    executablePath: resolve(entry.executablePath),
+  });
+}
+
+function materializeProcessRecord(entry, label = "spawn registration process") {
+  const raw = rawProcessShape(entry, label);
+  let executableSha256;
+  try {
+    executableSha256 = directExecutableSha256(raw.executablePath);
+  } catch {
+    throw ownedProcessHold(`${label} executable bytes are unreadable`);
+  }
+  return Object.freeze({ ...raw, executableSha256 });
+}
+
+function sameProcessRecord(left, right) {
+  return (
+    left?.pid === right?.pid &&
+    left?.creationTimeUtc === right?.creationTimeUtc &&
+    left?.executablePath === right?.executablePath &&
+    left?.executableSha256 === right?.executableSha256
+  );
+}
+
+function rootRecordMatchesLaunch(closure, record) {
+  const created = Date.parse(record.creationTimeUtc);
+  return (
+    record.pid === closure.rootPid &&
+    record.executablePath === resolve(closure.expectedRootIdentity.absolutePath) &&
+    record.executableSha256 === closure.expectedRootIdentity.sha256 &&
+    Number.isFinite(created) &&
+    created >= closure.launchTimeMs - 2000 &&
+    created <= closure.now() + 2000
+  );
+}
+
+function rawProcessIndex(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.processes) || !Array.isArray(snapshot.sockets)) {
+    throw ownedProcessHold("process/socket snapshot is malformed");
+  }
+  const byPid = new Map();
+  for (const entry of snapshot.processes) {
+    // Machine-wide indexing is byte-blind. Unrelated protected/malformed rows
+    // remain outside the owned trust set and are never hashed.
+    if (!Number.isSafeInteger(entry?.pid) || entry.pid <= 0) continue;
+    const bucket = byPid.get(entry.pid) ?? [];
+    bucket.push(entry);
+    byPid.set(entry.pid, bucket);
+  }
+  return byPid;
+}
+
+function selectedRawProcess(byPid, pid, label) {
+  const bucket = byPid.get(pid) ?? [];
+  if (bucket.length > 1) throw ownedProcessHold(`${label} has an ambiguous duplicate PID`);
+  return bucket[0] ?? null;
+}
+
+function classifyCapturedRawProcess(capturedRecord, byPid, label) {
+  const entry = selectedRawProcess(byPid, capturedRecord.pid, label);
+  if (!entry) return Object.freeze({ status: "ABSENT", raw: null, record: null });
+  const raw = rawProcessShape(entry, label);
+  if (
+    raw.creationTimeUtc !== capturedRecord.creationTimeUtc ||
+    raw.executablePath !== capturedRecord.executablePath
+  ) {
+    // Changed creation/path means PID reuse. It is absent without a byte read.
+    return Object.freeze({ status: "REUSED", raw, record: null });
+  }
+  const current = materializeProcessRecord(entry, label);
+  if (current.executableSha256 !== capturedRecord.executableSha256) {
+    throw ownedProcessHold(`${label} executable bytes changed after capture`);
+  }
+  return Object.freeze({ status: "EXACT", raw, record: capturedRecord });
+}
+
+function withinFrozenExecutableRoot(closure, absolutePath) {
+  const foldedRoot = closure.allowedExecutableRoot.toLowerCase();
+  const foldedPath = resolve(absolutePath).toLowerCase();
+  return foldedPath === foldedRoot || foldedPath.startsWith(`${foldedRoot}${sep}`);
+}
+
+function appendExecutableIdentity(identities, record) {
+  const key = record.executablePath.toLowerCase();
+  const existing = identities.get(key);
+  if (
+    existing &&
+    (existing.absolutePath !== record.executablePath || existing.sha256 !== record.executableSha256)
+  ) {
+    throw ownedProcessHold("owned executable identity collided or changed");
+  }
+  if (!existing) {
+    identities.set(
+      key,
+      Object.freeze({
+        absolutePath: record.executablePath,
+        sha256: record.executableSha256,
+      }),
+    );
+  }
+}
+
+function freezeSpawnClosure(closure) {
+  return Object.freeze({
+    rootPid: closure.rootPid,
+    expectedRootIdentity: Object.freeze({ ...closure.expectedRootIdentity }),
+    launchTimeMs: closure.launchTimeMs,
+    records: Object.freeze(
+      [...closure.records.values()]
+        .sort((left, right) => left.pid - right.pid)
+        .map((record) => Object.freeze({ ...record })),
+    ),
+    pids: Object.freeze([...closure.records.keys()].sort((a, b) => a - b)),
+    sockets: Object.freeze([...closure.sockets].sort()),
+  });
+}
+
+export function reconcileOwnedClosureForTesting(closure, snapshot) {
+  const byPid = rawProcessIndex(snapshot);
+  const currentExactRecords = new Map();
+  const priorRoot = closure.records.get(closure.rootPid);
+  if (priorRoot) {
+    const classification = classifyCapturedRawProcess(priorRoot, byPid, "captured owned root");
+    if (classification.status === "EXACT") currentExactRecords.set(priorRoot.pid, priorRoot);
+  } else {
+    const rootEntry = selectedRawProcess(byPid, closure.rootPid, "spawn registration root");
+    if (rootEntry) {
+      const rootShape = rawProcessShape(rootEntry, "spawn registration root");
+      const created = Date.parse(rootShape.creationTimeUtc);
+      if (
+        rootShape.executablePath === resolve(closure.expectedRootIdentity.absolutePath) &&
+        Number.isFinite(created) &&
+        created >= closure.launchTimeMs - 2000 &&
+        created <= closure.now() + 2000
+      ) {
+        const root = materializeProcessRecord(rootEntry, "spawn registration root");
+        if (!rootRecordMatchesLaunch(closure, root)) {
+          throw ownedProcessHold("spawn registration root executable identity changed");
+        }
+        closure.records.set(root.pid, root);
+        currentExactRecords.set(root.pid, root);
+      }
+    }
+  }
+
+  for (const record of closure.records.values()) {
+    if (currentExactRecords.has(record.pid)) continue;
+    const classification = classifyCapturedRawProcess(record, byPid, "captured owned process");
+    if (classification.status === "EXACT") currentExactRecords.set(record.pid, record);
+  }
+
+  // BFS expansion requires the parent to be EXACT in this same snapshot. A
+  // captured exact process may survive reparenting, but an absent/reused parent
+  // cannot confer ownership on a newly observed PID.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [pid, bucket] of byPid) {
+      if (closure.records.has(pid)) continue;
+      const candidate = bucket[0];
+      if (
+        !Number.isSafeInteger(candidate?.parentPid) ||
+        candidate.parentPid < 0 ||
+        !currentExactRecords.has(candidate.parentPid)
+      ) {
+        continue;
+      }
+      const selected = selectedRawProcess(byPid, pid, "spawn registration descendant");
+      const shape = rawProcessShape(selected, "spawn registration descendant");
+      if (!withinFrozenExecutableRoot(closure, shape.executablePath)) {
+        throw ownedProcessHold("owned descendant executable escaped the frozen allowed root");
+      }
+      const record = materializeProcessRecord(selected, "spawn registration descendant");
+      closure.records.set(record.pid, record);
+      currentExactRecords.set(record.pid, record);
+      changed = true;
+    }
+  }
+
+  for (const socket of snapshot.sockets) {
+    if (currentExactRecords.has(socket?.pid)) closure.sockets.add(JSON.stringify(socket));
+  }
+  const identities = new Map();
+  appendExecutableIdentity(identities, {
+    executablePath: resolve(closure.expectedRootIdentity.absolutePath),
+    executableSha256: closure.expectedRootIdentity.sha256,
+  });
+  for (const record of closure.records.values()) appendExecutableIdentity(identities, record);
+  const frozenClosure = freezeSpawnClosure(closure);
+  const livePids = new Set(currentExactRecords.keys());
+  const filteredSnapshot = Object.freeze({
+    processes: Object.freeze(
+      snapshot.processes.filter(
+        (entry) => livePids.has(entry?.pid) && byPid.get(entry.pid)?.length === 1,
+      ),
+    ),
+    sockets: Object.freeze(snapshot.sockets.filter((socket) => livePids.has(socket?.pid))),
+  });
+  return Object.freeze({
+    frozenClosure,
+    currentExactRecords: Object.freeze(
+      [...currentExactRecords.values()]
+        .sort((left, right) => left.pid - right.pid)
+        .map((record) => Object.freeze({ ...record })),
+    ),
+    ownerView: capturedOwnerView(frozenClosure),
+    executableIdentities: Object.freeze([...identities.values()]),
+    filteredSnapshot,
+  });
+}
+
+export async function proveFailedSpawnRegistrationAbsent(
+  child,
+  inspect = inspectWindowsProcessSocketSnapshot,
+  seed = null,
+  terminatePid = (pid) => process.kill(pid, "SIGKILL"),
+) {
+  if (
+    !child ||
+    !Number.isSafeInteger(child.pid) ||
+    child.pid <= 0 ||
+    typeof inspect !== "function" ||
+    typeof terminatePid !== "function"
+  ) {
+    throw new Error("failed spawn registration cleanup requires an exact child and inspector");
+  }
+  if (
+    !seed ||
+    !Object.isFrozen(seed) ||
+    JSON.stringify(Object.keys(seed)) !==
+      JSON.stringify([
+        "rootPid",
+        "expectedRootIdentity",
+        "launchTimeMs",
+        "records",
+        "pids",
+        "sockets",
+      ]) ||
+    seed.rootPid !== child.pid ||
+    !Object.isFrozen(seed.expectedRootIdentity) ||
+    JSON.stringify(Object.keys(seed.expectedRootIdentity)) !==
+      JSON.stringify(["absolutePath", "sha256"]) ||
+    !Number.isFinite(seed.launchTimeMs) ||
+    !Array.isArray(seed.records) ||
+    !Object.isFrozen(seed.records) ||
+    seed.records.some((record) => !Object.isFrozen(record)) ||
+    !Array.isArray(seed.pids) ||
+    !Object.isFrozen(seed.pids) ||
+    JSON.stringify(seed.records.map(({ pid }) => pid).sort((left, right) => left - right)) !==
+      JSON.stringify(seed.pids) ||
+    !Array.isArray(seed.sockets) ||
+    !Object.isFrozen(seed.sockets)
+  ) {
+    throw new Error("failed spawn registration cleanup requires an immutable launch closure");
+  }
+  const captured = createSpawnClosure(child.pid, seed.expectedRootIdentity, seed.launchTimeMs);
+  for (const record of seed.records) captured.records.set(record.pid, record);
+  for (const socket of seed.sockets) captured.sockets.add(socket);
+  const terminateCapturedRecords = (records) => {
+    for (const record of [...records].sort((left, right) => right.pid - left.pid)) {
+      try {
+        terminatePid(record.pid);
+      } catch (error) {
+        if (error?.code !== "ESRCH") throw error;
+      }
+    }
+  };
+  let consecutiveAbsent = 0;
+  const deadline = Date.now() + 5000;
+  while (Date.now() <= deadline) {
+    const snapshot = inspect();
+    const reconciled = reconcileOwnedClosureForTesting(captured, snapshot);
+    const liveRecords = reconciled.currentExactRecords;
+    terminateCapturedRecords(liveRecords);
+    const livePid = liveRecords.length > 0;
+    const liveSocket = snapshot.sockets.some(
+      (socket) =>
+        liveRecords.some((record) => record.pid === socket.pid) ||
+        captured.sockets.has(JSON.stringify(socket)),
+    );
+    if (!livePid && !liveSocket) {
+      consecutiveAbsent += 1;
+      if (consecutiveAbsent === 2) return freezeSpawnClosure(captured);
+    } else {
+      consecutiveAbsent = 0;
+    }
+    await new Promise((accept) => setTimeout(accept, 50));
+  }
+  throw new Error("failed spawn registration left a captured process or socket");
+}
+
+export async function spawnAndRegisterPreparationProcessForTesting(
+  executable,
+  args,
+  options,
+  descriptor,
+  identities,
+  dependencies = {},
+) {
+  const spawnProcess = dependencies.spawnProcess ?? spawn;
+  const inspect = dependencies.inspect ?? inspectWindowsProcessSocketSnapshot;
+  const waitForRegistration = dependencies.waitForRegistration ?? waitForRoleRegistration;
+  const terminatePid = dependencies.terminatePid ?? ((pid) => process.kill(pid, "SIGKILL"));
+  const now = dependencies.now ?? Date.now;
+  assertFrozenExecutableIdentityCurrent(identities[0], `${descriptor.role} pre-spawn`);
+  const launchTimeMs = now();
+  const child = spawnProcess(executable, args, options);
+  const closure = createSpawnClosure(child.pid, identities[0], launchTimeMs, now);
+  const phaseIdentities = [...identities];
+  const reconcile = (snapshot) => {
+    const result = reconcileOwnedClosureForTesting(closure, snapshot);
+    for (const identity of result.executableIdentities) {
+      const existing = phaseIdentities.find(
+        (candidate) => candidate.absolutePath.toLowerCase() === identity.absolutePath.toLowerCase(),
+      );
+      if (
+        existing &&
+        (existing.absolutePath !== identity.absolutePath || existing.sha256 !== identity.sha256)
+      ) {
+        throw ownedProcessHold("registration executable identity collided or changed");
+      }
+      if (!existing) phaseIdentities.push(identity);
+    }
+    return result;
+  };
+  try {
+    reconcile(inspect());
+    if (!closure.records.has(child.pid)) {
+      throw new Error("spawn registration root did not match launch identity");
+    }
+    const registry = await waitForRegistration(
+      null,
+      { ...descriptor, pid: child.pid },
+      phaseIdentities,
+      (snapshot) => reconcile(snapshot),
+    );
+    const registrationCapture = freezeSpawnClosure(closure);
+    if (!registrationCapture.records.some((record) => record.pid === child.pid)) {
+      throw new Error("spawn registration capture omitted the exact root record");
+    }
+    return Object.freeze({
+      child,
+      registry,
+      registrationCapture,
+      executableIdentities: Object.freeze([...phaseIdentities]),
+    });
+  } catch (error) {
+    await proveFailedSpawnRegistrationAbsent(
+      child,
+      inspect,
+      freezeSpawnClosure(closure),
+      terminatePid,
+    );
+    throw error;
+  }
+}
+
+const spawnAndRegisterPreparationProcess = spawnAndRegisterPreparationProcessForTesting;
 
 async function waitForNvdaReady(child, control) {
   const deadline = Date.now() + 10000;
@@ -526,16 +1310,13 @@ async function waitForNvdaObservation(
   throw new Error("NVDA produced no bounded synthetic announcement for the active observation");
 }
 
-async function createNvdaWriter(
-  manifest,
-  firstObservationId,
-  expectedObservationIds,
-  firstSpeechContract,
-) {
+function validateNvdaManifestForPreparation(manifest) {
   assertAttemptActive();
   validateAttempt002ToolManifest(manifest);
   const tool = manifest.tools.find((entry) => entry.toolId === "nvda");
-  if (!tool || !["ELIGIBLE", "LAUNCHED"].includes(tool.launchStatus)) return null;
+  if (!tool || !["ELIGIBLE", "LAUNCHED"].includes(tool.launchStatus)) {
+    throw new Error("NVDA is not preparation eligible");
+  }
   const installerSha256 = sha256(NVDA_ADAPTER_PATHS.installer);
   if (
     tool.sourceUrl !== NVDA_EXPECTED_SOURCE_URL ||
@@ -552,27 +1333,74 @@ async function createNvdaWriter(
   ) {
     throw new Error("NVDA installer or prospective Authenticode observation changed before launch");
   }
+  return tool;
+}
+
+function validatePreparedNvdaClosure(manifest, receipt) {
+  validateNvdaManifestForPreparation(manifest);
+  validateAttempt002PreparationReceipt(receipt);
+  const attempt = createAttempt002Authority();
+  validatePreparationManifestAuthorityBinding(
+    attempt.authority.toolManifestDigest,
+    sha256(ATTEMPT_002_PATHS.toolManifest),
+  );
+  const installerIdentity = createExecutableIdentity(NVDA_ADAPTER_PATHS.installer);
+  const defenderIdentity = createExecutableIdentity(DEFENDER);
+  const executable = resolve(NVDA_ADAPTER_PATHS.portable, "nvda.exe");
+  if (!existsSync(executable)) throw new Error("NVDA portable executable is absent");
+  const portableIdentity = createExecutableIdentity(executable);
+  const portableInventory = inventoryExactOwnedTree(
+    NVDA_ADAPTER_PATHS.portable,
+    NVDA_ADAPTER_PATHS.portable,
+  );
+  const configInventory = inventoryExactOwnedTree(
+    NVDA_ADAPTER_PATHS.config,
+    NVDA_ADAPTER_PATHS.config,
+  );
+  if (
+    receipt.authorityDigest !== attempt.digest ||
+    receipt.toolManifestDigest !== attempt.authority.toolManifestDigest ||
+    receipt.installerIdentityDigest !== valueDigest([installerIdentity]) ||
+    receipt.defenderIdentityDigest !== valueDigest([defenderIdentity]) ||
+    receipt.portableExecutableIdentityDigest !== valueDigest(portableIdentity) ||
+    receipt.portableInventoryDigest !== portableInventory.digest ||
+    receipt.configInventoryDigest !== configInventory.digest
+  ) {
+    throw new Error("attempt-002 prepared NVDA closure changed after preparation");
+  }
+  const snapshot = inspectWindowsProcessSocketSnapshot();
+  validatePreparationProcessSnapshot(snapshot);
+  return Object.freeze({ executable, portableIdentity, portableInventory, configInventory });
+}
+
+async function prepareNvdaPortable(manifest, authorityDigest, authorityToolManifestDigest) {
+  validateNvdaManifestForPreparation(manifest);
+  validatePreparationManifestAuthorityBinding(
+    authorityToolManifestDigest,
+    sha256(ATTEMPT_002_PATHS.toolManifest),
+  );
   assertWindowsStandardUser();
-  assertNoPreexistingNvda(inspectWindowsProcessSocketSnapshot());
+  const initialSnapshot = inspectWindowsProcessSocketSnapshot();
+  validatePreparationProcessSnapshot(initialSnapshot);
   const lifecycle = createNvdaLifecycle(resolve(NVDA_ADAPTER_PATHS.portable, "nvda.exe"));
   const installerIdentities = Object.freeze([
     createExecutableIdentity(NVDA_ADAPTER_PATHS.installer),
   ]);
-  const installer = spawn(NVDA_ADAPTER_PATHS.installer, lifecycle.create, {
-    cwd: RAW,
-    env: safeEnvironment(),
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
-  const installerRegistry = await waitForRoleRegistration(
-    null,
+  const installerSpawn = await spawnAndRegisterPreparationProcess(
+    NVDA_ADAPTER_PATHS.installer,
+    lifecycle.create,
+    { cwd: RAW, env: safeEnvironment(), stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
     {
       role: "nvda-installer",
-      pid: installer.pid,
       allowedRoot: dirname(NVDA_ADAPTER_PATHS.installer),
     },
     installerIdentities,
   );
+  const {
+    child: installer,
+    registry: installerRegistry,
+    registrationCapture: installerRegistrationCapture,
+  } = installerSpawn;
   const installerLog = boundedLog(installer);
   const installerExit = await waitForOwnedExit(
     installer,
@@ -581,34 +1409,34 @@ async function createNvdaWriter(
     installerRegistry,
     "nvda-installer",
     installerIdentities,
+    installerRegistrationCapture,
   );
-  if (installerExit !== 0) {
-    throw new Error(`NVDA portable creation failed with ${installerExit}: ${installerLog()}`);
+  if (installerExit.exitCode !== 0) {
+    throw new Error(
+      `NVDA portable creation failed with ${installerExit.exitCode}: ${installerLog()}`,
+    );
   }
+  assertFrozenExecutableIdentityCurrent(installerIdentities[0], "NVDA installer post-exit");
   installHashBoundScratchpad();
   inventoryExactOwnedTree(NVDA_ADAPTER_PATHS.rawRoot, NVDA_ADAPTER_PATHS.rawRoot);
-  const defender = "C:\\Program Files\\Windows Defender\\MpCmdRun.exe";
+  const defender = DEFENDER;
   if (!existsSync(defender)) throw new Error("fixed Microsoft Defender scanner is absent");
   const scannerIdentities = Object.freeze([createExecutableIdentity(defender)]);
-  const scanner = spawn(
+  const scannerSpawn = await spawnAndRegisterPreparationProcess(
     defender,
     ["-Scan", "-ScanType", "3", "-File", NVDA_ADAPTER_PATHS.rawRoot, "-DisableRemediation"],
-    {
-      cwd: RAW,
-      env: safeEnvironment(),
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    },
-  );
-  const scannerRegistry = await waitForRoleRegistration(
-    null,
+    { cwd: RAW, env: safeEnvironment(), stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
     {
       role: "defender-scanner",
-      pid: scanner.pid,
       allowedRoot: dirname(defender),
     },
     scannerIdentities,
   );
+  const {
+    child: scanner,
+    registry: scannerRegistry,
+    registrationCapture: scannerRegistrationCapture,
+  } = scannerSpawn;
   const scannerLog = boundedLog(scanner);
   const scannerExit = await waitForOwnedExit(
     scanner,
@@ -617,13 +1445,72 @@ async function createNvdaWriter(
     scannerRegistry,
     "defender-scanner",
     scannerIdentities,
+    scannerRegistrationCapture,
   );
-  if (scannerExit !== 0 || !/found no threats/iu.test(scannerLog())) {
+  if (scannerExit.exitCode !== 0 || !/found no threats/iu.test(scannerLog())) {
     throw new Error("NVDA generated portable malware scan did not pass");
   }
+  assertFrozenExecutableIdentityCurrent(scannerIdentities[0], "Defender scanner post-exit");
+  validatePreparationProcessSnapshot(inspectWindowsProcessSocketSnapshot());
   const executable = resolve(NVDA_ADAPTER_PATHS.portable, "nvda.exe");
   if (!existsSync(executable)) throw new Error("NVDA portable executable is absent");
-  const writerIdentities = Object.freeze([createExecutableIdentity(executable)]);
+  const portableIdentity = createExecutableIdentity(executable);
+  const portableInventory = inventoryExactOwnedTree(
+    NVDA_ADAPTER_PATHS.portable,
+    NVDA_ADAPTER_PATHS.portable,
+  );
+  const configInventory = inventoryExactOwnedTree(
+    NVDA_ADAPTER_PATHS.config,
+    NVDA_ADAPTER_PATHS.config,
+  );
+  return validateAttempt002PreparationReceipt({
+    schema: "fluyo:r4b:attempt-002-preparation:v1",
+    attemptId: "attempt-002-observer",
+    authorityDigest,
+    toolManifestDigest: authorityToolManifestDigest,
+    installerIdentityDigest: installerExit.identityDigest,
+    defenderIdentityDigest: scannerExit.identityDigest,
+    installerClosureDigest: canonicalPreparationClosureDigest(
+      "nvda-installer",
+      installerExit.identityDigest,
+      installerExit.capturedSetDigest,
+      installerExit.absenceStatus,
+    ),
+    defenderClosureDigest: canonicalPreparationClosureDigest(
+      "defender-scanner",
+      scannerExit.identityDigest,
+      scannerExit.capturedSetDigest,
+      scannerExit.absenceStatus,
+    ),
+    portableExecutableIdentityDigest: valueDigest(portableIdentity),
+    portableInventoryDigest: portableInventory.digest,
+    configInventoryDigest: configInventory.digest,
+    installerExitCode: installerExit.exitCode,
+    defenderExitCode: scannerExit.exitCode,
+    installerAbsenceStatus: installerExit.absenceStatus,
+    defenderAbsenceStatus: scannerExit.absenceStatus,
+    malwareStatus: "PASS",
+    serverLaunchStatus: "UNATTEMPTED",
+    driverLaunchStatus: "UNATTEMPTED",
+    chromeLaunchStatus: "UNATTEMPTED",
+    nativeNvdaLaunchStatus: "UNATTEMPTED",
+    status: "PASS",
+  });
+}
+
+async function launchPreparedNvdaWriter(
+  manifest,
+  receipt,
+  firstObservationId,
+  expectedObservationIds,
+  firstSpeechContract,
+) {
+  assertAttemptActive();
+  const { executable, portableIdentity } = validatePreparedNvdaClosure(manifest, receipt);
+  assertWindowsStandardUser();
+  assertNoPreexistingNvda(inspectWindowsProcessSocketSnapshot());
+  const lifecycle = createNvdaLifecycle(executable);
+  const writerIdentities = Object.freeze([portableIdentity]);
   const child = await spawnNativeNvdaBoundary(
     [
       executable,
@@ -691,7 +1578,12 @@ function registryForRole(registry, role) {
   return Object.freeze([record]);
 }
 
-async function waitForRoleRegistration(registry, descriptor, allowedExecutableIdentities) {
+async function waitForRoleRegistration(
+  registry,
+  descriptor,
+  allowedExecutableIdentities,
+  observeSnapshot = () => {},
+) {
   if (!Array.isArray(allowedExecutableIdentities) || allowedExecutableIdentities.length === 0) {
     throw new Error(`owned ${descriptor.role} registration requires exact executable identities`);
   }
@@ -699,6 +1591,7 @@ async function waitForRoleRegistration(registry, descriptor, allowedExecutableId
   while (Date.now() < deadline) {
     if (activeAttemptSignal?.aborted) throw activeAttemptSignal.reason;
     const snapshot = inspectWindowsProcessSocketSnapshot();
+    observeSnapshot(snapshot);
     try {
       const next = registry
         ? appendImmutableOwnershipRole(registry, descriptor, snapshot, allowedExecutableIdentities)
@@ -1543,15 +2436,118 @@ export function fillUnattemptedObservationStatuses(plan, completed, announcement
     announcements: Object.freeze(filledAnnouncements),
   });
 }
-async function observeDiscardedPreflightInternal() {
+
+function readPreparedManifest(plan) {
+  const manifestBytes = readBoundedRegularFile(
+    MANIFEST,
+    ROOT,
+    1048576,
+    "attempt-002 observer manifest read",
+  );
+  if (manifestBytes.length > Number(plan.gates.jsonMaxBytes)) {
+    throw new Error("manifest exceeds JSON gate");
+  }
+  const manifest = JSON.parse(manifestBytes.toString("utf8"));
+  validateAttempt002ToolManifest(manifest);
+  return manifest;
+}
+
+export function preparationTransactionDisposition(state) {
+  if (state === "PREPARED") return "VALIDATE_ONLY";
+  if (state === "BUILD_READY") return "PREPARE";
+  throw new Error("attempt-002 preparation is not in BUILD_READY or PREPARED state");
+}
+
+export async function executePreparationDispositionTransaction(state, operations) {
+  if (
+    !operations ||
+    JSON.stringify(Object.keys(operations)) !==
+      JSON.stringify(["validateExisting", "prepareNew"]) ||
+    typeof operations.validateExisting !== "function" ||
+    typeof operations.prepareNew !== "function"
+  ) {
+    throw new Error("attempt-002 preparation transaction operations are malformed");
+  }
+  const disposition = preparationTransactionDisposition(state);
+  return disposition === "VALIDATE_ONLY" ? operations.validateExisting() : operations.prepareNew();
+}
+
+export async function prepareAttempt002RuntimeInternal() {
   const plan = createDiscardedPreflightPlan();
-  if (resolveAttempt002State() !== "BUILD_READY")
-    throw new Error("attempt-002 observer is not in BUILD_READY state");
+  const state = resolveAttempt002State();
+  const disposition = preparationTransactionDisposition(state);
+  if (disposition === "VALIDATE_ONLY")
+    return executePreparationDispositionTransaction(state, {
+      validateExisting: () => {
+        const manifest = readPreparedManifest(plan);
+        const receipt = readAttempt002PreparationReceipt();
+        validatePreparedNvdaClosure(manifest, receipt);
+        return receipt;
+      },
+      prepareNew: () => {
+        throw new Error("PREPARED validation cannot enter the BUILD_READY mutation path");
+      },
+    });
   assertProductionFixtureBoundaryEligible();
   validateRepositoryDeploymentExclusion();
   validateHarnessInertness();
   scanProductionSourceTrees();
   const attempt = createAttempt002Authority();
+  if (!existsSync(resolve(HARNESS_BUILD, "BUILD_ID"))) {
+    throw new Error("reproducible isolated harness build is absent");
+  }
+  const buildInventory = inventoryExactOwnedTree(HARNESS_BUILD, HARNESS_BUILD);
+  if (buildInventory.files === 0 || buildInventory.bytes === 0n) {
+    throw new Error("isolated harness build inventory is empty");
+  }
+  validateHarnessProductionBuildProof(HARNESS_BUILD);
+  return executePreparationDispositionTransaction(state, {
+    validateExisting: () => {
+      throw new Error("BUILD_READY preparation cannot enter the PREPARED validation path");
+    },
+    prepareNew: async () => {
+      recordAttempt002Preparing();
+      try {
+        ensureAttemptParent(RUNTIME);
+        guardedAttemptMkdir(RUNTIME, { recursive: false });
+        guardedAttemptWrite(ATTEMPT_002_PATHS.authority, `${JSON.stringify(attempt.authority)}\n`, {
+          flag: "wx",
+        });
+        guardedAttemptWrite(MANIFEST, `${JSON.stringify(attempt.toolManifest)}\n`, { flag: "wx" });
+        guardedAttemptMkdir(RAW, { recursive: false });
+        validatePreparationManifestAuthorityBinding(
+          attempt.authority.toolManifestDigest,
+          sha256(MANIFEST),
+        );
+        const receipt = await prepareNvdaPortable(
+          attempt.toolManifest,
+          attempt.digest,
+          attempt.authority.toolManifestDigest,
+        );
+        const receiptBytes = Buffer.from(`${JSON.stringify(receipt)}\n`, "utf8");
+        if (receiptBytes.length > 4096) throw new Error("preparation receipt exceeds 4096 bytes");
+        guardedAttemptWrite(ATTEMPT_002_PATHS.preparationReceipt, receiptBytes, { flag: "wx" });
+        recordAttempt002Prepared(sha256(ATTEMPT_002_PATHS.preparationReceipt));
+        return receipt;
+      } catch (error) {
+        if (currentAttempt002LifecycleState() === "PREPARING") {
+          recordFailedHeld("PREPARATION_FAILED");
+        }
+        throw error;
+      }
+    },
+  });
+}
+
+async function observeDiscardedPreflightInternal() {
+  const plan = createDiscardedPreflightPlan();
+  if (resolveAttempt002State() !== "PREPARED")
+    throw new Error("attempt-002 observer is not in PREPARED state");
+  assertProductionFixtureBoundaryEligible();
+  validateRepositoryDeploymentExclusion();
+  validateHarnessInertness();
+  scanProductionSourceTrees();
+  createAttempt002Authority();
   if (!existsSync(resolve(HARNESS_BUILD, "BUILD_ID")))
     throw new Error("reproducible isolated harness build is absent");
   const buildInventory = inventoryExactOwnedTree(HARNESS_BUILD, HARNESS_BUILD);
@@ -1559,25 +2555,12 @@ async function observeDiscardedPreflightInternal() {
     throw new Error("isolated harness build inventory is empty");
   }
   validateHarnessProductionBuildProof(HARNESS_BUILD);
-  recordAttempt002Preparing();
-  ensureAttemptParent(RUNTIME);
-  guardedAttemptMkdir(RUNTIME, { recursive: false });
-  guardedAttemptWrite(ATTEMPT_002_PATHS.authority, `${JSON.stringify(attempt.authority)}\n`, {
-    flag: "wx",
-  });
-  guardedAttemptWrite(MANIFEST, `${JSON.stringify(attempt.toolManifest)}\n`, { flag: "wx" });
-  guardedAttemptMkdir(RAW, { recursive: false });
-  recordAttempt002Prepared();
-  const manifestBytes = readBoundedRegularFile(
-    MANIFEST,
-    ROOT,
-    1048576,
-    "attempt-002 observer manifest read",
-  );
-  if (manifestBytes.length > Number(plan.gates.jsonMaxBytes))
-    throw new Error("manifest exceeds JSON gate");
-  const manifest = JSON.parse(manifestBytes.toString("utf8"));
-  validateAttempt002ToolManifest(manifest);
+  const manifest = readPreparedManifest(plan);
+  const preparationReceipt = readAttempt002PreparationReceipt();
+  if (attempt002PreparationReceiptDigest() !== currentAttempt002PreparedReceiptDigest()) {
+    throw new Error("attempt-002 preparation receipt is not sealed by the PREPARED lifecycle");
+  }
+  validatePreparedNvdaClosure(manifest, preparationReceipt);
   for (const [toolId, path] of [
     ["chrome_for_testing", CHROME],
     ["chromedriver", DRIVER],
@@ -1847,8 +2830,9 @@ async function observeDiscardedPreflightInternal() {
       session = undefined;
     }
     assertAttemptActive();
-    nvdaWriter = await createNvdaWriter(
+    nvdaWriter = await launchPreparedNvdaWriter(
       manifest,
+      preparationReceipt,
       plan.observations[0].observationId,
       expectedObservationSet,
       expectedSpeechContracts[0],
@@ -2336,6 +3320,31 @@ async function observeDiscardedPreflightInternal() {
     recordAttempt002Observed();
   }
   return aggregate;
+}
+
+export async function prepareAttempt002Runtime(...args) {
+  if (args.length) throw new Error("preparation does not accept caller-supplied authority");
+  const controller = new AbortController();
+  const abortForSignal = (signalName) => () =>
+    controller.abort(new Error(`attempt-002 preparation cancelled by ${signalName}`));
+  const onSigint = abortForSignal("SIGINT");
+  const onSigterm = abortForSignal("SIGTERM");
+  process.once("SIGINT", onSigint);
+  process.once("SIGTERM", onSigterm);
+  const timer = setTimeout(
+    () => controller.abort(new Error("attempt-002 preparation exceeded the global 300000ms bound")),
+    300_000,
+  );
+  timer.unref?.();
+  activeAttemptSignal = controller.signal;
+  try {
+    return await prepareAttempt002RuntimeInternal();
+  } finally {
+    activeAttemptSignal = undefined;
+    clearTimeout(timer);
+    process.removeListener("SIGINT", onSigint);
+    process.removeListener("SIGTERM", onSigterm);
+  }
 }
 
 export async function observeDiscardedPreflight(...args) {

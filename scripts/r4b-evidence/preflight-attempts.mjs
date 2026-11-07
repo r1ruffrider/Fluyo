@@ -58,6 +58,7 @@ export const ATTEMPT_002_PATHS = Object.freeze({
   authoritySource: AUTHORITY_SOURCE_PATH,
   authority: resolve(RUNTIME, "attempts/attempt-002-observer/authority.json"),
   toolManifest: resolve(RUNTIME, "attempts/attempt-002-observer/tool-manifest.json"),
+  preparationReceipt: resolve(RUNTIME, "attempts/attempt-002-observer/preparation-receipt.json"),
   raw: resolve(RUNTIME, "attempts/attempt-002-observer/raw"),
   build: resolve(ROOT, "apps/r4b-preflight-harness/.next-attempt-002"),
   buildTemp: resolve(RUNTIME, "attempt-002-build-temp"),
@@ -180,6 +181,7 @@ const LIFECYCLE_KEYS = Object.freeze([
   "attemptId",
   "ordinal",
   "state",
+  "preparationReceiptSha256",
   "previousRecordSha256",
 ]);
 const LIFECYCLE_TRANSITIONS = Object.freeze(
@@ -223,6 +225,7 @@ export function validateAttempt002Lifecycle(records) {
   }
   let previousState = "NOT_STARTED";
   let previousDigest = null;
+  let preparationReceiptSha256 = null;
   for (const [index, record] of records.entries()) {
     if (
       !record ||
@@ -230,15 +233,23 @@ export function validateAttempt002Lifecycle(records) {
       record.schema !== LIFECYCLE_SCHEMA ||
       record.attemptId !== "attempt-002-observer" ||
       record.ordinal !== index + 1 ||
+      (record.state === "PREPARED"
+        ? !/^[0-9a-f]{64}$/u.test(record.preparationReceiptSha256)
+        : record.preparationReceiptSha256 !== null) ||
       record.previousRecordSha256 !== previousDigest ||
       !LIFECYCLE_TRANSITIONS.get(previousState)?.has(record.state)
     ) {
       throw new Error("attempt-002 append-only lifecycle order, chain, or state changed");
     }
     previousState = record.state;
+    if (record.state === "PREPARED") preparationReceiptSha256 = record.preparationReceiptSha256;
     previousDigest = canonicalDigest(record);
   }
-  return Object.freeze({ state: previousState, lastRecordSha256: previousDigest });
+  return Object.freeze({
+    state: previousState,
+    lastRecordSha256: previousDigest,
+    preparationReceiptSha256,
+  });
 }
 
 function readAttempt002Lifecycle() {
@@ -263,7 +274,13 @@ export function currentAttempt002LifecycleState() {
   return records.length ? validateAttempt002Lifecycle(records).state : "NOT_STARTED";
 }
 
-function appendAttempt002LifecycleState(state) {
+export function currentAttempt002PreparedReceiptDigest() {
+  const records = readAttempt002Lifecycle();
+  if (!records.length) return null;
+  return validateAttempt002Lifecycle(records).preparationReceiptSha256;
+}
+
+function appendAttempt002LifecycleState(state, preparationReceiptSha256 = null) {
   const records = readAttempt002Lifecycle();
   const validated = records.length
     ? validateAttempt002Lifecycle(records)
@@ -273,6 +290,7 @@ function appendAttempt002LifecycleState(state) {
     attemptId: "attempt-002-observer",
     ordinal: records.length + 1,
     state,
+    preparationReceiptSha256,
     previousRecordSha256: validated.lastRecordSha256,
   };
   validateAttempt002Lifecycle([...records, record]);
@@ -336,7 +354,8 @@ export function recordAttempt002BuildReady() {
   return appendAttempt002LifecycleState("BUILD_READY");
 }
 export const recordAttempt002Preparing = () => appendAttempt002LifecycleState("PREPARING");
-export const recordAttempt002Prepared = () => appendAttempt002LifecycleState("PREPARED");
+export const recordAttempt002Prepared = (preparationReceiptSha256) =>
+  appendAttempt002LifecycleState("PREPARED", preparationReceiptSha256);
 export const recordAttempt002Observing = () => appendAttempt002LifecycleState("OBSERVING");
 export const recordAttempt002ServerReady = () => appendAttempt002LifecycleState("SERVER_READY");
 export const recordAttempt002DriverReady = () => appendAttempt002LifecycleState("DRIVER_READY");
@@ -461,6 +480,87 @@ export function validateAttempt002ReadinessReceipt(value, readiness) {
     throw new Error("attempt-002 readiness receipt changed or is malformed");
   }
   return value;
+}
+
+const PREPARATION_RECEIPT_KEYS = Object.freeze([
+  "schema",
+  "attemptId",
+  "authorityDigest",
+  "toolManifestDigest",
+  "installerIdentityDigest",
+  "defenderIdentityDigest",
+  "installerClosureDigest",
+  "defenderClosureDigest",
+  "portableExecutableIdentityDigest",
+  "portableInventoryDigest",
+  "configInventoryDigest",
+  "installerExitCode",
+  "defenderExitCode",
+  "installerAbsenceStatus",
+  "defenderAbsenceStatus",
+  "malwareStatus",
+  "serverLaunchStatus",
+  "driverLaunchStatus",
+  "chromeLaunchStatus",
+  "nativeNvdaLaunchStatus",
+  "status",
+]);
+
+export function validateAttempt002PreparationReceipt(value) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    JSON.stringify(Object.keys(value)) !== JSON.stringify(PREPARATION_RECEIPT_KEYS) ||
+    value.schema !== "fluyo:r4b:attempt-002-preparation:v1" ||
+    value.attemptId !== "attempt-002-observer"
+  ) {
+    throw new Error("attempt-002 preparation receipt changed or is malformed");
+  }
+  for (const field of [
+    "authorityDigest",
+    "toolManifestDigest",
+    "installerIdentityDigest",
+    "defenderIdentityDigest",
+    "installerClosureDigest",
+    "defenderClosureDigest",
+    "portableExecutableIdentityDigest",
+    "portableInventoryDigest",
+    "configInventoryDigest",
+  ]) {
+    if (!/^[0-9a-f]{64}$/u.test(value[field])) {
+      throw new Error("attempt-002 preparation receipt changed or is malformed");
+    }
+  }
+  if (
+    value.installerExitCode !== 0 ||
+    value.defenderExitCode !== 0 ||
+    value.installerAbsenceStatus !== "PASS" ||
+    value.defenderAbsenceStatus !== "PASS" ||
+    value.malwareStatus !== "PASS" ||
+    value.serverLaunchStatus !== "UNATTEMPTED" ||
+    value.driverLaunchStatus !== "UNATTEMPTED" ||
+    value.chromeLaunchStatus !== "UNATTEMPTED" ||
+    value.nativeNvdaLaunchStatus !== "UNATTEMPTED" ||
+    value.status !== "PASS"
+  ) {
+    throw new Error("attempt-002 preparation receipt changed or is malformed");
+  }
+  return value;
+}
+
+export function readAttempt002PreparationReceipt() {
+  const bytes = readBoundedRegularFile(
+    ATTEMPT_002_PATHS.preparationReceipt,
+    ROOT,
+    4096,
+    "attempt-002 preparation receipt read",
+  );
+  return validateAttempt002PreparationReceipt(JSON.parse(bytes.toString("utf8")));
+}
+
+export function attempt002PreparationReceiptDigest() {
+  return fileDigest(ATTEMPT_002_PATHS.preparationReceipt);
 }
 function git(args, options = {}) {
   return execFileSync("git", args, { cwd: ROOT, encoding: "utf8", ...options }).trim();
@@ -693,8 +793,9 @@ export function resolveAttempt002State() {
       : "NOT_STARTED";
   }
   let state;
+  let preparationReceiptSha256;
   try {
-    state = validateAttempt002Lifecycle(records).state;
+    ({ state, preparationReceiptSha256 } = validateAttempt002Lifecycle(records));
   } catch {
     return "INVALID";
   }
@@ -710,6 +811,20 @@ export function resolveAttempt002State() {
     if (readdirSync(ATTEMPT_002_PATHS.root).some((name) => !allowed.has(name))) return "INVALID";
   }
   const present = (key) => existsSync(ATTEMPT_002_PATHS[key]);
+  const preparedClosureIsValid = () => {
+    try {
+      return (
+        present("authority") &&
+        present("toolManifest") &&
+        present("raw") &&
+        present("preparationReceipt") &&
+        readAttempt002PreparationReceipt().status === "PASS" &&
+        preparationReceiptSha256 === attempt002PreparationReceiptDigest()
+      );
+    } catch {
+      return false;
+    }
+  };
   if (state === "BUILDING") return !rootExists ? state : "INVALID";
   if (state === "BUILD_READY")
     return !rootExists &&
@@ -717,18 +832,32 @@ export function resolveAttempt002State() {
       present("buildReady")
       ? state
       : "INVALID";
-  if (new Set(["PREPARING", "PREPARED", "OBSERVING"]).has(state))
-    return rootExists ? state : "INVALID";
-  if (state === "SERVER_READY") return rootExists && present("serverReady") ? state : "INVALID";
+  if (state === "PREPARING") return rootExists ? state : "INVALID";
+  if (new Set(["PREPARED", "OBSERVING"]).has(state))
+    return rootExists && preparedClosureIsValid() ? state : "INVALID";
+  if (state === "SERVER_READY")
+    return rootExists && preparedClosureIsValid() && present("serverReady") ? state : "INVALID";
   if (state === "DRIVER_READY")
-    return rootExists && present("serverReady") && present("driverReady") ? state : "INVALID";
-  if (state === "NVDA_READY")
-    return rootExists && present("serverReady") && present("driverReady") && present("nvdaReady")
+    return rootExists &&
+      preparedClosureIsValid() &&
+      present("serverReady") &&
+      present("driverReady")
       ? state
       : "INVALID";
-  if (state === "OBSERVED") return rootExists && present("aggregate") ? state : "INVALID";
-  if (state === "RESULT_RECORDED") return rootExists && present("result") ? state : "INVALID";
-  if (state === "CLEANING") return rootExists && present("result") ? state : "INVALID";
+  if (state === "NVDA_READY")
+    return rootExists &&
+      preparedClosureIsValid() &&
+      present("serverReady") &&
+      present("driverReady") &&
+      present("nvdaReady")
+      ? state
+      : "INVALID";
+  if (state === "OBSERVED")
+    return rootExists && preparedClosureIsValid() && present("aggregate") ? state : "INVALID";
+  if (state === "RESULT_RECORDED")
+    return rootExists && preparedClosureIsValid() && present("result") ? state : "INVALID";
+  if (state === "CLEANING")
+    return rootExists && preparedClosureIsValid() && present("result") ? state : "INVALID";
   if (state === "FAILED_HELD")
     return (rootExists && present("failedHeld")) || (!rootExists && present("buildFailedHeld"))
       ? state
@@ -743,6 +872,7 @@ export function resolveAttempt002State() {
   }
   if (state === "SEALED") {
     return rootExists &&
+      preparedClosureIsValid() &&
       present("result") &&
       present("receipt") &&
       !present("raw") &&
