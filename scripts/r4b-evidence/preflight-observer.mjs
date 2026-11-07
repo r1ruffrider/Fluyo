@@ -62,9 +62,12 @@ import {
   assertWindowsStandardUser,
   appendImmutableOwnershipRole,
   boundedJsonRequest,
+  captureRegisteredOwnedExitSet,
+  createExecutableIdentity,
   createImmutableOwnershipRegistry,
   createWriteOnceOwnership,
   inspectWindowsProcessSocketSnapshot,
+  proveRegisteredOwnedProcessSetAbsent,
   terminateRegisteredOwnedChild,
   validateImmutableOwnershipRegistry,
   validateOwnedProcessSnapshot,
@@ -209,6 +212,81 @@ function sha256(path) {
     .update(readBoundedRegularFile(path, ROOT, 512 * 1024 * 1024, "observer bounded digest"))
     .digest("hex");
 }
+export function reconstructObserverOwnership(
+  priorOwnership,
+  rootPids,
+  allowedRoots,
+  additionalExecutablePaths,
+) {
+  if (!Array.isArray(additionalExecutablePaths)) {
+    throw new Error("observer executable reconstruction paths are malformed");
+  }
+  const identities = [...(priorOwnership?.allowedExecutableIdentities ?? [])];
+  const folded = new Map(
+    identities.map((identity) => [identity.absolutePath.toLowerCase(), identity]),
+  );
+  for (const absolutePath of additionalExecutablePaths) {
+    const next = createExecutableIdentity(absolutePath);
+    const existing = folded.get(next.absolutePath.toLowerCase());
+    if (existing) {
+      if (existing.absolutePath !== next.absolutePath || existing.sha256 !== next.sha256) {
+        throw new Error("observer executable identity changed during ownership reconstruction");
+      }
+      continue;
+    }
+    identities.push(next);
+    folded.set(next.absolutePath.toLowerCase(), next);
+  }
+  return createWriteOnceOwnership(rootPids, allowedRoots, identities);
+}
+function reconstructObserverOwnershipFromFrozenIdentities(
+  priorOwnership,
+  rootPids,
+  allowedRoots,
+  additionalExecutableIdentities,
+) {
+  if (!Array.isArray(additionalExecutableIdentities)) {
+    throw new Error("observer frozen executable identities are malformed");
+  }
+  const identities = [
+    ...(priorOwnership?.allowedExecutableIdentities ?? []),
+    ...additionalExecutableIdentities,
+  ];
+  const folded = new Map();
+  for (const identity of identities) {
+    const current = createExecutableIdentity(identity.absolutePath);
+    if (
+      current.absolutePath !== identity.absolutePath ||
+      current.sha256 !== identity.sha256 ||
+      (folded.has(identity.absolutePath.toLowerCase()) &&
+        folded.get(identity.absolutePath.toLowerCase()).absolutePath !== identity.absolutePath)
+    ) {
+      throw new Error("observer frozen executable identity changed before registration");
+    }
+    folded.set(identity.absolutePath.toLowerCase(), identity);
+  }
+  return createWriteOnceOwnership(rootPids, allowedRoots, [...folded.values()]);
+}
+function exactPhaseExecutableIdentities(ownership, absolutePaths) {
+  if (!ownership || !Array.isArray(absolutePaths) || absolutePaths.length === 0) {
+    throw new Error("observer phase executable identities are missing");
+  }
+  const selected = absolutePaths.map((absolutePath) => {
+    const identity = ownership.allowedExecutableIdentities.find(
+      (candidate) => candidate.absolutePath === absolutePath,
+    );
+    if (!identity) throw new Error("observer phase executable identity is not preserved");
+    return identity;
+  });
+  return Object.freeze(selected);
+}
+function assertFrozenExecutableIdentityCurrent(identity, label) {
+  const current = createExecutableIdentity(identity.absolutePath);
+  if (current.absolutePath !== identity.absolutePath || current.sha256 !== identity.sha256) {
+    throw new Error(`${label} executable identity changed before spawn`);
+  }
+  return identity;
+}
 function closedPathDigest(path) {
   return createHash("sha256").update(resolve(path).toLowerCase(), "utf8").digest("hex");
 }
@@ -312,13 +390,49 @@ function boundedLog(child) {
     });
   return () => output;
 }
-async function waitForOwnedExit(child, label, timeoutMs = 120000, registry = null, role = null) {
+async function waitForOwnedExit(
+  child,
+  label,
+  timeoutMs,
+  registry,
+  role,
+  allowedExecutableIdentities,
+) {
   if (!child || !Number.isSafeInteger(child.pid) || child.pid <= 0) {
     throw new Error(`${label} did not create an exact owned process`);
   }
-  if (child.exitCode !== null) return child.exitCode;
+  if (
+    !registry ||
+    !role ||
+    !Array.isArray(allowedExecutableIdentities) ||
+    allowedExecutableIdentities.length === 0
+  ) {
+    throw new Error(`${label} requires exact phase executable identities`);
+  }
+  const initialSnapshot = inspectWindowsProcessSocketSnapshot();
+  const record = registry.find((entry) => entry.role === role && entry.pid === child.pid);
+  if (!record) throw new Error(`${label} requires the exact registered process role`);
+  const captured = captureRegisteredOwnedExitSet(
+    initialSnapshot,
+    registry,
+    role,
+    child.pid,
+    [],
+    allowedExecutableIdentities,
+  );
+  if (child.exitCode !== null) {
+    await proveRegisteredOwnedProcessSetAbsent(
+      inspectWindowsProcessSocketSnapshot,
+      registry,
+      role,
+      captured,
+      [],
+      allowedExecutableIdentities,
+    );
+    return child.exitCode;
+  }
   try {
-    return await withBoundedTimeout(
+    const exitCode = await withBoundedTimeout(
       () =>
         new Promise((accept, reject) => {
           child.once("error", reject);
@@ -328,9 +442,35 @@ async function waitForOwnedExit(child, label, timeoutMs = 120000, registry = nul
       label,
       activeAttemptSignal,
     );
+    await proveRegisteredOwnedProcessSetAbsent(
+      inspectWindowsProcessSocketSnapshot,
+      registry,
+      role,
+      captured,
+      [],
+      allowedExecutableIdentities,
+    );
+    return exitCode;
   } catch (error) {
-    if (registry && role && child.exitCode === null) {
-      await terminateRegisteredOwnedChild(child, registry, role);
+    if (child.exitCode === null) {
+      await terminateRegisteredOwnedChild(
+        child,
+        registry,
+        role,
+        inspectWindowsProcessSocketSnapshot,
+        [],
+        allowedExecutableIdentities,
+        captured,
+      );
+    } else {
+      await proveRegisteredOwnedProcessSetAbsent(
+        inspectWindowsProcessSocketSnapshot,
+        registry,
+        role,
+        captured,
+        [],
+        allowedExecutableIdentities,
+      );
     }
     throw error;
   }
@@ -415,17 +555,24 @@ async function createNvdaWriter(
   assertWindowsStandardUser();
   assertNoPreexistingNvda(inspectWindowsProcessSocketSnapshot());
   const lifecycle = createNvdaLifecycle(resolve(NVDA_ADAPTER_PATHS.portable, "nvda.exe"));
+  const installerIdentities = Object.freeze([
+    createExecutableIdentity(NVDA_ADAPTER_PATHS.installer),
+  ]);
   const installer = spawn(NVDA_ADAPTER_PATHS.installer, lifecycle.create, {
     cwd: RAW,
     env: safeEnvironment(),
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
-  const installerRegistry = await waitForRoleRegistration(null, {
-    role: "nvda-installer",
-    pid: installer.pid,
-    allowedRoot: dirname(NVDA_ADAPTER_PATHS.installer),
-  });
+  const installerRegistry = await waitForRoleRegistration(
+    null,
+    {
+      role: "nvda-installer",
+      pid: installer.pid,
+      allowedRoot: dirname(NVDA_ADAPTER_PATHS.installer),
+    },
+    installerIdentities,
+  );
   const installerLog = boundedLog(installer);
   const installerExit = await waitForOwnedExit(
     installer,
@@ -433,6 +580,7 @@ async function createNvdaWriter(
     120000,
     installerRegistry,
     "nvda-installer",
+    installerIdentities,
   );
   if (installerExit !== 0) {
     throw new Error(`NVDA portable creation failed with ${installerExit}: ${installerLog()}`);
@@ -441,6 +589,7 @@ async function createNvdaWriter(
   inventoryExactOwnedTree(NVDA_ADAPTER_PATHS.rawRoot, NVDA_ADAPTER_PATHS.rawRoot);
   const defender = "C:\\Program Files\\Windows Defender\\MpCmdRun.exe";
   if (!existsSync(defender)) throw new Error("fixed Microsoft Defender scanner is absent");
+  const scannerIdentities = Object.freeze([createExecutableIdentity(defender)]);
   const scanner = spawn(
     defender,
     ["-Scan", "-ScanType", "3", "-File", NVDA_ADAPTER_PATHS.rawRoot, "-DisableRemediation"],
@@ -451,11 +600,15 @@ async function createNvdaWriter(
       windowsHide: true,
     },
   );
-  const scannerRegistry = await waitForRoleRegistration(null, {
-    role: "defender-scanner",
-    pid: scanner.pid,
-    allowedRoot: dirname(defender),
-  });
+  const scannerRegistry = await waitForRoleRegistration(
+    null,
+    {
+      role: "defender-scanner",
+      pid: scanner.pid,
+      allowedRoot: dirname(defender),
+    },
+    scannerIdentities,
+  );
   const scannerLog = boundedLog(scanner);
   const scannerExit = await waitForOwnedExit(
     scanner,
@@ -463,12 +616,14 @@ async function createNvdaWriter(
     120000,
     scannerRegistry,
     "defender-scanner",
+    scannerIdentities,
   );
   if (scannerExit !== 0 || !/found no threats/iu.test(scannerLog())) {
     throw new Error("NVDA generated portable malware scan did not pass");
   }
   const executable = resolve(NVDA_ADAPTER_PATHS.portable, "nvda.exe");
   if (!existsSync(executable)) throw new Error("NVDA portable executable is absent");
+  const writerIdentities = Object.freeze([createExecutableIdentity(executable)]);
   const child = await spawnNativeNvdaBoundary(
     [
       executable,
@@ -490,11 +645,15 @@ async function createNvdaWriter(
       env: safeEnvironment(),
     },
   );
-  const writerRegistry = await waitForRoleRegistration(null, {
-    role: "nvda-writer",
-    pid: child.pid,
-    allowedRoot: NVDA_ADAPTER_PATHS.portable,
-  });
+  const writerRegistry = await waitForRoleRegistration(
+    null,
+    {
+      role: "nvda-writer",
+      pid: child.pid,
+      allowedRoot: NVDA_ADAPTER_PATHS.portable,
+    },
+    writerIdentities,
+  );
   let control;
   try {
     control = createNvdaControl({
@@ -506,13 +665,21 @@ async function createNvdaWriter(
     child.writeControl(control);
     await waitForNvdaReady(child, control);
   } catch (error) {
-    await terminateRegisteredOwnedChild(child, writerRegistry, "nvda-writer");
+    await terminateRegisteredOwnedChild(
+      child,
+      writerRegistry,
+      "nvda-writer",
+      inspectWindowsProcessSocketSnapshot,
+      [],
+      writerIdentities,
+    );
     throw error;
   }
   return Object.freeze({
     child,
     executable,
     lifecycle,
+    executableIdentities: writerIdentities,
     initialObservationId: firstObservationId,
     initialControl: control,
   });
@@ -524,15 +691,20 @@ function registryForRole(registry, role) {
   return Object.freeze([record]);
 }
 
-async function waitForRoleRegistration(registry, descriptor) {
+async function waitForRoleRegistration(registry, descriptor, allowedExecutableIdentities) {
+  if (!Array.isArray(allowedExecutableIdentities) || allowedExecutableIdentities.length === 0) {
+    throw new Error(`owned ${descriptor.role} registration requires exact executable identities`);
+  }
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     if (activeAttemptSignal?.aborted) throw activeAttemptSignal.reason;
     const snapshot = inspectWindowsProcessSocketSnapshot();
     try {
-      return registry
-        ? appendImmutableOwnershipRole(registry, descriptor, snapshot)
+      const next = registry
+        ? appendImmutableOwnershipRole(registry, descriptor, snapshot, allowedExecutableIdentities)
         : createImmutableOwnershipRegistry([descriptor], snapshot);
+      validateImmutableOwnershipRegistry(snapshot, next, [], allowedExecutableIdentities);
+      return next;
     } catch (error) {
       if (!/absent from the exact snapshot/u.test(String(error))) throw error;
     }
@@ -541,13 +713,15 @@ async function waitForRoleRegistration(registry, descriptor) {
   throw new Error(`owned ${descriptor.role} process was not registerable within 5000ms`);
 }
 
-async function stopNvdaWriter(writer, registry) {
+async function stopNvdaWriter(writer, registry, allowedExecutableIdentities) {
   if (!writer) return;
-  writer.child.kill();
   await terminateRegisteredOwnedChild(
     writer.child,
     registryForRole(registry, "nvda-writer"),
     "nvda-writer",
+    inspectWindowsProcessSocketSnapshot,
+    [],
+    allowedExecutableIdentities,
   );
 }
 async function wd(base, method, path, body) {
@@ -1420,6 +1594,9 @@ async function observeDiscardedPreflightInternal() {
   const driverPort = await allocateInternalLoopbackPort();
   const origin = `http://127.0.0.1:${webPort}`;
   const driverBase = `http://127.0.0.1:${driverPort}`;
+  const webIdentity = createExecutableIdentity(process.execPath);
+  const driverIdentity = createExecutableIdentity(DRIVER);
+  const chromeIdentity = createExecutableIdentity(CHROME);
   const web = spawn(
     process.execPath,
     [NEXT_CLI, "start", "--hostname", "127.0.0.1", "--port", String(webPort)],
@@ -1459,32 +1636,54 @@ async function observeDiscardedPreflightInternal() {
   let inertBoundaryProved = false;
   try {
     assertAttemptActive();
-    ownershipRegistry = await waitForRoleRegistration(null, {
-      role: "web-server",
-      pid: web.pid,
-      allowedRoot: dirname(process.execPath),
-    });
-    ownership = createWriteOnceOwnership([web.pid], [dirname(process.execPath), HARNESS_BUILD]);
+    ownership = reconstructObserverOwnershipFromFrozenIdentities(
+      null,
+      [web.pid],
+      [dirname(process.execPath), HARNESS_BUILD],
+      [webIdentity],
+    );
+    ownershipRegistry = await waitForRoleRegistration(
+      null,
+      {
+        role: "web-server",
+        pid: web.pid,
+        allowedRoot: dirname(process.execPath),
+      },
+      ownership.allowedExecutableIdentities,
+    );
     const first = plan.visualCells[0];
     await waitFor(
       `${origin}/?fixture=${fixturePresentation(first)}&breakCase=${first.fixtureId}&locale=${first.localeId}&transition=none`,
     );
     await proveHarnessQueryBoundary(origin, plan);
-    validateImmutableOwnershipRegistry(inspectWindowsProcessSocketSnapshot(), ownershipRegistry);
+    validateImmutableOwnershipRegistry(
+      inspectWindowsProcessSocketSnapshot(),
+      ownershipRegistry,
+      [],
+      ownership.allowedExecutableIdentities,
+    );
     writeReadinessReceipt("SERVER_READY", ownershipRegistry, ["web-server"]);
+    assertFrozenExecutableIdentityCurrent(driverIdentity, "ChromeDriver");
+    assertFrozenExecutableIdentityCurrent(chromeIdentity, "Chrome");
     driver = spawn(DRIVER, [`--port=${driverPort}`, "--allowed-ips=127.0.0.1"], {
       env: safeEnvironment(),
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });
-    ownershipRegistry = await waitForRoleRegistration(ownershipRegistry, {
-      role: "chromedriver",
-      pid: driver.pid,
-      allowedRoot: dirname(DRIVER),
-    });
-    ownership = createWriteOnceOwnership(
+    ownership = reconstructObserverOwnershipFromFrozenIdentities(
+      ownership,
       [web.pid, driver.pid],
       [dirname(process.execPath), dirname(DRIVER), dirname(CHROME), HARNESS_BUILD],
+      [driverIdentity, chromeIdentity],
+    );
+    ownershipRegistry = await waitForRoleRegistration(
+      ownershipRegistry,
+      {
+        role: "chromedriver",
+        pid: driver.pid,
+        allowedRoot: dirname(DRIVER),
+      },
+      ownership.allowedExecutableIdentities,
     );
     const driverLog = boundedLog(driver);
     try {
@@ -1492,10 +1691,16 @@ async function observeDiscardedPreflightInternal() {
     } catch (error) {
       throw new Error(`${error.message}; ${driverLog()}`);
     }
-    validateImmutableOwnershipRegistry(inspectWindowsProcessSocketSnapshot(), ownershipRegistry);
+    validateImmutableOwnershipRegistry(
+      inspectWindowsProcessSocketSnapshot(),
+      ownershipRegistry,
+      [],
+      ownership.allowedExecutableIdentities,
+    );
     writeReadinessReceipt("DRIVER_READY", ownershipRegistry, ["web-server", "chromedriver"]);
     for (const risk of plan.riskIntersections) {
       assertAttemptActive();
+      assertFrozenExecutableIdentityCurrent(chromeIdentity, "Chrome session");
       session = await createChromeSession(
         driverBase,
         resolve(RAW, "checks", "risk", risk.cellDigest),
@@ -1562,6 +1767,7 @@ async function observeDiscardedPreflightInternal() {
       if (!transition || transition.transitionDigest !== family.representativeDigest) {
         throw new Error("transition-family representative drifted from the closed plan");
       }
+      assertFrozenExecutableIdentityCurrent(chromeIdentity, "Chrome transition session");
       session = await createChromeSession(
         driverBase,
         resolve(RAW, "checks", "transition", family.representativeDigest),
@@ -1648,16 +1854,27 @@ async function observeDiscardedPreflightInternal() {
       expectedSpeechContracts[0],
     );
     if (!nvdaWriter) throw new Error("NVDA readiness is required before observation sampling");
-    ownership = createWriteOnceOwnership(
+    ownership = reconstructObserverOwnershipFromFrozenIdentities(
+      ownership,
       [...ownership.rootPids, nvdaWriter.child.pid],
       [...ownership.allowedRoots, NVDA_ADAPTER_PATHS.portable, NVDA_ADAPTER_PATHS.config],
+      nvdaWriter.executableIdentities,
     );
-    ownershipRegistry = await waitForRoleRegistration(ownershipRegistry, {
-      role: "nvda-writer",
-      pid: nvdaWriter.child.pid,
-      allowedRoot: NVDA_ADAPTER_PATHS.portable,
-    });
-    validateImmutableOwnershipRegistry(inspectWindowsProcessSocketSnapshot(), ownershipRegistry);
+    ownershipRegistry = await waitForRoleRegistration(
+      ownershipRegistry,
+      {
+        role: "nvda-writer",
+        pid: nvdaWriter.child.pid,
+        allowedRoot: NVDA_ADAPTER_PATHS.portable,
+      },
+      ownership.allowedExecutableIdentities,
+    );
+    validateImmutableOwnershipRegistry(
+      inspectWindowsProcessSocketSnapshot(),
+      ownershipRegistry,
+      [],
+      ownership.allowedExecutableIdentities,
+    );
     writeReadinessReceipt("NVDA_READY", ownershipRegistry, [
       "web-server",
       "chromedriver",
@@ -1666,6 +1883,7 @@ async function observeDiscardedPreflightInternal() {
     for (const observation of plan.observations) {
       assertAttemptActive();
       const profileRoot = resolve(RAW, "profiles", observation.observationId);
+      assertFrozenExecutableIdentityCurrent(chromeIdentity, "Chrome observation session");
       session = await createChromeSession(driverBase, profileRoot);
       await cdp(driverBase, session, "Network.enable");
       const cell = plan.visualCells[observation.cellOrdinal - 1];
@@ -1915,17 +2133,28 @@ async function observeDiscardedPreflightInternal() {
   } finally {
     try {
       if (session && driver) await wd(driverBase, "DELETE", `/session/${session}`).catch(() => {});
-      if (nvdaWriter) await stopNvdaWriter(nvdaWriter, ownershipRegistry);
+      if (nvdaWriter)
+        await stopNvdaWriter(
+          nvdaWriter,
+          ownershipRegistry,
+          exactPhaseExecutableIdentities(ownership, [nvdaWriter.executable]),
+        );
       if (driver)
         await terminateRegisteredOwnedChild(
           driver,
           registryForRole(ownershipRegistry, "chromedriver"),
           "chromedriver",
+          inspectWindowsProcessSocketSnapshot,
+          [],
+          exactPhaseExecutableIdentities(ownership, [DRIVER, CHROME]),
         );
       await terminateRegisteredOwnedChild(
         web,
         registryForRole(ownershipRegistry, "web-server"),
         "web-server",
+        inspectWindowsProcessSocketSnapshot,
+        [],
+        exactPhaseExecutableIdentities(ownership, [process.execPath]),
       );
       if (ownership)
         assertNoOwnedProcessesOrSockets(inspectWindowsProcessSocketSnapshot(), ownership);
