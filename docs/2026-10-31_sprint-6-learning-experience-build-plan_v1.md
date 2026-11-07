@@ -1565,27 +1565,59 @@ R1 verification is limited to deterministic serialization, closed contract valid
 
 ## Status
 
+This status is the current repository handoff as of 2026-11-07. It does not amend the
+digest-bound Attempt-002 infrastructure plan or authority record, and it grants no runtime,
+capture, provider, production, or external-action authority.
+
 **Today**
 
-- R0–R3 and R4-A are merged or accepted through verified `main` `b0f32d97e6d763e4cf080b1854ac1db4ee695d6a`.
-- Marlon selected Choice A on 2026-11-01. ADR 0008 and this plan stage R4-B as R4-B1 runtime/harness, R4-B2 trusted baseline and descendant capture, and R4-B3 review/cleanup/final runtime-browser-AT PASS.
-- The R0-era sentence “Runtime implementation remains zero” is retained only as a historical statement about that documentation phase; it is not the current project status.
-- A local R4-B1 implementation candidate exists at committed parent `6914b5644849f562f38b018814be3f476213be81` with a later uncommitted route and zero-egress repair. It has no pull request and makes no runtime/accessibility completion claim.
-- PR #61 and its required-check blocker remain separate and untouched by this amendment. PR #61 remains a separate draft and does not block the staged R4-B work.
+- PR #78 repaired the formatter boundary without changing the canonical one-line authority
+  contract and merged as trusted harness commit `4c94dfbe5cc04ac0b12043220c2dbe9d8563cede`
+  (`H3`).
+- PR #79 freshly derived the sole-path Attempt-002 authority from `H3` and merged as `main`
+  `f34b2ffab74e0973b1053ca2f01586ce3c4d0936`. Post-main CI run `42316447797`
+  passed all nine jobs; approval-history run `42316447878` and material-decision run
+  `42316448000` also passed.
+- The merged authority is
+  `scripts/r4b-evidence/attempt-002-authority.json`: 1,062 bytes, one terminal LF, blob
+  `26b4480d4b9db3fabec445d8ce669d4e1f8d878a`, file SHA-256
+  `a53fb609993409cb31daded82eafc01439d74cfa80f05b025213f07bb4f7a273`, and canonical
+  digest `4b44bd9de3ab626bae17c1425b79bd46ccc7bd208e9747d33587dea7aeeec2a1`.
+  It remains `NON_EVIDENCE`, `creditable: false`, predecessor `BLOCKED`, with 144 required
+  checks and zero evidence credit. The `PartialChain`/`NoCheck` provenance limitations remain
+  limitations and do not become stronger online revocation-chain claims.
+- PR #77 remains an open draft frozen at
+  `b8e4bfadb3b24b1390536b8108712fb310018fd8`; its historical formatting failure is not to
+  be rerun, rewritten, or reused.
 
 **Waiting**
 
-- Complete the exact-byte records-amendment gates, then commit, push, open, and reconcile its protected pull-request checks and mergeability.
-- After the amendment merges and post-main checks pass, integrate the route/zero-egress repair and topology-neutral evidence core into R4-B1, compute a fresh manifest, and rerun all applicable specialist and Elana exact-head code-scope gates.
+- Attempt-002 tool, harness, and observer launch and runtime capture remain explicitly
+  unapproved and unattempted. The authority merge does not convert any of the 144 required
+  statuses to PASS and does not complete R4-B2, aggregate R4-B, or Sprint 6.
+- OCR remains `BLOCKED` and outside Attempt-002. Provider configuration, runner registration,
+  administrator/firewall action, storage expansion, credentials, spending, and external-account
+  actions remain separately gated.
 
 **Needs you**
 
-- Nothing for the already-approved records amendment or credential-free R4-B1 repository work.
-- Production, signing, stores, spend, credentials, external accounts, economy, social, child, notification, offline-write, and native-learning decisions remain gated.
-- R4-B2 tool installation, provider configuration, administrator/firewall action, storage expansion, credential, external-account, or spending choices will be presented separately before execution.
+- Nothing for this repository-only handoff reconciliation.
+- The next non-record action requires Marlon's explicit approval of the exact bounded local
+  runtime scope before any cached Chrome, Chromedriver, or NVDA byte is launched or executed,
+  any portable NVDA preparation occurs, or the isolated harness/observer captures observations.
+- Production, signing, stores, spending, credentials, provider/admin/firewall/storage actions,
+  external accounts, publication, and other previously excluded actions remain unapproved.
 
 **Next**
 
-- Merge the records amendment only after every applicable specialist gate, protected check, mergeability check, and Elana exact-head records PASS.
-- Verify post-main workflows, then advance directly to the authorized R4-B1 integration without waiting for another start instruction.
-- Do not begin R4-B2 capture or claim aggregate R4-B completion from R4-B1 evidence.
+- Hold runtime execution until the runtime choice is explicit. Any future runtime must use a clean
+  checkout whose `HEAD` is exactly the immutable executable A2 commit
+  `f34b2ffab74e0973b1053ca2f01586ce3c4d0936`.
+- Any later commit produced from this records-only handoff is documentation only. It is not
+  executable A2, must never be substituted as runtime `HEAD`, and cannot satisfy the direct-child
+  verifier.
+- If Marlon approves the bounded local runtime, require Catalina, Natalia, Camila, Daniela,
+  Julieta, Gabriela, Renata, and Elana to pass their applicable pre-execution gates against that
+  exact clean A2 checkout before the 30-cell/120-observation `NON_EVIDENCE` preflight begins.
+- Do not begin provider-backed R4-B2 capture or claim R4-B2, aggregate R4-B, or Sprint 6 complete
+  from the authority record or discarded preflight.
