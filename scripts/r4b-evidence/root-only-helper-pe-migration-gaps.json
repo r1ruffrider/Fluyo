@@ -1,0 +1,25 @@
+{
+  "schema": "fluyo:r4b:root-only-helper-pe-migration-gaps:v1",
+  "gaps": [
+    {
+      "id": "V1_CONTENT_UNRECOVERABLE",
+      "status": "PERMANENT_NONBLOCKING"
+    },
+    {
+      "id": "V1_CONTENT_NOT_REVERIFIABLE",
+      "status": "PERMANENT_NONBLOCKING"
+    },
+    {
+      "id": "ATTEMPT004_AUTHORITY_NOT_FROZEN",
+      "status": "OPEN_BLOCKING"
+    },
+    {
+      "id": "ATTEMPT004_BROKER_ONLY_BUILD_NOT_EXECUTED",
+      "status": "OPEN_BLOCKING"
+    },
+    {
+      "id": "ATTEMPT004_RESULT_NOT_VALIDATED",
+      "status": "OPEN_BLOCKING"
+    }
+  ]
+}

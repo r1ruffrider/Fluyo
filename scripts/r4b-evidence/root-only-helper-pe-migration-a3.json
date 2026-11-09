@@ -1,0 +1,8 @@
+{
+  "schema": "fluyo:r4b:root-only-helper-pe-migration-a3:v1",
+  "v1": {
+    "sha256": "ff5f8d8d5d6ea1b3fd1aedfed0508f86452587a5c74cd4e1a433e25c86ced7ce",
+    "bytes": 8232,
+    "migrationReason": "Marlon selected 1/A on 2026-11-09: permanently delete the privacy-bearing v1 manifest after exact 8,232-byte and SHA-256 verification; retain no copy, recovery path, content, or future content-reverifiability claim."
+  }
+}
