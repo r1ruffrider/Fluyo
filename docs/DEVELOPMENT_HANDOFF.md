@@ -2310,3 +2310,132 @@ sanitized iOS aggregate evidence plus **3 consecutive independent canonical curr
 current-job/corpus PASS runs**, all protected checks, mergeability, and Elana's final exact-head PASS
 remain mandatory before ready or merge. PR #72 remains draft/**HOLD**. **Marlon action required:
 none.**
+
+## R4-B A3 privacy migration record — 2026-11-10
+
+This append-only entry records Marlon's explicit **1/A** selection on 2026-11-09 and supersedes
+only later status claims; it does not rewrite the earlier chronology. Marlon authorized permanent
+deletion of the exact privacy-bearing v1 manifest only after verifying its exact identity. Before
+deletion, `scripts/r4b-evidence/root-only-helper-pe-build-manifest.json` was verified as a regular,
+non-reparse, untracked file absent from Git history, exactly **8,232 bytes**, with full SHA-256
+`ff5f8d8d5d6ea1b3fd1aedfed0508f86452587a5c74cd4e1a433e25c86ced7ce`. That exact file was
+permanently deleted. No copy, backup, recovery object, trash entry, archive, retained content, or
+future content-reverifiability claim exists. Post-deletion scans found zero same-name files and zero
+remaining 8,232-byte files with that digest across the checked worktrees.
+
+The retained A3 record is a derivative migration record, not independent proof from which the
+deleted content or its digest can now be re-derived. It retains only the contemporaneously verified
+full SHA-256, byte count `8232`, and the fixed migration reason. Claims must rely on the
+contemporaneous pre-deletion verification and must never imply recoverability, retained bytes, or
+future verification of the deleted content.
+
+The seven retained migration and consumer files are:
+
+- `scripts/r4b-evidence/root-only-helper-pe-migration-a3.json` — **421 bytes**, SHA-256
+  `81976d818548318ffef3b68e94e8569f0fe8baca18be1f707dc4dd7cc6bab06c`;
+- `scripts/r4b-evidence/root-only-helper-pe-migration-index.json` — **242 bytes**, SHA-256
+  `497f68bd47b9f2ac3528699d76a9fd6e2bd1034ae240163e08f29efa0e87791e`;
+- `scripts/r4b-evidence/root-only-helper-pe-migration-gaps.json` — **557 bytes**, SHA-256
+  `2ef674fa6bb5ef0a5764ba85b8db6706c307d1a108a2ee2da333285e1f206866`;
+- `scripts/r4b-evidence/root-only-closure-schema.mjs` — **33,688 bytes**, SHA-256
+  `7ffe2dac09581835ec0c919cea964b743468f19747de903aafd7126004cd6b9e`;
+- `scripts/r4b-evidence/root-only-output-broker.test.mjs` — **15,233 bytes**, SHA-256
+  `0ecd60298ae336e6e5505ce65629a3648671f1bc756e8022ba81615490194ce4`;
+- `scripts/r4b-evidence/root-only-install-controller.mjs` — **17,092 bytes**, SHA-256
+  `316f7971e637dd6a8fa9cb647558753525fc7e46856a9920463e55eff3f840f4`;
+- `scripts/r4b-evidence/root-only-closure-handoff.mjs` — **21,686 bytes**, SHA-256
+  `109a59048ceb52e347f9af30e98a4e5ea2ff79473187f42e4db1b935ce396139`.
+
+The canonical retained-manifest digest is computed from exactly those seven rows sorted by
+repository-relative path. Each UTF-8 row is encoded exactly as
+`repo-relative-path\0byte-count\0sha256\n`; concatenating the seven rows produces an **882-byte**
+preimage whose SHA-256 is
+`0ebe1259bee322724064c1efa9f82a2acfca7d444bb0227063e252126b63580f`.
+
+The closed migration-gap record contains exactly five ordered entries: two permanent nonblocking
+gaps (`V1_CONTENT_UNRECOVERABLE`, `V1_CONTENT_NOT_REVERIFIABLE`) and three open blocking gaps
+(`ATTEMPT004_AUTHORITY_NOT_FROZEN`, `ATTEMPT004_BROKER_ONLY_BUILD_NOT_EXECUTED`,
+`ATTEMPT004_RESULT_NOT_VALIDATED`). All four consumers were migrated away from the deleted manifest.
+`STALE_REBUILD_REQUIRED` remains the first execution barrier, and the three open gaps block
+Attempt004.
+
+Development evidence is bounded and reported without inflation: focused migration checks pass
+**14/14**; portable R4-B passes **127/127**; and the Node assertion inventory passes **237/237**.
+The overall `test:r4b:exact` command nevertheless exits **1** after those tests because its separate
+post-test hook reads an unavailable historical Attempt001 operational result. The exact lane is not
+claimed as passing, and the missing historical seal must not be recreated, recovered, or fabricated.
+Full-workspace lint and typecheck are likewise not claimed green: unrelated pre-existing untracked
+root-closure files and stale cross-worktree dependency resolution prevent those claims. Exact-file
+lint, syntax, selected formatting, and diff checks pass.
+
+Specialist evidence at this checkpoint is: Catalina **59/59 PASS**; Natalia **187/187 PASS WITH
+INTEGRATION HOLD**; Julieta **56/58**, with both records-only failures resolved by this append;
+Gabriela **36/38**, with both records-only failures resolved by this append; and Renata **378/378
+repository evidence PASS WITH INTEGRATION HOLD**. Attempt004 remains **HOLD** until this sanitized
+migration is immutable, a clean isolated install and protected CI pass, exact-head specialist and
+Elana gates pass, and a separate broker-only authority/result cycle is frozen. No production,
+signing, store, spend, credential, provider, external-account, or public-release action is
+authorized. **Marlon action required now: none.**
+
+## R4-B A3 Option-A structural repair record — 2026-11-10
+
+This append-only entry supersedes only the later Option-A candidate status and preserves the
+privacy-migration chronology above. The stable seven-file Option-A core contains exactly two
+updated core files:
+
+- `scripts/r4b-evidence/root-only-install-controller.mjs` — **17,154 bytes**, SHA-256
+  `19b0b77ed266c7c989e2042d4a56430a1f32348b6a1ae53d531304d605a0424e`;
+- `scripts/r4b-evidence/root-only-closure-handoff.mjs` — **21,709 bytes**, SHA-256
+  `1bbb7a74628faaa38688d1cff9b71065ac81799bb54c298fe32c8f6481924cf4`;
+
+The separately reviewed structural test, which is not part of the core seven, is:
+
+- `scripts/r4b-evidence/root-only-install-controller.test.mjs` — **12,059 bytes**, SHA-256
+  `4afc241334962233269aba0777f10c789cdb8c509d63728360dc75cd5535079d`.
+
+The other five core files are unchanged from the preceding migration record:
+
+- A3 SHA-256 `81976d818548318ffef3b68e94e8569f0fe8baca18be1f707dc4dd7cc6bab06c`;
+- migration index SHA-256
+  `497f68bd47b9f2ac3528699d76a9fd6e2bd1034ae240163e08f29efa0e87791e`;
+- migration gaps SHA-256
+  `2ef674fa6bb5ef0a5764ba85b8db6706c307d1a108a2ee2da333285e1f206866`;
+- closure schema SHA-256
+  `7ffe2dac09581835ec0c919cea964b743468f19747de903aafd7126004cd6b9e`;
+- output-broker test SHA-256
+  `0ecd60298ae336e6e5505ce65629a3648671f1bc756e8022ba81615490194ce4`.
+
+The stable core-seven binding uses seven repository-relative rows sorted by path and encoded exactly
+as `repo-relative-path\0byte-count\0sha256\n`. Its UTF-8 preimage is **882 bytes** and has SHA-256
+`7dc4b5b40e2248b451e4f98113892d9da6dac0cf39b10619b2c4faecc9416d0a`.
+
+The structural test is the eighth reviewed core artifact. Applying the same sorted-row formula to
+the seven core files plus that test produces a **1,012-byte** UTF-8 preimage with SHA-256
+`fa26d621158c35c6ffa1d50fe14993ec673c3879916a9489e0d79d59db455c5b`.
+That eight-file value is an external review binding. It does not include this handoff, is not a
+self-hash, and must change if any reviewed core or test byte changes. No self-inclusive handoff
+digest is embedded here.
+
+The repair keeps the controller and handoff authority objects closed, frozen, and exactly ordered;
+binds the reviewed authority digest, head, tree, trusted parent head, and trusted parent tree; and
+keeps the controller broker connection closed to the exact executable, `CONTROLLER` phase,
+checkout, contract digests, approvals, authority state, approved environment, and controller timeout.
+The structural adversaries reject reordered, missing, unknown, duplicated, unfrozen, or wrongly
+bound authority fields; wrong phase or timeout; omitted authority state; and misleading prefixed
+source text. Broker execution remains no-shell and continues behind the tracked-build and repeated
+authority checkpoints. No runtime, protocol, dependency, privacy, or Attempt004 authority is
+expanded.
+
+Evidence at these exact bytes is: structural tests **3/3 PASS**, focused migration tests **15/15
+PASS**, portable R4-B **128/128 PASS**, and the Node assertion inventory **238/238 PASS**. The overall
+exact command still exits **1** only at its separate unavailable historical Attempt001 operational
+seal; it is not described as a passing exact lane and that evidence must not be recovered or
+fabricated. Catalina reports **PASS** and Natalia reports **PASS WITH the existing integration
+HOLD**.
+
+The approved deletion, zero-copy privacy boundary, derivative-record limitation, and permanent
+non-recoverability/non-reverifiability facts remain unchanged. Attempt004 remains **HOLD** pending
+the immutable sanitized migration, clean protected evidence, exact-head specialist and Elana gates,
+and a separately frozen broker-only authority/result cycle. No production, signing, store, spend,
+credential, provider, external-account, or public-release action is authorized. **Marlon action
+required now: none.**
