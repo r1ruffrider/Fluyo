@@ -2310,3 +2310,491 @@ sanitized iOS aggregate evidence plus **3 consecutive independent canonical curr
 current-job/corpus PASS runs**, all protected checks, mergeability, and Elana's final exact-head PASS
 remain mandatory before ready or merge. PR #72 remains draft/**HOLD**. **Marlon action required:
 none.**
+
+## R4-B A3 privacy migration record — 2026-11-10
+
+This append-only entry records Marlon's explicit **1/A** selection on 2026-11-09 and supersedes
+only later status claims; it does not rewrite the earlier chronology. Marlon authorized permanent
+deletion of the exact privacy-bearing v1 manifest only after verifying its exact identity. Before
+deletion, `scripts/r4b-evidence/root-only-helper-pe-build-manifest.json` was verified as a regular,
+non-reparse, untracked file absent from Git history, exactly **8,232 bytes**, with full SHA-256
+`ff5f8d8d5d6ea1b3fd1aedfed0508f86452587a5c74cd4e1a433e25c86ced7ce`. That exact file was
+permanently deleted. No copy, backup, recovery object, trash entry, archive, retained content, or
+future content-reverifiability claim exists. Post-deletion scans found zero same-name files and zero
+remaining 8,232-byte files with that digest across the checked worktrees.
+
+The retained A3 record is a derivative migration record, not independent proof from which the
+deleted content or its digest can now be re-derived. It retains only the contemporaneously verified
+full SHA-256, byte count `8232`, and the fixed migration reason. Claims must rely on the
+contemporaneous pre-deletion verification and must never imply recoverability, retained bytes, or
+future verification of the deleted content.
+
+The seven retained migration and consumer files are:
+
+- `scripts/r4b-evidence/root-only-helper-pe-migration-a3.json` — **421 bytes**, SHA-256
+  `81976d818548318ffef3b68e94e8569f0fe8baca18be1f707dc4dd7cc6bab06c`;
+- `scripts/r4b-evidence/root-only-helper-pe-migration-index.json` — **242 bytes**, SHA-256
+  `497f68bd47b9f2ac3528699d76a9fd6e2bd1034ae240163e08f29efa0e87791e`;
+- `scripts/r4b-evidence/root-only-helper-pe-migration-gaps.json` — **557 bytes**, SHA-256
+  `2ef674fa6bb5ef0a5764ba85b8db6706c307d1a108a2ee2da333285e1f206866`;
+- `scripts/r4b-evidence/root-only-closure-schema.mjs` — **33,688 bytes**, SHA-256
+  `7ffe2dac09581835ec0c919cea964b743468f19747de903aafd7126004cd6b9e`;
+- `scripts/r4b-evidence/root-only-output-broker.test.mjs` — **15,233 bytes**, SHA-256
+  `0ecd60298ae336e6e5505ce65629a3648671f1bc756e8022ba81615490194ce4`;
+- `scripts/r4b-evidence/root-only-install-controller.mjs` — **17,092 bytes**, SHA-256
+  `316f7971e637dd6a8fa9cb647558753525fc7e46856a9920463e55eff3f840f4`;
+- `scripts/r4b-evidence/root-only-closure-handoff.mjs` — **21,686 bytes**, SHA-256
+  `109a59048ceb52e347f9af30e98a4e5ea2ff79473187f42e4db1b935ce396139`.
+
+The canonical retained-manifest digest is computed from exactly those seven rows sorted by
+repository-relative path. Each UTF-8 row is encoded exactly as
+`repo-relative-path\0byte-count\0sha256\n`; concatenating the seven rows produces an **882-byte**
+preimage whose SHA-256 is
+`0ebe1259bee322724064c1efa9f82a2acfca7d444bb0227063e252126b63580f`.
+
+The closed migration-gap record contains exactly five ordered entries: two permanent nonblocking
+gaps (`V1_CONTENT_UNRECOVERABLE`, `V1_CONTENT_NOT_REVERIFIABLE`) and three open blocking gaps
+(`ATTEMPT004_AUTHORITY_NOT_FROZEN`, `ATTEMPT004_BROKER_ONLY_BUILD_NOT_EXECUTED`,
+`ATTEMPT004_RESULT_NOT_VALIDATED`). All four consumers were migrated away from the deleted manifest.
+`STALE_REBUILD_REQUIRED` remains the first execution barrier, and the three open gaps block
+Attempt004.
+
+Development evidence is bounded and reported without inflation: focused migration checks pass
+**14/14**; portable R4-B passes **127/127**; and the Node assertion inventory passes **237/237**.
+The overall `test:r4b:exact` command nevertheless exits **1** after those tests because its separate
+post-test hook reads an unavailable historical Attempt001 operational result. The exact lane is not
+claimed as passing, and the missing historical seal must not be recreated, recovered, or fabricated.
+Full-workspace lint and typecheck are likewise not claimed green: unrelated pre-existing untracked
+root-closure files and stale cross-worktree dependency resolution prevent those claims. Exact-file
+lint, syntax, selected formatting, and diff checks pass.
+
+Specialist evidence at this checkpoint is: Catalina **59/59 PASS**; Natalia **187/187 PASS WITH
+INTEGRATION HOLD**; Julieta **56/58**, with both records-only failures resolved by this append;
+Gabriela **36/38**, with both records-only failures resolved by this append; and Renata **378/378
+repository evidence PASS WITH INTEGRATION HOLD**. Attempt004 remains **HOLD** until this sanitized
+migration is immutable, a clean isolated install and protected CI pass, exact-head specialist and
+Elana gates pass, and a separate broker-only authority/result cycle is frozen. No production,
+signing, store, spend, credential, provider, external-account, or public-release action is
+authorized. **Marlon action required now: none.**
+
+## R4-B A3 Option-A structural repair record — 2026-11-10
+
+This append-only entry supersedes only the later Option-A candidate status and preserves the
+privacy-migration chronology above. The stable seven-file Option-A core contains exactly two
+updated core files:
+
+- `scripts/r4b-evidence/root-only-install-controller.mjs` — **17,154 bytes**, SHA-256
+  `19b0b77ed266c7c989e2042d4a56430a1f32348b6a1ae53d531304d605a0424e`;
+- `scripts/r4b-evidence/root-only-closure-handoff.mjs` — **21,709 bytes**, SHA-256
+  `1bbb7a74628faaa38688d1cff9b71065ac81799bb54c298fe32c8f6481924cf4`;
+
+The separately reviewed structural test, which is not part of the core seven, is:
+
+- `scripts/r4b-evidence/root-only-install-controller.test.mjs` — **12,059 bytes**, SHA-256
+  `4afc241334962233269aba0777f10c789cdb8c509d63728360dc75cd5535079d`.
+
+The other five core files are unchanged from the preceding migration record:
+
+- A3 SHA-256 `81976d818548318ffef3b68e94e8569f0fe8baca18be1f707dc4dd7cc6bab06c`;
+- migration index SHA-256
+  `497f68bd47b9f2ac3528699d76a9fd6e2bd1034ae240163e08f29efa0e87791e`;
+- migration gaps SHA-256
+  `2ef674fa6bb5ef0a5764ba85b8db6706c307d1a108a2ee2da333285e1f206866`;
+- closure schema SHA-256
+  `7ffe2dac09581835ec0c919cea964b743468f19747de903aafd7126004cd6b9e`;
+- output-broker test SHA-256
+  `0ecd60298ae336e6e5505ce65629a3648671f1bc756e8022ba81615490194ce4`.
+
+The stable core-seven binding uses seven repository-relative rows sorted by path and encoded exactly
+as `repo-relative-path\0byte-count\0sha256\n`. Its UTF-8 preimage is **882 bytes** and has SHA-256
+`7dc4b5b40e2248b451e4f98113892d9da6dac0cf39b10619b2c4faecc9416d0a`.
+
+The structural test is the eighth reviewed core artifact. Applying the same sorted-row formula to
+the seven core files plus that test produces a **1,012-byte** UTF-8 preimage with SHA-256
+`fa26d621158c35c6ffa1d50fe14993ec673c3879916a9489e0d79d59db455c5b`.
+That eight-file value is an external review binding. It does not include this handoff, is not a
+self-hash, and must change if any reviewed core or test byte changes. No self-inclusive handoff
+digest is embedded here.
+
+The repair keeps the controller and handoff authority objects closed, frozen, and exactly ordered;
+binds the reviewed authority digest, head, tree, trusted parent head, and trusted parent tree; and
+keeps the controller broker connection closed to the exact executable, `CONTROLLER` phase,
+checkout, contract digests, approvals, authority state, approved environment, and controller timeout.
+The structural adversaries reject reordered, missing, unknown, duplicated, unfrozen, or wrongly
+bound authority fields; wrong phase or timeout; omitted authority state; and misleading prefixed
+source text. Broker execution remains no-shell and continues behind the tracked-build and repeated
+authority checkpoints. No runtime, protocol, dependency, privacy, or Attempt004 authority is
+expanded.
+
+Evidence at these exact bytes is: structural tests **3/3 PASS**, focused migration tests **15/15
+PASS**, portable R4-B **128/128 PASS**, and the Node assertion inventory **238/238 PASS**. The overall
+exact command still exits **1** only at its separate unavailable historical Attempt001 operational
+seal; it is not described as a passing exact lane and that evidence must not be recovered or
+fabricated. Catalina reports **PASS** and Natalia reports **PASS WITH the existing integration
+HOLD**.
+
+The approved deletion, zero-copy privacy boundary, derivative-record limitation, and permanent
+non-recoverability/non-reverifiability facts remain unchanged. Attempt004 remains **HOLD** pending
+the immutable sanitized migration, clean protected evidence, exact-head specialist and Elana gates,
+and a separately frozen broker-only authority/result cycle. No production, signing, store, spend,
+credential, provider, external-account, or public-release action is authorized. **Marlon action
+required now: none.**
+
+## R4-B A3 non-reproducible verifier hold and pending decision — 2026-11-10
+
+This append-only entry supersedes only later verifier-provenance, candidate-inventory, specialist,
+and PR #87 status claims. It preserves every earlier record and does not modify the reviewed source,
+tests, executable, or receipt. The retained build-provenance receipt is
+`scripts/r4b-evidence/root-only-closure-ntfs-build-provenance.json`, exactly **5,864 bytes**, SHA-256
+`10ef452feb0afe309f8e35e1d8e21e6b302fe17f19e792d2535242d45706424f`. Its recorded outcome is
+`NON_REPRODUCIBLE_HOLD`.
+
+The receipt records **6 unique builds** across two three-build series. `HISTORICAL_V1` produced
+SHA-256 values `337eca65a75b5d85313e3011b244605cc7bd1677a2128e08d39ba89949582935`,
+`2b436ea000fd6fb96617357262152b8771a8ca410065d7ffb3bd7374c524f746`, and
+`02b7d143693e5f7258ff78f7afd69f35c929108989687fcb5505fc694ddf9dab`.
+`CLOSED_V2` produced SHA-256 values
+`7b4024f87a77393e3834b8ebc3e5a8b6c447f0f2ab98b846e882e388ca60763e`,
+`f3eb3d1abe99c594aa3fc612f2be0403b824a9f30e8872e1702a2a8f2296618a`, and
+`ed5a0ceb8c38c81e11bc19675e16d8d476cab36cae3607aab16ad32317eabde7`.
+No build matched the current executable. Cleanup is exactly **6 attempt roots created / 0 attempt
+roots retained / 0 outputs retained**, with `rawStdoutRetained: false` and
+`rawStderrRetained: false`. The raw build outputs were deleted and are not independently
+reverifiable from retained bytes; no reconstruction or reproduction claim is made.
+
+The exact source is `scripts/r4b-evidence/root-only-closure-ntfs.cs`, **24,368 bytes**, SHA-256
+`c61440ce230cb24257e4bc2c090d2f02a2548134eb0bad977eaa4e423c717f03`. The current executable is
+`scripts/r4b-evidence/root-only-closure-ntfs.exe`, **24,576 bytes**, SHA-256
+`23099e7d2eabf099ae6e2ca485bde1412b8c171dca3a94867f6f1c05d6b77c5c`, `AMD64`, `CONSOLE`, and
+`UNSIGNED`. The compiler pin is
+`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`, **2,569,576 bytes**, SHA-256
+`eca02e6b15cde93009a59a3d129d5a77fb5008f2e1cf62cf573b6737c747ecc3`, file version
+`14.8.10001.0 built by: bd501acdc000004`, with valid Microsoft Windows Authenticode signature and
+thumbprint `a28356221f80483a8509067973b88770557c9300`. The response file is **1,329 bytes**, SHA-256
+`e2021640c1f8ad500549fc89cd53bc4c2f0fa13fee9034714142d93c5d554042`; the compiler configuration
+is **182 bytes**, SHA-256 `2d4610ade011e530d817dd3ba4fc787e5dc0c2297cc520c30a643b8fb13f9093`.
+Pinned references are `mscorlib.dll` (**5,495,096 bytes**, SHA-256
+`94715f6991e2b9dc7481532c05aa99e74a5fff4ee147be541bca27f99e003fc7`), `System.dll`
+(**3,561,272 bytes**, SHA-256
+`09787b4f38f4f020c6b8a3894146085d4df7b8ae337577ed42d9acf1419660e8`), and `System.Core.dll`
+(**1,540,408 bytes**, SHA-256
+`d1bafee1a4dd7e7bd9adf6859e7b1b654d1b4e0d031a38795e33ba040508c09d`).
+
+All receipt claim flags remain false: `attempt004Authorized`,
+`currentBinaryProvenanceEstablished`, `productionRuntimeAuthorized`, `replacementAuthorized`, and
+`toolInstallAuthorized`. The replacement candidate digest remains `null`. Attempt004, replacement,
+tool installation/acquisition, and broker-only authority/result execution remain blocked.
+
+The three current aggregate bindings use repository-relative paths sorted by path and UTF-8 rows
+encoded exactly as `path\0decimal-bytes\0lowercase-sha256\n`:
+
+- **NTFS source + receipt:** 2 rows, **254-byte** preimage, SHA-256
+  `24c1bf316d34a9c008bfa6e357882096b112df7a6978df5ad94afc5e7e57871f`;
+- **provenance implementation + receipt:** 5 rows, **647-byte** preimage, SHA-256
+  `b4e91590ac24cf57cc4aa66e997bd917b5dcd5d181da5a863185dce9ae63b007`;
+- **full 33-path candidate immediately before this records append:** **4,120-byte** preimage, SHA-256
+  `aac93619fefdab70158e86bada6315fa68ec92ac22a21a557832c460895cec5f`.
+
+The `b4e91590…` aggregate is **provenance implementation + receipt** and must never be labeled
+“source + receipt.” Its five rows are
+`scripts/r4b-evidence/r4b-test-lanes.mjs`,
+`scripts/r4b-evidence/root-only-closure-ntfs.test.mjs`,
+`scripts/r4b-evidence/root-only-closure-ntfs-build-provenance.mjs`,
+`scripts/r4b-evidence/root-only-closure-ntfs-build-provenance.test.mjs`, and
+`scripts/r4b-evidence/root-only-closure-ntfs-build-provenance.json`. Only `24c1bf31…` is the
+two-row NTFS source + receipt aggregate.
+
+Current specialist records are: Catalina **66/66 PASS**; Renata **118/118 PASS**; Natalia
+**79/82**, with **3 PR-integration failures**; Gabriela **50/57 FAIL/HOLD**; and Julieta
+**114/119 FAIL/HOLD**, with **36 raw-output measures unattempted**. These results do not authorize
+Attempt004, a replacement executable, tool acquisition, broker execution, release, or merge.
+
+The exact pending choices are:
+
+- **A — `Authorize pinned deterministic toolchain (Recommended)`:** approve credential-free
+  acquisition/evaluation of a precisely pinned, signature/hash/license-verified deterministic
+  Roslyn toolchain; after new architecture/security/reproducibility gates, attempt a deterministic
+  rebuild. **Consequence:** authorizes a bounded external tool download/install; Attempt004 remains
+  blocked until proof passes.
+- **B — `Accept non-reproducible exception`:** explicitly accept an unsigned, non-reproducible
+  verifier artifact under a durable exception and compensating controls. **Consequence:** avoids a
+  new tool install and can unblock sooner, but materially weakens provenance/audit confidence; no
+  claim beyond the exception.
+- **C — `Defer native verifier`:** retain strict policy and perform no tool acquisition or exception.
+  **Consequence:** safest/no new external action, but native verifier and broker-only Attempt004
+  remain blocked.
+
+No A/B/C selection exists. Silence is not C. The release/user decision remains pending.
+
+PR #87 is open, draft, and mergeable but stale/behind at exact head
+`6b3a970499bcc73b6749cd74c44345768f2bf04a`. GitHub currently reports **11** checks while its body
+reports **9**; the body reports **21** dirty paths while the current candidate contains **33**. The
+live checks are **7 success / 4 failure**. The PR body lacks the retained receipt, current candidate
+binding, and an Elana exact-head binding. PR #87 must not be marked ready or merged. Attempt004
+remains **HOLD**; replacement, install/acquisition, and broker-only authority/result execution remain
+blocked pending an explicit A/B/C selection and every resulting fresh gate.
+
+## R4-B Option-A pinned Roslyn toolchain approval and pre-acquisition hold — 2026-11-10
+
+This append-only entry supersedes only the preceding claim that no A/B/C selection exists. Marlon
+explicitly selected **A — Authorize pinned deterministic toolchain** and delegated to Adriana the
+approval of equivalent bounded steps. The approved direction is a credential-free, zero-spend,
+precisely pinned deterministic Roslyn acquisition and evaluation path. It does not accept the
+existing non-reproducibility, authorize a replacement executable, or authorize the broker or
+Attempt004.
+
+The standing bounded process is now: Adriana may approve acquisition or evaluation of a precisely
+pinned deterministic toolchain only after primary-source version and license provenance, an exact
+HTTPS origin, pre-known package or file hashes, publisher/signature verification where applicable,
+an isolated standard-user and non-global transaction, no `PATH` or global mutation, no scripts
+unless separately reviewed, no credentials, bounded network and byte limits, explicit cleanup or
+retention rules, an SBOM or package inventory, Catalina architecture acceptance, Natalia security
+acceptance, Renata reproducibility acceptance, Julieta numerical/license/claim acceptance,
+Gabriela provenance, a Bianca append-only decision record, and Elana exact-head gates before
+commit or push. This delegation does **not** cover spending, credentials, production, signing,
+stores, arbitrary packages, weakened pins, acceptance of non-reproducibility, the broker,
+Attempt004, or unrelated external actions.
+
+The approved Roslyn candidate is the official NuGet package
+`Microsoft.Net.Compilers.Toolset.Framework` version **5.9.0**, published
+`2026-08-17T16:56:24.777Z`, from exactly
+`https://api.nuget.org/v3-flatcontainer/microsoft.net.compilers.toolset.framework/5.9.0/microsoft.net.compilers.toolset.framework.5.9.0.nupkg`.
+Official metadata records exactly **12,965,530 bytes** and SHA-512 base64
+`ud6t47OkT32uuAivIvQdntunI3BAS/TXwq8+qPk3GwEvPRgPEqIGDeBSChYtV9hPlwT8LZ+6dz4LgMe5+AmWxw==`,
+which decodes to SHA-512 hex
+`b9deade3b3a44f7daeb808af22f41d9edba72370404bf4d7c2af3ea8f9371b012f3d180f12a2060de0520a162d57d84f9704fc2d9fba773e0b80c7b9f80996c7`.
+The source commit is `35d9211b841e7613c1d2f8f5af6d628ace696c4c`; the license is MIT;
+license acceptance is required; the package targets `net472`, records no dependencies, and is
+officially described as unsupported for direct application reference. Those are metadata facts,
+not proof that artifact bytes have been acquired or verified.
+
+The narrowly bounded package-signature verifier is the standalone portable official `nuget.exe`
+version **7.9.0**, displayed executable version **7.9.0.83**, from exactly
+`https://dist.nuget.org/win-x86-commandline/v7.9.0/nuget.exe`. Microsoft `tools.json` identifies
+7.9.0 as `ReleasedAndBlessed` and uploaded `2026-08-11T17:00:00Z`. The Microsoft WinGet manifest
+pins SHA-256
+`992d70cac5b06c38efec91806caba64cdcc07e6d963a0959dbbbaf264d33b800`, classifies the file as
+portable x86, and uses that exact URL. The NuGet.Client license is Apache-2.0. `nuget.exe` 5.0+
+requires .NET Framework 4.7.2 or later; the reviewed host has .NET Framework 4.8. This portable
+verifier is a direct Option-A supply-chain dependency, not an arbitrary tool or SDK.
+
+Official metadata does **not** publish the exact `nuget.exe` 7.9.0 byte count or a package-specific
+Authenticode signer subject or thumbprint. Those facts remain **UNATTEMPTED** and must not be
+claimed. `R4B-ROSLYN-VERIFIER-BOOTSTRAP-v1.1` therefore uses two separate commit-bound authorities.
+`VERIFIER_DOWNLOAD_AUTHORITY_V1` may authorize one inert GET of the exact URL with an exact
+**16,777,216-byte** ceiling and no redirect, retry, resume, proxy, credentials, custom trust, shell,
+execution, installer, `PATH` change, or global mutation. The retained bytes must match the exact
+pre-known SHA-256 before any later use. Its sanitized receipt must record the observed exact byte
+count, executable version 7.9.0/7.9.0.83, Authenticode `Valid` with a trusted code-signing EKU and
+timestamp chain, signer subject/thumbprint, license and one-file SBOM/inventory, script absence,
+containment, and cleanup or content-addressed retention. Failure is terminal and non-executable.
+Only a later separately reviewed and commit-bound `VERIFIER_EXECUTION_AUTHORITY_V1` may permit the
+closed local `nuget verify -Signatures` operation against the separately hash-bound Roslyn package.
+That operation cannot authorize extraction, compiler execution, replacement, the broker, or
+Attempt004.
+
+Catalina froze the six-path repository boundary and
+`R4B-ROSLYN-VERIFIER-BOOTSTRAP-v1.1`. Natalia reports **PASS TO IMPLEMENT / HOLD TO ACQUIRE OR
+EXECUTE**, with **36 controls = 29 passed / 0 contradicted / 7 required-unattempted**. Renata's host
+inventory reports **52 controls = 45 passed / 2 failed / 5 required-unattempted**: the isolation,
+TLS, hashing, inert ZIP inspection, resource caps, and cleanup substrate are viable, but the host
+currently has no trusted NuGet signature verifier (`nuget.exe`, .NET SDK, Visual Studio, or NuGet
+verification assemblies), so package-specific signature validation cannot yet run. Julieta reports
+**35 claims/controls = 20 passed / 0 contradicted / 15 required-unattempted or missing**. Gabriela
+verified the official package and verifier metadata and found no official exact verifier byte count
+or Authenticode identity; those remain acquisition-time evidence only.
+
+Current disposition: **PASS TO IMPLEMENT THE REPOSITORY AUTHORITY CANDIDATE / HOLD TO DOWNLOAD,
+INSTALL, EXTRACT, EXECUTE, OR EVALUATE**. No Roslyn package or verifier request, download,
+installation, extraction, execution, repository mutation for the authority candidate, broker action,
+or Attempt004 action has occurred. PR #87 remains stale, draft, behind, and not merge-ready. The
+retained `NON_REPRODUCIBLE_HOLD` receipt and every earlier privacy/provenance record remain
+unchanged. **Marlon action required now: none.**
+
+The six-path repository authority candidate is now implemented and remains uncommitted; no
+download, installation, extraction, execution, staging, commit, or push has occurred.
+
+### Option-A authority evidence-key repair — 2026-11-10
+
+The uncommitted candidate now includes the exact required authority keys `hostIsolationEvidence`
+and `retentionDecision`. The repaired authority JSON is **2,172 bytes**, SHA-256
+`4af9da2ceaa5713405ec20ff3c3f190ab14200fb190e2ddb50e503655cc43249`; the validator is **7,206
+bytes**, SHA-256 `085a23ac968a1e7fdc4dcf8492e44148d16b2c5259e903c5e51d90c3d5e4c2ca`; and its test is
+**5,710 bytes**, SHA-256 `a559ae2f112ec5b464e8c23f5218ed4b59f28d532ebfaf358337111ec99fdd86`.
+The plan and lane inventory are unchanged. Valentina's development evidence is focused **6/6 PASS**,
+portable **134/134 PASS**, exact-file lint PASS, and exact-file Prettier PASS. These bytes address
+Catalina's prior **50/52 FAIL** findings, but they do not substitute for Catalina's fresh exact-byte
+review or Elana's final gate. No download, installation, extraction, execution, staging, commit, or
+push has occurred; acquisition and execution remain **HOLD**.
+
+### Option-A verifier bootstrap v1.2 superseding evidence — 2026-11-10
+
+Natalia's prior exact-byte review was **94/96 FAIL**. The uncommitted v1.2 candidate addresses those
+two findings through an exact same-handle, same-byte verifier identity binding and the closed
+revocation mode `OFFLINE_CACHE_ONLY_NO_NETWORK`; no online revocation request or other network path
+is authorized. Catalina's v1.2 contract also requires the v2 schema and authority, the closed
+36-key receipt inventory, recursively frozen evidence, and strict separation between synthetic test
+evidence and an actual receipt. The plan is **4,950 bytes**, SHA-256
+`9fe6bc2fa04acf3afb6296ded4ae6652e87379f28873ea6e9f3b5a8731b265fc`; the authority v2 record is
+**2,670 bytes**, SHA-256 `bd1a523399a76fdcfd88a2afe0e752e24c4f518500d65a6e6b51ddb0834b59cd`;
+the module is **9,528 bytes**, SHA-256
+`402a65fef9e67a5672ba2721d5c3073f06f62856867771796282531417170527`; and the test is **11,247
+bytes**, SHA-256 `65ba454c1d0240124cc518a2b218177294e16f0353fb6997328bd44dcd6e3842`.
+The lane inventory is byte-identical to the preceding candidate. Valentina's development evidence
+is focused **6/6 PASS**, portable **134/134 PASS**, exact-file lint PASS, and exact-file Prettier
+PASS. These implementation results do not replace fresh Catalina, Natalia, Renata, Julieta,
+Gabriela, or Elana review. External action remains false; no acquisition, download, installation,
+extraction, execution, staging, commit, or push has occurred.
+
+### Option-A verifier bootstrap v1.2 three-gap repair — 2026-11-10
+
+The refrozen uncommitted candidate closes the remaining three architecture gaps. Its synthetic
+receipt exact shape now requires `cookiesUsed: false` and `shellUsed: false`. Recursive immutability
+adversaries prove that mutation attempts throw, leave values unchanged, and revalidate across the
+verifier, download, isolation, and both array branches. Signer-chain and timestamp-chain
+`NoCheck`/`ExcludeRoot` adversaries return the fixed revocation-policy error. Only the module and
+test bytes changed: the module is **9,644 bytes**, SHA-256
+`c44a6c4d1f0e7b4ea0c017d2ad6fd98b2afff3ed94561bd024bda9e23c18780d`, and the test is **12,340
+bytes**, SHA-256 `399c0e6a541aac0573b5644d5f40932524ea3ba016b510b37452892ca92c2ef8`.
+The plan, authority, and lane inventory remain unchanged. Valentina's development evidence is
+focused **7/7 PASS**, portable **135/135 PASS**, exact-file lint PASS, and exact-file Prettier PASS.
+Fresh independent exact-byte reviews remain required. No download, installation, extraction,
+execution, staging, commit, or push has occurred.
+
+### Option-A lane snapshot reconstruction supersession — 2026-11-10
+
+Elana's exact reconstruction verdict was **FAIL** because the earlier lane count was erroneously
+reported as **17 portable + 7 Windows = 24**. `R4B-ROSLYN-LANE-SNAPSHOT-v1` corrects the closed
+inventory to exactly **11 portable + 5 Windows = 16**. Its lane digest is
+`6ccc0208c8d7e104d6ebfe2e9b196eb3b5ddbc599ef365ae92c65e6ec712d9f2`; the digest of the eight
+excluded paths is `8d875d47149a98760b795907131676b4c334652a679ebe97645c942eae32b3bc`.
+Those eight exclusions are unrelated untracked `NON_EVIDENCE`, not lane prerequisites, and the Git
+output cap is exactly **1,048,576 bytes**.
+
+The repaired plan is **6,239 bytes**, SHA-256
+`58b1ae7cc1a5656b143a6892affa97131aedce68b88b6c23742534aa7f1190d7`; the lane implementation is
+**11,847 bytes**, SHA-256 `d724d0d5914d4386200bb6cd2809bbb4317b5499a122f7757f960cd096c88e7f`;
+and the Roslyn test is **19,084 bytes**, SHA-256
+`daca131050354d749c55a124ffad044cc0ebb06572592ede4be3dfe32cb779c4`. The authority JSON remains
+**2,670 bytes**, SHA-256 `bd1a523399a76fdcfd88a2afe0e752e24c4f518500d65a6e6b51ddb0834b59cd`,
+and the module remains **9,644 bytes**, SHA-256
+`c44a6c4d1f0e7b4ea0c017d2ad6fd98b2afff3ed94561bd024bda9e23c18780d`.
+Valentina's development evidence is focused Roslyn/lane **13/13 PASS**, self-contained portable
+**106/106 PASS**, Prettier PASS, and lint PASS. Fresh independent exact-byte reviews, including
+Elana's sole final gate, remain required. No prerequisite, download, acquisition, extraction,
+execution, installation, staging, commit, or push has occurred.
+
+### Option-A lane snapshot three-fix supersession — 2026-11-10
+
+Catalina's exact-byte review of the preceding lane snapshot was **87/90 FAIL**. Natalia's security
+review of those prior bytes was **151/151 PASS**; that result does not certify this changed lane.
+The bounded repair closes Catalina's three findings: it uses the literal fixed errors
+`R4B_LANE_GIT_OUTPUT_LIMIT` and `R4B_LANE_GIT_OUTPUT_MALFORMED`; the path decoder rejects every
+control character from U+0000 through U+001F plus U+007F, with tab, U+0001, U+001F, and DEL
+adversaries; and count, order, and duplicate inventory branches now return only the fixed
+`R4B_LANE_INVENTORY_MISMATCH` error instead of dynamic values. The complete fixed lane-error
+vocabulary is `R4B_LANE_GIT_FAILURE`, `R4B_LANE_GIT_OUTPUT_LIMIT`,
+`R4B_LANE_GIT_OUTPUT_MALFORMED`, `R4B_LANE_INVENTORY_MISMATCH`, and
+`R4B_LANE_PHASE_TEST_NONREGULAR`.
+
+The updated lane is **11,596 bytes**, SHA-256
+`2db2129bf70dee01349eec54e658c183697cd0b2ee2acc254fecbef4e6cbce84`; the updated Roslyn test is
+**19,922 bytes**, SHA-256 `23de223a0ba49ba36c2fa3434150f1a1f74f69e73f46d0ec9b4236d8a2016c70`.
+The plan remains **6,239 bytes**, SHA-256
+`58b1ae7cc1a5656b143a6892affa97131aedce68b88b6c23742534aa7f1190d7`; the authority and module
+remain unchanged. Valentina's development evidence is focused **13/13 PASS**, portable **106/106
+PASS**, Prettier PASS, and ESLint PASS. Fresh exact-byte reviews remain required. No prerequisite,
+network, download, acquisition, extraction, execution, installation, staging, commit, or push has
+occurred.
+
+### Option-A lane Unicode Cc supersession — 2026-11-10
+
+Catalina's preceding exact-byte review was **90/90 PASS**. Natalia's review was **161/162 FAIL**
+because U+0080 through U+009F control characters remained accepted. The bounded repair now rejects
+the full Unicode `\p{Cc}` category while retaining every C0 and DEL rejection. Exact U+0080,
+U+0085, and U+009F adversaries require the fixed `R4B_LANE_GIT_OUTPUT_MALFORMED` error.
+The updated lane is **11,581 bytes**, SHA-256
+`62218615e17d92d9fd5d427f33fd7d4d5cf5a7f4005e54a6c236364be74090d0`; the updated Roslyn test is
+**19,952 bytes**, SHA-256 `bce20b52ca0aa3000f153da7548e6bdc28270fb9fb49e6f2742fec6e3dbb4aab`.
+The plan, authority, and module remain unchanged. Valentina's development evidence is focused
+**13/13 PASS**, portable **106/106 PASS**, Prettier PASS, and ESLint PASS. Fresh exact-byte reviews
+remain required. No prerequisite, network, download, acquisition, extraction, execution,
+installation, staging, commit, or push has occurred.
+
+### Option-A real-staged lane snapshot v1.1 supersession — 2026-11-10
+
+The commit gate was first held because cached diff-check found exactly two trailing spaces on plan
+line 3. That formatting-only repair removed only those two bytes. Catalina then required a distinct
+v1.1 staged-state architecture repair; its later plan, lane, and test changes must not be described
+as whitespace-only. Earlier alternate-index and temporary-unstage evidence is superseded and is not
+authoritative.
+
+`R4B-ROSLYN-LANE-SNAPSHOT-v1.1` adds the third exact Git call
+`git diff --cached --name-only -z --diff-filter=ACMR` between the `HEAD` and untracked queries,
+records `stagedTestPaths`, and validates the four legitimate phase states: precommit, exact-six
+staged, postcommit, and clean. Unexpected, excluded, or duplicate staged paths fail closed, as do
+staged-command failure, output-limit, and malformed-output adversaries. Before this append, the
+actual exact-six staged integration passed with the exact reviewed repository index; that
+real-index evidence supersedes the earlier alternate-index reconstruction.
+
+The updated plan is **6,335 bytes**, SHA-256
+`cc7f6e418eabb4f854ac8e834cdb627dac044608f869830ed8735a5458eb0b44`; the updated lane is **12,699
+bytes**, SHA-256 `709f204a53c3cee5ac01f2a83dca440bc6b98bd8a62705cfdc2c0e52a6c2a8ed`;
+and the updated Roslyn test is **21,450 bytes**, SHA-256
+`6e8a7b392fc7459c3c6326359937ef8a9b1c1cba4a39b062894a932afffce784`.
+The authority remains **2,670 bytes**, SHA-256
+`bd1a523399a76fdcfd88a2afe0e752e24c4f518500d65a6e6b51ddb0834b59cd`, and the module remains
+**9,644 bytes**, SHA-256 `c44a6c4d1f0e7b4ea0c017d2ad6fd98b2afff3ed94561bd024bda9e23c18780d`.
+The pre-append six-row staged manifest was **739 bytes**, SHA-256
+`69774627f7ceea060a56973756f64340ea81deb8727d8edd9d824788f0490854`; this append changes the
+handoff row and therefore requires a new manifest binding before any commit.
+
+Real-index development evidence is focused **13/13 PASS**, portable **106/106 PASS**, Prettier
+PASS, ESLint PASS, cached diff-check PASS, and worktree diff-check PASS. Fresh exact-byte reviews
+and a new handoff-inclusive manifest remain required. No download, acquisition, extraction,
+execution, installation, commit, or push has occurred.
+
+### Option-A real-staged lane snapshot v1.2 supersession — 2026-11-10
+
+Natalia's review of the preceding staged snapshot was **44/45 FAIL with one Blocker** because the
+staged query omitted deletion status. `R4B-ROSLYN-LANE-SNAPSHOT-v1.2` replaces it with the exact
+status-bearing, no-renames query
+`git diff --cached --name-status -z --no-renames --diff-filter=ACMRD`. Its dedicated decoder permits
+only `A` and `M`; a syntactically valid `D` returns the fixed `R4B_LANE_INVENTORY_MISMATCH` error.
+Copy or rename scores and malformed, bare, unknown, four-digit, truncated, extra, duplicate, or
+noncanonical records fail closed. The testing seam exposes exactly three members. The actual
+real-staged integration passes the closed **11 portable + 5 Windows = 16** inventory.
+
+The updated plan is **6,538 bytes**, SHA-256
+`95000c31e448c4e9b64a63106a04dfbe74bb527db78e3336382360d0041adc52`; the updated lane is **14,729
+bytes**, SHA-256 `4cd47182c0abb97f41ce3414e35268d9475b6320c92e8f547723aeb776f0c94d`;
+and the updated Roslyn test is **23,728 bytes**, SHA-256
+`787bac3803d3b43b64feed6ba1c423d94d1a107df01d53cd3e52bc3a68133ad2`.
+The authority and module remain unchanged. Valentina's development evidence is focused **13/13
+PASS**, authoritative portable **106/106 PASS**, Prettier PASS, and ESLint PASS. Fresh exact-byte
+reviews remain required. No prerequisite, network, download, acquisition, extraction, execution,
+installation, commit, or push has occurred.
+
+### Option-A real-staged lane snapshot v1.3 supersession — 2026-11-10
+
+Natalia's review of v1.2 was **51/52 FAIL with one Blocker** because the staged command's
+`diff-filter` could hide a `T` type-change status. `R4B-ROSLYN-LANE-SNAPSHOT-v1.3` removes the
+diff-filter and closes the complete status model. `A` and `M` are allowed. `D`, `T`, `U`, `X`, and
+`B` must carry exactly one valid path and then return the fixed `R4B_LANE_INVENTORY_MISMATCH`
+error. Scored `C` and `R` records and every malformed, bare, unknown, truncated, extra, duplicate,
+or noncanonical status fail closed.
+
+The retained v1.2 adversaries are supplemented by `T` cases for a phase path, the lane module, and
+a non-test path; `U`, `X`, `B`, and unknown `Q` cases; and an executable isolated temporary-Git
+fixture that changes a regular file to mode **120000**, observes the raw `T` status, proves its
+rejection, and cleans itself in `finally`. The fixture never touches the production index.
+
+The updated plan is **6,645 bytes**, SHA-256
+`9fc89d301aaaabe8f52c6574ca9e518d09a6af4296130d03d3baf71122baef9f`; the updated lane is **14,752
+bytes**, SHA-256 `205665c87b2d88b2f8a80e635570f5c7e45fe7043fc9ce8e7681e10480c9153c`;
+and the updated Roslyn test is **25,922 bytes**, SHA-256
+`0da37f316e501d840a999bd3805350b3a97f0570e0e5ce2a49001df978104755`.
+The authority and module remain unchanged. Real-staged development evidence is focused **14/14
+PASS**, authoritative portable **107/107 PASS**, Prettier PASS, and ESLint PASS. Fresh exact-byte
+reviews remain required. No prerequisite, network, download, acquisition, extraction, execution,
+installation, commit, or push has occurred.
