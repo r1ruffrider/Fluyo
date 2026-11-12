@@ -238,6 +238,24 @@ head; stale concurrent bases, prior index-prefix mutation, and unindexed record 
 appended record's provenance source must already be an ancestor of the exact PR base so squash cannot
 erase a candidate-created frozen subject.
 
+### Material-decision selection append
+
+The sequence-2 record binds Marlon's exact 2026-10-30 “Approve recommended bundle” selection to the
+decision manifest and merged brief preserved at PR-A commit
+`80563fee339a07bd2ab9706b8186ed772a3b9a1a`. It records all 14 decisions atomically and folds to
+seven evidence-pending selections, seven deferred decisions, and zero accepted decisions. Its UTC
+timestamp is the repository recording time; it does not claim an unknown human-selection time.
+
+Every forbidden authorization flag remains false. Runtime remains gated to `ACCEPTED` only, so this
+record authorizes no SDK selection or installation, live adapter, credential, native runtime,
+provider/dashboard or domain mutation, signing, device, production, store, spending, publication,
+or destructive action. Runtime evidence remains zero and all 24 native scenarios remain
+unattempted.
+
+The base-controlled validator checks this append, but branch-protection configuration is a separate
+external action. Until `Auth material decisions` is configured and verified as a required check,
+the appended selection is not authoritative repository governance and cannot unlock runtime.
+
 The append-only approval ledger stores only canonical repository paths, SHA-256 digests, public governance declarations, gate names, and bounded authority. It stores no credentials, secrets, tokens, private account identifiers, customer data, or PII. Paths are sorted, unique repository-relative regular blobs; traversal, symlinks, absolute paths, unindexed records, stale prefixes, and unknown authority fields fail closed. Natalia reviews the exact frozen subject bundle before any delegated phase approval. Production, credentials, signing, store/release, spend, destructive/data, external account/dashboard/domain, physical-device, and publication actions remain outside the delegation. Material-decision approval and supersession events are denied in ledger v1. The records prove repository integrity and declared authority after recording, not cryptographic human nonrepudiation.
 
 The direct-Marlon `DEPENDENCY_LOCK_REMEDIATION_OPTION_A` authorization is limited to the exact atomic Vitest 4.1.11 → 4.1.12 development-tool bundle recorded from historical provenance `a886b75af125b5a69e2ee3f42471ceb2700eeec1`. The current `0b5032b0e05539f31ad7efe1b8806ec55f5f91a2` bundle is neither the authorized base nor target and the authorization is dormant. It satisfies no native evidence and authorizes no runtime, product, or external action.
