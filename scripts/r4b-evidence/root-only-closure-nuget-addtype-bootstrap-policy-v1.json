@@ -1,0 +1,1367 @@
+{
+  "schema": "fluyo:r4b:nuget-verifier-addtype-bootstrap-policy:v1",
+  "policyVersion": "R4B-NUGET-VERIFIER-CLOSED-ADDTYPE-BOOTSTRAP-v1",
+  "decisionStatus": "APPROVED_FOR_REPOSITORY_IMPLEMENTATION_ONLY",
+  "decisionDate": "2026-11-11",
+  "decisionReference": "MARLON_RECOMMENDED_1A_CLOSED_ADDTYPE_PINVOKE_2026-11-11",
+  "externalActionAuthorized": false,
+  "downloadAuthorityPresent": false,
+  "executionAuthorityPresent": false,
+  "sourceControl": {
+    "sourceMainCommit": "d6607300e52219c5d534e70c17e00e2e717e505b",
+    "historicalAuthorityPath": "scripts/r4b-evidence/root-only-closure-roslyn-download-authority.json",
+    "historicalAuthorityBlobSha1": "4881688075b25726be4b2a03a22b19a9ea5c6419",
+    "historicalAuthoritySha256": "bd1a523399a76fdcfd88a2afe0e752e24c4f518500d65a6e6b51ddb0834b59cd",
+    "decisionRecordPath": "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md",
+    "handoffPath": "docs/DEVELOPMENT_HANDOFF.md",
+    "newSources": [
+      {
+        "path": "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md",
+        "role": "DECISION_RECORD",
+        "byteCount": 42819,
+        "sha256": "14c70f54e197da533acc06fc9239017dd49495b2499708d6fab90a42f129be56",
+        "gitBlobSha1": "4ada59acc9c249af87ed6342467d029e8e9dc1af"
+      },
+      {
+        "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.mjs",
+        "role": "CONTROLLER_VALIDATOR",
+        "byteCount": 116155,
+        "sha256": "3a735a83712fba453e2d6f1685dd252b3c48e357efa5fca411d824760d935a2e",
+        "gitBlobSha1": "7c3dad9ea10db0b13d13341da5a461e6e75ec116"
+      },
+      {
+        "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.ps1",
+        "role": "ENCODED_BOOTSTRAP",
+        "byteCount": 4079,
+        "sha256": "6197c44cebbde77791e1257037bc357d3cb76af3079d32f6775d6205e03721fb",
+        "gitBlobSha1": "22cdfb61d11770cfc5dc3859bfd9af1ee4ad6428"
+      },
+      {
+        "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-lease-v1.cs",
+        "role": "ADDTYPE_AUDIT_SOURCE",
+        "byteCount": 120913,
+        "sha256": "165d4d0abd02ac300f997775b3c95dddcd7c1f1085b12406c8b9330763d89885",
+        "gitBlobSha1": "86b630b7b095beb5e6e33fa738adf98531592aa5"
+      },
+      {
+        "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
+        "role": "SYNTHETIC_ADAPTER_LAUNCHER",
+        "byteCount": 67453,
+        "sha256": "96b2a2142fa21d0aab1cc16c124f4ed825a1a23c46450afc751dff9270ee95b7",
+        "gitBlobSha1": "000f0e24e45295c4ca63006500da79173812ed8c"
+      },
+      {
+        "path": "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
+        "role": "AUTHENTICODE_HELPER_SOURCE",
+        "byteCount": 116075,
+        "sha256": "15a10f93570477ef4add20397a8dc0c2709ecd94d37710dacded26cb8d89d5ad",
+        "gitBlobSha1": "776cfebc68d45df66c70fa66b473285c09abfa03"
+      },
+      {
+        "path": "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
+        "role": "RECEIPT_VALIDATOR",
+        "byteCount": 23874,
+        "sha256": "39cab857a72e75c5e461646ae6644d0a6f04e800541b0ec470c598410d782e93",
+        "gitBlobSha1": "6613c77e2d6d2795216299e6a349aeed769059ec"
+      }
+    ],
+    "designCommitRequiredBeforeActivation": true,
+    "headChangeInvalidates": true
+  },
+  "delegation": {
+    "authorityId": "CLOSED_ADD_TYPE_PINVOKE_LEASE_BOOTSTRAP_V1",
+    "bootstrapDesignAuthorityPresent": true,
+    "equivalentBoundedApprovalsDelegatedToAdriana": true,
+    "syntheticBootstrapTestAuthorized": true,
+    "scope": "NON_PRODUCTION_EVIDENCE_AND_TEST_ONLY",
+    "externalActionAuthorized": false,
+    "downloadAuthorityPresent": false,
+    "executionAuthorityPresent": false
+  },
+  "powerShellHost": {
+    "signaturePolicy": "PINNED_MICROSOFT_OS_CATALOG_VALID",
+    "executable": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "byteCount": 495616,
+      "sha256": "d8f182560210d43baaf767d482ad1dc1207372522e91413b9d5e515a875e552d",
+      "normalizedImagePathSha256": "9fb73839bbbf71d76eb5494bd12cf8939b28503a45bcef20d7af749d20ea3a15",
+      "fileVersion": "10.0.26100.9818 (WinBuild.160101.0800)",
+      "productVersion": "10.0.26100.9818",
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "667BBA1E1F478221AA65DE4F75187A751B03A453",
+      "signerIssuer": "CN=Microsoft Windows Production PCA 2026 RSA2048-SHA256, O=Microsoft Corporation, C=US"
+    },
+    "configuration": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe.config",
+      "byteCount": 395,
+      "sha256": "7bd3f01f04332f1657494e879e861500d520f49b8f9a2a2d511d1d6736c85656",
+      "fileVersion": null,
+      "productVersion": null,
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "71F53A26BB1625E466727183409A30D03D7923DF",
+      "signerIssuer": "CN=Microsoft Windows Production PCA 2011, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+    },
+    "automationAssembly": {
+      "path": "C:\\Windows\\Microsoft.Net\\assembly\\GAC_MSIL\\System.Management.Automation\\v4.0_3.0.0.0__31bf3856ad364e35\\System.Management.Automation.dll",
+      "byteCount": 6703104,
+      "sha256": "330d01150c14fd1c937d485775abbea7764c2062d65e6dfc55e9cde50e2e6bcb",
+      "fileVersion": "10.0.26100.9818",
+      "productVersion": "10.0.26100.9818",
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "667BBA1E1F478221AA65DE4F75187A751B03A453",
+      "signerIssuer": "CN=Microsoft Windows Production PCA 2026 RSA2048-SHA256, O=Microsoft Corporation, C=US"
+    },
+    "utilityModuleManifest": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules\\Microsoft.PowerShell.Utility\\Microsoft.PowerShell.Utility.psd1",
+      "byteCount": 2459,
+      "sha256": "c09df190addc67f7c6c38e7ea1dca719fd87807107f688c3f60ed8816e1c48a6",
+      "fileVersion": null,
+      "productVersion": null,
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "71F53A26BB1625E466727183409A30D03D7923DF",
+      "signerIssuer": "CN=Microsoft Windows Production PCA 2011, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+    },
+    "utilityModuleScript": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules\\Microsoft.PowerShell.Utility\\Microsoft.PowerShell.Utility.psm1",
+      "byteCount": 30592,
+      "sha256": "f9232f3de3c94dd03caf40f54b22876c9d810c657c41e54ab2d10469b45f26b5",
+      "fileVersion": null,
+      "productVersion": null,
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "71F53A26BB1625E466727183409A30D03D7923DF",
+      "signerIssuer": "CN=Microsoft Windows Production PCA 2011, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+    },
+    "utilityAssembly": {
+      "path": "C:\\Windows\\Microsoft.Net\\assembly\\GAC_MSIL\\Microsoft.PowerShell.Commands.Utility\\v4.0_3.0.0.0__31bf3856ad364e35\\Microsoft.PowerShell.Commands.Utility.dll",
+      "byteCount": 6999552,
+      "sha256": "a0dd6ea090bc0402ecde17c6236442d4f32a9c8b41b97fa63c8bf0d5d71f2172",
+      "fileVersion": "10.0.26100.9974",
+      "productVersion": "10.0.26100.9974",
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "667BBA1E1F478221AA65DE4F75187A751B03A453",
+      "signerIssuer": "CN=Microsoft Windows Production PCA 2026 RSA2048-SHA256, O=Microsoft Corporation, C=US"
+    },
+    "clr": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\clr.dll",
+      "byteCount": 10001720,
+      "sha256": "121b975d4242a069be2f46e59b661b95c7c468e30c0a9820da1066d8e40df524",
+      "fileVersion": "4.8.10008.0 built by: d5c29ab0c000001",
+      "productVersion": "4.8.10008.0",
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+      "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+    },
+    "mscorlib": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll",
+      "byteCount": 5495096,
+      "sha256": "94715f6991e2b9dc7481532c05aa99e74a5fff4ee147be541bca27f99e003fc7",
+      "fileVersion": "4.8.10008.0 built by: d5c29ab0c000001",
+      "productVersion": "4.8.10008.0",
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+      "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+    },
+    "compiler": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+      "byteCount": 2569576,
+      "sha256": "eca02e6b15cde93009a59a3d129d5a77fb5008f2e1cf62cf573b6737c747ecc3",
+      "fileVersion": "14.8.10001.0 built by: bd501acdc000004",
+      "productVersion": "14.8.10001.0",
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+      "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+    },
+    "compilerConfiguration": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe.config",
+      "byteCount": 182,
+      "sha256": "2d4610ade011e530d817dd3ba4fc787e5dc0c2297cc520c30a643b8fb13f9093",
+      "fileVersion": null,
+      "productVersion": null,
+      "signatureStatus": "Valid",
+      "signatureType": "Catalog",
+      "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+      "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+    },
+    "compilerReferences": [
+      {
+        "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\mscorlib.dll",
+        "byteCount": 5495096,
+        "sha256": "94715f6991e2b9dc7481532c05aa99e74a5fff4ee147be541bca27f99e003fc7",
+        "fileVersion": "4.8.10008.0 built by: d5c29ab0c000001",
+        "productVersion": "4.8.10008.0",
+        "signatureStatus": "Valid",
+        "signatureType": "Catalog",
+        "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+        "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+      },
+      {
+        "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.dll",
+        "byteCount": 3561272,
+        "sha256": "09787b4f38f4f020c6b8a3894146085d4df7b8ae337577ed42d9acf1419660e8",
+        "fileVersion": "4.8.10001.0 built by: 5f296df0c000005",
+        "productVersion": "4.8.10001.0",
+        "signatureStatus": "Valid",
+        "signatureType": "Catalog",
+        "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+        "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+      },
+      {
+        "path": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Core.dll",
+        "byteCount": 1540408,
+        "sha256": "d1bafee1a4dd7e7bd9adf6859e7b1b654d1b4e0d031a38795e33ba040508c09d",
+        "fileVersion": "4.8.10008.0 built by: d5c29ab0c000000",
+        "productVersion": "4.8.10008.0",
+        "signatureStatus": "Valid",
+        "signatureType": "Catalog",
+        "signerSubject": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+        "signerThumbprint": "A28356221F80483A8509067973B88770557C9300",
+        "signerIssuer": "CN=Windows Production PCA 2023, O=Microsoft Corporation, C=US"
+      }
+    ]
+  },
+  "bootstrap": {
+    "mechanism": "CLOSED_ADD_TYPE_PINVOKE_LEASE_BOOTSTRAP_V1",
+    "scriptPath": "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.ps1",
+    "auditSourcePath": "scripts/r4b-evidence/root-only-closure-nuget-addtype-lease-v1.cs",
+    "helperSourcePath": "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
+    "receiptValidatorPath": "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
+    "syntheticAdapterPath": "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
+    "scriptEncoding": "ASCII_UTF8_NO_BOM_LF_ONLY",
+    "scriptByteCap": 8192,
+    "auditSourceEncoding": "STRICT_UTF8_NO_BOM_LF_ONLY",
+    "auditSourceByteCap": 131072,
+    "orderedArguments": [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-InputFormat",
+      "Text",
+      "-OutputFormat",
+      "Text",
+      "-Command",
+      "-"
+    ],
+    "cwdPolicy": {
+      "kind": "EXACT_SOURCE_CHECKOUT_ROOT",
+      "repositoryRootSource": "GIT_TOP_LEVEL_FROM_EXACT_SOURCE_CHECKOUT",
+      "requiredSourceMainCommit": "d6607300e52219c5d534e70c17e00e2e717e505b",
+      "gitTopLevelRequired": true,
+      "regularDirectoryRequired": true,
+      "reparseAllowed": false,
+      "absolutePathInReceiptAllowed": false
+    },
+    "environment": {
+      "SystemRoot": "C:\\Windows",
+      "WINDIR": "C:\\Windows",
+      "TEMP": "<EXCLUSIVE_ROOT>\\temp",
+      "TMP": "<EXCLUSIVE_ROOT>\\temp",
+      "PSModulePath": "",
+      "FLUYO_R4B_PIPE_TOKEN": "<32_LOWERHEX>",
+      "FLUYO_R4B_CHECKOUT_ROOT": "<EXACT_SOURCE_CHECKOUT_ROOT>",
+      "FLUYO_R4B_PARENT_PID": "<DECIMAL_PARENT_PID>"
+    },
+    "languageMode": "FullLanguage",
+    "moduleAutoloadPolicy": {
+      "preference": "None",
+      "profileLoadingAllowed": false,
+      "moduleSearchAllowed": false,
+      "scriptResolutionAllowed": false,
+      "allowedImportPath": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules\\Microsoft.PowerShell.Utility\\Microsoft.PowerShell.Utility.psd1",
+      "allowedModuleName": "Microsoft.PowerShell.Utility",
+      "allowedModuleCount": 1,
+      "modulePinsRequired": true,
+      "additionalModulesAllowed": false
+    },
+    "addTypePolicy": {
+      "languageMode": "FullLanguage",
+      "sourceMode": "EXACT_PINNED_INPUT_LEASE_BYTES",
+      "language": "CSharp",
+      "maximumInvocations": 1,
+      "pathArgumentAllowed": false,
+      "compilerOptionsAllowed": false,
+      "referencedAssembliesAllowed": false,
+      "outputAssemblyAllowed": false,
+      "callerSourceAllowed": false,
+      "dynamicTypeNameAllowed": false,
+      "auditSourceEqualityRequired": true,
+      "codeDomCompilerException": "EXACT_PINNED_SYNCHRONOUS_BOOTSTRAP_CSC",
+      "codeDomJobProofRequired": false,
+      "compilerPinBeforeAfterRequired": true,
+      "temporaryArtifactPolicy": "EXCLUSIVE_TEMP_ZERO_RESIDUE"
+    },
+    "processPolicy": {
+      "childCreation": "CREATEPROCESSW_SUSPENDED_ONLY",
+      "startupFlags": [
+        "CREATE_SUSPENDED",
+        "EXTENDED_STARTUPINFO_PRESENT",
+        "CREATE_UNICODE_ENVIRONMENT"
+      ],
+      "handleInheritance": "PROC_THREAD_ATTRIBUTE_HANDLE_LIST_ONLY",
+      "directNoShell": true,
+      "startProcessAllowed": false,
+      "cmdAllowed": false,
+      "breakawayAllowed": false,
+      "codeDomBootstrapChild": {
+        "role": "ADDTYPE_CODEDOM_CSC_SELECTED_BOOTSTRAP",
+        "jobBound": false,
+        "synchronousOnly": true,
+        "compilerPinsBeforeAfterRequired": true,
+        "sourceEqualityRequired": true,
+        "survivingProcessCount": 0
+      },
+      "ownedChildRoles": ["HELPER_BUILD_CSC", "AUTHENTICODE_HELPER"],
+      "jobPolicy": {
+        "killOnClose": true,
+        "activeProcessLimit": 1,
+        "breakawayAllowed": false,
+        "childProcessAllowed": false,
+        "activeProcessCountAtExit": 0
+      },
+      "imageProof": {
+        "heldOutputRequired": true,
+        "denyWriteDeleteShare": true,
+        "queryFullProcessImageNameRequired": true,
+        "finalPathRequired": true,
+        "volumeSerialAndFileIdRequired": true,
+        "sha256Required": true,
+        "proofBeforeResume": true,
+        "mismatchAction": "TERMINATE_BEFORE_USER_CODE"
+      },
+      "timeoutsMs": {
+        "addType": 30000,
+        "helperBuildCompiler": 30000,
+        "verifierHelper": 30000,
+        "cleanup": 30000,
+        "totalFutureTransaction": 300000,
+        "networkIdle": 30000
+      },
+      "outputCapsBytes": {
+        "perProcessCombined": 65536,
+        "wholeTransactionSanitized": 196608
+      },
+      "finalDescendantCount": 0
+    },
+    "syntheticPolicy": {
+      "mode": "CONTRACT_SELF_TEST_V1_13_6",
+      "tracePinSchema": "R4B-AUTHENTICODE-TRACE-PINS-v1.13.6",
+      "controller": {
+        "version": "R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.13.6",
+        "adapterMethods": [
+          "beginOwnedNetworkMeasurement",
+          "captureGlobalMutationSnapshot",
+          "openPinnedInputLeases",
+          "revalidatePinnedInputLeases",
+          "allocateOwnedRoot",
+          "createOwnershipLedger",
+          "runOwnedProcess",
+          "forceStopOwnedProcessTree",
+          "performCleanupStep"
+        ],
+        "timeoutMs": {
+          "global": 300000,
+          "work": 270000,
+          "process": 30000,
+          "forceStop": 5000,
+          "abortSettlement": 1000
+        },
+        "cleanupGroupTimeoutMs": {
+          "QUIESCE": 5000,
+          "NETWORK": 5000,
+          "ROOT": 10000,
+          "FINALIZE": 10000
+        },
+        "terminalStates": [
+          "SYNTHETIC_TEST_CLEAN",
+          "SYNTHETIC_TEST_FAILED_CLEAN",
+          "SYNTHETIC_TEST_FAILED_CLEANUP_HOLD"
+        ],
+        "deadlineStatuses": ["COMPLETED_WITHIN_GLOBAL_300000_MS", "GLOBAL_300000_MS_EXCEEDED"],
+        "baselineTokenOrder": ["ROOT_LEASE", "GLOBAL_BASELINE"]
+      },
+      "concreteAdapter": {
+        "version": "R4B-SYNTHETIC-ADAPTER-v1.13.6",
+        "protocolVersion": "R4B-ADDTYPE-PIPE-RPC-v1.13.6",
+        "manifestBinding": "HELD_TEN_PATH_PREEXEC_REVIEW_BINDING_V1",
+        "runtimeManifestPaths": [
+          "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md",
+          "docs/DEVELOPMENT_HANDOFF.md",
+          "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-policy-v1.json",
+          "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.mjs",
+          "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.ps1",
+          "scripts/r4b-evidence/root-only-closure-nuget-addtype-lease-v1.cs",
+          "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
+          "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs",
+          "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
+          "scripts/r4b-evidence/roslyn-verifier-authenticode.cs"
+        ],
+        "handshakeSchemas": {
+          "HELLO": [
+            "protocolVersion",
+            "clientNonce",
+            "pipeTokenSha256",
+            "candidateManifestSha256",
+            "reviewBinding",
+            "rootLeaseId",
+            "sessionId",
+            "nodePid",
+            "nodeHeldImage",
+            "spawnedPowerShellPid",
+            "powerShellHeldImage"
+          ],
+          "CHALLENGE": [
+            "protocolVersion",
+            "serverNonce",
+            "observedNodeIdentity",
+            "observedPowerShellIdentity",
+            "serverProof"
+          ],
+          "AUTH": [
+            "protocolVersion",
+            "serverNonce",
+            "clientProof",
+            "candidateManifestSha256",
+            "reviewBinding",
+            "rootLeaseId",
+            "sessionId",
+            "observedNodeIdentitySha256",
+            "observedPowerShellIdentitySha256",
+            "pipeTokenSha256"
+          ],
+          "READY": [
+            "protocolVersion",
+            "readyProof",
+            "candidateManifestSha256",
+            "reviewBinding",
+            "rootLeaseId",
+            "sessionId",
+            "observedNodeIdentitySha256",
+            "observedPowerShellIdentitySha256",
+            "manifestHeld",
+            "peerIdentitiesBound",
+            "rootChainHeld",
+            "preReadyInventoryComplete",
+            "expectedTempDirectoryIdentitySha256",
+            "livePreReadyDescendantCount",
+            "livePreReadyDescendantInventorySha256",
+            "unexpectedPreReadyEntryCount",
+            "unexpectedPreReadyEntryInventorySha256",
+            "observerStarted",
+            "readerStarted",
+            "workerStarted",
+            "rpcReady"
+          ]
+        },
+        "brokerThreading": {
+          "reader": "DEDICATED_CANCEL_AND_CLOSE_READER",
+          "worker": "ONE_SERIALIZED_OPERATION_WORKER",
+          "writer": "ONE_LOCKED_CANONICAL_WRITER",
+          "maximumQueuedOperations": 1
+        },
+        "ownedProcessPolicy": {
+          "compilerAndFixtureCount": 40,
+          "creation": "CREATEPROCESSW_SUSPENDED_DIRECT",
+          "job": "KILL_ON_CLOSE_ACTIVE_LIMIT_1_NO_BREAKAWAY",
+          "verifyImageBeforeResume": true,
+          "noChildBeforeReady": true
+        },
+        "cleanupBinding": {
+          "controllerStepCount": 23,
+          "outerSteps": 7,
+          "preReadyCleanupAllowed": false,
+          "crashRecoveryAllowed": false
+        },
+        "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
+        "cliMode": "--execute-authorized-contract-self-test-v1",
+        "nodeHost": {
+          "path": "C:\\Program Files\\nodejs\\node.exe",
+          "version": "24.22.1",
+          "byteCount": 93915464,
+          "sha256": "d702daa815eabbff763c7d3808e235cf031cf2ca70211b56847bc72f51e240e5",
+          "normalizedImagePathSha256": "46674df7e50081977073a3d38239a6782e73328bda5843f5d5a85d4118d98357"
+        },
+        "ambientGate": {
+          "execArgv": [],
+          "argumentCount": 1,
+          "forbiddenEnvironmentKeys": [
+            "NODE_OPTIONS",
+            "NODE_PATH",
+            "NODE_EXTRA_CA_CERTS",
+            "NPM_CONFIG_NODE_OPTIONS",
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "ALL_PROXY",
+            "NO_PROXY",
+            "NUGET_CREDENTIALPROVIDERS_PATH",
+            "NUGET_PLUGIN_PATHS",
+            "ARTIFACTS_CREDENTIALPROVIDER_FEED_ENDPOINTS",
+            "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS"
+          ]
+        },
+        "importPolicy": {
+          "staticBuiltins": [
+            "node:child_process",
+            "node:crypto",
+            "node:fs",
+            "node:net",
+            "node:path",
+            "node:process",
+            "node:url"
+          ],
+          "dynamicImportsAllowed": [
+            "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.mjs"
+          ],
+          "packageImportsAllowed": false,
+          "loaderHooksAllowed": false
+        },
+        "trustedRoot": {
+          "parentPath": "C:\\Windows\\Temp",
+          "namePattern": "fluyo-r4b-addtype-synthetic-v1-<32-lowerhex>",
+          "nonceBytes": 16,
+          "creation": "EXCLUSIVE_CREATE_NEW",
+          "ancestorPolicy": "LSTAT_REALPATH_NO_REPARSE",
+          "nodeLease": "OPEN_FD_BIGINT_PRE_POST_FSTAT_HELD",
+          "brokerAdoption": "WIN32_DRIVE_ROOT_HANDLE_WALK_FILE_ID_MATCH"
+        },
+        "powerShellLaunch": {
+          "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "orderedArguments": [
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-InputFormat",
+            "Text",
+            "-OutputFormat",
+            "Text",
+            "-Command",
+            "-"
+          ],
+          "scriptDelivery": "EXACT_HELD_COMMITTED_PS1_STDIN_CLOSE",
+          "environmentKeys": [
+            "SystemRoot",
+            "WINDIR",
+            "TEMP",
+            "TMP",
+            "PSModulePath",
+            "FLUYO_R4B_AUDIT_SOURCE_BYTE_COUNT",
+            "FLUYO_R4B_AUDIT_SOURCE_SHA256",
+            "FLUYO_R4B_PIPE_TOKEN",
+            "FLUYO_R4B_CHECKOUT_ROOT",
+            "FLUYO_R4B_PARENT_PID",
+            "FLUYO_R4B_CANDIDATE_MANIFEST_SHA256",
+            "FLUYO_R4B_ROOT_NAME"
+          ],
+          "directNoShell": true
+        },
+        "pipe": {
+          "namePattern": "\\\\.\\pipe\\fluyo-r4b-addtype-v1-<64-lowerhex>",
+          "tokenBytes": 32,
+          "accessFlags": [
+            "PIPE_ACCESS_DUPLEX",
+            "FILE_FLAG_FIRST_PIPE_INSTANCE",
+            "FILE_FLAG_OVERLAPPED"
+          ],
+          "modeFlags": [
+            "PIPE_TYPE_BYTE",
+            "PIPE_READMODE_BYTE",
+            "PIPE_WAIT",
+            "PIPE_REJECT_REMOTE_CLIENTS"
+          ],
+          "maximumInstances": 1,
+          "sddl": "D:P(A;;GA;;;<SE_GROUP_LOGON_ID_SID>)S:(ML;;NW;;;ME)",
+          "requiredIntegrity": "MEDIUM",
+          "handshake": "OS_PID_IMAGE_AND_TWO_NONCE_SHA256_V1"
+        },
+        "rpc": {
+          "schemaVersion": 1,
+          "frameKeys": [
+            "schemaVersion",
+            "frameType",
+            "directionSequence",
+            "sessionId",
+            "operationId",
+            "method",
+            "timeoutMs",
+            "payloadSha256",
+            "payload"
+          ],
+          "frameTypes": [
+            "HELLO",
+            "CHALLENGE",
+            "AUTH",
+            "READY",
+            "REQUEST",
+            "RESPONSE",
+            "RESPONSE_ACK",
+            "CANCEL",
+            "CANCEL_ACK",
+            "CLOSE",
+            "CLOSED"
+          ],
+          "requestSchemas": {
+            "beginOwnedNetworkMeasurement": ["planSha256"],
+            "captureGlobalMutationSnapshot": [],
+            "openPinnedInputLeases": ["planSha256"],
+            "revalidatePinnedInputLeases": ["leaseId", "recordsSha256"],
+            "allocateOwnedRoot": ["precreatedRootLeaseId"],
+            "createOwnershipLedger": ["rootLeaseId"],
+            "runOwnedProcess": [
+              "processRole",
+              "fixtureId",
+              "executableIdentitySha256",
+              "rootLeaseId",
+              "ledgerId",
+              "pinnedLeaseId",
+              "timeoutMs",
+              "combinedOutputCapBytes"
+            ],
+            "forceStopOwnedProcessTree": ["targetOperationId", "bindingStateSha256"],
+            "performCleanupStep": ["operation", "bindingStateSha256"]
+          },
+          "resultSchemas": {
+            "beginOwnedNetworkMeasurement": [
+              "schemaVersion",
+              "leaseId",
+              "available",
+              "complete",
+              "startedBeforeFirstSyntheticChild",
+              "baselineOwnerCount",
+              "baselineOwnerScopeSha256",
+              "evidenceMode",
+              "targetPollIntervalMicros",
+              "maximumAllowedGapMicros"
+            ],
+            "captureGlobalMutationSnapshot": [
+              "schemaVersion",
+              "complete",
+              "phaseManifestSha256",
+              "phaseInputMetadataSha256",
+              "checkoutControlMetadataSha256",
+              "nodeHostMetadataSha256",
+              "powerShellHostMetadataSha256",
+              "closedChildEnvironmentSha256",
+              "foreignOwnedPrefixMetadataSha256",
+              "aggregateSha256"
+            ],
+            "openPinnedInputLeases": [
+              "schemaVersion",
+              "leaseId",
+              "records",
+              "recordsSha256",
+              "allHeld"
+            ],
+            "revalidatePinnedInputLeases": [
+              "schemaVersion",
+              "leaseId",
+              "records",
+              "recordsSha256",
+              "allHeld"
+            ],
+            "allocateOwnedRoot": [
+              "schemaVersion",
+              "leaseId",
+              "parentVolumeSerialNumber",
+              "parentFileId",
+              "rootVolumeSerialNumber",
+              "rootFileId",
+              "parentFinalPathSha256",
+              "rootFinalPathSha256",
+              "rootName",
+              "ancestorChainReparseFree",
+              "sameVolume",
+              "heldDenyDelete",
+              "precreatedByAdapter",
+              "adoptedByBroker"
+            ],
+            "createOwnershipLedger": [
+              "schemaVersion",
+              "ledgerId",
+              "rootLeaseId",
+              "state",
+              "entryCount",
+              "entriesSha256"
+            ],
+            "runOwnedProcess": [
+              "exitCode",
+              "stdoutBase64",
+              "stderrBase64",
+              "processIdentity",
+              "outputIdentity",
+              "ownershipLedger"
+            ],
+            "forceStopOwnedProcessTree": [
+              "schemaVersion",
+              "operationId",
+              "requested",
+              "ownedProcessCount",
+              "stoppedProcessCount",
+              "exitObserved",
+              "jobClosed",
+              "liveOwnedProcessCount"
+            ],
+            "performCleanupStep": [
+              "schemaVersion",
+              "operation",
+              "status",
+              "fixedReason",
+              "evidence"
+            ]
+          },
+          "maximumFrameBytes": 131072,
+          "maximumSessionBytes": 8388608,
+          "sequencePolicy": "INDEPENDENT_PER_DIRECTION_START_1_EXACT_INCREMENT",
+          "canonicalEncoding": "CLOSED_ORDERED_NFC_SAFE_INTEGER_JSON_UTF8_LF_V1"
+        },
+        "globalSnapshot": {
+          "mode": "BOUNDED_METADATA_SNAPSHOT_V1",
+          "keys": [
+            "schemaVersion",
+            "complete",
+            "phaseManifestSha256",
+            "phaseInputMetadataSha256",
+            "checkoutControlMetadataSha256",
+            "nodeHostMetadataSha256",
+            "powerShellHostMetadataSha256",
+            "closedChildEnvironmentSha256",
+            "foreignOwnedPrefixMetadataSha256",
+            "aggregateSha256"
+          ],
+          "ambientValuesAllowed": false
+        },
+        "networkEvidence": {
+          "mode": "ZERO_OBSERVED_OWNED_TCP_UDP_ENDPOINTS_V1",
+          "ownerCount": 42,
+          "pollMaximumMs": 2,
+          "gapMaximumMs": 10,
+          "packetCaptureClaimAllowed": false
+        },
+        "preReady": {
+          "timeoutMs": 30000,
+          "exitWaitMs": 5000,
+          "successRequirements": [
+            "ADDTYPE_COMPLETE",
+            "COMPILER_PINS_REVALIDATED",
+            "ZERO_SURVIVING_CODEDOM_PROCESS",
+            "ROOT_ADOPTED",
+            "SURVIVING_ARTIFACTS_INVENTORIED",
+            "PIPE_IDENTITY_VERIFIED",
+            "NETWORK_OBSERVER_READY"
+          ],
+          "failureReason": "ADAPTER_BOOTSTRAP_DESCENDANT_UNPROVEN_HOLD",
+          "cleanupAllowed": false,
+          "transientAbsenceClaimAllowed": false
+        },
+        "receipt": {
+          "maximumBytes": 4096,
+          "stdoutLineCount": 1,
+          "stderrBytes": 0,
+          "exitCodes": { "clean": 0, "failedClean": 1, "hold": 2 },
+          "keys": [
+            "schemaVersion",
+            "mode",
+            "contractVersion",
+            "reviewBinding",
+            "candidateManifestSha256",
+            "state",
+            "primaryFailureReason",
+            "completedFixtureCount",
+            "compilerProcessCount",
+            "fixtureProcessCount",
+            "cleanupStepCount",
+            "fixtureEvidenceSha256",
+            "publicTracePinsSha256",
+            "ownershipLedgerPreCleanupSha256",
+            "ownershipLedgerSha256",
+            "cleanupSha256",
+            "adapterSessionClosed",
+            "networkEvidenceMode",
+            "networkMeasurementComplete",
+            "networkBaselineOwnerCount",
+            "networkWorkOwnerCount",
+            "networkOwnerCount",
+            "networkObservationCount",
+            "networkMaximumGapMicros",
+            "networkEventCount",
+            "retainedArtifactCount",
+            "globalMutationCount",
+            "manifestFinalRevalidated",
+            "authority"
+          ]
+        },
+        "outerCleanup": {
+          "steps": [
+            "SEND_CLOSE",
+            "RECEIVE_CLOSED",
+            "OBSERVE_PIPE_EOF",
+            "OBSERVE_POWERSHELL_EXIT",
+            "CLOSE_NODE_HANDLES",
+            "VERIFY_ROOT_ABSENT",
+            "VERIFY_ZERO_OWNED_PROCESS_AND_FOREIGN_RESIDUE"
+          ],
+          "automaticCrashRecoveryAllowed": false
+        },
+        "failureReasons": [
+          "ADAPTER_HOST_INVALID",
+          "ADAPTER_AMBIENT_INVALID",
+          "ADAPTER_ARGUMENT_INVALID",
+          "ADAPTER_MANIFEST_INVALID",
+          "ADAPTER_ROOT_PRECONDITION_HOLD",
+          "ADAPTER_BOOTSTRAP_TIMEOUT_HOLD",
+          "ADAPTER_BOOTSTRAP_DESCENDANT_UNPROVEN_HOLD",
+          "ADAPTER_BOOTSTRAP_INVALID",
+          "ADAPTER_PIPE_SECURITY_INVALID",
+          "ADAPTER_HANDSHAKE_INVALID",
+          "ADAPTER_PROTOCOL_INVALID",
+          "ADAPTER_RPC_TIMEOUT",
+          "ADAPTER_FORCE_STOP_FAILED",
+          "ADAPTER_NETWORK_OBSERVER_INVALID",
+          "ADAPTER_GLOBAL_SNAPSHOT_INVALID",
+          "ADAPTER_CRASH_RESIDUE_HOLD",
+          "ADAPTER_SESSION_CLOSE_FAILED",
+          "ADAPTER_AUDIT_SOURCE_PIN_INVALID",
+          "ADAPTER_IPV6_CENSUS_INVALID",
+          "ADAPTER_PRE_READY_INVENTORY_INVALID",
+          "ADAPTER_RPC_ROUTING_INVALID",
+          "ADAPTER_PROCESS_CENSUS_INVALID",
+          "ADAPTER_ARGUMENT_QUOTING_INVALID",
+          "ADAPTER_NETWORK_LEASE_CLOSE_INVALID",
+          "ADAPTER_BASELINE_TOKEN_CLOSE_INVALID",
+          "ADAPTER_INTERNAL_FAILURE"
+        ],
+        "authority": {
+          "externalActionAuthorized": false,
+          "downloadAuthorityPresent": false,
+          "executionAuthorityPresent": false,
+          "state": "PRECONDITION_HOLD_NO_GET"
+        }
+      },
+      "tracePins": [
+        {
+          "fixtureId": "VALID_LEGACY",
+          "expectedOutcome": "SUCCESS",
+          "fixedReason": null,
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "cdb8b8a8fa818a37c45c4c5fba4d4f4467a84563b654fb61ce83940eb1bdb0de",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "VALID_RFC_TSSTORE_ONLY",
+          "expectedOutcome": "SUCCESS",
+          "fixedReason": null,
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "faa163433672e7497659564169181a72013e917ea1cfc0873bf759daf9ff09fb",
+          "resourceTraceSha256": "afb3cc87afdc325448e18b3c3b67be611fa5c88e8ec0c999de5afc078313771f"
+        },
+        {
+          "fixtureId": "CERT_BAG_DECOY",
+          "expectedOutcome": "SUCCESS",
+          "fixedReason": null,
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "cdf2bfb21d3cdfe438666c59fa8a34812d893e5ec043d22f773746fe7f4e1cc1",
+          "resourceTraceSha256": "2634ae5d93c985fc606985e1d801dc8e5c00086dccef35ef67ea1fb1cdc912f7"
+        },
+        {
+          "fixtureId": "SIGNER_COUNT_ZERO",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "GET_SIGNER_COUNT",
+          "resolverTraceSha256": "5523df43221a5ce0760f878f32be8528fc4df16802c705164f26b0bbc8dfaa82",
+          "resourceTraceSha256": "cf14dbb0085ec6270e34ab47e49201c6408f416aa2af9819268dbb4b8043c255"
+        },
+        {
+          "fixtureId": "SIGNER_COUNT_TWO",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "GET_SIGNER_COUNT",
+          "resolverTraceSha256": "5523df43221a5ce0760f878f32be8528fc4df16802c705164f26b0bbc8dfaa82",
+          "resourceTraceSha256": "cf14dbb0085ec6270e34ab47e49201c6408f416aa2af9819268dbb4b8043c255"
+        },
+        {
+          "fixtureId": "SIGNER_INFO_CERT_INFO_MISMATCH",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "COMPARE_SIGNER_IDENTITIES",
+          "resolverTraceSha256": "441380b6ff3f483220996092390388d406cd987e337445ac4fcb2d7c07666880",
+          "resourceTraceSha256": "d44c8927916ceca5a9d64335c946a6476c95c27ae7c5061d26873897e437c4ef"
+        },
+        {
+          "fixtureId": "RESOLVED_CERT_MISMATCH",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "RESOLVE_PRIMARY_CERT",
+          "resolverTraceSha256": "17da45bb643c74dd0a97f02d70fae9f1d126211ad63eeb25b41ee9e54ef61cd6",
+          "resourceTraceSha256": "05f5101bf7a8816e2faf4a693fde9a2236d2f72d5847c4f8284b3729301d6e90"
+        },
+        {
+          "fixtureId": "TIMESTAMP_NONE",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "GET_TIMESTAMP_ATTRIBUTES",
+          "resolverTraceSha256": "fec12966840e31707b56a69609d8edb552f719f757919bbdd79abc8aa51a1bf1",
+          "resourceTraceSha256": "2470ba8342711e4eb022a513792b778b737bfe8c5aa157db69c4c1310ebbbb76"
+        },
+        {
+          "fixtureId": "TIMESTAMP_BOTH",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "GET_TIMESTAMP_ATTRIBUTES",
+          "resolverTraceSha256": "fec12966840e31707b56a69609d8edb552f719f757919bbdd79abc8aa51a1bf1",
+          "resourceTraceSha256": "2470ba8342711e4eb022a513792b778b737bfe8c5aa157db69c4c1310ebbbb76"
+        },
+        {
+          "fixtureId": "TIMESTAMP_DUPLICATE",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "GET_TIMESTAMP_ATTRIBUTES",
+          "resolverTraceSha256": "fec12966840e31707b56a69609d8edb552f719f757919bbdd79abc8aa51a1bf1",
+          "resourceTraceSha256": "2470ba8342711e4eb022a513792b778b737bfe8c5aa157db69c4c1310ebbbb76"
+        },
+        {
+          "fixtureId": "LEGACY_COUNTERSIGN_INVALID",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "VERIFY_LEGACY_COUNTERSIGNATURE",
+          "resolverTraceSha256": "3aa2d990212f74c5b6145d7c05c9b57b5d6bb45eafe2e510884f153eea0387c1",
+          "resourceTraceSha256": "166a3608142af3bc6294c66ff4b00de00bd3c6efad3e26d692160c66f2477326"
+        },
+        {
+          "fixtureId": "LEGACY_WRONG_STORE",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "RESOLVE_LEGACY_TIMESTAMP_CERT",
+          "resolverTraceSha256": "c7cd554173b6097fd6362d87f1aba89c48fa37530659ae3297508f7024b87c95",
+          "resourceTraceSha256": "8c732fa7c5f589810cf973c902199d65bb0805e28364e1b7a8306a8a6edf7b16"
+        },
+        {
+          "fixtureId": "RFC_HASH_MISMATCH",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "VERIFY_RFC3161",
+          "resolverTraceSha256": "f25410c82552e668738ba8dfccb6eaa38c4909e7fa45bcb46166c7f47680559b",
+          "resourceTraceSha256": "2169409a1ad0c562cc4a7fa82104ad253e077b5fd067147f723b4897febd8d4d"
+        },
+        {
+          "fixtureId": "RFC_TSSTORE_EMPTY",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "VERIFY_RFC3161",
+          "resolverTraceSha256": "569ee3e12e3014ee486b5501452edcd7d20aca60b4dd6e8502d9251eca2f9b8c",
+          "resourceTraceSha256": "3c8fb5fdd3df05480f8f2ce9809a82bb07ee7b4ffce84ee0a21208ade1a1564d"
+        },
+        {
+          "fixtureId": "RFC_TSSTORE_UNRELATED",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "VERIFY_RFC3161",
+          "resolverTraceSha256": "569ee3e12e3014ee486b5501452edcd7d20aca60b4dd6e8502d9251eca2f9b8c",
+          "resourceTraceSha256": "3c8fb5fdd3df05480f8f2ce9809a82bb07ee7b4ffce84ee0a21208ade1a1564d"
+        },
+        {
+          "fixtureId": "RFC_TSSTORE_CLOSED",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "BUILD_TIMESTAMP_CHAIN",
+          "resolverTraceSha256": "facd6a628cb80eb069a136ba2708b3280bd0f4791e6dda2dbbb55212e708a432",
+          "resourceTraceSha256": "82085b38540ceac4cbe6842aac06c72ff9a77634961bfa7cd584215c906c8a8e"
+        },
+        {
+          "fixtureId": "SIGNER_EKU_MISSING",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "VERIFY_PRIMARY_EKU",
+          "resolverTraceSha256": "fa5a26851c146f8fbea7d78565ad167368ed31f316808a5fef96fa8f2441bba9",
+          "resourceTraceSha256": "166a3608142af3bc6294c66ff4b00de00bd3c6efad3e26d692160c66f2477326"
+        },
+        {
+          "fixtureId": "TSA_EKU_MISSING",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "VERIFY_TIMESTAMP_EKU",
+          "resolverTraceSha256": "1087139adb5ae6d598006d594e0ade18e48bb653ff03e1a3d5271da1ef4bc3c0",
+          "resourceTraceSha256": "166a3608142af3bc6294c66ff4b00de00bd3c6efad3e26d692160c66f2477326"
+        },
+        {
+          "fixtureId": "SIGNER_CHAIN_TRUST_ERROR",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "BUILD_PRIMARY_CHAIN",
+          "resolverTraceSha256": "6099e2827cbdbf5ca5f48faaa2493ff235b205fd2759d08a9cb7eb802744663c",
+          "resourceTraceSha256": "a677fa6cdc7e088a774672d5450fc9d321ba0b796f1d84a6b6a1d9b001922f45"
+        },
+        {
+          "fixtureId": "TSA_CHAIN_TRUST_ERROR",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "BUILD_TIMESTAMP_CHAIN",
+          "resolverTraceSha256": "210bba8371fd50c645786e89642d1f4dc4890bd201f9e51e05bb458bee6dad45",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "SIGNER_POLICY_ERROR",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "VERIFY_PRIMARY_POLICY",
+          "resolverTraceSha256": "5576248c8cabb7fc2edf90c4a2eab8139541868f41f04aafcb8d5927e7f4cfde",
+          "resourceTraceSha256": "a677fa6cdc7e088a774672d5450fc9d321ba0b796f1d84a6b6a1d9b001922f45"
+        },
+        {
+          "fixtureId": "TSA_POLICY_ERROR",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "VERIFY_TIMESTAMP_POLICY",
+          "resolverTraceSha256": "8f48506f4f8346f2a011d05f0d0e70266891c82a3d509acf634a951977e2e54e",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OFFLINE_REVOCATION_MISSING",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "OFFLINE_REVOCATION_UNAVAILABLE",
+          "terminalOperation": "BUILD_PRIMARY_CHAIN",
+          "resolverTraceSha256": "7bb2558a49e72bd27dfa5770c3550bd084d5ba1a9aa7a1f2725ebe9fca03e379",
+          "resourceTraceSha256": "a677fa6cdc7e088a774672d5450fc9d321ba0b796f1d84a6b6a1d9b001922f45"
+        },
+        {
+          "fixtureId": "FRACTIONAL_FILETIME",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "VALIDATE_TIMESTAMP_FILETIME",
+          "resolverTraceSha256": "43b93bea5922ae4bcb88a2a895dfb2e3fb9a4c1425ce28d49174a1304efa60de",
+          "resourceTraceSha256": "166a3608142af3bc6294c66ff4b00de00bd3c6efad3e26d692160c66f2477326"
+        },
+        {
+          "fixtureId": "TIMESTAMP_OUTSIDE_SIGNER_VALIDITY",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "VALIDATE_TIMESTAMP_VALIDITY",
+          "resolverTraceSha256": "26893dc400ef4519bdb5359a70e38dcafd3a0b780feffd7587a8595b0c243290",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "TIMESTAMP_OUTSIDE_TSA_VALIDITY",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "VALIDATE_TIMESTAMP_VALIDITY",
+          "resolverTraceSha256": "26893dc400ef4519bdb5359a70e38dcafd3a0b780feffd7587a8595b0c243290",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "HANDLE_IDENTITY_DRIFT",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "FILE_IDENTITY_DRIFT",
+          "terminalOperation": "COMPARE_TARGET_SNAPSHOTS",
+          "resolverTraceSha256": "c4a9e0e139954b90d21a39cab048f4fc5034bd187f2be2f52239d785205951d5",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "HANDLE_HASH_DRIFT",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "FILE_IDENTITY_DRIFT",
+          "terminalOperation": "COMPARE_TARGET_SNAPSHOTS",
+          "resolverTraceSha256": "c4a9e0e139954b90d21a39cab048f4fc5034bd187f2be2f52239d785205951d5",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "HANDLE_PATH_DRIFT",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "FILE_IDENTITY_DRIFT",
+          "terminalOperation": "COMPARE_TARGET_SNAPSHOTS",
+          "resolverTraceSha256": "c4a9e0e139954b90d21a39cab048f4fc5034bd187f2be2f52239d785205951d5",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "CONTENT_UNSIGNED",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "CLASSIFY_CATALOG_IF_NO_EMBEDDED",
+          "resolverTraceSha256": "e7c2c70a4cf544c2e38d62e57ec857d536f5f8931215aac863319071ce6eb796",
+          "resourceTraceSha256": "4cd935f2db4a4fe2aaf7cc8ff26d80b9b255b69230d04cb4ec5bdec2ca5bbce2"
+        },
+        {
+          "fixtureId": "CONTENT_DETACHED",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "SIGNATURE_INVALID",
+          "terminalOperation": "OPEN_EMBEDDED_MESSAGE",
+          "resolverTraceSha256": "a2edf469b5ad90339dfca4853377c11748d5942f9576760a678fc3d4534f0e19",
+          "resourceTraceSha256": "8174eae7c571135861da01c4c450c9377324c1062421a1f7876a5d46bc36f0ea"
+        },
+        {
+          "fixtureId": "CONTENT_CATALOG_ONLY",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CATALOG_SIGNATURE_REJECTED",
+          "terminalOperation": "CLASSIFY_CATALOG_IF_NO_EMBEDDED",
+          "resolverTraceSha256": "79e72c720c70e91e9c90829d4ce386e830995d2d87f73af2c195b45ac82b211e",
+          "resourceTraceSha256": "cc93792b94a24f73782db82d1b361fbe077b8ef1c52db3c27fd72d5dd7c22818"
+        },
+        {
+          "fixtureId": "VERSION_INVALID",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "VERSION_INVALID",
+          "terminalOperation": "READ_VERSIONS",
+          "resolverTraceSha256": "98648c377c4cbff476bfda27e53252d4df8534e8d637c4744932a2ac24380be6",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OUTPUT_EXTRA_FIELD",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "a77eafcc02c0719096a728c328353f3140aee8d73a103a3838dc2506d09ee9a3",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OUTPUT_MISSING_FIELD",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "a77eafcc02c0719096a728c328353f3140aee8d73a103a3838dc2506d09ee9a3",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OUTPUT_REORDERED",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "a77eafcc02c0719096a728c328353f3140aee8d73a103a3838dc2506d09ee9a3",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OUTPUT_WRONG_TYPE",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "a77eafcc02c0719096a728c328353f3140aee8d73a103a3838dc2506d09ee9a3",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OUTPUT_OVERSIZE",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "a77eafcc02c0719096a728c328353f3140aee8d73a103a3838dc2506d09ee9a3",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        },
+        {
+          "fixtureId": "OUTPUT_TRAILING",
+          "expectedOutcome": "FAILURE",
+          "fixedReason": "CERTIFICATE_FIELDS_INVALID",
+          "terminalOperation": "BUILD_EVIDENCE",
+          "resolverTraceSha256": "a77eafcc02c0719096a728c328353f3140aee8d73a103a3838dc2506d09ee9a3",
+          "resourceTraceSha256": "de30cc2ab4f09340c34c72dac47ea3858920167948d2dcc47cca31a56cd8d6af"
+        }
+      ],
+      "zeroNetworkRequired": true,
+      "networkEvidenceMode": "ZERO_OBSERVED_OWNED_TCP_UDP_ENDPOINTS_V1",
+      "tempOnly": true,
+      "activationConsumptionAllowed": false,
+      "downloadAllowed": false,
+      "retainedArtifactCount": 0,
+      "globalMutationAllowed": false
+    }
+  },
+  "futureActivation": {
+    "requiredAuthorityId": "DOWNLOAD_AUTHORIZED_V1",
+    "activationArtifactRequired": true,
+    "activationCommitMustDescendFromMergedDesignCommit": true,
+    "designPolicySha256Required": true,
+    "externalActionAuthorized": false,
+    "downloadAuthorityPresent": false,
+    "executionAuthorityPresent": false,
+    "initialState": "PRECONDITION_HOLD_NO_GET",
+    "transactionId": "R4B-NUGET-VERIFIER-7.9.0-DOWNLOAD-001",
+    "maximumTransactions": 1,
+    "headChangeInvalidates": true,
+    "network": {
+      "method": "GET",
+      "url": "https://dist.nuget.org/win-x86-commandline/v7.9.0/nuget.exe",
+      "expectedSha256": "992d70cac5b06c38efec91806caba64cdcc07e6d963a0959dbbbaf264d33b800",
+      "maximumBodyBytes": 16777216,
+      "maximumRequests": 1,
+      "redirectsAllowed": false,
+      "retriesAllowed": false,
+      "resumeAllowed": false,
+      "credentialsAllowed": false,
+      "cookiesAllowed": false,
+      "proxyAllowed": false,
+      "customTrustAllowed": false
+    },
+    "targetCreationPolicy": "HELD_CREATE_NEW_BEFORE_NETWORK",
+    "stateOrder": [
+      "NOT_STARTED",
+      "BOOTSTRAP_BYTES_VERIFIED",
+      "ADDTYPE_READY",
+      "LEASES_HELD",
+      "HOST_VERIFIED",
+      "ACTIVATION_CONSUMED",
+      "HELPER_BUILDING",
+      "HELPER_READY",
+      "DOWNLOAD_IN_PROGRESS",
+      "BYTES_RECEIVED",
+      "HASH_VERIFIED",
+      "SIGNATURE_VERIFIED",
+      "RECEIPT_RECORDED",
+      "SEALED_BYTES_HELD"
+    ],
+    "successTerminal": "SEALED_BYTES_HELD",
+    "preconditionTerminal": "PRECONDITION_HOLD_NO_GET",
+    "failureRecoveryState": "RECOVERING_CLEANUP",
+    "failureTerminals": ["FAILED_CLEANED_HOLD", "FAILED_CLEANUP_HOLD"],
+    "retryAllowed": false,
+    "resumeAllowed": false
+  },
+  "receiptContract": {
+    "successSchema": "fluyo:r4b:roslyn-verifier-bytes-receipt:v1",
+    "successVersion": "VERIFIER_BYTES_VERIFIED_V1",
+    "successState": "RECEIPT_RECORDED",
+    "successOutcome": "BYTES_VERIFIED_PENDING_EXECUTION_REVIEW",
+    "successRootKeys": [
+      "schema",
+      "receiptVersion",
+      "authorityCommit",
+      "authorityArtifactSha256",
+      "sourceMainCommit",
+      "transactionId",
+      "state",
+      "outcome",
+      "externalActionAuthorized",
+      "executionAuthorityPresent",
+      "executionAllowed",
+      "requestCount",
+      "bootstrap",
+      "download",
+      "verification",
+      "licenseEvidence",
+      "sbomInventory",
+      "scriptAbsence",
+      "hostIsolationEvidence",
+      "retentionDecision",
+      "cleanupEvidence"
+    ],
+    "bootstrapRootKeys": [
+      "mechanism",
+      "policySha256",
+      "designCommit",
+      "script",
+      "addTypeSource",
+      "powerShellHost",
+      "leaseEvidence",
+      "helperBuild",
+      "helperProcess"
+    ],
+    "verificationRootKeys": [
+      "observedSha256",
+      "authenticodeObservedSha256",
+      "authenticodeFileIdentityBefore",
+      "authenticodeFileIdentityAfter",
+      "authenticodeHandlePolicy",
+      "authenticodeIdentityStable",
+      "authenticodeStatus",
+      "authenticodeSignatureType",
+      "codeSigningEku",
+      "signerSubject",
+      "signerThumbprint",
+      "signerIssuer",
+      "signerSerial",
+      "signerNotBeforeUtc",
+      "signerNotAfterUtc",
+      "signatureChainStatus",
+      "revocationNetworkPolicy",
+      "signerChainRevocationMode",
+      "signerChainRevocationFlag",
+      "signerChainVerificationFlags",
+      "signerRevocationEvidenceStatus",
+      "timestampSubject",
+      "timestampThumbprint",
+      "timestampUtc",
+      "timestampChainStatus",
+      "timestampChainRevocationMode",
+      "timestampChainRevocationFlag",
+      "timestampChainVerificationFlags",
+      "timestampRevocationEvidenceStatus",
+      "productVersion",
+      "fileVersion"
+    ],
+    "externalActionAuthorized": false,
+    "executionAuthorityPresent": false,
+    "executionAllowed": false,
+    "absolutePathsAllowed": false,
+    "rawOutputAllowed": false,
+    "rawCertificateBytesAllowed": false
+  },
+  "failureReceiptContract": {
+    "schema": "fluyo:r4b:roslyn-verifier-failure-receipt:v1",
+    "version": "VERIFIER_TRANSACTION_HOLD_V1",
+    "rootKeys": [
+      "schema",
+      "receiptVersion",
+      "authorityCommit",
+      "transactionId",
+      "outcome",
+      "lastCompletedState",
+      "reason",
+      "authorityConsumed",
+      "requestCount",
+      "cleanupEvidence"
+    ],
+    "outcomes": ["PRECONDITION_HOLD_NO_GET", "FAILED_CLEANED_HOLD", "FAILED_CLEANUP_HOLD"],
+    "cleanupEvidenceKeys": [
+      "cleanupAttempted",
+      "cleanupComplete",
+      "retainedSanitizedRecordOnly",
+      "ownedResidueCount"
+    ],
+    "maximumOwnedResidueCount": 64,
+    "rawFieldsAllowed": false,
+    "unknownPairAllowed": false
+  },
+  "forbiddenActions": [
+    "genericPowerShellOrShellAuthority",
+    "arbitraryAddTypeOrPInvoke",
+    "profileOrModuleSearch",
+    "dynamicSourceOrCallerOptions",
+    "extraNetwork",
+    "redirect",
+    "retry",
+    "resume",
+    "proxy",
+    "credentials",
+    "cookies",
+    "customTrust",
+    "pathMutation",
+    "globalInstall",
+    "globalCache",
+    "globalConfig",
+    "nugetExecution",
+    "roslynDownload",
+    "roslynExtraction",
+    "generalCompilerExecution",
+    "replacement",
+    "broker",
+    "Attempt004",
+    "production",
+    "signing",
+    "store",
+    "spend",
+    "externalAccount",
+    "nonReproducibilityAcceptance"
+  ]
+}

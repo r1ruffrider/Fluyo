@@ -2798,3 +2798,196 @@ The authority and module remain unchanged. Real-staged development evidence is f
 PASS**, authoritative portable **107/107 PASS**, Prettier PASS, and ESLint PASS. Fresh exact-byte
 reviews remain required. No prerequisite, network, download, acquisition, extraction, execution,
 installation, commit, or push has occurred.
+
+### Closed Add-Type/PInvoke bootstrap selection and delegation — 2026-11-11
+
+Marlon explicitly selected the recommended **1/A closed Add-Type/PInvoke lease bootstrap** and
+delegated to Adriana approval of this bounded class of non-production evidence and test processes.
+The authoritative decision record is
+`docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md`. This delegation permits repository
+implementation, synthetic zero-network tests, exact-byte reviews, and normal commit/push/draft-PR
+gate transitions after the applicable specialist and Elana gates pass. It does not authorize
+production, signing, stores, spend, credentials, external accounts, a real download, downloaded
+verifier execution, broker execution, Attempt004, or unrelated external actions.
+
+Remote `main` is exactly `d6607300e52219c5d534e70c17e00e2e717e505b`. Existing draft PRs #87,
+#77, #61, and #58 remain preserved and untouched. Catalina's closed architecture preflight is
+**128/128 PASS** and Natalia's security preflight is **64/64 PASS**, with runtime/download **0**.
+The authority is `CLOSED_ADD_TYPE_PINVOKE_LEASE_BOOTSTRAP_V1`; it is not generic shell authority and
+permits only the pinned, committed, byte-equal EncodedCommand/Add-Type lease design recorded in the
+decision file.
+
+The immutable phase disposition remains `PRECONDITION_HOLD_NO_GET` with
+`externalActionAuthorized:false`, `downloadAuthorityPresent:false`, and
+`executionAuthorityPresent:false`. No helper execution, GET, package retention, NuGet execution,
+Roslyn execution, broker action, Attempt004, production action, staging, commit, or push has occurred
+under this new phase. Bianca owns only the two records paths; Valentina may next implement only the
+seven frozen code/test paths. Any literal or file drift resets Catalina and Natalia's passes. Elana
+remains the sole final independent exact-head QA/code-review gate.
+
+### Closed synthetic compiler exception — 2026-11-11
+
+Roslyn and toolchain execution remain forbidden except for the single pinned, zero-network
+`CONTRACT_SELF_TEST_V1` csc compile-and-39-fixture run authorized by
+`syntheticBootstrapTestAuthorized`. That synthetic transaction may execute only on unchanged bytes
+after Catalina architecture PASS, Natalia security PASS, and Renata reproducibility PASS; it cannot
+consume activation authority or authorize a GET, download, retained package, live helper, NuGet
+execution, broker, Attempt004, production, signing, store, spend, credential, or external-account
+action. All other compiler, helper, download, and toolchain execution remains forbidden.
+
+The exception does not change `externalActionAuthorized:false`,
+`downloadAuthorityPresent:false`, `executionAuthorityPresent:false`, or
+`PRECONDITION_HOLD_NO_GET`. It authorizes no compile or fixture execution on repository bytes until
+the unchanged exact candidate has Catalina, Natalia, and Renata pre-execution PASS verdicts. Any byte
+change resets those gates.
+
+### 2026-11-11 — v1.4 pre-execution repair contract
+
+- Natalia accepted the complete v1.4 architecture contract at 64/64 controls before implementation.
+- The repair remains confined to the existing nine-path repository boundary. It closes pinned input/output identity continuity, opaque held-root containment, process-bound zero-network measurement, bounded cleanup and post-delete proof, exact trace/resource pins, revocation precedence, catalog-content rejection, unique issuer-and-serial certificate selection, and native-handle adoption cleanup.
+- externalActionAuthorized, downloadAuthorityPresent, and executionAuthorityPresent remain false. PRECONDITION_HOLD_NO_GET remains active. No compile, PowerShell/helper execution, GET, download, NuGet execution, broker, or Attempt004 is authorized by this record.
+- After implementation, unchanged bytes require Catalina architecture PASS, Natalia security PASS, and Renata reproducibility PASS before the separately approved zero-network CONTRACT_SELF_TEST_V1 transaction may run.
+
+2026-11-12 — v1.5 architecture freeze:
+
+R4B-AUTHENTICODE-OPERATIONAL-RESOLVER-v1.5 is approved for repository implementation and zero-network synthetic contract testing only after unchanged Catalina, Natalia, and Renata pre-execution PASSes. It removes WinVerifyTrust path authority and verifies embedded Authenticode through held-handle PE digest plus decoded-message signature, while catalog presence is rejection-only. externalActionAuthorized, downloadAuthorityPresent, and executionAuthorityPresent remain false. PRECONDITION_HOLD_NO_GET remains mandatory. This does not authorize a download, live verifier/helper execution, NuGet execution, broker, Attempt004, production, signing, store, spend, credential, or external-account action.
+
+### 2026-11-12 — v1.6 bounded repair freeze
+
+`R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.6` passed Natalia's pre-implementation security review at 64/64 controls. The unchanged nine-path implementation must bind armed work/global deadlines, forced process-tree stop, universal adapter quarantine, honest partial-token cleanup, full strong-signature and resource-ledger ownership, operational certificate-store and catalog semantics, and regenerated 39-fixture trace pins. The synthetic terminal is `SYNTHETIC_TEST_FAILED_CLEANUP_HOLD`; the separate future-activation `FAILED_CLEANUP_HOLD` literal remains unchanged. No compile, synthetic fixture run, PowerShell/helper execution, GET, download, NuGet execution, broker, Attempt004, production, signing, store, spend, credential, or external-account action is authorized by this freeze. The one previously approved zero-network synthetic compile-and-39-fixture transaction remains held until unchanged Catalina, Natalia, and Renata static PASSes. Any byte or literal drift resets those gates.
+
+### 2026-11-12 — v1.7 ownership and deadline repair freeze
+
+Catalina froze R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.7 within the existing nine paths after the v1.6 exact-byte gate found incomplete native ownership and synthetic operational coverage. Implementation must pass the exact 38-test static suite and fresh Catalina, Natalia, and Renata static reviews before the separately approved zero-network 39-fixture transaction may run. PRECONDITION_HOLD_NO_GET and all false authority flags remain unchanged; no compile, fixture run, helper, GET, download, NuGet, broker, Attempt004, production, signing, store, spend, credential, or external-account action is authorized.
+
+### 2026-11-12 — v1.8 operational cleanup and dispatch-deadline repair freeze
+
+Catalina froze R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.8 after the v1.7 exact-byte wave found three native-ownership/catalog defects and one dispatch-microtask deadline defect. The bounded repair requires exact closer execution for real synthetic allocations with fake-native discrimination confined to CloseRaw and truthful close/rollback rows; operational execution of NONE plus the four failing AdoptionInjection positions with exact allocator, close-count, ledger, and trace expectations; dependency-aware CATALOG_CLOSE_REVERSED adoption, rejection, and info-before-admin cleanup; and a finite positive phase/global deadline recheck inside each invokeAdapter and forceStop dispatch microtask immediately before the adapter call. The exact nine-path boundary is retained. Only the decision record, this handoff, policy, controller, Authenticode helper, and focused test may change; the PowerShell bootstrap, lease C# source, and verifier-bytes receipt remain byte-identical. The focused target is 42/42. The 39 public fixture IDs and public resolver/resource trace pins remain byte-identical; internal adoption/catalog self-checks do not become public fixtures. All authority flags remain false and PRECONDITION_HOLD_NO_GET remains active. No compile, C# or PowerShell execution, helper/fixture run, GET, download, acquisition, NuGet execution, broker, Attempt004, production, signing, store, spend, credential, external-account action, stage, commit, or push has occurred or is authorized. Pending gates are a frozen nine-row manifest and development checks, fresh Catalina and Natalia exact-byte reviews, Renata static review only after both pass, then applicable Julieta, Gabriela, Bianca, and sole final Elana review; any path, public trace, authority, or byte drift resets the sequence.
+
+## 2026-11-12 — v1.10 concrete synthetic adapter/launcher handoff
+
+- Decision: `R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.10` supersedes v1.9 for repository implementation only.
+- Boundary: exactly ten paths; the sole new path is `scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs`; `roslyn-verifier-authenticode.cs` and `root-only-closure-verifier-bytes-receipt-v1.mjs` remain byte-identical.
+- Required implementation evidence: 72/72 non-executing focused checks, followed by unchanged exact-byte Catalina and Natalia PASSes and Renata pre-execution PASS before any real synthetic transaction.
+- Evidence claim: `ZERO_OBSERVED_OWNED_TCP_UDP_ENDPOINTS_V1` is bounded owned-process endpoint observation, not packet capture or proof that no packet existed.
+- Fail-closed boundary: any pre-READY timeout, unproven descendant, transient-artifact uncertainty, crash residue, pipe/RPC identity failure or cleanup failure remains HOLD; no automatic recovery or deletion is authorized.
+- Authority: `externalActionAuthorized:false`, `downloadAuthorityPresent:false`, `executionAuthorityPresent:false`, `PRECONDITION_HOLD_NO_GET`; no GET, download, acquisition, real NuGet/verifier, broker, Attempt004, production, signing, store, spend, credentials, external accounts, stage, commit or push.
+
+## 2026-11-12 — v1.10.2 committed audit-source lease
+
+- Boundary: exact ten paths unchanged; no source copy or new assembly path.
+- Lease: Node and PowerShell hold the same committed audit source; PowerShell uses FileShare.Read and denies new write/delete opens.
+- Validation: strict UTF-8, no BOM, LF-only, 1..65,536 bytes, exact source-control SHA-256 and live identity bound before READY.
+- Lifecycle: seventh pinned input; revalidated and closed with pinned inputs; never ledger-owned or deleted.
+- Caps/gate: PS1 8,192 bytes, audit C# 65,536 bytes, 76/76 non-executing checks, then Catalina/Natalia/Renata; no execution/acquisition/stage/commit/push.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.11 architecture handoff
+
+- Current disposition: `IMPLEMENTATION_AUTHORIZED_EXECUTION_HELD`.
+- v1.10.2 exact-byte review: Catalina 34 controls, 16 passed and 18 failed; Natalia 64 controls, 56 passed and 8 failed. Static 76/76 did not establish a reachable broker transaction. Renata and Elana were not eligible on that candidate.
+- Frozen replacement literals: controller `R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.11`; adapter `R4B-SYNTHETIC-ADAPTER-v1.11`; protocol `R4B-ADDTYPE-PIPE-RPC-v1.11`; manifest binding `HELD_TEN_PATH_PREEXEC_REVIEW_BINDING_V1`.
+- Exact boundary: the same ten decision, handoff, policy, controller, PS1, broker C#, adapter, immutable helper, immutable receipt, and regression-test paths. No eleventh path is authorized.
+- Required implementation: held exact-ten observational manifest; pinned Node and PowerShell identity; held audit-source lease; current-logon-SID-only medium-integrity overlapped pipe; canonical `HELLO`/`CHALLENGE`/`AUTH`/`READY`; all nine RPC methods; independent cancellation; broker-derived pinned compiler and 39 fixtures in kill-on-close jobs; owner-scoped network observation; bounded metadata snapshots; append-only ownership ledger; exact 23-step cleanup; `CLOSE`/`CLOSED`; fixed sanitized receipt; and outer cleanup or fixed residue hold.
+- Required adapter correction: method arities and nested identity/lease mapping must match the controller calls exactly; no caller-controlled path, command, argument, environment, or handle may cross the RPC boundary.
+- Required native corrections: aligned `TOKEN_GROUPS`/`SID_AND_ATTRIBUTES`; real overlapped `ConnectNamedPipe`, `ReadFile`, and `WriteFile`; exact client/server PID, creation-time, image, volume, and file-identity checks; and broker validation of the Node audit-source file-index pin while retaining its authoritative held handle.
+- Required QA: 96 nonexecuting tests total, with the 54 v1.11 tests exercising the executable adapter boundary through a strict injected broker oracle. Exact-byte Catalina and Natalia reviews restart after any edit; Renata follows both; Elana remains the final unchanged-head gate.
+- Implementation does not authorize execution. Keep `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` until the later separately gated one-run decision.
+- No PowerShell, Add-Type, csc, helper, network, acquisition, download, broker, synthetic transaction, Attempt004, stage, commit, or push occurred as part of this architecture freeze.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.12 implementation handoff
+
+R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.12 supersedes v1.11 and is approved for repository implementation and non-executing contract tests only. It establishes one UTF-8-bytewise canonical ten-path manifest, explicit non-self-referential reviewed-digest CLI binding, held-byte execution, OS-bound peer identities, strict canonical RPC, independent cancellation and measured force-stop, held segment-root trust, truthful READY/CodeDOM inventory, owner-scoped network evidence, live metadata snapshots, canonical identity-ledger rows, identity-revalidated nonrecursive cleanup, bounded outer settlement and sanitized receipt arithmetic. The pre-execution target is 120/120. The eight operational tests remain required and unattempted until separately authorized; no fake controller, transport, identity or result can satisfy them. externalActionAuthorized=false, downloadAuthorityPresent=false, executionAuthorityPresent=false and PRECONDITION_HOLD_NO_GET remain mandatory. This amendment authorizes no PowerShell, Add-Type, C#, compiler, helper, network, transaction, GET, acquisition, NuGet, broker, Attempt004, production, signing, store, spend, credential, external-account, stage, commit or push action.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.12.1 identity handoff
+
+R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.12.1 supersedes only the v1.12 peer-identity handshake contract. Node retains and presents pinned Node and PowerShell image-file byte, SHA-256 and final-path digests plus documented process IDs, but does not claim OS process creation time or use an undocumented child handle. After HELLO, the broker authoritatively observes both pipe peer PIDs, retains both process and image handles, derives creation FILETIME and file identities from those handles, compares the observed image claims to Node's held files, and returns the complete observed identities in CHALLENGE. SERVER_V1, CLIENT_V1 and READY_V1 bind the same broker-observed identity digests in one exact proof domain. This removes the circular pre-broker creation-time requirement without adding a helper, native path, authority or execution. All remaining v1.12 boundaries, the 120/120 pre-execution target, eight held operational tests, false authority flags and PRECONDITION_HOLD_NO_GET remain unchanged.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.12.2 path-identity handoff
+
+R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.12.2 supersedes only the v1.12.1 held-image path claim. Node's retained Node and PowerShell image descriptors bind byte count, content SHA-256 and documented device/inode continuity only; they do not claim a handle-derived final path. The held policy pins one exact normalized host-image path digest for each host. The broker derives each final path from its retained image handle, normalizes it with the closed local-DOS algorithm, and requires the digest to equal held policy before CHALLENGE. Node validates the broker-observed final-path digests against the same held policy while retaining its descriptors through CLOSED and final revalidation. No caller path, undocumented process handle, helper, native path, authority or execution is added. All remaining v1.12.1 and v1.12 boundaries, test counts, false authority flags and PRECONDITION_HOLD_NO_GET remain unchanged.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.12.3 receipt-evidence handoff
+
+R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.12.3 supersedes only the v1.12.2 receipt-evidence plumbing. Terminal network observation count and maximum poll gap are measured by STOP_MEASUREMENT, owner arithmetic is measured by BIND_OWNER_SCOPE, and zero endpoint events are measured separately by VERIFY_ZERO_EVENTS; event count is never relabeled as observation count. SCAN_LEDGER_INVENTORY records ownershipLedgerPreCleanupSha256 over the complete canonical current ledger rows before filesystem deletion transitions, while CLOSE_OWNERSHIP_LEDGER records ownershipLedgerSha256 over the final append-only transition journal after all legal transitions and close. The sanitized receipt carries both distinctly named ledger digests and copies every network and ledger field only from its validated cleanup operation. No RPC, path, authority or execution is added. All remaining v1.12.2, v1.12.1 and v1.12 boundaries, test counts, false authority flags and PRECONDITION_HOLD_NO_GET remain unchanged.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.12.4 network-event handoff
+
+R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.12.4 supersedes only the v1.12.3 receipt key list and source map. The sanitized receipt adds networkEventCount immediately after networkMaximumGapMicros. networkEventCount is copied only from validated VERIFY_ZERO_EVENTS operation-nine evidence, is exactly zero for a clean result, and is null when that cleanup evidence is unavailable or incomplete; it is never derived from poll observations, table iterations, owner counts or a default. All v1.12.3 poll, gap, owner and dual-ledger schemas, all earlier boundaries, test counts, false authority flags and PRECONDITION_HOLD_NO_GET remain unchanged.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13 implementation handoff
+
+`R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.13` replaces fixed or inferred readiness, IPv6, process, quoting, lease, cleanup, and receipt claims with checked and measured evidence. The contract requires manifest-policy-PowerShell audit-pin parity, exact TCP6 60-byte rows with owning PID at offset 56, bounded returned-buffer arithmetic, measured process/job census, canonical CRT quoting, stateful observer and baseline-token closure, and receipt values copied only from validated operation evidence. This is repository implementation and non-executing test authority only.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13.1 readiness handoff
+
+`R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.13.1` adds the exact closed 12-row environment, a held Node-created temporary-root lease and pre-`READY` inventory, actual reader/worker/observer startup, the truthful exact 21-key `READY` record, one receive pump with separate handshake and operation routing, measured process/job totals, `OPEN` to `STOPPED` to `CLOSED` observer settlement, and real baseline-token closure. No authority boundary changes.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13.2 terminal-state handoff
+
+`R4B-CLOSED-ADDTYPE-BOOTSTRAP-v1.13.2` adds closed control-state routing, `RESPONSE_ACK`, broker terminal tombstones, all six cancellation permutations, and bilateral proof of empty pending, drain, and tombstone state before close. Non-executing evidence is **148/148 PASS**, with **0 failed, 0 skipped, and 0 todo**. Operational scenarios `E01` through `E08` remain **8/8 required-unattempted**.
+
+The authoritative pre-record evidence table is in `docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md`. Before the record append, the canonical ten-row stream was **1,753 bytes** with SHA-256 `44d1c3a7cd79306250594ea204a9d99bf1d5d40a30412bf31717d4fa963a792a`; the decision record was **24,418 bytes** with SHA-256 `4130fe6857f4e9273ea15f090703a94246bfe9effcb173a231c8d01a99df3bb7`, and this handoff was **237,601 bytes** with SHA-256 `03e72b427a67f9934e8b0e05b7861f8a666a657cce9a7c37be63147bd9c34b93`. These are explicitly pre-record transition values, not the final reviewed manifest.
+
+The final canonical manifest is recomputed only after both appends and the final two-pass source-pin refresh. Its digest remains external review evidence and is not embedded into any covered manifest member. `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain mandatory. No PowerShell, Add-Type, C#, compiler, helper, network, synthetic transaction, GET, acquisition, NuGet, broker, Attempt004, production, signing, store, spend, credential, external-account, stage, commit, or push action occurred.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13.3 correction handoff
+
+Independent exact-byte review reproduced the v1.13.2 **148/148 PASS** result but found non-operative routing and drain coverage, an inconsistent environment contract, and hard-coded `READY` census evidence. V1.13.2 did not clear architecture or security review.
+
+V1.13.3 supersedes only environment identity, pre-`READY` measurement, RPC routing, and terminal settlement. The bounded implementation reached **164/164 nonlive PASS**; `E01` through `E08` remain **8 required-unattempted**. The exact five-file freeze is:
+
+- Policy: 56059 bytes; SHA-256 `5bc741c5c3afceef195da3e00ae24340c6b2adacb74d630fe83c26a8bdfe50b5`; blob `8ff385058a1f8c3c3f3df2ad18eda040443c2d84`.
+- Controller: 116155 bytes; SHA-256 `a8e8810a7861a91e50d385f2dc2deef3b13261f0a81545ae059dcf5c5f4c778f`; blob `03a99baf87d2f2cd7a0b1092380ae34e2c34bdcf`.
+- Adapter: 61555 bytes; SHA-256 `d15d5468e94d8cc22a046d8440d1d9fbd2d0b3d2046ede3d142d436ec2aa7387`; blob `8e11cdea462e8268bfd4326b1380cb27685ab5f4`.
+- Broker C#: 117351 bytes; SHA-256 `69e82e6a1947b41cca6deb69d017ffe1f2e6b7bc6c3ecd76ca6b62603eb0c8ee`; blob `8c424ea6c17204f70b24c6ada32824a82931134d`.
+- Focused test: 165324 bytes; SHA-256 `3a40356797c3db5cdba42c6b1232fd6edba4d9b6c6792345e4445ef067811cf4`; blob `07ea579e89f043c64e6ea4d4e76ad9dddb6c2e99`.
+
+The PowerShell bootstrap, verifier-bytes receipt, and Authenticode helper remain byte-immutable. The final ten-path manifest remains external review evidence and is not embedded. `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13.4 correction handoff
+
+Independent review reproduced **164/164 PASS** for v1.13.3 but found non-cooperative cancellation result leakage, source-only C# lifecycle assertions, unbounded EOF settlement, unchecked pre-newline input growth, and pathname inventory recursion risk. The prior v1.13.3 five-file freeze was a pre-record, pre-pin snapshot only; policy and controller changed during final pin refresh, and it was never the final manifest.
+
+V1.13.4 supersedes only those bounded defects. The repository implementation reached **172/172 nonlive PASS**; `E01` through `E08` remain **8 required-unattempted**. The exact five-file freeze is:
+
+- Policy: 56059 bytes; SHA-256 `088edf24616dc82a6819b245988061dc2a37590de3597a4e4220f10a2b0694fd`; blob `5f5bb766644e338447d53838f1e15a98f80b2306`.
+- Controller: 116155 bytes; SHA-256 `68f6c9331bc3b5b79d9ca122121715d9b0aa3763d38b8329fe806b84d5888203`; blob `ba1328cff2b4c989e158dd1c8ce58e38afa10683`.
+- Adapter: 64299 bytes; SHA-256 `49114fe254ae4b5795a017ffbf79a01c0c069f91826cfe1bd2a01e85efc0a4d0`; blob `55aa90c61de56372fef4de7224060a450a1c1fd9`.
+- Broker C#: 117470 bytes; SHA-256 `03391653b8bc56985c0c6ba90eed3904a31ea590ee4a15e12692973d80201409`; blob `f2ffed78c007b33739a6c3e1fdbff81a2c17ca0e`.
+- Focused test: 179487 bytes; SHA-256 `ada07fb192fb40875b47c2fb4a869ca621c43da37767c8a005eb638d0bd982d5`; blob `d09c5779e9c02a30176833e8c6edf6373e91010c`.
+
+The PowerShell bootstrap, verifier-bytes receipt, and Authenticode helper remain byte-immutable. The final ten-path manifest remains external review evidence and no self hash is embedded. `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13.5 correction handoff
+
+Independent review reproduced **172/172 PASS** for v1.13.4 but found incomplete session-failure quarantine, a masked `CLOSE`-send failure, broker and inventory source-bound oracles that duplicated JavaScript semantics, and rejection of the terminal-cancel late `CANCEL`. The prior v1.13.4 five-file freeze was a pre-record, pre-pin snapshot only; policy and controller changed during final pin refresh, and it was never the final manifest.
+
+V1.13.5 supersedes only failure quarantine, close settlement, declarative semantic ownership, terminal `CANCEL` acknowledgement, and records terminology. The repository implementation reached **178/178 nonlive PASS**; `E01` through `E08` remain **8 required-unattempted**. The exact five-file freeze is:
+
+- Policy: 56059 bytes; SHA-256 `7b83decfa81f42b4b1c1ee861c7e1f7288a38a27894b26decfa887bbf6b574f4`; blob `85e1d0980a455bb41def98287bb0ff228f8c3fa0`.
+- Controller: 116155 bytes; SHA-256 `014294851ce6d8ebf84037331a1b7a63beff074da5b71abc3e296a05064d1ada`; blob `98578fd610a706972bee07cfcb56d78a168ba6bb`.
+- Adapter: 65904 bytes; SHA-256 `ae828734eef96225f535245f02a08d6583a3a6e59ce1b150c98e452c54cc7195`; blob `a4232aa8a8e05a44aa8aa5d134be0c1b5c47335d`.
+- Broker C#: 120913 bytes; SHA-256 `a2c21f4575dce662ac18d99f24260aa88cf1650b3112b96dec3fcb1222a03c38`; blob `10ce3f43fc31592d37562d26d44a12e9275ffca3`.
+- Focused test: 189213 bytes; SHA-256 `c1dbe4033d0cc219e603d1b89b4f4a0a7d2d69edb8d649e53010d143ece38305`; blob `f13c0d9b08a466b87b27a9142351d49ddc25aa54`.
+
+The PowerShell bootstrap, verifier-bytes receipt, and Authenticode helper remain byte-immutable. The final ten-path manifest remains external review evidence and no self hash is embedded. `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-12 — R4-B Add-Type bootstrap v1.13.6 correction handoff
+
+Independent review reproduced **178/178 PASS** for v1.13.5 but found that a permanently pending `CLOSE` write stayed outside the effective deadline because close awaited the write before settlement. The prior v1.13.5 five-file values were a pre-record, pre-pin implementation snapshot only and never the final reviewed manifest.
+
+V1.13.6 supersedes only close-write deadline participation, late-write quarantine, and records terminology. The repository implementation reached **180/180 nonlive PASS**; `E01` through `E08` remain **8 required-unattempted**. The exact five-file snapshot is:
+
+- Policy: 56059 bytes; SHA-256 `f54e04ed96a7b281163e987497ea7d4ed816ac922ec004c44d69f540e8897251`; blob `6d4c80777958bb57eb8c290886d2b3edacbfe7ff`.
+- Controller: 116155 bytes; SHA-256 `f640d3091116c7a8cfe015698076e6c5278e40a803f5433c2635d7b77c25ba16`; blob `4e956a51b074e54152b33d59cb203da3d89c7af8`.
+- Adapter: 67453 bytes; SHA-256 `96b2a2142fa21d0aab1cc16c124f4ed825a1a23c46450afc751dff9270ee95b7`; blob `000f0e24e45295c4ca63006500da79173812ed8c`.
+- Broker C#: 120913 bytes; SHA-256 `165d4d0abd02ac300f997775b3c95dddcd7c1f1085b12406c8b9330763d89885`; blob `86b630b7b095beb5e6e33fa738adf98531592aa5`.
+- Focused test: 191213 bytes; SHA-256 `bd58bd81f4df57ca909a3e82ebad0e3ce9396acfe1f3f496f965e0302ff524fd`; blob `39fb0e2a5b24648a5d0d95bf00bfed4afb54537a`.
+
+The PowerShell bootstrap, verifier-bytes receipt, and Authenticode helper remain byte-immutable. The final ten-path manifest remains external review evidence and no self hash is embedded. `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-12 — v1.13.6 records clarification
+
+The v1.13.6 five-file values above are an exact **pre-record, pre-pin implementation snapshot only**. They were captured before this append-only records update and the final mechanical source-pin refresh, and they were never the final reviewed manifest. Final canonical identity remains external review evidence and is not embedded in any covered member.
+
+No implementation, protocol, schema, test-count, authority, or execution boundary changes. V1.13.6 remains **180/180 nonlive PASS** with `E01` through `E08` **8 required-unattempted** and all false-authority / `PRECONDITION_HOLD_NO_GET` controls unchanged.
