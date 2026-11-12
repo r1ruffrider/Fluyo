@@ -2991,3 +2991,14 @@ The PowerShell bootstrap, verifier-bytes receipt, and Authenticode helper remain
 The v1.13.6 five-file values above are an exact **pre-record, pre-pin implementation snapshot only**. They were captured before this append-only records update and the final mechanical source-pin refresh, and they were never the final reviewed manifest. Final canonical identity remains external review evidence and is not embedded in any covered member.
 
 No implementation, protocol, schema, test-count, authority, or execution boundary changes. V1.13.6 remains **180/180 nonlive PASS** with `E01` through `E08` **8 required-unattempted** and all false-authority / `PRECONDITION_HOLD_NO_GET` controls unchanged.
+
+## 2026-11-12 — PR #89 portable normalized-image digest repair handoff
+
+At exact head `ad259f5`, protected Linux portable Tests failed `I03` because the validated DOS path used host `path.resolve`; Windows-native passed. The repair uses `node:path.win32.resolve` only inside `normalizedImagePathSha256`, preserving host `resolve` elsewhere and leaving all guards, C# semantics, protocol/version boundaries, authority controls, and reviewed digest contracts unchanged.
+
+The two-file pre-record, pre-pin snapshot is:
+
+- Adapter: 67466 bytes; SHA-256 `a86fafac5f55f9d93308484bc54fb2a815bd264e7f558a6e0f9b79ba98cb950f`; blob `7ed73973cc5fad445cda7d7dc872609dc8796c97`.
+- Focused test: 191918 bytes; SHA-256 `1f86ec949db4942b2206eb11fe453a082d40aad3ccd070793c216c1192ee6959`; blob `9729f79b86860ec77382dd187a446a0d6184d732`.
+
+These values are not the final reviewed manifest; final canonical identity remains external review evidence and is not embedded. Fresh protected Linux portable, Windows-native, and full pinned gates remain required. `E01` through `E08` remain **8 required-unattempted**; all false-authority and `PRECONDITION_HOLD_NO_GET` controls remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.

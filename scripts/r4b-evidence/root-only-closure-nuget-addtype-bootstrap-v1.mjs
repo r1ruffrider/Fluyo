@@ -360,7 +360,7 @@ const PINNED_HOSTS = Object.freeze([
   ],
 ]);
 const EXPECTED_POLICY_LITERAL_SHA256 =
-  "5afd879df8ca88fb3f7445a39732ef553746e119d29b01a6ee9564d17c3be6db";
+  "38e4530e927243fa9e42a63fdb84452a7db829ef4b4e3f458d7fa3721598d3e1";
 const DLL_IMPORTS = Object.freeze({
   "kernel32.dll": Object.freeze([
     "CreateFileW",

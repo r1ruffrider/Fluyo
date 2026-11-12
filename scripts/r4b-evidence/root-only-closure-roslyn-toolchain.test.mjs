@@ -3782,19 +3782,36 @@ test("v1.12 I02 observed process identity has exact broker-authoritative keys", 
 });
 
 test("v1.12 I03 normalized DOS host path digest is closed cross-language input", () => {
+  const nodeDigest = "46674df7e50081977073a3d38239a6782e73328bda5843f5d5a85d4118d98357";
+  const powerShellDigest = "9fb73839bbbf71d76eb5494bd12cf8939b28503a45bcef20d7af749d20ea3a15";
+  for (const value of ["C:\\Program Files\\nodejs\\node.exe", "C:/Program Files/nodejs/node.exe"])
+    assert.equal(normalizedImagePathSha256(value), nodeDigest);
   assert.equal(
-    normalizedImagePathSha256("C:\\Program Files\\nodejs\\node.exe"),
-    "46674df7e50081977073a3d38239a6782e73328bda5843f5d5a85d4118d98357",
+    normalizedImagePathSha256("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"),
+    powerShellDigest,
+  );
+  assert.equal(
+    normalizedImagePathSha256("\\\\?\\C:\\Program Files\\nodejs\\node.exe", true),
+    nodeDigest,
   );
   for (const value of [
     "relative\\node.exe",
     "\\\\server\\share\\node.exe",
     "\\\\.\\C:\\node.exe",
+    "\\\\?\\C:\\node.exe",
     "C:\\GLOBALROOT\\node.exe",
     "C:\\node.exe:stream",
     "C:\\safe\\..\\node.exe",
+    "C:\\cafe\u0301\\node.exe",
+    "C:\\safe\\node.exe\nleak",
   ])
-    assert.throws(() => normalizedImagePathSha256(value));
+    assert.throws(
+      () => normalizedImagePathSha256(value),
+      (error) =>
+        error?.message === "ADAPTER_HOST_INVALID" &&
+        !error.message.includes(value) &&
+        !error.message.includes("node.exe"),
+    );
 });
 
 test("v1.12 I04 held policy pins both normalized host image paths", () => {

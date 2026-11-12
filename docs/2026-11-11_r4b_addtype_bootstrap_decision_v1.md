@@ -293,3 +293,16 @@ Independent review reproduced the v1.13.5 **178/178 PASS** result but found that
 The section titled “v1.13.6 exact five-file snapshot” records an exact **pre-record, pre-pin implementation snapshot only**. Its policy and controller values were captured before the append-only record update and the required final mechanical source-pin refresh. Those values were never the final reviewed manifest. The word “exact” applies only to that historical pre-pin boundary.
 
 The final canonical ten-path identity remains external exact-byte review evidence and is not embedded in this or any other covered manifest member. This clarification changes no v1.13.6 implementation, test, protocol, schema, authority, or execution boundary. The nonlive result remains **180/180 PASS**; `E01` through `E08` remain **8 required-unattempted**; `externalActionAuthorized=false`, `downloadAuthorityPresent=false`, `executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-12 — PR #89 portable normalized-image digest repair
+
+At exact head `ad259f5`, the protected Linux portable Tests job failed `I03` because the validated DOS path used host `path.resolve`; the Windows-native lane passed. The bounded repair uses `node:path.win32.resolve` only inside `normalizedImagePathSha256` and preserves host `resolve` everywhere else. Existing guards, C# semantics, protocol/version boundaries, authority controls, and reviewed digest contracts remain unchanged.
+
+### Two-file pre-record, pre-pin snapshot
+
+| Path                                                                            |  Bytes | SHA-256                                                            | Git blob                                   |
+| ------------------------------------------------------------------------------- | -----: | ------------------------------------------------------------------ | ------------------------------------------ |
+| `scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs` |  67466 | `a86fafac5f55f9d93308484bc54fb2a815bd264e7f558a6e0f9b79ba98cb950f` | `7ed73973cc5fad445cda7d7dc872609dc8796c97` |
+| `scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs`              | 191918 | `1f86ec949db4942b2206eb11fe453a082d40aad3ccd070793c216c1192ee6959` | `9729f79b86860ec77382dd187a446a0d6184d732` |
+
+This two-file snapshot is pre-record and pre-pin only; it is not the final reviewed manifest. Final canonical identity remains external exact-byte review evidence and is not embedded in this record. Fresh protected Linux portable, Windows-native, and full pinned gates remain required. Operational scenarios `E01` through `E08` remain **8 required-unattempted**; all false-authority and `PRECONDITION_HOLD_NO_GET` controls remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.

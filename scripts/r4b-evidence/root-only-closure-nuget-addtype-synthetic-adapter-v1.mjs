@@ -11,7 +11,7 @@ import {
   realpathSync,
 } from "node:fs";
 import { connect } from "node:net";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
@@ -376,7 +376,7 @@ export function normalizedImagePathSha256(input, handleReturned = false) {
     value.split("\\").includes("..")
   )
     fail("ADAPTER_HOST_INVALID");
-  value = resolve(value).replaceAll("/", "\\");
+  value = win32.resolve(value).replaceAll("/", "\\");
   value = `${value[0].toUpperCase()}${value.slice(1)}`;
   if (!/^[A-Za-z]:\\$/u.test(value)) value = value.replace(/\\+$/u, "");
   value = value.normalize("NFC").toUpperCase();

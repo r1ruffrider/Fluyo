@@ -18,16 +18,16 @@
       {
         "path": "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md",
         "role": "DECISION_RECORD",
-        "byteCount": 42819,
-        "sha256": "14c70f54e197da533acc06fc9239017dd49495b2499708d6fab90a42f129be56",
-        "gitBlobSha1": "4ada59acc9c249af87ed6342467d029e8e9dc1af"
+        "byteCount": 44712,
+        "sha256": "60593b594f000cc8abeba4dfed36068bfb104fbbe76215712b740bda1f7c3605",
+        "gitBlobSha1": "006629952a124cee61116deed22acba82de1a2cf"
       },
       {
         "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.mjs",
         "role": "CONTROLLER_VALIDATOR",
         "byteCount": 116155,
-        "sha256": "3a735a83712fba453e2d6f1685dd252b3c48e357efa5fca411d824760d935a2e",
-        "gitBlobSha1": "7c3dad9ea10db0b13d13341da5a461e6e75ec116"
+        "sha256": "0a85e72ecfb2fcf29213bb3d8a8d5dcff3feb960c632f548c1ae255e8c4b10d4",
+        "gitBlobSha1": "f2ead1b33648e081c94f844dc50bba3ca3f6c910"
       },
       {
         "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.ps1",
@@ -46,9 +46,9 @@
       {
         "path": "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
         "role": "SYNTHETIC_ADAPTER_LAUNCHER",
-        "byteCount": 67453,
-        "sha256": "96b2a2142fa21d0aab1cc16c124f4ed825a1a23c46450afc751dff9270ee95b7",
-        "gitBlobSha1": "000f0e24e45295c4ca63006500da79173812ed8c"
+        "byteCount": 67466,
+        "sha256": "a86fafac5f55f9d93308484bc54fb2a815bd264e7f558a6e0f9b79ba98cb950f",
+        "gitBlobSha1": "7ed73973cc5fad445cda7d7dc872609dc8796c97"
       },
       {
         "path": "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
