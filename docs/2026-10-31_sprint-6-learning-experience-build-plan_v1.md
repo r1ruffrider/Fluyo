@@ -1626,3 +1626,116 @@ capture, provider, production, or external-action authority.
   exact clean A2 checkout before the 30-cell/120-observation `NON_EVIDENCE` preflight begins.
 - Do not begin provider-backed R4-B2 capture or claim R4-B2, aggregate R4-B, or Sprint 6 complete
   from the authority record or discarded preflight.
+
+## Superseding current-status block — 2026-11-12
+
+This block supersedes only the prior current-status narrative. It does not alter
+the document-control date, source commit, accepted-through-R4-A status, or the
+historical 2026-11-07 record above.
+
+Phase `R4B-ADDTYPE-POSTMAIN-READINESS-v1` records that PR #89's exact reviewed
+squash source `7220bef062a93142f5bcde07de89199355eb5837` was squash-merged at
+`2026-11-12T12:22:17Z` as authoritative main
+`7a5b345846eb29928dacb8f01b96796c01182dc2`. The reviewed PR head is a
+`SQUASH_SOURCE`; it is not represented as an ancestor of the squash merge.
+Post-main Auth approval history, Auth material decisions, and CI passed 3/3
+without retries. CI passed 9/9 jobs; Portable Tests completed in 9m27s and
+Windows-native Tests completed in 8m46s.
+
+The reviewed ten-path manifest remains 10 rows, 1,753 bytes, SHA-256
+`15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b`.
+All authority flags remain false and `PRECONDITION_HOLD_NO_GET` remains active.
+E01–E08 remain exactly eight `REQUIRED_UNATTEMPTED` operational scenarios.
+R4-B2, R4-B3, aggregate R4-B, and Sprint 6 remain incomplete. This status
+authorizes no synthetic self-test, PowerShell, Add-Type, C#, compiler, helper,
+verifier, download, acquisition, NuGet, broker, Attempt004, production, signing,
+store, spending, credential, or external-account action.
+
+Draft PRs #87 (`6b3a970499bcc73b6749cd74c44345768f2bf04a`), #77
+(`b8e4bfadb3b24b1390536b8108712fb310018fd8`), #61
+(`119c8b5dbbff8b2a07027b463f1cc88fee66f94d`), and #58
+(`3dbc1f587560847be3c7f75ce873df0e8ba3f7d2`) were observed and preserved
+unchanged. None is current, merge-ready, reusable authority, or authorized for
+mutation by this record.
+
+Only this repository records/status reconciliation and its regression guard are
+independently authorized. Every operational or external action retains its
+separate authority and pre-execution gates.
+
+## Canonical readiness record
+
+```json
+{
+  "schema": "fluyo:r4b:addtype-postmain-readiness:v1",
+  "recordedDate": "2026-11-12",
+  "repositoryMainCommit": "7a5b345846eb29928dacb8f01b96796c01182dc2",
+  "reviewedPullRequest": {
+    "number": 89,
+    "reviewedHead": "7220bef062a93142f5bcde07de89199355eb5837",
+    "relationship": "SQUASH_SOURCE",
+    "mergeCommit": "7a5b345846eb29928dacb8f01b96796c01182dc2",
+    "mergedAtUtc": "2026-11-12T12:22:17Z"
+  },
+  "reviewedManifest": {
+    "rowCount": 10,
+    "byteCount": 1753,
+    "sha256": "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b"
+  },
+  "postMainVerification": {
+    "workflowCount": 3,
+    "successfulWorkflowCount": 3,
+    "ciJobCount": 9,
+    "successfulCiJobCount": 9,
+    "retryCount": 0,
+    "status": "SUCCESS"
+  },
+  "operationalScenarios": [
+    {
+      "id": "E01",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E02",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E03",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E04",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E05",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E06",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E07",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E08",
+      "status": "REQUIRED_UNATTEMPTED"
+    }
+  ],
+  "authority": {
+    "externalActionAuthorized": false,
+    "downloadAuthorityPresent": false,
+    "executionAuthorityPresent": false,
+    "draftMutationAuthorized": false,
+    "state": "PRECONDITION_HOLD_NO_GET"
+  },
+  "completion": {
+    "r4b2": false,
+    "aggregateR4b": false,
+    "sprint6": false
+  },
+  "observedOpenDraftPullRequests": [87, 77, 61, 58],
+  "claimBoundary": "REPOSITORY_ONLY_POST_MAIN_VERIFIED_NO_OPERATIONAL_AUTHORITY"
+}
+```
