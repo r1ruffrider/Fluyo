@@ -1,8 +1,24 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  fsyncSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  rmdirSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -82,6 +98,63 @@ const executorExpectedPacket = () =>
       { encoding: "utf8", windowsHide: true },
     ),
   );
+const validatorHarnessFailure = (reason = "ACTIVATION_VALIDATOR_HARNESS_INVALID"): Error =>
+  new Error(reason);
+const normalizeValidatorPath = (value: string): string => {
+  const normalized = resolve(value).normalize("NFC");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+};
+const sameValidatorIdentity = (
+  left: { dev: bigint; ino: bigint },
+  right: { dev: bigint; ino: bigint },
+): boolean =>
+  left.dev !== 0n && left.ino !== 0n && left.dev === right.dev && left.ino === right.ino;
+const captureValidatorDirectory = (path: string) => {
+  const stat = lstatSync(path, { bigint: true });
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw validatorHarnessFailure();
+  const finalPath = realpathSync.native(path);
+  if (normalizeValidatorPath(finalPath) !== normalizeValidatorPath(path))
+    throw validatorHarnessFailure();
+  return { stat, finalPath };
+};
+const captureValidatorFile = (path: string, held: { dev: bigint; ino: bigint }) => {
+  const stat = lstatSync(path, { bigint: true });
+  if (!stat.isFile() || stat.isSymbolicLink() || !sameValidatorIdentity(stat, held))
+    throw validatorHarnessFailure();
+  const finalPath = realpathSync.native(path);
+  if (normalizeValidatorPath(finalPath) !== normalizeValidatorPath(path))
+    throw validatorHarnessFailure();
+  return { stat, finalPath };
+};
+type ValidatorRunOptions = {
+  cwd: string;
+  windowsHide: boolean;
+  shell: false;
+  timeout: number;
+  maxBuffer: number;
+  env: Record<string, string>;
+  stdio: ["ignore", "pipe", "ignore"];
+};
+type ValidatorRunResult = {
+  status: number | null;
+  signal: string | null;
+  error?: Error;
+  stdout: Buffer | string | null;
+};
+type ValidatorRunner = (
+  executable: string,
+  args: string[],
+  options: ValidatorRunOptions,
+) => ValidatorRunResult;
+const runValidatorProcess: ValidatorRunner = (executable, args, options) => {
+  const result = spawnSync(executable, args, options);
+  return {
+    status: result.status,
+    signal: result.signal,
+    error: result.error,
+    stdout: result.stdout,
+  };
+};
 const validatorAccepts = (candidate: unknown): boolean => {
   const value = Buffer.from(`${JSON.stringify(candidate, null, 2)}\n`).toString("base64");
   const result = spawnSync(
@@ -96,20 +169,129 @@ const validatorAccepts = (candidate: unknown): boolean => {
   );
   return result.status === 0;
 };
-const validatorRejectsAll = (candidates: unknown[]): boolean => {
-  const result = spawnSync(
-    process.execPath,
-    [
-      "--input-type=module",
-      "--eval",
-      `import { readFileSync } from "node:fs"; import { outerActivationTesting as s } from ${JSON.stringify(executorUrl)}; const values=JSON.parse(readFileSync(0,"utf8")); for (let index=0; index<values.length; index+=1) { const bytes=Buffer.from(JSON.stringify(values[index],null,2)+"\\n"); try { s.validatePacket(bytes,{reviewBinding:s.constants.SIX_BINDING,activationManifestSha256:"0".repeat(64)}); process.stdout.write(String(index)); process.exit(1); } catch {} } process.exit(0);`,
-    ],
-    { cwd: root, windowsHide: true, input: JSON.stringify(candidates), encoding: "utf8" },
-  );
-  if (result.status !== 0)
-    throw new Error(
-      `validator accepted mutation ${result.stdout || "unknown"}: ${result.error?.message ?? result.stderr}`,
+const validatorRejectsAll = (
+  candidates: unknown[],
+  runner: ValidatorRunner = runValidatorProcess,
+): boolean => {
+  const input = Buffer.from(`${JSON.stringify(candidates)}\n`);
+  if (input.length > 1024 * 1024) throw validatorHarnessFailure();
+
+  let directory = "";
+  let inputPath = "";
+  let inputHandle: number | null = null;
+  let directoryIdentity: ReturnType<typeof captureValidatorDirectory> | null = null;
+  let inputIdentity: { dev: bigint; ino: bigint } | null = null;
+  let result: ValidatorRunResult | null = null;
+  let failure: Error | null = null;
+  let cleanupFailure = false;
+
+  try {
+    directory = mkdtempSync(resolve(tmpdir(), "fluyo-r4b-activation-validator-"));
+    directoryIdentity = captureValidatorDirectory(directory);
+    inputPath = resolve(directory, "mutations-v1.json");
+    if (dirname(inputPath) !== resolve(directory)) throw validatorHarnessFailure();
+
+    inputHandle = openSync(inputPath, "wx", 0o600);
+    let offset = 0;
+    while (offset < input.length) {
+      const written = writeSync(inputHandle, input, offset, input.length - offset, offset);
+      if (!Number.isSafeInteger(written) || written <= 0) throw validatorHarnessFailure();
+      offset += written;
+    }
+    fsyncSync(inputHandle);
+    const heldInput = fstatSync(inputHandle, { bigint: true });
+    if (!heldInput.isFile()) throw validatorHarnessFailure();
+    inputIdentity = { dev: heldInput.dev, ino: heldInput.ino };
+    const capturedInput = captureValidatorFile(inputPath, inputIdentity);
+    if (
+      dirname(normalizeValidatorPath(capturedInput.finalPath)) !== normalizeValidatorPath(directory)
+    )
+      throw validatorHarnessFailure();
+
+    const nodePath = resolve(process.execPath);
+    if (!isAbsolute(nodePath)) throw validatorHarnessFailure();
+    const nodeStat = lstatSync(nodePath, { bigint: true });
+    if (!nodeStat.isFile() || nodeStat.isSymbolicLink()) throw validatorHarnessFailure();
+    if (normalizeValidatorPath(realpathSync.native(nodePath)) !== normalizeValidatorPath(nodePath))
+      throw validatorHarnessFailure();
+
+    captureValidatorDirectory(directory);
+    captureValidatorFile(inputPath, inputIdentity);
+    result = runner(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        `import { lstatSync, readFileSync, realpathSync } from "node:fs"; import { isAbsolute, resolve } from "node:path"; import { outerActivationTesting as s } from ${JSON.stringify(executorUrl)}; if (process.argv.length!==2||!isAbsolute(process.argv[1])) process.exit(3); const p=resolve(process.argv[1]); const st=lstatSync(p); if (!st.isFile()||st.isSymbolicLink()||resolve(realpathSync.native(p))!==p) process.exit(3); const input=readFileSync(p); if (input.length>1048576) process.exit(3); const values=JSON.parse(input.toString("utf8")); if (!Array.isArray(values)) process.exit(3); for (let index=0; index<values.length; index+=1) { const bytes=Buffer.from(JSON.stringify(values[index],null,2)+"\\n"); try { s.validatePacket(bytes,{reviewBinding:s.constants.SIX_BINDING,activationManifestSha256:"0".repeat(64)}); process.stdout.write(String(index)); process.exit(1); } catch {} } process.exit(0);`,
+        capturedInput.finalPath,
+      ],
+      {
+        cwd: root,
+        windowsHide: true,
+        shell: false,
+        timeout: 30_000,
+        maxBuffer: 4096,
+        env: {},
+        stdio: ["ignore", "pipe", "ignore"],
+      },
     );
+
+    captureValidatorDirectory(directory);
+    captureValidatorFile(inputPath, inputIdentity);
+    if (result.status === 0 && result.signal === null && !result.error) {
+      if (!Buffer.isBuffer(result.stdout) || result.stdout.length !== 0)
+        throw validatorHarnessFailure();
+    } else if (
+      result.status === 1 &&
+      result.signal === null &&
+      !result.error &&
+      Buffer.isBuffer(result.stdout) &&
+      /^(?:0|[1-9][0-9]*)$/u.test(result.stdout.toString("ascii"))
+    ) {
+      const acceptedIndex = Number(result.stdout.toString("ascii"));
+      if (!Number.isSafeInteger(acceptedIndex) || acceptedIndex >= candidates.length)
+        throw validatorHarnessFailure();
+      throw validatorHarnessFailure("ACTIVATION_VALIDATOR_MUTATION_ACCEPTED");
+    } else {
+      throw validatorHarnessFailure();
+    }
+  } catch (error) {
+    failure =
+      error instanceof Error &&
+      ["ACTIVATION_VALIDATOR_HARNESS_INVALID", "ACTIVATION_VALIDATOR_MUTATION_ACCEPTED"].includes(
+        error.message,
+      )
+        ? error
+        : validatorHarnessFailure();
+  } finally {
+    try {
+      if (inputHandle !== null) closeSync(inputHandle);
+      if (!directoryIdentity || !inputIdentity || directory === "" || inputPath === "") {
+        cleanupFailure = directory !== "";
+      } else {
+        const currentDirectory = captureValidatorDirectory(directory);
+        const currentInput = captureValidatorFile(inputPath, inputIdentity);
+        if (
+          !sameValidatorIdentity(currentDirectory.stat, directoryIdentity.stat) ||
+          normalizeValidatorPath(currentDirectory.finalPath) !==
+            normalizeValidatorPath(directoryIdentity.finalPath) ||
+          dirname(normalizeValidatorPath(currentInput.finalPath)) !==
+            normalizeValidatorPath(directory)
+        ) {
+          cleanupFailure = true;
+        } else {
+          unlinkSync(inputPath);
+          rmdirSync(directory);
+          cleanupFailure = existsSync(directory);
+        }
+      }
+    } catch {
+      cleanupFailure = true;
+    }
+  }
+
+  if (cleanupFailure) throw validatorHarnessFailure("ACTIVATION_VALIDATOR_CLEANUP_HOLD");
+  if (failure) throw failure;
   return true;
 };
 const canonicalManifest = (paths: string[]) => {
@@ -240,7 +422,11 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       ),
     ).toHaveLength(1);
     expect(producerSource.match(/\.tmp-auth-readiness-approval-/gu)).toHaveLength(1);
-    expect(activationSource).not.toMatch(/\blstat(?:Sync)?\b/u);
+    const concurrencyContractSource = activationSource.slice(
+      activationSource.indexOf('it("07 candidate union is exactly six paths"'),
+      activationSource.indexOf('it("08 keeps exact ordered ten-path manifest"'),
+    );
+    expect(concurrencyContractSource).not.toMatch(/\blstat(?:Sync)?\b/u);
     expect(bytes("packages/shared/src/index.ts").toString("utf8")).not.toContain(
       "sprint-6-r4b-addtype-contract-self-test-executor",
     );
@@ -503,6 +689,80 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ];
     expect(mutations).toHaveLength(22);
     expect(validatorRejectsAll(mutations)).toBe(true);
+
+    const invocations: Array<{
+      executable: string;
+      args: readonly string[];
+      options: ValidatorRunOptions;
+    }> = [];
+    const successfulRunner: ValidatorRunner = (
+      executable: string,
+      args: string[],
+      options: ValidatorRunOptions,
+    ) => {
+      invocations.push({ executable, args, options });
+      return {
+        stdout: Buffer.alloc(0),
+        status: 0,
+        signal: null,
+        error: undefined,
+      };
+    };
+    expect(validatorRejectsAll([mutations[0]], successfulRunner)).toBe(true);
+    expect(invocations).toHaveLength(1);
+    expect(invocations[0]?.executable).toBe(process.execPath);
+    expect(invocations[0]?.args.slice(0, 2)).toEqual(["--input-type=module", "--eval"]);
+    const validatorInputPath = invocations[0]?.args.at(-1) ?? "";
+    expect(isAbsolute(validatorInputPath)).toBe(true);
+    expect(resolve(validatorInputPath)).toBe(validatorInputPath);
+    expect(dirname(validatorInputPath)).toContain("fluyo-r4b-activation-validator-");
+    expect(existsSync(dirname(validatorInputPath))).toBe(false);
+    expect(invocations[0]?.options).toMatchObject({
+      cwd: root,
+      windowsHide: true,
+      shell: false,
+      timeout: 30_000,
+      maxBuffer: 4096,
+      env: {},
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    expect(invocations[0]?.options).not.toHaveProperty("input");
+
+    const fixedFailure = (result: ValidatorRunResult, expected: string) => {
+      const runner: ValidatorRunner = () => result;
+      let observed: unknown;
+      try {
+        validatorRejectsAll([{ privateSentinel: "MUST_NOT_LEAK" }], runner);
+      } catch (error) {
+        observed = error;
+      }
+      expect(observed).toBeInstanceOf(Error);
+      expect((observed as Error).message).toBe(expected);
+      expect((observed as Error).message).not.toContain("MUST_NOT_LEAK");
+    };
+    fixedFailure(
+      {
+        status: 1,
+        signal: null,
+        stdout: Buffer.from("0"),
+        error: undefined,
+      },
+      "ACTIVATION_VALIDATOR_MUTATION_ACCEPTED",
+    );
+    for (const stdout of ["00", "-1", "1.0", "1", "raw-output-MUST_NOT_LEAK"])
+      fixedFailure(
+        { status: 1, signal: null, stdout: Buffer.from(stdout), error: undefined },
+        "ACTIVATION_VALIDATOR_HARNESS_INVALID",
+      );
+    fixedFailure(
+      {
+        status: null,
+        signal: "SIGTERM",
+        stdout: Buffer.alloc(0),
+        error: new Error("MUST_NOT_LEAK"),
+      },
+      "ACTIVATION_VALIDATOR_HARNESS_INVALID",
+    );
   });
 
   it("21 activation record carries exact normative language", () => {

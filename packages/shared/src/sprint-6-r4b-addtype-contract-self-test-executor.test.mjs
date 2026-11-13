@@ -27,13 +27,20 @@ const SHA = "b".repeat(64);
 const BLOB = "c".repeat(40);
 const EXPECTED_ID = "d".repeat(64);
 const D70 = subject.constants.EXECUTION_COMMIT;
+const FIXTURE_ROOT = resolve(root, ".r4b-addtype-executor-fixture");
+const FIXTURE_COMMON = join(FIXTURE_ROOT, "repo", ".git");
+const FIXTURE_M_ROOT = join(FIXTURE_ROOT, "repo-m");
+const FIXTURE_D70_ROOT = join(FIXTURE_ROOT, "repo-d70");
+const FIXTURE_ACTIVATION_ROOT = join(FIXTURE_ROOT, "activation");
+const FIXTURE_TRANSACTION_ROOT = join(FIXTURE_ROOT, "tx");
+const FIXTURE_ADAPTER_PATH = join(FIXTURE_ROOT, "repo", "adapter.mjs");
 
 const exactArgv = (overrides = {}) => [
   process.execPath,
   executorPath,
   subject.constants.OUTER_MODE,
   `--activation-merge-commit=${overrides.merge ?? M}`,
-  `--execution-checkout-root=${overrides.executionRoot ?? "C:\\repo-d70"}`,
+  `--execution-checkout-root=${overrides.executionRoot ?? FIXTURE_D70_ROOT}`,
   `--activation-packet-sha256=${overrides.packetSha ?? SHA}`,
   `--activation-packet-git-blob-sha1=${overrides.packetBlob ?? BLOB}`,
   `--reviewed-six-row-manifest-sha256=${overrides.manifestSha ?? SHA}`,
@@ -167,16 +174,16 @@ function addRepository(memory, worktreeRoot, gitdir, commonDir, head) {
     memory.add(commonDir, "dir", Buffer.alloc(0), { ino: 2n });
 }
 
-function repositoryFixture(common = "C:\\repo\\.git") {
+function repositoryFixture(common = FIXTURE_COMMON) {
   const memory = memoryPlatform();
-  const mRoot = "C:\\repo-m";
-  const d70Root = "C:\\repo-d70";
+  const mRoot = FIXTURE_M_ROOT;
+  const d70Root = FIXTURE_D70_ROOT;
   addRepository(memory, mRoot, join(common, "worktrees", "m"), common, M);
   addRepository(memory, d70Root, join(common, "worktrees", "d70"), common, D70);
   return { memory, mRoot, d70Root, common };
 }
 
-function directRepository(memory, common = "C:\\repo\\.git") {
+function directRepository(memory, common = FIXTURE_COMMON) {
   if (!memory.entries.has(memory.key(common)))
     memory.add(common, "dir", Buffer.alloc(0), { ino: 2n });
   const commonHeld = subject.holdDirectory(
@@ -194,7 +201,7 @@ function directRepository(memory, common = "C:\\repo\\.git") {
 
 function activationBundleFixture() {
   const memory = memoryPlatform();
-  const activationRoot = "C:\\activation";
+  const activationRoot = FIXTURE_ACTIVATION_ROOT;
   memory.add(activationRoot, "dir");
   const rows = [];
   for (const path of subject.SIX_PATHS) {
@@ -332,7 +339,10 @@ const outcomeContext = () => ({
 });
 
 test("25 CLI accepts only exact positional argv and empty execArgv", () => {
-  assert.equal(subject.parseCli(exactArgv(), [], executorPath).activationMergeCommit, M);
+  const parsed = subject.parseCli(exactArgv(), [], executorPath);
+  assert.equal(parsed.activationMergeCommit, M);
+  assert.equal(parsed.executionRoot, FIXTURE_D70_ROOT);
+  assert.equal(resolve(parsed.executionRoot), FIXTURE_D70_ROOT);
   for (const argv of [
     exactArgv().slice(0, -1),
     [...exactArgv(), "--extra"],
@@ -377,7 +387,7 @@ test("27 Git controls accept only canonical linked detached worktrees", () => {
   const fixture = repositoryFixture();
   const repository = subject.openRepository(fixture.memory.platform, fixture.mRoot, M);
   assert.equal(repository.commonDir.toLowerCase(), fixture.common.toLowerCase());
-  const head = "C:\\repo\\.git\\worktrees\\m\\HEAD";
+  const head = join(FIXTURE_COMMON, "worktrees", "m", "HEAD");
   const heldHead = repository.files.at(-1);
   fixture.memory.replace(head, { bytes: Buffer.from("ref: refs/heads/main\n") });
   assert.throws(
@@ -584,7 +594,7 @@ test("39 full-chain replacement before marker or child rejects", () => {
 
 test("40 canonical marker write uses wx write-all fsync and exact reopen", () => {
   const memory = memoryPlatform();
-  const directory = "C:\\tx";
+  const directory = FIXTURE_TRANSACTION_ROOT;
   memory.add(directory, "dir");
   const handle = memory.platform.openDirectoryReadOnly(directory);
   const value = { state: "ATTEMPT_CONSUMED_PRESPAWN" };
@@ -660,7 +670,7 @@ test("44 Node image evidence is actual held scalar evidence", () => {
 
 test("45 adapter evidence includes exact Git blob identity", () => {
   const bytes = Buffer.from("adapter");
-  const value = subject.imageEvidence(bytes, { dev: 1n, ino: 3n }, "C:\\repo\\adapter.mjs", true);
+  const value = subject.imageEvidence(bytes, { dev: 1n, ino: 3n }, FIXTURE_ADAPTER_PATH, true);
   assert.equal(value.gitBlobSha1, subject.gitBlob(bytes));
 });
 
@@ -697,21 +707,21 @@ test("46 post-settlement identity drift maps to unknown hold", () => {
 });
 
 test("47 child invocation is exact absolute Node adapter and d70 cwd", () => {
-  const value = subject.buildChildInvocation("C:\\repo-d70");
+  const value = subject.buildChildInvocation(FIXTURE_D70_ROOT);
   assert.equal(value.executable, process.execPath);
   assert.deepEqual(value.args.slice(1), [
     subject.constants.INNER_MODE,
     `--reviewed-manifest-sha256=${subject.constants.TEN_MANIFEST_SHA}`,
     `--review-binding=${subject.constants.TEN_BINDING}`,
   ]);
-  assert.equal(value.options.cwd, "C:\\repo-d70");
+  assert.equal(value.options.cwd, FIXTURE_D70_ROOT);
   assert.equal(value.options.shell, false);
   assert.equal(exactArgv().length, 10);
   assert.equal(exactArgv()[9], `--review-binding=${subject.constants.SIX_BINDING}`);
 });
 
 test("48 child env is exact and excludes ambient authority", () => {
-  assert.deepEqual(subject.buildChildInvocation("C:\\repo-d70").options.env, {
+  assert.deepEqual(subject.buildChildInvocation(FIXTURE_D70_ROOT).options.env, {
     SystemRoot: "C:\\Windows",
     WINDIR: "C:\\Windows",
   });
