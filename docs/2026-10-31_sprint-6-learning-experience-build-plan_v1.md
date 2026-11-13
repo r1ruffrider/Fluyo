@@ -1739,3 +1739,15 @@ separate authority and pre-execution gates.
   "claimBoundary": "REPOSITORY_ONLY_POST_MAIN_VERIFIED_NO_OPERATIONAL_AUTHORITY"
 }
 ```
+
+## 2026-11-13 — R4-B Add-Type contract self-test activation v1.1.2
+
+Recommended Option A is selected under Marlon's delegated bounded non-production evidence/test authority. The repository packet authorizes only one future zero-network synthetic CONTRACT_SELF_TEST_V1 transaction after merge, protected CI, post-main verification, a reviewed activation-M/d70/same-common-dir identity tuple, and fresh Catalina, Natalia, Renata, Julieta, Bianca, and Elana gates.
+
+Historical design provenance remains d6607300e52219c5d534e70c17e00e2e717e505b. The exact execution checkout remains d70d8d9f3510b8b4a83f18478dc79dece39094d6. The immutable ten-path subject remains 10 rows, 1,753 bytes, SHA-256 15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b. A future squash merge M records this six-path activation packet but is never the execution checkout.
+
+The sole transaction R4B-ADDTYPE-CONTRACT-SELF-TEST-D70D8D9F-001 is consumed by exclusive creation of its permanent Git-common-dir transaction directory. Retry, resume, repair, deletion, cross-clone replay, raw-path retention, and authority expansion are forbidden. Marker and outer receipt evidence are permanent outer governance evidence and do not change the clean or failed-clean inner retainedArtifactCount=0 claim.
+
+Version v1.1.2 supersedes v1.1.1 only for numerical receipt semantics. Complete CLEAN and FAILED_CLEAN evidence records 39 completed fixtures, residual compiler and fixture process counts of 0, 40 measured work owners, 42 total owners including two baseline owners, and four endpoint-table iterations per network observation. The outer receipt derives one launched compiler as 40-39 and table iterations as networkObservationCount*4. Every numerical projection is all-present for CLEAN and FAILED_CLEAN and all-null for cleanup HOLD or any outer HOLD; partial outer numerical claims are forbidden.
+
+Until every gate passes, execution remains held. externalActionAuthorized=false, downloadAuthorityPresent=false, executionAuthorityPresent=false, and PRECONDITION_HOLD_NO_GET remain exact. GET, download, acquisition, live verifier, NuGet execution, broker, Attempt004, E01–E08, production, signing, stores, spending, credentials, external accounts, provider administration, firewall changes, storage expansion, and publication remain forbidden. R4-B2, R4-B3, aggregate R4-B, and Sprint 6 remain incomplete.
