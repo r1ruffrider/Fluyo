@@ -1,0 +1,273 @@
+{
+  "schemaVersion": 2,
+  "packetId": "R4B-ADDTYPE-CONTRACT-SELF-TEST-ACTIVATION-v1.1.2",
+  "recordedDate": "2026-11-13",
+  "decision": {
+    "selection": "RECOMMENDED_OPTION_A",
+    "approvedBy": "Adriana Solano",
+    "approvalBasis": "MARLON_DELEGATED_BOUNDED_NON_PRODUCTION_EVIDENCE_TEST_APPROVAL",
+    "authorityId": "CLOSED_ADD_TYPE_PINVOKE_LEASE_BOOTSTRAP_V1",
+    "decisionReference": "MARLON_RECOMMENDED_1A_CLOSED_ADDTYPE_PINVOKE_2026-11-11"
+  },
+  "historicalDesignProvenance": {
+    "sourceMainCommit": "d6607300e52219c5d534e70c17e00e2e717e505b",
+    "reviewedSourceHead": "7220bef062a93142f5bcde07de89199355eb5837",
+    "designMergeCommit": "7a5b345846eb29928dacb8f01b96796c01182dc2",
+    "readinessMergeCommit": "d70d8d9f3510b8b4a83f18478dc79dece39094d6",
+    "semantics": "IMMUTABLE_HISTORICAL_PROVENANCE_NOT_EXECUTION_AUTHORITY"
+  },
+  "executionBinding": {
+    "executionCheckoutCommit": "d70d8d9f3510b8b4a83f18478dc79dece39094d6",
+    "requiredAncestorCommit": "d6607300e52219c5d534e70c17e00e2e717e505b",
+    "relationship": "DESCENDANT_WITH_BYTE_IDENTICAL_TEN_PATH_SUBJECT",
+    "reviewBinding": "HELD_TEN_PATH_PREEXEC_REVIEW_BINDING_V1",
+    "manifestRowCount": 10,
+    "manifestByteCount": 1753,
+    "manifestSha256": "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b",
+    "manifestPaths": [
+      "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md",
+      "docs/DEVELOPMENT_HANDOFF.md",
+      "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-policy-v1.json",
+      "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.mjs",
+      "scripts/r4b-evidence/root-only-closure-nuget-addtype-bootstrap-v1.ps1",
+      "scripts/r4b-evidence/root-only-closure-nuget-addtype-lease-v1.cs",
+      "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
+      "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs",
+      "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
+      "scripts/r4b-evidence/roslyn-verifier-authenticode.cs"
+    ],
+    "cleanDetachedCheckoutRequired": true,
+    "headDriftInvalidates": true,
+    "repositoryIdentityBinding": {
+      "mode": "EXPECTED_REPOSITORY_COMMON_DIR_IDENTITY_V1",
+      "derivationAlgorithm": "R4B_REPOSITORY_COMMON_DIR_IDENTITY_V1",
+      "reviewedPostMainTupleRequired": true,
+      "expectedValueCommitted": false,
+      "crossCloneAllowed": false,
+      "sameCommonDirIdentityRequired": true
+    }
+  },
+  "activationBundleBinding": {
+    "reviewBinding": "HELD_SIX_PATH_ACTIVATION_REVIEW_BINDING_V1",
+    "pathCount": 6,
+    "manifestAlgorithm": "UTF8_PATH_NUL_BYTECOUNT_NUL_SHA256_NUL_GITBLOBSHA1_LF_V1",
+    "manifestDigestCommitted": false,
+    "manifestDigestSource": "FRESH_EXACT_HEAD_GATE",
+    "paths": [
+      "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md",
+      "docs/2026-11-13_r4b_addtype_contract_self_test_activation_v1.md",
+      "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts",
+      "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-executor.test.mjs",
+      "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json",
+      "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-executor-v1.mjs"
+    ]
+  },
+  "executorBinding": {
+    "contractVersion": "R4B-ADDTYPE-OUTER-ACTIVATION-EXECUTOR-v1.1.2",
+    "executorPath": "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-executor-v1.mjs",
+    "executorTestPath": "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-executor.test.mjs",
+    "adapterPath": "scripts/r4b-evidence/root-only-closure-nuget-addtype-synthetic-adapter-v1.mjs",
+    "adapterCliMode": "--execute-authorized-contract-self-test-v1",
+    "adapterReviewBinding": "HELD_TEN_PATH_PREEXEC_REVIEW_BINDING_V1",
+    "nodeHost": {
+      "path": "C:\\Program Files\\nodejs\\node.exe",
+      "version": "24.22.1",
+      "byteCount": 93915464,
+      "sha256": "d702daa815eabbff763c7d3808e235cf031cf2ca70211b56847bc72f51e240e5",
+      "normalizedImagePathSha256": "46674df7e50081977073a3d38239a6782e73328bda5843f5d5a85d4118d98357"
+    },
+    "allowedBuiltins": [
+      "node:child_process",
+      "node:crypto",
+      "node:fs",
+      "node:path",
+      "node:process",
+      "node:url"
+    ],
+    "dynamicImportAllowed": false,
+    "shellAllowed": false,
+    "networkAllowed": false,
+    "unknownArgumentsAllowed": false
+  },
+  "transaction": {
+    "transactionId": "R4B-ADDTYPE-CONTRACT-SELF-TEST-D70D8D9F-001",
+    "transactionIdSha256": "ac17e1dfe4c2f08c719eb89a73756e0f426f81d407ed4d38482fd07e4853c576",
+    "mode": "CONTRACT_SELF_TEST_V1_13_6",
+    "outerCliMode": "--execute-authorized-contract-self-test-activation-v1",
+    "innerCliMode": "--execute-authorized-contract-self-test-v1",
+    "maximumAttempts": 1,
+    "attemptConsumedAt": "EXCLUSIVE_TRANSACTION_DIRECTORY_CREATE_SUCCESS",
+    "retryAllowed": false,
+    "resumeAllowed": false,
+    "networkAllowed": false,
+    "cleanCompletedFixtureCount": 39,
+    "cleanDerivedLaunchedCompilerProcessCount": 1,
+    "cleanResidualCompilerProcessCount": 0,
+    "cleanResidualFixtureProcessCount": 0,
+    "cleanResidualOwnedProcessCount": 0,
+    "cleanNetworkBaselineOwnerCount": 2,
+    "cleanNetworkWorkOwnerCount": 40,
+    "cleanNetworkOwnerCount": 42,
+    "cleanNetworkEventCount": 0,
+    "networkTablesPerObservation": 4,
+    "innerReceiptMaximumBytes": 4096,
+    "outerReceiptMaximumBytes": 8192,
+    "childStdoutMaximumBytes": 4096,
+    "childStderrMaximumBytes": 0,
+    "outerObservationTimeoutMs": 330000,
+    "innerTerminalStates": [
+      "SYNTHETIC_TEST_CLEAN",
+      "SYNTHETIC_TEST_FAILED_CLEAN",
+      "SYNTHETIC_TEST_FAILED_CLEANUP_HOLD"
+    ],
+    "outerTerminalStates": [
+      "OUTER_SYNTHETIC_TEST_CLEAN",
+      "OUTER_SYNTHETIC_TEST_FAILED_CLEAN",
+      "OUTER_SYNTHETIC_TEST_FAILED_CLEANUP_HOLD",
+      "OUTER_ATTEMPT_CONSUMED_MARKER_INCOMPLETE_HOLD",
+      "OUTER_ATTEMPT_CONSUMED_RESULT_UNKNOWN_HOLD"
+    ]
+  },
+  "durableConsumption": {
+    "mode": "GIT_COMMON_DIR_DURABLE_TRANSACTION_V1",
+    "transactionIdSha256": "ac17e1dfe4c2f08c719eb89a73756e0f426f81d407ed4d38482fd07e4853c576",
+    "relativeDirectory": "fluyo-r4b/transactions/ac17e1dfe4c2f08c719eb89a73756e0f426f81d407ed4d38482fd07e4853c576",
+    "markerFileName": "consumption-v1.json",
+    "receiptFileName": "outer-receipt-v1.json",
+    "directoryCreateMode": "EXCLUSIVE_NONRECURSIVE_SEGMENT_CHAIN_V1",
+    "markerCreateMode": "WX_CANONICAL_FSYNC_V1",
+    "receiptCreateMode": "WX_CANONICAL_FSYNC_V1",
+    "directoryExistenceConsumesAttempt": true,
+    "retryAllowed": false,
+    "resumeAllowed": false,
+    "repairAllowed": false,
+    "deleteAllowed": false,
+    "crossCloneAllowed": false,
+    "sameCommonDirIdentityRequired": true,
+    "retention": "PERMANENT_DO_NOT_DELETE_REPAIR_REUSE"
+  },
+  "outerReceipt": {
+    "schema": "R4B-ADDTYPE-CONTRACT-SELF-TEST-OUTER-RECEIPT-v1.1.2",
+    "maximumBytes": 8192,
+    "canonicalEncoding": "UTF8_NFC_COMPACT_JSON_ONE_LF",
+    "rawPathAllowed": false,
+    "rawOutputAllowed": false,
+    "innerRetainedArtifactCountRequired": 0,
+    "innerNumericalEvidenceProjection": {
+      "sourceReceiptKeyCount": 29,
+      "cleanAndFailedCleanRequireCompleteEvidence": true,
+      "cleanupHoldOuterProjection": "ALL_NUMERICAL_FIELDS_NULL",
+      "networkTablesPerObservation": 4,
+      "sourceFields": [
+        "completedFixtureCount",
+        "compilerProcessCount",
+        "fixtureProcessCount",
+        "cleanupStepCount",
+        "networkBaselineOwnerCount",
+        "networkWorkOwnerCount",
+        "networkOwnerCount",
+        "networkObservationCount",
+        "networkMaximumGapMicros",
+        "networkEventCount",
+        "retainedArtifactCount"
+      ],
+      "derivedFields": [
+        "innerDerivedLaunchedCompilerProcessCount=networkWorkOwnerCount-completedFixtureCount",
+        "innerDerivedNetworkTableIterationCount=networkObservationCount*4"
+      ]
+    },
+    "markerStateValues": [
+      "VALID_CANONICAL",
+      "ABSENT_AFTER_DIRECTORY_CONSUMPTION_HOLD",
+      "PRESENT_INVALID_OR_PARTIAL_HOLD"
+    ],
+    "retention": "PERMANENT_DO_NOT_DELETE_REPAIR_REUSE"
+  },
+  "preExecutionGates": {
+    "packetExactHeadElana": "REQUIRED_PASS_BEFORE_MERGE",
+    "protectedCi": "REQUIRED_SUCCESS",
+    "postMain": "REQUIRED_SUCCESS",
+    "postMainRepositoryIdentityTuple": "REQUIRED_FRESH_REVIEW",
+    "catalina": "REQUIRED_FRESH_PASS_ON_M_D70_IDENTITY_TUPLE",
+    "natalia": "REQUIRED_FRESH_PASS_ON_M_D70_IDENTITY_TUPLE",
+    "renata": "REQUIRED_FRESH_PASS_ON_M_D70_IDENTITY_TUPLE",
+    "postRunJulieta": "REQUIRED",
+    "postRunElana": "REQUIRED"
+  },
+  "authority": {
+    "syntheticBootstrapTestAuthorized": true,
+    "transactionAuthorizationPresent": true,
+    "externalActionAuthorized": false,
+    "downloadAuthorityPresent": false,
+    "executionAuthorityPresent": false,
+    "state": "PRECONDITION_HOLD_NO_GET"
+  },
+  "operationalScenarios": [
+    {
+      "id": "E01",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E02",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E03",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E04",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E05",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E06",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E07",
+      "status": "REQUIRED_UNATTEMPTED"
+    },
+    {
+      "id": "E08",
+      "status": "REQUIRED_UNATTEMPTED"
+    }
+  ],
+  "forbiddenActions": [
+    "GET",
+    "DOWNLOAD",
+    "ACQUISITION",
+    "LIVE_VERIFIER",
+    "NUGET_EXECUTION",
+    "BROKER",
+    "ATTEMPT004",
+    "E01",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E06",
+    "E07",
+    "E08",
+    "PRODUCTION",
+    "SIGNING",
+    "STORE",
+    "SPEND",
+    "CREDENTIAL",
+    "EXTERNAL_ACCOUNT",
+    "PROVIDER_ADMIN",
+    "FIREWALL",
+    "STORAGE_EXPANSION",
+    "PUBLICATION"
+  ],
+  "completion": {
+    "r4b2": false,
+    "r4b3": false,
+    "aggregateR4b": false,
+    "sprint6": false
+  },
+  "claimBoundary": "ONE_ZERO_NETWORK_SYNTHETIC_CONTRACT_SELF_TEST_ONLY_NO_OPERATIONAL_OR_EXTERNAL_AUTHORITY"
+}
