@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -9,8 +10,16 @@ const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md"
 const handoffPath = "docs/DEVELOPMENT_HANDOFF.md";
 const decisionPath = "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md";
 const canonicalRecordHeading = "## Canonical readiness record";
+const reviewedSourceCommit = "7220bef062a93142f5bcde07de89199355eb5837";
+const designMergeCommit = "7a5b345846eb29928dacb8f01b96796c01182dc2";
+const readinessMergeCommit = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
+const currentOverlayCommit = "c579699c273301599d81c89cec6ba0696e34e313";
 
 const sha256 = (bytes: Buffer | string): string => createHash("sha256").update(bytes).digest("hex");
+const blob = (bytes: Buffer): string =>
+  createHash("sha1")
+    .update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes]))
+    .digest("hex");
 
 const expectedRecord = {
   schema: "fluyo:r4b:addtype-postmain-readiness:v1",
@@ -63,6 +72,8 @@ const expectedRecord = {
 } as const;
 
 const readBytes = (path: string): Buffer => readFileSync(resolve(root, path));
+const gitBytes = (commit: string, path: string): Buffer =>
+  execFileSync("git", ["show", `${commit}:${path}`], { cwd: root, windowsHide: true });
 
 const canonicalJsonBlocks = (source: string): string[] => {
   const markerParts = source.split(canonicalRecordHeading);
@@ -91,18 +102,40 @@ describe("R4B Add-Type post-main readiness", () => {
     expect(sha256(prefix)).toBe("05ac348eb3160e4514c1ebfba3daeace40bd29286af4687c777282b5df153a0a");
   });
 
-  it("keeps the reviewed ten-path records members byte-identical", () => {
+  it("keeps historical records immutable and pins the sole current handoff overlay", () => {
     const handoff = readBytes(handoffPath);
     const decision = readBytes(decisionPath);
+    const historicalHandoff = gitBytes(readinessMergeCommit, handoffPath);
+    const historicalDecision = gitBytes(readinessMergeCommit, decisionPath);
 
-    expect(handoff.byteLength).toBe(249_789);
-    expect(sha256(handoff)).toBe(
+    expect(historicalHandoff.byteLength).toBe(249_789);
+    expect(sha256(historicalHandoff)).toBe(
       "78788e3bf3b0a54ef3bccb4b0aec804ad3db406976dfede4963bf1d2c083889f",
     );
-    expect(decision.byteLength).toBe(44_712);
-    expect(sha256(decision)).toBe(
+    expect(historicalDecision.byteLength).toBe(44_712);
+    expect(sha256(historicalDecision)).toBe(
       "60593b594f000cc8abeba4dfed36068bfb104fbbe76215712b740bda1f7c3605",
     );
+
+    for (const commit of [reviewedSourceCommit, designMergeCommit, readinessMergeCommit]) {
+      expect(gitBytes(commit, handoffPath)).toEqual(historicalHandoff);
+      expect(gitBytes(commit, decisionPath)).toEqual(historicalDecision);
+    }
+
+    expect(decision).toEqual(historicalDecision);
+    expect(decision).toEqual(gitBytes(currentOverlayCommit, decisionPath));
+    expect(handoff).toEqual(gitBytes(currentOverlayCommit, handoffPath));
+    expect({ bytes: handoff.length, sha256: sha256(handoff), blob: blob(handoff) }).toEqual({
+      bytes: 256_652,
+      sha256: "154984bb347861ea28767551fa587fe835aaf9981385f26c5e4f1a5e549c1302",
+      blob: "1e036c612cc7eb7b5cee9fb163809a6d600109bc",
+    });
+
+    expect(
+      [handoffPath, decisionPath].filter(
+        (path) => !readBytes(path).equals(gitBytes(readinessMergeCommit, path)),
+      ),
+    ).toEqual([handoffPath]);
   });
 
   it("duplicates one exact canonical readiness object across both records surfaces", () => {

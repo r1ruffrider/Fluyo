@@ -29,7 +29,10 @@ const d660 = "d6607300e52219c5d534e70c17e00e2e717e505b";
 const source = "7220bef062a93142f5bcde07de89199355eb5837";
 const merge = "7a5b345846eb29928dacb8f01b96796c01182dc2";
 const d70 = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
+const activationSourceCommit = "a2485dc12c231dd482799834d5aca2966a6db494";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
+const currentOverlayManifestSha =
+  "606bf4f42a1850e3e60a5bb8d1c941dd630adbcca26f4a9504ba7d4232edc000";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -54,6 +57,19 @@ const tenPaths = [
   "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
   "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
 ].sort(compareUtf8);
+const currentOverlayMembers = {
+  "docs/DEVELOPMENT_HANDOFF.md": {
+    bytes: 256_652,
+    sha256: "154984bb347861ea28767551fa587fe835aaf9981385f26c5e4f1a5e549c1302",
+    blob: "1e036c612cc7eb7b5cee9fb163809a6d600109bc",
+  },
+  "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs": {
+    bytes: 196_187,
+    sha256: "0610699e1570dbeb6f5e74fc99930ee2468c03a33571496e351402f5accf413d",
+    blob: "394d2cca3f9f36f381bb7c5ef32ffa2ec7a0ca75",
+  },
+} as const;
+const currentOverlayPaths = Object.keys(currentOverlayMembers).sort(compareUtf8);
 
 function compareUtf8(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left), Buffer.from(right));
@@ -305,6 +321,17 @@ const canonicalManifest = (paths: string[]) => {
   );
   return { rows: paths.length, bytes: value.length, sha256: sha(value) };
 };
+const canonicalGitManifest = (commit: string, paths: string[]) => {
+  const value = Buffer.from(
+    paths
+      .map((path) => {
+        const value = gitBytes(commit, path);
+        return `${path}\0${value.length}\0${sha(value)}\0${blob(value)}\n`;
+      })
+      .join(""),
+  );
+  return { rows: paths.length, bytes: value.length, sha256: sha(value) };
+};
 describe("R4B Add-Type outer activation v1.1.2", () => {
   it("01 packet is canonical NFC UTF-8 pretty JSON", () => {
     const value = bytes(packetPath);
@@ -355,7 +382,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(packet().historicalDesignProvenance.readinessMergeCommit).toBe(d70);
   });
 
-  it("07 candidate union is exactly six paths", () => {
+  it("07 historical d70-to-source candidate is exactly six paths", () => {
     const concurrentRowPattern = /^\.tmp-auth-readiness-approval-[A-Za-z0-9]{6}\/$/u;
     const partitionUntracked = (rows: string[]) => {
       if (new Set(rows).size !== rows.length) throw new Error("duplicate untracked row");
@@ -366,13 +393,13 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         concurrent,
       };
     };
-    const committed = lines(["diff", "--name-only", `${d70}...HEAD`]);
-    const cached = lines(["diff", "--cached", "--name-only"]);
-    const unstaged = lines(["diff", "--name-only"]);
-    const untracked = lines(["ls-files", "--others", "--exclude-standard"]);
-    const partitioned = partitionUntracked(untracked);
-    const union = [...committed, ...cached, ...unstaged, ...partitioned.candidate];
-    expect([...new Set(union)].sort(compareUtf8)).toEqual(sixPaths);
+    const historicalCandidate = lines([
+      "diff",
+      "--name-only",
+      `${d70}...${activationSourceCommit}`,
+    ]);
+    expect(historicalCandidate).toHaveLength(6);
+    expect([...new Set(historicalCandidate)].sort(compareUtf8)).toEqual(sixPaths);
     const positive = ".tmp-auth-readiness-approval-abc123/";
     expect(concurrentRowPattern.test(positive)).toBe(true);
     expect(partitionUntracked([positive])).toEqual({ candidate: [], concurrent: [positive] });
@@ -403,7 +430,6 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         ...partitionUntracked([positive]).candidate,
       ]),
     ).toEqual(new Set([positive]));
-    expect(partitioned.concurrent.length).toBeLessThanOrEqual(1);
     const activationSource = bytes(testPath).toString("utf8");
     expect(
       activationSource.match(
@@ -423,7 +449,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ).toHaveLength(1);
     expect(producerSource.match(/\.tmp-auth-readiness-approval-/gu)).toHaveLength(1);
     const concurrencyContractSource = activationSource.slice(
-      activationSource.indexOf('it("07 candidate union is exactly six paths"'),
+      activationSource.indexOf('it("07 historical d70-to-source candidate is exactly six paths"'),
       activationSource.indexOf('it("08 keeps exact ordered ten-path manifest"'),
     );
     expect(concurrencyContractSource).not.toMatch(/\blstat(?:Sync)?\b/u);
@@ -445,19 +471,86 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(tenPaths).not.toContain(packetPath);
   });
 
-  it("09 current ten-path bytes equal d70 objects", () => {
-    for (const path of tenPaths) expect(bytes(path)).toEqual(gitBytes(d70, path));
+  it("09 historical ten-path Git objects remain immutable", () => {
+    for (const path of tenPaths) {
+      const historical = gitBytes(d70, path);
+      expect(gitBytes(source, path)).toEqual(historical);
+      expect(gitBytes(merge, path)).toEqual(historical);
+    }
+    for (const commit of [source, merge, d70]) {
+      expect(canonicalGitManifest(commit, tenPaths)).toEqual({
+        rows: 10,
+        bytes: 1753,
+        sha256: manifestSha,
+      });
+    }
   }, 20_000);
 
-  it("10 ten-path bytes equal reviewed source and design merge", () => {
+  it("10 current ten-path overlay changes exactly two pinned members", () => {
+    const changed = tenPaths.filter((path) => !bytes(path).equals(gitBytes(d70, path)));
+    expect(changed).toEqual(currentOverlayPaths);
+
     for (const path of tenPaths) {
-      expect(bytes(path)).toEqual(gitBytes(source, path));
-      expect(bytes(path)).toEqual(gitBytes(merge, path));
+      const value = bytes(path);
+      expect(value).toEqual(gitBytes("HEAD", path));
+      if (!currentOverlayPaths.includes(path)) {
+        expect(value).toEqual(gitBytes(d70, path));
+        continue;
+      }
+      const expected = currentOverlayMembers[path as keyof typeof currentOverlayMembers];
+      expect({ bytes: value.length, sha256: sha(value), blob: blob(value) }).toEqual(expected);
+    }
+
+    const acceptsOverlay = (
+      rows: Array<{ path: string; bytes: number; sha256: string; blob: string }>,
+    ) =>
+      rows.length === currentOverlayPaths.length &&
+      new Set(rows.map(({ path }) => path)).size === currentOverlayPaths.length &&
+      rows.every(({ path, bytes, sha256, blob: objectId }) => {
+        const expected = currentOverlayMembers[path as keyof typeof currentOverlayMembers];
+        return (
+          expected !== undefined &&
+          bytes === expected.bytes &&
+          sha256 === expected.sha256 &&
+          objectId === expected.blob
+        );
+      });
+    const exactRows = currentOverlayPaths.map((path) => ({
+      path,
+      ...currentOverlayMembers[path as keyof typeof currentOverlayMembers],
+    }));
+    expect(acceptsOverlay(exactRows)).toBe(true);
+    for (const invalid of [
+      exactRows.slice(0, 1),
+      [...exactRows, exactRows[0]!],
+      [...exactRows, { ...exactRows[0]!, path: `${exactRows[0]!.path}.bak` }],
+      exactRows.map((row, index) => (index === 0 ? { ...row, path: row.path.slice(0, -3) } : row)),
+      exactRows.map((row, index) => (index === 0 ? { ...row, sha256: "0".repeat(64) } : row)),
+    ]) {
+      expect(acceptsOverlay(invalid)).toBe(false);
     }
   }, 30_000);
 
-  it("11 recomputes exact ten-path manifest", () => {
-    expect(canonicalManifest(tenPaths)).toEqual({ rows: 10, bytes: 1753, sha256: manifestSha });
+  it("11 recomputes exact historical and current ten-path manifests", () => {
+    expect(canonicalGitManifest(d70, tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: manifestSha,
+    });
+    expect(canonicalManifest(tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: currentOverlayManifestSha,
+    });
+    expect(canonicalGitManifest("HEAD", tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: currentOverlayManifestSha,
+    });
+    expect(canonicalManifest([...tenPaths, tenPaths[0]!]).sha256).not.toBe(
+      currentOverlayManifestSha,
+    );
+    expect(canonicalManifest(tenPaths.slice(1)).sha256).not.toBe(currentOverlayManifestSha);
   });
 
   it("12 adapter retains exact CLI/binding/revalidation and no governance import", () => {
