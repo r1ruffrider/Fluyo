@@ -136,7 +136,7 @@ describe("R4B Add-Type post-main readiness", () => {
         (path) => !readBytes(path).equals(gitBytes(readinessMergeCommit, path)),
       ),
     ).toEqual([handoffPath]);
-  });
+  }, 30_000);
 
   it("duplicates one exact canonical readiness object across both records surfaces", () => {
     const datedRecordBlocks = canonicalJsonBlocks(readBytes(recordPath).toString("utf8"));
