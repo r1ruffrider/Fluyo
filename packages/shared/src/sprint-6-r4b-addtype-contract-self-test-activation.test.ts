@@ -20,9 +20,38 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import "./sprint-6-r4b-addtype-contract-self-test-executor.test.mjs";
+
+type LifecycleEvidence = Readonly<{
+  schema: "fluyo:r4b:addtype:lifecycle-evidence:v1";
+  mode: "PRECOMMIT" | "BRANCH" | "SQUASH_MAIN";
+  head: string;
+  anchor: string;
+  firstChild: string | null;
+  recordsSnapshot: "ee4e77996d646cb880e9a86ea5003c4edce470c5";
+  repairPathCount: 2;
+  protectedPathCount: 12;
+}>;
+const lifecycleHelperSymbol = Symbol.for("fluyo:r4b:addtype:lifecycle-helper-only:v1");
+const lifecycleHelperQuery = "./sprint-6-r4b-addtype-postmain-readiness.test?lifecycle-helper-v1";
+let verifyAddTypeLifecycleAt: (cwd: string) => LifecycleEvidence;
+beforeAll(async () => {
+  if (Reflect.has(globalThis, lifecycleHelperSymbol))
+    throw new Error("ACTIVATION_LIFECYCLE_HELPER_STATE_INVALID");
+  Reflect.set(globalThis, lifecycleHelperSymbol, true);
+  try {
+    const helper = (await import(lifecycleHelperQuery)) as {
+      verifyAddTypeLifecycleAt: (cwd: string) => LifecycleEvidence;
+    };
+    verifyAddTypeLifecycleAt = helper.verifyAddTypeLifecycleAt;
+  } finally {
+    Reflect.deleteProperty(globalThis, lifecycleHelperSymbol);
+  }
+  if (typeof verifyAddTypeLifecycleAt !== "function")
+    throw new Error("ACTIVATION_LIFECYCLE_HELPER_INVALID");
+});
 
 const root = resolve(__dirname, "../../..");
 const d660 = "d6607300e52219c5d534e70c17e00e2e717e505b";
@@ -30,9 +59,12 @@ const source = "7220bef062a93142f5bcde07de89199355eb5837";
 const merge = "7a5b345846eb29928dacb8f01b96796c01182dc2";
 const d70 = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
 const activationSourceCommit = "a2485dc12c231dd482799834d5aca2966a6db494";
+const reviewedBranchRoot = "c579699c273301599d81c89cec6ba0696e34e313";
+const recordsParentCommit = "2ee6312b02ad1393456603fe2a519cf3c20cce8c";
+const recordsSnapshotCommit = "ee4e77996d646cb880e9a86ea5003c4edce470c5";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentOverlayManifestSha =
-  "606bf4f42a1850e3e60a5bb8d1c941dd630adbcca26f4a9504ba7d4232edc000";
+const recordsSnapshotManifestSha =
+  "6f6641a6e74c7d7242c8912963853fd705b1f83217bd765acf5bafa9994e249c";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -42,6 +74,7 @@ const executorPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-executor-v1.mjs";
 const executorTestPath =
   "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-executor.test.mjs";
+const readinessTestPath = "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts";
 const sixPaths = [planPath, recordPath, testPath, packetPath, executorPath, executorTestPath].sort(
   compareUtf8,
 );
@@ -57,11 +90,26 @@ const tenPaths = [
   "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
   "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
 ].sort(compareUtf8);
-const currentOverlayMembers = {
+const repairPaths = [testPath, readinessTestPath].sort(compareUtf8);
+const reviewedLocalCumulativePaths = [
+  "docs/2026-11-14_r4b_windows_python_reviewed_local_binding_v2.md",
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/auth-runtime-synthetic-contract.test.ts",
+  testPath,
+  readinessTestPath,
+  "scripts/r4b-evidence/r4b-test-lanes.mjs",
+  "scripts/r4b-evidence/reviewed-local-python-native-lease-v2.cs",
+  "scripts/r4b-evidence/reviewed-local-python-transaction.mjs",
+  "scripts/r4b-evidence/reviewed-local-python-transaction.test.mjs",
+  "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs",
+  "scripts/r4b-evidence/test-python-binding.mjs",
+  "scripts/r4b-evidence/windows-native-test-journal-runner.test.mjs",
+] as const;
+const recordsSnapshotMembers = {
   "docs/DEVELOPMENT_HANDOFF.md": {
-    bytes: 256_652,
-    sha256: "154984bb347861ea28767551fa587fe835aaf9981385f26c5e4f1a5e549c1302",
-    blob: "1e036c612cc7eb7b5cee9fb163809a6d600109bc",
+    bytes: 259_496,
+    sha256: "28c0ed4cb1292d0351a74848abd88c2a308f7d3d3f63691fbffd884a36bc3f5b",
+    blob: "ac27214f98de252a2a4e07b4421971bb9639c12d",
   },
   "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs": {
     bytes: 196_187,
@@ -69,7 +117,7 @@ const currentOverlayMembers = {
     blob: "394d2cca3f9f36f381bb7c5ef32ffa2ec7a0ca75",
   },
 } as const;
-const currentOverlayPaths = Object.keys(currentOverlayMembers).sort(compareUtf8);
+const recordsSnapshotPaths = Object.keys(recordsSnapshotMembers).sort(compareUtf8);
 
 function compareUtf8(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left), Buffer.from(right));
@@ -84,6 +132,8 @@ const git = (args: string[]): string =>
   execFileSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true }).trim();
 const gitBytes = (commit: string, path: string): Buffer =>
   execFileSync("git", ["show", `${commit}:${path}`], { cwd: root, windowsHide: true });
+const gitBytesAt = (cwd: string, commit: string, path: string): Buffer =>
+  execFileSync("git", ["show", `${commit}:${path}`], { cwd, windowsHide: true });
 const lines = (args: string[]): string[] => {
   const output = git(args);
   return output === "" ? [] : output.split(/\r?\n/u).filter(Boolean);
@@ -332,6 +382,7 @@ const canonicalGitManifest = (commit: string, paths: string[]) => {
   );
   return { rows: paths.length, bytes: value.length, sha256: sha(value) };
 };
+
 describe("R4B Add-Type outer activation v1.1.2", () => {
   it("01 packet is canonical NFC UTF-8 pretty JSON", () => {
     const value = bytes(packetPath);
@@ -469,6 +520,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
   it("08 locks ten runtime paths and excludes packet", () => {
     expect(packet().executionBinding.manifestPaths).toEqual(tenPaths);
     expect(tenPaths).not.toContain(packetPath);
+    expect(repairPaths).toEqual([readinessTestPath, testPath].sort(compareUtf8));
   });
 
   it("09 historical ten-path Git objects remain immutable", () => {
@@ -484,30 +536,36 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         sha256: manifestSha,
       });
     }
+    expect(git(["rev-parse", `${recordsSnapshotCommit}^`])).toBe(recordsParentCommit);
+    expect(git(["rev-list", "--parents", "-n", "1", recordsSnapshotCommit]).split(" ")).toEqual([
+      recordsSnapshotCommit,
+      recordsParentCommit,
+    ]);
   }, 20_000);
 
-  it("10 current ten-path overlay changes exactly two pinned members", () => {
-    const changed = tenPaths.filter((path) => !bytes(path).equals(gitBytes(d70, path)));
-    expect(changed).toEqual(currentOverlayPaths);
+  it("10 records snapshot overlay and closed precommit status are exact", () => {
+    const changed = tenPaths.filter(
+      (path) => !gitBytes(recordsSnapshotCommit, path).equals(gitBytes(d70, path)),
+    );
+    expect(changed).toEqual(recordsSnapshotPaths);
 
     for (const path of tenPaths) {
-      const value = bytes(path);
-      expect(value).toEqual(gitBytes("HEAD", path));
-      if (!currentOverlayPaths.includes(path)) {
+      const value = gitBytes(recordsSnapshotCommit, path);
+      if (!recordsSnapshotPaths.includes(path)) {
         expect(value).toEqual(gitBytes(d70, path));
         continue;
       }
-      const expected = currentOverlayMembers[path as keyof typeof currentOverlayMembers];
+      const expected = recordsSnapshotMembers[path as keyof typeof recordsSnapshotMembers];
       expect({ bytes: value.length, sha256: sha(value), blob: blob(value) }).toEqual(expected);
     }
 
     const acceptsOverlay = (
       rows: Array<{ path: string; bytes: number; sha256: string; blob: string }>,
     ) =>
-      rows.length === currentOverlayPaths.length &&
-      new Set(rows.map(({ path }) => path)).size === currentOverlayPaths.length &&
+      rows.length === recordsSnapshotPaths.length &&
+      new Set(rows.map(({ path }) => path)).size === recordsSnapshotPaths.length &&
       rows.every(({ path, bytes, sha256, blob: objectId }) => {
-        const expected = currentOverlayMembers[path as keyof typeof currentOverlayMembers];
+        const expected = recordsSnapshotMembers[path as keyof typeof recordsSnapshotMembers];
         return (
           expected !== undefined &&
           bytes === expected.bytes &&
@@ -515,9 +573,9 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
           objectId === expected.blob
         );
       });
-    const exactRows = currentOverlayPaths.map((path) => ({
+    const exactRows = recordsSnapshotPaths.map((path) => ({
       path,
-      ...currentOverlayMembers[path as keyof typeof currentOverlayMembers],
+      ...recordsSnapshotMembers[path as keyof typeof recordsSnapshotMembers],
     }));
     expect(acceptsOverlay(exactRows)).toBe(true);
     for (const invalid of [
@@ -531,26 +589,45 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     }
   }, 30_000);
 
-  it("11 recomputes exact historical and current ten-path manifests", () => {
+  it("11 recomputes exact historical and snapshot manifests and classifies lifecycle", () => {
     expect(canonicalGitManifest(d70, tenPaths)).toEqual({
       rows: 10,
       bytes: 1753,
       sha256: manifestSha,
     });
-    expect(canonicalManifest(tenPaths)).toEqual({
+    expect(canonicalGitManifest(recordsSnapshotCommit, tenPaths)).toEqual({
       rows: 10,
       bytes: 1753,
-      sha256: currentOverlayManifestSha,
+      sha256: recordsSnapshotManifestSha,
     });
-    expect(canonicalGitManifest("HEAD", tenPaths)).toEqual({
-      rows: 10,
-      bytes: 1753,
-      sha256: currentOverlayManifestSha,
-    });
-    expect(canonicalManifest([...tenPaths, tenPaths[0]!]).sha256).not.toBe(
-      currentOverlayManifestSha,
+    expect(canonicalGitManifest(recordsParentCommit, tenPaths).sha256).not.toBe(
+      recordsSnapshotManifestSha,
     );
-    expect(canonicalManifest(tenPaths.slice(1)).sha256).not.toBe(currentOverlayManifestSha);
+    expect(
+      canonicalGitManifest(recordsSnapshotCommit, [...tenPaths, tenPaths[0]!]).sha256,
+    ).not.toBe(recordsSnapshotManifestSha);
+    expect(canonicalGitManifest(recordsSnapshotCommit, tenPaths.slice(1)).sha256).not.toBe(
+      recordsSnapshotManifestSha,
+    );
+    const lifecycle = verifyAddTypeLifecycleAt(root);
+    expect(lifecycle).toMatchObject({
+      schema: "fluyo:r4b:addtype:lifecycle-evidence:v1",
+      head: git(["rev-parse", "HEAD"]),
+      recordsSnapshot: recordsSnapshotCommit,
+      repairPathCount: 2,
+      protectedPathCount: 12,
+    });
+    expect(["PRECOMMIT", "BRANCH", "SQUASH_MAIN"]).toContain(lifecycle.mode);
+    if (lifecycle.mode === "PRECOMMIT") {
+      expect(lifecycle.anchor).toBe(recordsSnapshotCommit);
+      expect(lifecycle.firstChild).toBeNull();
+    } else if (lifecycle.mode === "BRANCH") {
+      expect(lifecycle.anchor).toBe(recordsSnapshotCommit);
+      expect(lifecycle.firstChild).toMatch(/^[0-9a-f]{40}$/u);
+    } else {
+      expect(lifecycle.anchor).toBe(activationSourceCommit);
+      expect(lifecycle.firstChild).toMatch(/^[0-9a-f]{40}$/u);
+    }
   });
 
   it("12 adapter retains exact CLI/binding/revalidation and no governance import", () => {
@@ -922,6 +999,494 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       gitAt(repository, ["config", "user.name", "R4B Fixture"]);
       gitAt(repository, ["config", "user.email", "r4b-fixture@example.invalid"]);
       gitAt(repository, ["config", "core.autocrlf", "false"]);
+
+      const lifecycleRepository = resolve(temporary, "lifecycle");
+      execFileSync("git", ["clone", "--no-local", root, lifecycleRepository], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      gitAt(lifecycleRepository, ["config", "user.name", "R4B Lifecycle Fixture"]);
+      gitAt(lifecycleRepository, ["config", "user.email", "r4b-lifecycle@example.invalid"]);
+      gitAt(lifecycleRepository, ["config", "core.autocrlf", "false"]);
+      const historyNegatives = new Set<string>();
+      const rejectHistory = (label: string): void => {
+        expect(() => verifyAddTypeLifecycleAt(lifecycleRepository), label).toThrow();
+        historyNegatives.add(label);
+      };
+      const commitAll = (message: string): string => {
+        gitAt(lifecycleRepository, ["add", "-A"]);
+        gitAt(lifecycleRepository, ["-c", "commit.gpgsign=false", "commit", "-m", message]);
+        return gitAt(lifecycleRepository, ["rev-parse", "HEAD"]);
+      };
+      const startLifecycleBranch = (name: string, start = recordsSnapshotCommit): void => {
+        gitAt(lifecycleRepository, ["checkout", "--detach", start]);
+        gitAt(lifecycleRepository, ["switch", "-c", name]);
+      };
+      const writeRepairs = (): void => {
+        for (const path of repairPaths)
+          writeFileSync(resolve(lifecycleRepository, path), bytes(path));
+      };
+      gitAt(lifecycleRepository, ["checkout", "--detach", recordsSnapshotCommit]);
+      gitAt(lifecycleRepository, ["switch", "-c", "lifecycle-repair"]);
+      rejectHistory("stale/no-diff");
+      for (const path of repairPaths)
+        writeFileSync(resolve(lifecycleRepository, path), bytes(path));
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("PRECOMMIT");
+      gitAt(lifecycleRepository, ["add", "--", repairPaths[0]!]);
+      expect(() => verifyAddTypeLifecycleAt(lifecycleRepository)).toThrow();
+      gitAt(lifecycleRepository, ["reset", "--", repairPaths[0]!]);
+      writeFileSync(resolve(lifecycleRepository, "unexpected.txt"), "unexpected\n");
+      expect(() => verifyAddTypeLifecycleAt(lifecycleRepository)).toThrow();
+      unlinkSync(resolve(lifecycleRepository, "unexpected.txt"));
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("PRECOMMIT");
+      gitAt(lifecycleRepository, ["add", "--", ...repairPaths]);
+      gitAt(lifecycleRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "repair lifecycle tests",
+      ]);
+      const repairChild = gitAt(lifecycleRepository, ["rev-parse", "HEAD"]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("BRANCH");
+
+      const firstChildCases = [
+        {
+          label: "one repair",
+          write: () =>
+            writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), bytes(repairPaths[0]!)),
+        },
+        {
+          label: "missing first-child path",
+          write: () =>
+            writeFileSync(resolve(lifecycleRepository, repairPaths[1]!), bytes(repairPaths[1]!)),
+        },
+        {
+          label: "extra first-child path",
+          write: () => {
+            writeRepairs();
+            writeFileSync(resolve(lifecycleRepository, "unexpected.txt"), "unexpected\n");
+          },
+        },
+        {
+          label: "sibling first-child path",
+          write: () => {
+            writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), bytes(repairPaths[0]!));
+            writeFileSync(
+              resolve(lifecycleRepository, `${repairPaths[1]}.bak`),
+              bytes(repairPaths[1]!),
+            );
+          },
+        },
+        {
+          label: "prefix first-child path",
+          write: () => {
+            writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), bytes(repairPaths[0]!));
+            writeFileSync(
+              resolve(lifecycleRepository, repairPaths[1]!.slice(0, -3)),
+              bytes(repairPaths[1]!),
+            );
+          },
+        },
+        {
+          label: "wrong first-child status",
+          write: () => {
+            writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), bytes(repairPaths[0]!));
+            rmSync(resolve(lifecycleRepository, repairPaths[1]!));
+          },
+        },
+      ] as const;
+      for (const [index, fixture] of firstChildCases.entries()) {
+        startLifecycleBranch(`first-child-negative-${index}`);
+        fixture.write();
+        commitAll(fixture.label);
+        rejectHistory(fixture.label);
+      }
+
+      startLifecycleBranch("wrong-parent", "e0325f067330a095aa337790d771ed2027204bbb");
+      writeRepairs();
+      commitAll("wrong parent");
+      rejectHistory("wrong parent");
+
+      startLifecycleBranch("merge-child-side");
+      writeRepairs();
+      commitAll("merge child side");
+      startLifecycleBranch("merge-child");
+      gitAt(lifecycleRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "merge",
+        "--no-ff",
+        "merge-child-side",
+        "-m",
+        "merge child",
+      ]);
+      rejectHistory("merge child");
+
+      gitAt(lifecycleRepository, ["checkout", "--detach", recordsSnapshotCommit]);
+      gitAt(lifecycleRepository, ["switch", "-c", "second-repair-child"]);
+      for (const path of repairPaths)
+        writeFileSync(resolve(lifecycleRepository, path), bytes(path));
+      gitAt(lifecycleRepository, ["add", "--", ...repairPaths]);
+      gitAt(lifecycleRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "second repair child",
+      ]);
+      gitAt(lifecycleRepository, ["switch", "lifecycle-repair"]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("BRANCH");
+      gitAt(lifecycleRepository, ["branch", "-D", "second-repair-child"]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("BRANCH");
+
+      const safeAppend = Buffer.from(
+        "\nexternalActionAuthorized=false\ndownloadAuthorityPresent=false\nexecutionAuthorityPresent=false\nPRECONDITION_HOLD_NO_GET\n",
+      );
+      writeFileSync(
+        resolve(lifecycleRepository, "docs/DEVELOPMENT_HANDOFF.md"),
+        Buffer.concat([
+          gitBytesAt(lifecycleRepository, repairChild, "docs/DEVELOPMENT_HANDOFF.md"),
+          safeAppend,
+        ]),
+      );
+      gitAt(lifecycleRepository, ["add", "--", "docs/DEVELOPMENT_HANDOFF.md"]);
+      gitAt(lifecycleRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "safe handoff append",
+      ]);
+      const safeBranchHead = gitAt(lifecycleRepository, ["rev-parse", "HEAD"]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("BRANCH");
+
+      gitAt(lifecycleRepository, ["switch", "-c", "merge-side", safeBranchHead]);
+      writeFileSync(resolve(lifecycleRepository, "outside-protected-set.txt"), "fixture\n");
+      gitAt(lifecycleRepository, ["add", "--", "outside-protected-set.txt"]);
+      gitAt(lifecycleRepository, ["-c", "commit.gpgsign=false", "commit", "-m", "side"]);
+      gitAt(lifecycleRepository, ["switch", "-c", "merge-case", safeBranchHead]);
+      gitAt(lifecycleRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "merge",
+        "--no-ff",
+        "merge-side",
+        "-m",
+        "merge",
+      ]);
+      rejectHistory("later merge");
+      gitAt(lifecycleRepository, ["switch", "lifecycle-repair"]);
+      gitAt(lifecycleRepository, ["branch", "-D", "merge-case", "merge-side"]);
+
+      gitAt(lifecycleRepository, ["switch", "-c", "repair-drift"]);
+      writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), Buffer.from("drift\n"));
+      commitAll("repair drift");
+      rejectHistory("repair drift");
+      gitAt(lifecycleRepository, ["switch", "lifecycle-repair"]);
+      gitAt(lifecycleRepository, ["branch", "-D", "repair-drift"]);
+
+      gitAt(lifecycleRepository, ["switch", "-c", "drift-revert"]);
+      writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), Buffer.from("drift\n"));
+      gitAt(lifecycleRepository, ["add", "--", repairPaths[0]!]);
+      gitAt(lifecycleRepository, ["-c", "commit.gpgsign=false", "commit", "-m", "drift"]);
+      writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), bytes(repairPaths[0]!));
+      gitAt(lifecycleRepository, ["add", "--", repairPaths[0]!]);
+      gitAt(lifecycleRepository, ["-c", "commit.gpgsign=false", "commit", "-m", "revert"]);
+      rejectHistory("drift plus revert");
+      gitAt(lifecycleRepository, ["switch", "lifecycle-repair"]);
+      gitAt(lifecycleRepository, ["branch", "-D", "drift-revert"]);
+
+      gitAt(lifecycleRepository, ["switch", "-c", "protected-drift"]);
+      const protectedDriftPath = "packages/shared/src/auth-runtime-synthetic-contract.test.ts";
+      writeFileSync(resolve(lifecycleRepository, protectedDriftPath), Buffer.from("drift\n"));
+      commitAll("protected drift");
+      rejectHistory("non-handoff protected drift");
+      gitAt(lifecycleRepository, ["switch", "lifecycle-repair"]);
+      gitAt(lifecycleRepository, ["branch", "-D", "protected-drift"]);
+
+      gitAt(lifecycleRepository, ["switch", "-c", "unsafe-handoff"]);
+      writeFileSync(
+        resolve(lifecycleRepository, "docs/DEVELOPMENT_HANDOFF.md"),
+        Buffer.concat([
+          gitBytesAt(lifecycleRepository, safeBranchHead, "docs/DEVELOPMENT_HANDOFF.md"),
+          Buffer.from("\nexternalActionAuthorized=true\n"),
+        ]),
+      );
+      gitAt(lifecycleRepository, ["add", "--", "docs/DEVELOPMENT_HANDOFF.md"]);
+      gitAt(lifecycleRepository, ["-c", "commit.gpgsign=false", "commit", "-m", "unsafe handoff"]);
+      writeFileSync(
+        resolve(lifecycleRepository, "docs/DEVELOPMENT_HANDOFF.md"),
+        Buffer.concat([
+          gitBytesAt(lifecycleRepository, "HEAD", "docs/DEVELOPMENT_HANDOFF.md"),
+          safeAppend,
+        ]),
+      );
+      commitAll("safe append after unsafe handoff");
+      rejectHistory("unsafe intermediate handoff then safe append");
+      gitAt(lifecycleRepository, ["switch", "lifecycle-repair"]);
+      gitAt(lifecycleRepository, ["branch", "-D", "unsafe-handoff"]);
+
+      gitAt(lifecycleRepository, ["checkout", "--detach", activationSourceCommit]);
+      gitAt(lifecycleRepository, ["switch", "-c", "squash-main"]);
+      gitAt(lifecycleRepository, ["merge", "--squash", recordsSnapshotCommit]);
+      for (const path of repairPaths)
+        writeFileSync(resolve(lifecycleRepository, path), bytes(path));
+      gitAt(lifecycleRepository, ["add", "--", ...repairPaths]);
+      gitAt(lifecycleRepository, ["-c", "commit.gpgsign=false", "commit", "-m", "squash repair"]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("SQUASH_MAIN");
+      const squashCommit = gitAt(lifecycleRepository, ["rev-parse", "HEAD"]);
+
+      const mainOnlyBare = resolve(temporary, "main-only.git");
+      const mainOnlyRepository = resolve(temporary, "main-only");
+      execFileSync("git", ["init", "--bare", mainOnlyBare], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      gitAt(lifecycleRepository, ["push", mainOnlyBare, `${squashCommit}:refs/heads/main`]);
+      execFileSync(
+        "git",
+        [
+          "clone",
+          "--no-local",
+          "--no-tags",
+          "--single-branch",
+          "--branch",
+          "main",
+          mainOnlyBare,
+          mainOnlyRepository,
+        ],
+        { windowsHide: true, stdio: "ignore" },
+      );
+      gitAt(mainOnlyRepository, ["config", "user.name", "R4B Main Only Fixture"]);
+      gitAt(mainOnlyRepository, ["config", "user.email", "r4b-main-only@example.invalid"]);
+      gitAt(mainOnlyRepository, ["config", "core.autocrlf", "false"]);
+      gitAt(mainOnlyRepository, ["remote", "remove", "origin"]);
+      gitAt(mainOnlyRepository, ["reflog", "expire", "--expire=now", "--all"]);
+      gitAt(mainOnlyRepository, ["gc", "--prune=now"]);
+      expect(gitAt(mainOnlyRepository, ["for-each-ref", "--format=%(refname)"])).toBe(
+        "refs/heads/main",
+      );
+      const objectExists = (commit: string): boolean => {
+        const result = spawnSync(
+          "git",
+          ["rev-parse", "--verify", "--quiet", `${commit}^{commit}`],
+          {
+            cwd: mainOnlyRepository,
+            windowsHide: true,
+            stdio: "ignore",
+            timeout: 5_000,
+          },
+        );
+        if (result.signal !== null || result.error !== undefined || result.status === null)
+          throw new Error("MAIN_ONLY_OBJECT_PROBE_INVALID");
+        if (result.status === 0) return true;
+        if (result.status === 1) return false;
+        throw new Error("MAIN_ONLY_OBJECT_PROBE_INVALID");
+      };
+      expect(objectExists(activationSourceCommit)).toBe(true);
+      expect(objectExists(squashCommit)).toBe(true);
+      for (const absent of [
+        reviewedBranchRoot,
+        "e0325f067330a095aa337790d771ed2027204bbb",
+        recordsParentCommit,
+        recordsSnapshotCommit,
+      ])
+        expect(objectExists(absent)).toBe(false);
+      expect(verifyAddTypeLifecycleAt(mainOnlyRepository).mode).toBe("SQUASH_MAIN");
+      writeFileSync(
+        resolve(mainOnlyRepository, "docs/DEVELOPMENT_HANDOFF.md"),
+        Buffer.concat([
+          readFileSync(resolve(mainOnlyRepository, "docs/DEVELOPMENT_HANDOFF.md")),
+          safeAppend,
+        ]),
+      );
+      gitAt(mainOnlyRepository, ["add", "--", "docs/DEVELOPMENT_HANDOFF.md"]);
+      gitAt(mainOnlyRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-m",
+        "safe main-only handoff append",
+      ]);
+      expect(verifyAddTypeLifecycleAt(mainOnlyRepository).mode).toBe("SQUASH_MAIN");
+
+      const writeMainOnlySquashMembers = (): void => {
+        for (const path of reviewedLocalCumulativePaths) {
+          const target = resolve(mainOnlyRepository, path);
+          mkdirSync(dirname(target), { recursive: true });
+          writeFileSync(target, bytes(path));
+        }
+      };
+      const rejectMainOnlyFirstChild = (name: string, mutate: () => void): void => {
+        gitAt(mainOnlyRepository, ["checkout", "--detach", activationSourceCommit]);
+        gitAt(mainOnlyRepository, ["switch", "-c", `negative-${name}`]);
+        writeMainOnlySquashMembers();
+        mutate();
+        gitAt(mainOnlyRepository, ["add", "-A"]);
+        gitAt(mainOnlyRepository, [
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "-m",
+          `negative ${name}`,
+        ]);
+        expect(() => verifyAddTypeLifecycleAt(mainOnlyRepository)).toThrow();
+      };
+      rejectMainOnlyFirstChild("missing", () => {
+        rmSync(resolve(mainOnlyRepository, reviewedLocalCumulativePaths[6]));
+      });
+      rejectMainOnlyFirstChild("extra", () => {
+        writeFileSync(resolve(mainOnlyRepository, "unexpected-reviewed-path.txt"), "unexpected\n");
+      });
+      rejectMainOnlyFirstChild("wrong-status", () => {
+        rmSync(resolve(mainOnlyRepository, reviewedLocalCumulativePaths[2]));
+      });
+      rejectMainOnlyFirstChild("wrong-literal", () => {
+        writeFileSync(resolve(mainOnlyRepository, reviewedLocalCumulativePaths[2]), "drift\n");
+      });
+      rejectMainOnlyFirstChild("wrong-repair", () => {
+        writeFileSync(resolve(mainOnlyRepository, repairPaths[0]!), "drift\n");
+      });
+
+      const commitMainOnlyAll = (message: string): string => {
+        gitAt(mainOnlyRepository, ["add", "-A"]);
+        gitAt(mainOnlyRepository, ["-c", "commit.gpgsign=false", "commit", "-m", message]);
+        return gitAt(mainOnlyRepository, ["rev-parse", "HEAD"]);
+      };
+      gitAt(mainOnlyRepository, ["switch", "main"]);
+      gitAt(mainOnlyRepository, ["switch", "-c", "later-protected-drift"]);
+      writeFileSync(resolve(mainOnlyRepository, reviewedLocalCumulativePaths[2]), "drift\n");
+      commitMainOnlyAll("later protected drift");
+      expect(() => verifyAddTypeLifecycleAt(mainOnlyRepository)).toThrow();
+
+      gitAt(mainOnlyRepository, ["switch", "main"]);
+      gitAt(mainOnlyRepository, ["switch", "-c", "later-unsafe-handoff"]);
+      writeFileSync(
+        resolve(mainOnlyRepository, "docs/DEVELOPMENT_HANDOFF.md"),
+        Buffer.concat([
+          readFileSync(resolve(mainOnlyRepository, "docs/DEVELOPMENT_HANDOFF.md")),
+          Buffer.from("\nexternalActionAuthorized=true\n"),
+        ]),
+      );
+      commitMainOnlyAll("later unsafe handoff");
+      expect(() => verifyAddTypeLifecycleAt(mainOnlyRepository)).toThrow();
+
+      gitAt(mainOnlyRepository, ["switch", "main"]);
+      gitAt(mainOnlyRepository, ["switch", "-c", "later-merge-side"]);
+      writeFileSync(resolve(mainOnlyRepository, "unrelated-side.txt"), "side\n");
+      commitMainOnlyAll("later merge side");
+      gitAt(mainOnlyRepository, ["switch", "main"]);
+      gitAt(mainOnlyRepository, ["switch", "-c", "later-merge"]);
+      gitAt(mainOnlyRepository, [
+        "-c",
+        "commit.gpgsign=false",
+        "merge",
+        "--no-ff",
+        "later-merge-side",
+        "-m",
+        "later merge",
+      ]);
+      expect(() => verifyAddTypeLifecycleAt(mainOnlyRepository)).toThrow();
+
+      const unrelatedRepository = resolve(temporary, "unrelated");
+      execFileSync("git", ["init", unrelatedRepository], { windowsHide: true, stdio: "ignore" });
+      gitAt(unrelatedRepository, ["config", "user.name", "R4B Unrelated Fixture"]);
+      gitAt(unrelatedRepository, ["config", "user.email", "r4b-unrelated@example.invalid"]);
+      writeFileSync(resolve(unrelatedRepository, "README.md"), "unrelated\n");
+      gitAt(unrelatedRepository, ["add", "README.md"]);
+      gitAt(unrelatedRepository, ["-c", "commit.gpgsign=false", "commit", "-m", "unrelated"]);
+      expect(() => verifyAddTypeLifecycleAt(unrelatedRepository)).toThrow();
+
+      expect(
+        spawnSync("git", ["cat-file", "-e", `${recordsSnapshotCommit}^{commit}`], {
+          cwd: lifecycleRepository,
+          windowsHide: true,
+          stdio: "ignore",
+        }).status,
+      ).toBe(0);
+      gitAt(lifecycleRepository, ["switch", "squash-main"]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("SQUASH_MAIN");
+
+      const squashNegative = (label: string, mutate: () => void): void => {
+        startLifecycleBranch(`squash-${label.replaceAll(" ", "-")}`, activationSourceCommit);
+        gitAt(lifecycleRepository, ["merge", "--squash", recordsSnapshotCommit]);
+        writeRepairs();
+        mutate();
+        commitAll(label);
+        rejectHistory(label);
+      };
+      squashNegative("missing add reviewed path", () => {
+        rmSync(
+          resolve(
+            lifecycleRepository,
+            "scripts/r4b-evidence/reviewed-local-python-native-lease-v2.cs",
+          ),
+        );
+        writeFileSync(resolve(lifecycleRepository, "unexpected-reviewed-path.txt"), "unexpected\n");
+      });
+      squashNegative("squash status drift", () => {
+        const path = "scripts/r4b-evidence/reviewed-local-python-native-lease-v2.cs";
+        const renamed = `${path}.renamed`;
+        writeFileSync(
+          resolve(lifecycleRepository, renamed),
+          readFileSync(resolve(lifecycleRepository, path)),
+        );
+        rmSync(resolve(lifecycleRepository, path));
+      });
+      squashNegative("squash nonrepair byte drift", () => {
+        writeFileSync(
+          resolve(
+            lifecycleRepository,
+            "packages/shared/src/auth-runtime-synthetic-contract.test.ts",
+          ),
+          Buffer.from("drift\n"),
+        );
+      });
+      squashNegative("squash repair mismatch", () => {
+        writeFileSync(resolve(lifecycleRepository, repairPaths[0]!), Buffer.from("drift\n"));
+      });
+
+      gitAt(lifecycleRepository, ["switch", "squash-main"]);
+      const reviewedRootTree = gitAt(lifecycleRepository, [
+        "rev-parse",
+        `${reviewedBranchRoot}^{tree}`,
+      ]);
+      const replacement = gitAt(lifecycleRepository, [
+        "commit-tree",
+        reviewedRootTree,
+        "-p",
+        recordsSnapshotCommit,
+        "-m",
+        "invalid reviewed chain parent",
+      ]);
+      gitAt(lifecycleRepository, ["replace", reviewedBranchRoot, replacement]);
+      expect(verifyAddTypeLifecycleAt(lifecycleRepository).mode).toBe("SQUASH_MAIN");
+      gitAt(lifecycleRepository, ["replace", "-d", reviewedBranchRoot]);
+
+      expect([...historyNegatives].sort(compareUtf8)).toEqual(
+        [
+          "drift plus revert",
+          "extra first-child path",
+          "later merge",
+          "merge child",
+          "missing add reviewed path",
+          "missing first-child path",
+          "non-handoff protected drift",
+          "one repair",
+          "prefix first-child path",
+          "repair drift",
+          "sibling first-child path",
+          "squash nonrepair byte drift",
+          "squash repair mismatch",
+          "squash status drift",
+          "stale/no-diff",
+          "unsafe intermediate handoff then safe append",
+          "wrong first-child status",
+          "wrong parent",
+        ].sort(compareUtf8),
+      );
+
       gitAt(repository, ["checkout", "--detach", d70]);
       gitAt(repository, ["switch", "-c", "candidate"]);
       for (const path of sixPaths) {
