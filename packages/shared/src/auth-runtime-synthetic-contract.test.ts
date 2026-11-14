@@ -20,6 +20,8 @@ const phaseBase = "e2197c597a9a49f3685ceb2c2010cd5d067ff299";
 const phaseCompletion = "a5658045cd7d780665cf11cedfb5daccc2c6fc82";
 const authReadinessApprovalTemporaryRootPrefix = ".tmp-auth-readiness-approval-";
 const authorizedPostCompletionExactPaths = new Set([
+  "scripts/r4b-evidence/reviewed-local-python-transaction.mjs",
+  "scripts/r4b-evidence/reviewed-local-python-transaction.test.mjs",
   "scripts/r4b-evidence/windows-trusted-temp-root.mjs",
 ]);
 
@@ -705,6 +707,9 @@ describe("native auth executable synthetic kernel", () => {
       phaseUntrackedPaths([
         ".tmp-auth-readiness-approval-abc123/",
         ".tmp-auth-readiness-approvals-abc123/policy.json",
+        "scripts/r4b-evidence/reviewed-local-python-transaction.mjs",
+        "scripts/r4b-evidence/reviewed-local-python-transaction.test.mjs",
+        "scripts/r4b-evidence/reviewed-local-python-transaction.mjs.bak",
         "scripts/r4b-evidence/windows-trusted-temp-root.mjs",
         "scripts/r4b-evidence/windows-trusted-temp-root.mjs.bak",
         "scripts/r4b-evidence/windows-trusted-temp-root.test.mjs",
@@ -712,6 +717,7 @@ describe("native auth executable synthetic kernel", () => {
       ]),
     ).toEqual([
       ".tmp-auth-readiness-approvals-abc123/policy.json",
+      "scripts/r4b-evidence/reviewed-local-python-transaction.mjs.bak",
       "scripts/r4b-evidence/windows-trusted-temp-root.mjs.bak",
       "scripts/r4b-evidence/windows-trusted-temp-root.test.mjs",
       "unexpected.txt",

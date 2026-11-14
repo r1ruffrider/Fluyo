@@ -11,8 +11,24 @@ const MODULE_PATH = fileURLToPath(import.meta.url);
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const R4B_GIT_OUTPUT_CAP_BYTES = 1_048_576;
 export const R4B_PHASE_TEST = "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs";
+export const R4B_REVIEWED_LOCAL_TEST =
+  "scripts/r4b-evidence/reviewed-local-python-transaction.test.mjs";
+export const R4B_LANE_TEST_PATH_KINDS = Object.freeze(
+  [
+    [R4B_PHASE_TEST, "regular"],
+    [R4B_REVIEWED_LOCAL_TEST, "regular"],
+  ].map((row) => Object.freeze(row)),
+);
+export const R4B_LANE_LIFECYCLE_STATES = Object.freeze(
+  [
+    ["A", "100", "001"],
+    ["B", "110", "010"],
+    ["C", "100", "100"],
+    ["D", "110", "110"],
+  ].map((row) => Object.freeze(row)),
+);
 export const R4B_LANE_INVENTORY_SHA256 =
-  "6ccc0208c8d7e104d6ebfe2e9b196eb3b5ddbc599ef365ae92c65e6ec712d9f2";
+  "dcb968f685a4c7c2b271a2d32d7d2f7c3765f34e8c531831e932e1e3f9b5a1f5";
 export const R4B_OUT_OF_SCOPE_UNTRACKED_SHA256 =
   "8d875d47149a98760b795907131676b4c334652a679ebe97645c942eae32b3bc";
 
@@ -26,6 +42,7 @@ export const PORTABLE_R4B_TESTS = Object.freeze([
   "scripts/r4b-evidence/preflight-plan.test.mjs",
   "scripts/r4b-evidence/preflight-png.test.mjs",
   "scripts/r4b-evidence/production-exclusion.test.mjs",
+  "scripts/r4b-evidence/reviewed-local-python-transaction.test.mjs",
   "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs",
   "scripts/r4b-evidence/transition.test.mjs",
 ]);
@@ -256,18 +273,22 @@ export function validateR4bTestLaneInventorySnapshot(snapshot) {
       "trackedTestPaths",
       "stagedTestPaths",
       "untrackedTestPaths",
-      "phaseTestKind",
+      "testPathKinds",
     ])
   )
     fixedError("R4B_LANE_INVENTORY_MISMATCH");
-  if (snapshot.phaseTestKind !== "regular") fixedError("R4B_LANE_PHASE_TEST_NONREGULAR");
+  if (
+    !Array.isArray(snapshot.testPathKinds) ||
+    JSON.stringify(snapshot.testPathKinds) !== JSON.stringify(R4B_LANE_TEST_PATH_KINDS)
+  )
+    fixedError("R4B_LANE_PHASE_TEST_NONREGULAR");
   if (
     !Array.isArray(snapshot.trackedTestPaths) ||
     !Array.isArray(snapshot.stagedTestPaths) ||
     !Array.isArray(snapshot.untrackedTestPaths)
   )
     fixedError("R4B_LANE_INVENTORY_MISMATCH");
-  assertCanonicalLane(PORTABLE_R4B_TESTS, 11);
+  assertCanonicalLane(PORTABLE_R4B_TESTS, 12);
   assertCanonicalLane(WINDOWS_NATIVE_R4B_TESTS, 5);
   const portable = new Set(PORTABLE_R4B_TESTS);
   const windowsNative = new Set(WINDOWS_NATIVE_R4B_TESTS);
@@ -300,17 +321,31 @@ export function validateR4bTestLaneInventorySnapshot(snapshot) {
   if (tracked.some((path) => !LANE_PATH_SET.has(path))) fixedError("R4B_LANE_INVENTORY_MISMATCH");
   if (staged.some((path) => EXCLUSION_SET.has(path) || !LANE_PATH_SET.has(path)))
     fixedError("R4B_LANE_INVENTORY_MISMATCH");
-  if (untracked.some((path) => path !== R4B_PHASE_TEST && !EXCLUSION_SET.has(path)))
+  if (untracked.some((path) => path !== R4B_REVIEWED_LOCAL_TEST && !EXCLUSION_SET.has(path)))
     fixedError("R4B_LANE_INVENTORY_MISMATCH");
   const phaseLocations = [
     tracked.includes(R4B_PHASE_TEST),
     staged.includes(R4B_PHASE_TEST),
     untracked.includes(R4B_PHASE_TEST),
   ].map((present) => (present ? "1" : "0"));
-  if (!["001", "010", "100", "110"].includes(phaseLocations.join("")))
+  const reviewedLocations = [
+    tracked.includes(R4B_REVIEWED_LOCAL_TEST),
+    staged.includes(R4B_REVIEWED_LOCAL_TEST),
+    untracked.includes(R4B_REVIEWED_LOCAL_TEST),
+  ].map((present) => (present ? "1" : "0"));
+  const phaseState = phaseLocations.join("");
+  const reviewedState = reviewedLocations.join("");
+  if (
+    !["100", "110"].includes(phaseState) ||
+    !["001", "010", "100", "110"].includes(reviewedState) ||
+    !R4B_LANE_LIFECYCLE_STATES.some(
+      ([, expectedPhase, expectedReviewed]) =>
+        expectedPhase === phaseState && expectedReviewed === reviewedState,
+    )
+  )
     fixedError("R4B_LANE_INVENTORY_MISMATCH");
   for (const path of LANE_PATHS) {
-    if (path === R4B_PHASE_TEST) continue;
+    if (path === R4B_PHASE_TEST || path === R4B_REVIEWED_LOCAL_TEST) continue;
     if (!tracked.includes(path) || staged.includes(path) || untracked.includes(path))
       fixedError("R4B_LANE_INVENTORY_MISMATCH");
   }
@@ -323,25 +358,29 @@ export function validateR4bTestLaneInventorySnapshot(snapshot) {
   )
     fixedError("R4B_LANE_INVENTORY_MISMATCH");
   return Object.freeze({
-    portable: 11,
+    portable: 12,
     windowsNative: 5,
-    total: 16,
+    total: 17,
     inventorySha256: R4B_LANE_INVENTORY_SHA256,
     outOfScopeUntrackedSha256: R4B_OUT_OF_SCOPE_UNTRACKED_SHA256,
   });
 }
 
 export function validateR4bTestLaneInventory() {
-  let phaseMetadata;
+  const testPathKinds = [];
   try {
-    phaseMetadata = lstatSync(resolve(ROOT, R4B_PHASE_TEST));
+    for (const [path] of R4B_LANE_TEST_PATH_KINDS) {
+      const metadata = lstatSync(resolve(ROOT, path));
+      testPathKinds.push([
+        path,
+        metadata.isFile() && !metadata.isSymbolicLink() ? "regular" : "nonregular",
+      ]);
+    }
   } catch {
     fixedError("R4B_LANE_PHASE_TEST_NONREGULAR");
   }
-  const phaseTestKind =
-    phaseMetadata.isFile() && !phaseMetadata.isSymbolicLink() ? "regular" : "nonregular";
   const gitSnapshot = collectGitTestSnapshotWithRunner(fixedGitRunner);
-  return validateR4bTestLaneInventorySnapshot({ ...gitSnapshot, phaseTestKind });
+  return validateR4bTestLaneInventorySnapshot({ ...gitSnapshot, testPathKinds });
 }
 
 function runNode(arguments_, environment = process.env) {
