@@ -9,6 +9,11 @@ const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md"
 const handoffPath = "docs/DEVELOPMENT_HANDOFF.md";
 const decisionPath = "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md";
 const canonicalRecordHeading = "## Canonical readiness record";
+const historicalHandoffBytes = 249_789;
+const historicalHandoffSha256 = "78788e3bf3b0a54ef3bccb4b0aec804ad3db406976dfede4963bf1d2c083889f";
+const ios17SuffixBytes = 18_302;
+const ios17SuffixSha256 = "8d58e0d9fc1c3e6fb002cbfde5f2df38c86010a7f690cac2d2e3415107122804";
+const ios17Heading = "## 2026-11-14 — Recommended Option A iOS 17.5 prerequisite CI repair";
 
 const sha256 = (bytes: Buffer | string): string => createHash("sha256").update(bytes).digest("hex");
 
@@ -80,6 +85,28 @@ const isClosedRecord = (value: unknown): boolean => {
   if (!hasExactKeys(value, Object.keys(expectedRecord))) return false;
   return JSON.stringify(value) === JSON.stringify(expectedRecord);
 };
+const isExactIos17Handoff = (value: Buffer): boolean => {
+  if (value.length !== historicalHandoffBytes + ios17SuffixBytes) return false;
+  const prefix = value.subarray(0, historicalHandoffBytes);
+  const suffix = value.subarray(historicalHandoffBytes);
+  if (sha256(prefix) !== historicalHandoffSha256 || sha256(suffix) !== ios17SuffixSha256)
+    return false;
+  const text = value.toString("utf8");
+  if (!Buffer.from(text, "utf8").equals(value) || text !== text.normalize("NFC")) return false;
+  const suffixText = suffix.toString("utf8");
+  if (!suffixText.startsWith(`\n${ios17Heading}\n\n`)) return false;
+  if (suffixText.split(ios17Heading).length !== 2) return false;
+  return [
+    "Marlon explicitly selected Recommended Option A",
+    "xcodebuild -downloadPlatform iOS -buildVersion 17.5 -architectureVariant arm64",
+    "The v1.1.6 implementation is repository-only until independent gates pass.",
+    "300/300 controller cases",
+    "58/58 shared structure cases",
+    "gated accidental-invocation and source-mutation containment",
+    "not OS authorization against malicious same-user code",
+    "PR #93 remains draft/HOLD",
+  ].every((literal) => suffixText.includes(literal));
+};
 
 describe("R4B Add-Type post-main readiness", () => {
   it("preserves the historical build-plan prefix byte for byte", () => {
@@ -91,18 +118,42 @@ describe("R4B Add-Type post-main readiness", () => {
     expect(sha256(prefix)).toBe("05ac348eb3160e4514c1ebfba3daeace40bd29286af4687c777282b5df153a0a");
   });
 
-  it("keeps the reviewed ten-path records members byte-identical", () => {
+  it("keeps historical records immutable and binds the exact iOS 17.5 append", () => {
     const handoff = readBytes(handoffPath);
     const decision = readBytes(decisionPath);
 
-    expect(handoff.byteLength).toBe(249_789);
-    expect(sha256(handoff)).toBe(
-      "78788e3bf3b0a54ef3bccb4b0aec804ad3db406976dfede4963bf1d2c083889f",
-    );
+    const prefix = handoff.subarray(0, historicalHandoffBytes);
+    const suffix = handoff.subarray(historicalHandoffBytes);
+    expect(prefix.byteLength).toBe(historicalHandoffBytes);
+    expect(sha256(prefix)).toBe(historicalHandoffSha256);
+    expect(suffix.byteLength).toBe(ios17SuffixBytes);
+    expect(sha256(suffix)).toBe(ios17SuffixSha256);
+    expect(isExactIos17Handoff(handoff)).toBe(true);
     expect(decision.byteLength).toBe(44_712);
     expect(sha256(decision)).toBe(
       "60593b594f000cc8abeba4dfed36068bfb104fbbe76215712b740bda1f7c3605",
     );
+
+    const prefixMutation = Buffer.from(handoff);
+    prefixMutation[0] = (prefixMutation[0] ?? 0) ^ 1;
+    const suffixMutation = Buffer.from(handoff);
+    suffixMutation[historicalHandoffBytes + 1] =
+      (suffixMutation[historicalHandoffBytes + 1] ?? 0) ^ 1;
+    const decomposed = Buffer.concat([
+      prefix,
+      Buffer.from(suffix.toString("utf8").replace("—", "e\u0301"), "utf8"),
+    ]);
+    const duplicateHeading = Buffer.concat([handoff, Buffer.from(`\n${ios17Heading}\n`, "utf8")]);
+    const invalidUtf8 = Buffer.concat([handoff, Buffer.from([0xc3, 0x28])]);
+    for (const mutation of [
+      prefixMutation,
+      suffixMutation,
+      handoff.subarray(0, -1),
+      decomposed,
+      duplicateHeading,
+      invalidUtf8,
+    ])
+      expect(isExactIos17Handoff(mutation)).toBe(false);
   });
 
   it("duplicates one exact canonical readiness object across both records surfaces", () => {

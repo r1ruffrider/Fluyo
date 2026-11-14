@@ -29,7 +29,9 @@ const d660 = "d6607300e52219c5d534e70c17e00e2e717e505b";
 const source = "7220bef062a93142f5bcde07de89199355eb5837";
 const merge = "7a5b345846eb29928dacb8f01b96796c01182dc2";
 const d70 = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
+const phaseBase = "a2485dc12c231dd482799834d5aca2966a6db494";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
+const currentTenManifestSha = "aab4198e70e17a4846e265cbacb6bed2e01e340e37732e6c589969d1635684d8";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -54,6 +56,38 @@ const tenPaths = [
   "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
   "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
 ].sort(compareUtf8);
+const phasePaths = [
+  ".github/workflows/ios.yml",
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-ci.sh",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const phaseModifiedPaths = phasePaths.filter(
+  (path) =>
+    path !== "scripts/ios-runtime-bootstrap.mjs" &&
+    path !== "scripts/ios-runtime-bootstrap.test.mjs",
+);
+const phaseAddedPaths = [
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const statusArguments = Object.freeze([
+  "status",
+  "--porcelain=v2",
+  "-z",
+  "--branch",
+  "--no-ahead-behind",
+  "--untracked-files=normal",
+  "--ignore-submodules=none",
+]);
+const statusTimeoutMs = 5_000;
+const statusOutputCap = 1_048_576;
+const zeroObjectId = "0".repeat(40);
+const concurrentApprovalRoot = /^\.tmp-auth-readiness-approval-[A-Za-z0-9]{6}\/$/u;
 
 function compareUtf8(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left), Buffer.from(right));
@@ -72,6 +106,257 @@ const lines = (args: string[]): string[] => {
   const output = git(args);
   return output === "" ? [] : output.split(/\r?\n/u).filter(Boolean);
 };
+const sortedLines = (args: string[]): string[] => lines(args).sort(compareUtf8);
+type StatusEntry = Readonly<{
+  kind: "1" | "?";
+  path: string;
+  xy: string | null;
+  sub: string | null;
+  headMode: string | null;
+  indexMode: string | null;
+  worktreeMode: string | null;
+  headObject: string | null;
+  indexObject: string | null;
+}>;
+type StatusSnapshot = Readonly<{
+  oid: string;
+  head: string;
+  entries: readonly StatusEntry[];
+}>;
+type StatusRunner = typeof spawnSync;
+const topologyFailure = (): never => {
+  throw new Error("IOS17_PHASE_TOPOLOGY_INVALID");
+};
+const decodeStatus = (value: Buffer): string => {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(value);
+    if (text !== text.normalize("NFC")) topologyFailure();
+    return text;
+  } catch {
+    return topologyFailure();
+  }
+};
+const safeStatusPath = (path: string): boolean =>
+  path !== "" &&
+  path === path.normalize("NFC") &&
+  !path.startsWith("/") &&
+  !path.includes("\\") &&
+  !/[\x00-\x1f\x7f]/u.test(path) &&
+  !path.split("/").some((segment) => segment === "" || segment === "." || segment === "..");
+const parseStatusSnapshot = (value: Buffer): StatusSnapshot => {
+  if (value.length === 0 || value.length > statusOutputCap || value.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(value).split("\0");
+  if (records.pop() !== "" || records.length < 2) topologyFailure();
+  const oidMatch = /^# branch\.oid ([0-9a-f]{40})$/u.exec(records[0] ?? "") ?? topologyFailure();
+  const headMatch =
+    /^# branch\.head (\(detached\)|[A-Za-z0-9._/-]+)$/u.exec(records[1] ?? "") ?? topologyFailure();
+  if (headMatch[1]!.includes("..")) topologyFailure();
+  const entries: StatusEntry[] = [];
+  const paths = new Set<string>();
+  for (const record of records.slice(2)) {
+    let entry: StatusEntry | null = null;
+    if (record.startsWith("1 ")) {
+      const match =
+        /^1 ([.MADRCUT?!]{2}) (N\.\.\.) ([0-7]{6}) ([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) (.+)$/u.exec(
+          record,
+        ) ?? topologyFailure();
+      entry = Object.freeze({
+        kind: "1",
+        xy: match[1]!,
+        sub: match[2]!,
+        headMode: match[3]!,
+        indexMode: match[4]!,
+        worktreeMode: match[5]!,
+        headObject: match[6]!,
+        indexObject: match[7]!,
+        path: match[8]!,
+      });
+    } else if (record.startsWith("? ")) {
+      entry = Object.freeze({
+        kind: "?",
+        xy: null,
+        sub: null,
+        headMode: null,
+        indexMode: null,
+        worktreeMode: null,
+        headObject: null,
+        indexObject: null,
+        path: record.slice(2),
+      });
+    } else topologyFailure();
+    const checkedEntry = entry ?? topologyFailure();
+    if (
+      (!safeStatusPath(checkedEntry.path) && !concurrentApprovalRoot.test(checkedEntry.path)) ||
+      paths.has(checkedEntry.path)
+    )
+      topologyFailure();
+    paths.add(checkedEntry.path);
+    entries.push(checkedEntry);
+  }
+  return Object.freeze({
+    oid: oidMatch[1]!,
+    head: headMatch[1]!,
+    entries: Object.freeze(entries),
+  });
+};
+const runBoundedGit = (args: readonly string[], runner: StatusRunner = spawnSync): Buffer => {
+  const result = runner("git", [...args], {
+    cwd: root,
+    shell: false,
+    timeout: statusTimeoutMs,
+    maxBuffer: statusOutputCap,
+    encoding: "buffer",
+    windowsHide: true,
+  });
+  const stdout = Buffer.isBuffer(result.stdout) ? result.stdout : Buffer.alloc(0);
+  const stderr = Buffer.isBuffer(result.stderr) ? result.stderr : Buffer.alloc(0);
+  if (
+    result.error ||
+    result.status !== 0 ||
+    result.signal !== null ||
+    stderr.length !== 0 ||
+    stdout.length + stderr.length > statusOutputCap
+  )
+    topologyFailure();
+  return stdout;
+};
+const captureStatusSnapshot = (runner: StatusRunner = spawnSync): StatusSnapshot =>
+  parseStatusSnapshot(runBoundedGit(statusArguments, runner));
+const expectedTracked = (path: string) => {
+  const mode = path === "scripts/ios-ci.sh" ? "100755" : "100644";
+  return {
+    mode,
+    baseObject: git(["rev-parse", `${phaseBase}:${path}`]),
+    candidateObject: blob(bytes(path)),
+  };
+};
+const exactType1 = (
+  entry: StatusEntry,
+  expected: ReturnType<typeof expectedTracked>,
+  xy: ".M" | "M.",
+): boolean =>
+  entry.kind === "1" &&
+  entry.xy === xy &&
+  entry.sub === "N..." &&
+  entry.headMode === expected.mode &&
+  entry.indexMode === expected.mode &&
+  entry.worktreeMode === expected.mode &&
+  entry.headObject === expected.baseObject &&
+  entry.indexObject === (xy === ".M" ? expected.baseObject : expected.candidateObject);
+const exactAdded = (entry: StatusEntry): boolean =>
+  entry.kind === "1" &&
+  entry.xy === "A." &&
+  entry.sub === "N..." &&
+  entry.headMode === "000000" &&
+  entry.indexMode === "100644" &&
+  entry.worktreeMode === "100644" &&
+  entry.headObject === zeroObjectId &&
+  entry.indexObject === blob(bytes(entry.path));
+const assertDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${phaseBase}`) topologyFailure();
+};
+const verifyPostcommitObject = (oid: string): void => {
+  assertDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  const diff = runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", phaseBase, oid]);
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) ([AM])$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[5]}\0${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(phasePaths))
+    topologyFailure();
+  for (const path of phaseModifiedPaths) {
+    const expected = expectedTracked(path);
+    if (
+      observed.get(path) !==
+      `M\0${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+  for (const path of phaseAddedPaths)
+    if (
+      observed.get(path) !== ["A", "000000", "100644", zeroObjectId, blob(bytes(path))].join("\0")
+    )
+      topologyFailure();
+};
+const classifyStatusSnapshot = (
+  snapshot: StatusSnapshot,
+  verifyPostcommit: (oid: string) => void = verifyPostcommitObject,
+): "PRECOMMIT_UNSTAGED" | "PRECOMMIT_STAGED" | "POSTCOMMIT" => {
+  const concurrent = snapshot.entries.filter(
+    (entry) => entry.kind === "?" && concurrentApprovalRoot.test(entry.path),
+  );
+  if (concurrent.length > 1) topologyFailure();
+  const entries = snapshot.entries
+    .filter((entry) => !concurrentApprovalRoot.test(entry.path))
+    .sort((left, right) => compareUtf8(left.path, right.path));
+  if (snapshot.oid === phaseBase) {
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(phasePaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      phaseModifiedPaths.includes(entry.path)
+        ? exactType1(entry, expectedTracked(entry.path), ".M")
+        : phaseAddedPaths.includes(entry.path) && entry.kind === "?",
+    );
+    const staged = entries.every((entry) =>
+      phaseModifiedPaths.includes(entry.path)
+        ? exactType1(entry, expectedTracked(entry.path), "M.")
+        : phaseAddedPaths.includes(entry.path) && exactAdded(entry),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (entries.length !== 0) topologyFailure();
+  verifyPostcommit(snapshot.oid);
+  return "POSTCOMMIT";
+};
+const statusType1Record = (path: string, xy: ".M" | "M."): string => {
+  const expected = expectedTracked(path);
+  return [
+    "1",
+    xy,
+    "N...",
+    expected.mode,
+    expected.mode,
+    expected.mode,
+    expected.baseObject,
+    xy === ".M" ? expected.baseObject : expected.candidateObject,
+    path,
+  ].join(" ");
+};
+const statusAddedRecord = (path: string): string =>
+  ["1", "A.", "N...", "000000", "100644", "100644", zeroObjectId, blob(bytes(path)), path].join(
+    " ",
+  );
+const statusSnapshotBytes = (
+  oid: string,
+  records: readonly string[],
+  head = "codex/ios175-runtime-bootstrap-prereq",
+): Buffer =>
+  Buffer.from([`# branch.oid ${oid}`, `# branch.head ${head}`, ...records, ""].join("\0"));
+const unstagedStatusRecords = (): string[] => [
+  ...phaseModifiedPaths.map((path) => statusType1Record(path, ".M")),
+  ...phaseAddedPaths.map((path) => `? ${path}`),
+];
+const stagedStatusRecords = (): string[] => [
+  ...phaseModifiedPaths.map((path) => statusType1Record(path, "M.")),
+  ...phaseAddedPaths.map(statusAddedRecord),
+];
 const ancestor = (left: string, right: string): boolean => {
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", left, right], {
@@ -355,27 +640,13 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(packet().historicalDesignProvenance.readinessMergeCommit).toBe(d70);
   });
 
-  it("07 candidate union is exactly six paths", () => {
-    const concurrentRowPattern = /^\.tmp-auth-readiness-approval-[A-Za-z0-9]{6}\/$/u;
-    const partitionUntracked = (rows: string[]) => {
-      if (new Set(rows).size !== rows.length) throw new Error("duplicate untracked row");
-      const concurrent = rows.filter((row) => concurrentRowPattern.test(row));
-      if (concurrent.length > 1) throw new Error("multiple concurrent approval roots");
-      return {
-        candidate: rows.filter((row) => !concurrentRowPattern.test(row)),
-        concurrent,
-      };
-    };
-    const committed = lines(["diff", "--name-only", `${d70}...HEAD`]);
-    const cached = lines(["diff", "--cached", "--name-only"]);
-    const unstaged = lines(["diff", "--name-only"]);
-    const untracked = lines(["ls-files", "--others", "--exclude-standard"]);
-    const partitioned = partitionUntracked(untracked);
-    const union = [...committed, ...cached, ...unstaged, ...partitioned.candidate];
-    expect([...new Set(union)].sort(compareUtf8)).toEqual(sixPaths);
+  it("07 preserves the historical six-path candidate and closes the current eight-path phase", () => {
+    expect(sortedLines(["diff", "--name-only", `${d70}...${phaseBase}`])).toEqual(sixPaths);
+    expect(["PRECOMMIT_UNSTAGED", "PRECOMMIT_STAGED", "POSTCOMMIT"]).toContain(
+      classifyStatusSnapshot(captureStatusSnapshot()),
+    );
     const positive = ".tmp-auth-readiness-approval-abc123/";
-    expect(concurrentRowPattern.test(positive)).toBe(true);
-    expect(partitionUntracked([positive])).toEqual({ candidate: [], concurrent: [positive] });
+    expect(concurrentApprovalRoot.test(positive)).toBe(true);
     for (const negative of [
       ".tmp-auth-readiness-approval-abc123",
       ".tmp-auth-readiness-approval-abc12/",
@@ -388,22 +659,8 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       ".security-tmp/",
       "unexpected.txt",
     ]) {
-      expect(concurrentRowPattern.test(negative)).toBe(false);
-      expect(partitionUntracked([negative])).toEqual({ candidate: [negative], concurrent: [] });
+      expect(concurrentApprovalRoot.test(negative)).toBe(false);
     }
-    expect(() => partitionUntracked([positive, positive])).toThrow("duplicate untracked row");
-    expect(() => partitionUntracked([positive, ".tmp-auth-readiness-approval-def456/"])).toThrow(
-      "multiple concurrent approval roots",
-    );
-    expect(
-      new Set([
-        ...[positive],
-        ...[positive],
-        ...[positive],
-        ...partitionUntracked([positive]).candidate,
-      ]),
-    ).toEqual(new Set([positive]));
-    expect(partitioned.concurrent.length).toBeLessThanOrEqual(1);
     const activationSource = bytes(testPath).toString("utf8");
     expect(
       activationSource.match(
@@ -423,7 +680,9 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ).toHaveLength(1);
     expect(producerSource.match(/\.tmp-auth-readiness-approval-/gu)).toHaveLength(1);
     const concurrencyContractSource = activationSource.slice(
-      activationSource.indexOf('it("07 candidate union is exactly six paths"'),
+      activationSource.indexOf(
+        'it("07 preserves the historical six-path candidate and closes the current eight-path phase"',
+      ),
       activationSource.indexOf('it("08 keeps exact ordered ten-path manifest"'),
     );
     expect(concurrencyContractSource).not.toMatch(/\blstat(?:Sync)?\b/u);
@@ -438,6 +697,174 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         ),
       ),
     ).toBe(false);
+    expect(activationSource).not.toContain(
+      ["sprint-6-r4b-addtype-postmain-readiness.test", "?lifecycle-helper-v1"].join(""),
+    );
+    expect(activationSource).not.toContain(
+      ["docs/2026-11-14_r4b_windows_python_", "reviewed_local_binding_v2.md"].join(""),
+    );
+    expect(activationSource).not.toContain(blob(bytes(testPath)));
+  });
+
+  it("07a captures one bounded porcelain-v2 snapshot with exact invocation", () => {
+    const output = statusSnapshotBytes(phaseBase, unstagedStatusRecords());
+    let calls = 0;
+    const runner = ((executable: string, args: string[], options: Record<string, unknown>) => {
+      calls += 1;
+      expect(executable).toBe("git");
+      expect(args).toEqual(statusArguments);
+      expect(options).toMatchObject({
+        cwd: root,
+        shell: false,
+        timeout: statusTimeoutMs,
+        maxBuffer: statusOutputCap,
+        encoding: "buffer",
+        windowsHide: true,
+      });
+      return {
+        pid: 1,
+        output: [null, output, Buffer.alloc(0)],
+        stdout: output,
+        stderr: Buffer.alloc(0),
+        status: 0,
+        signal: null,
+      };
+    }) as unknown as StatusRunner;
+    const snapshot = captureStatusSnapshot(runner);
+    expect(calls).toBe(1);
+    expect(snapshot.oid).toBe(phaseBase);
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_UNSTAGED");
+    const noisy = (() => ({
+      pid: 1,
+      output: [null, output, Buffer.from("private")],
+      stdout: output,
+      stderr: Buffer.from("private"),
+      status: 0,
+      signal: null,
+    })) as unknown as StatusRunner;
+    expect(() => captureStatusSnapshot(noisy)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    const oversized = (() => ({
+      pid: 1,
+      output: [null, Buffer.alloc(statusOutputCap + 1), Buffer.alloc(0)],
+      stdout: Buffer.alloc(statusOutputCap + 1),
+      stderr: Buffer.alloc(0),
+      status: 0,
+      signal: null,
+    })) as unknown as StatusRunner;
+    expect(() => captureStatusSnapshot(oversized)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07b accepts only the exact fully staged eight-path snapshot", () => {
+    const snapshot = parseStatusSnapshot(statusSnapshotBytes(phaseBase, stagedStatusRecords()));
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_STAGED");
+  });
+
+  it("07c binds postcommit classification to the captured oid and one direct parent", () => {
+    const oid = "1".repeat(40);
+    const snapshot = parseStatusSnapshot(statusSnapshotBytes(oid, [], "(detached)"));
+    let observed = "";
+    expect(
+      classifyStatusSnapshot(snapshot, (captured) => {
+        observed = captured;
+      }),
+    ).toBe("POSTCOMMIT");
+    expect(observed).toBe(oid);
+    const commit = Buffer.from(
+      `tree ${"2".repeat(40)}\nparent ${phaseBase}\nauthor a\n\nmessage\n`,
+    );
+    expect(() => assertDirectChildCommit(commit)).not.toThrow();
+    expect(() =>
+      assertDirectChildCommit(
+        Buffer.from(
+          `tree ${"2".repeat(40)}\nparent ${phaseBase}\nparent ${"3".repeat(40)}\nauthor a\n\nmessage\n`,
+        ),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07d rejects noncanonical framing encoding normalization and branch headers", () => {
+    const valid = statusSnapshotBytes(phaseBase, unstagedStatusRecords());
+    const invalidUtf8 = Buffer.concat([valid.subarray(0, -1), Buffer.from([0xff, 0])]);
+    const decomposed = statusSnapshotBytes(phaseBase, ["? cafe\u0301"]);
+    const missingTerminator = valid.subarray(0, -1);
+    const extraHeader = Buffer.from(
+      [`# branch.oid ${phaseBase}`, "# branch.head main", "# branch.upstream origin/main", ""].join(
+        "\0",
+      ),
+    );
+    for (const candidate of [invalidUtf8, decomposed, missingTerminator, extraHeader])
+      expect(() => parseStatusSnapshot(candidate)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07e rejects rename unmerged ignored and unknown record types", () => {
+    for (const record of [
+      `2 R. N... 100644 100644 100644 ${"1".repeat(40)} ${"2".repeat(40)} R100 new\0old`,
+      `u UU N... 100644 100644 100644 100644 ${"1".repeat(40)} ${"2".repeat(40)} ${"3".repeat(40)} file`,
+      "! ignored",
+      "x unknown",
+    ])
+      expect(() => parseStatusSnapshot(statusSnapshotBytes(phaseBase, [record]))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("07f rejects duplicate unsafe and non-NFC paths", () => {
+    const record = `? ${phaseAddedPaths[0]}`;
+    for (const records of [
+      [record, record],
+      ["? ../escape"],
+      ["? /absolute"],
+      ["? parent\\child"],
+      ["? nested//child"],
+      ["? cafe\u0301"],
+    ])
+      expect(() => parseStatusSnapshot(statusSnapshotBytes(phaseBase, records))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("07g permits one exact concurrent auth root and rejects near nested or second roots", () => {
+    const exact = ".tmp-auth-readiness-approval-abc123/";
+    const allowed = parseStatusSnapshot(
+      statusSnapshotBytes(phaseBase, [...unstagedStatusRecords(), `? ${exact}`]),
+    );
+    expect(classifyStatusSnapshot(allowed)).toBe("PRECOMMIT_UNSTAGED");
+    for (const row of [
+      "? .tmp-auth-readiness-approval-abc12/",
+      "? .tmp-auth-readiness-approval-abc123/file",
+      "? parent/.tmp-auth-readiness-approval-abc123/",
+    ])
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(phaseBase, [...unstagedStatusRecords(), row])),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    const second = parseStatusSnapshot(
+      statusSnapshotBytes(phaseBase, [
+        ...unstagedStatusRecords(),
+        `? ${exact}`,
+        "? .tmp-auth-readiness-approval-def456/",
+      ]),
+    );
+    expect(() => classifyStatusSnapshot(second)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07h rejects mixed status mode object and path-set drift", () => {
+    const unstaged = unstagedStatusRecords();
+    const mixed = [...unstaged];
+    mixed[0] = statusType1Record(phaseModifiedPaths[0]!, "M.");
+    const wrongMode = [...unstaged];
+    wrongMode[0] = wrongMode[0]!.replace("100644 100644 100644", "100755 100755 100755");
+    const wrongObject = [...unstaged];
+    wrongObject[0] = wrongObject[0]!.replace(
+      expectedTracked(phaseModifiedPaths[0]!).baseObject,
+      zeroObjectId,
+    );
+    const extra = [...unstaged, "? unexpected.txt"];
+    for (const records of [mixed, wrongMode, wrongObject, extra]) {
+      const snapshot = parseStatusSnapshot(statusSnapshotBytes(phaseBase, records));
+      expect(() => classifyStatusSnapshot(snapshot)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    }
   });
 
   it("08 locks ten runtime paths and excludes packet", () => {
@@ -445,19 +872,38 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(tenPaths).not.toContain(packetPath);
   });
 
-  it("09 current ten-path bytes equal d70 objects", () => {
-    for (const path of tenPaths) expect(bytes(path)).toEqual(gitBytes(d70, path));
+  it("09 historical ten-path Git objects remain immutable", () => {
+    for (const path of tenPaths) {
+      const historical = gitBytes(d70, path);
+      expect(gitBytes(source, path)).toEqual(historical);
+      expect(gitBytes(merge, path)).toEqual(historical);
+    }
   }, 20_000);
 
-  it("10 ten-path bytes equal reviewed source and design merge", () => {
-    for (const path of tenPaths) {
-      expect(bytes(path)).toEqual(gitBytes(source, path));
-      expect(bytes(path)).toEqual(gitBytes(merge, path));
-    }
+  it("10 current ten-path overlay changes only the append-only handoff", () => {
+    const changed = tenPaths.filter((path) => !bytes(path).equals(gitBytes(d70, path)));
+    expect(changed).toEqual(["docs/DEVELOPMENT_HANDOFF.md"]);
   }, 30_000);
 
-  it("11 recomputes exact ten-path manifest", () => {
-    expect(canonicalManifest(tenPaths)).toEqual({ rows: 10, bytes: 1753, sha256: manifestSha });
+  it("11 recomputes historical and exact current ten-path manifests", () => {
+    const historical = Buffer.from(
+      tenPaths
+        .map((path) => {
+          const value = gitBytes(d70, path);
+          return `${path}\0${value.length}\0${sha(value)}\0${blob(value)}\n`;
+        })
+        .join(""),
+    );
+    expect({ rows: tenPaths.length, bytes: historical.length, sha256: sha(historical) }).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: manifestSha,
+    });
+    expect(canonicalManifest(tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: currentTenManifestSha,
+    });
   });
 
   it("12 adapter retains exact CLI/binding/revalidation and no governance import", () => {
@@ -468,6 +914,16 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     );
     expect(text).toContain("manifest.revalidate();");
     expect(text).not.toContain(packetPath);
+    const executorText = bytes(executorPath).toString("utf8");
+    expect(executorText).toContain(manifestSha);
+    expect(executorText).not.toContain(currentTenManifestSha);
+    const addTypeSources = tenPaths
+      .filter((path) => path.startsWith("scripts/"))
+      .map((path) => bytes(path).toString("utf8"))
+      .join("\n");
+    expect(addTypeSources).not.toMatch(
+      /ios-runtime-bootstrap|iOS 17\.5|Xcode_16\.2|downloadPlatform/u,
+    );
   });
 
   it("13 locks transaction hash, modes, counts, caps and timeout", () => {

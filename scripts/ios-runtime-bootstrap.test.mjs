@@ -1,0 +1,3415 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
+import { closeSync, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { PassThrough } from "node:stream";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+import {
+  ACQUIRE_TIMEOUT_MS,
+  CHILD_CLOSE_WAIT_MS,
+  CHILD_GATE_READY,
+  CHILD_GATE_RELEASE_BYTES,
+  CHILD_GATE_TIMEOUT_MS,
+  CATALOG_PAYLOAD_BYTES,
+  CATALOG_TUPLE,
+  CATALOG_TUPLE_SHA256,
+  CLEANUP_FINAL_RESERVE_MS,
+  CLEANUP_TIMEOUT_MS,
+  DISK_MONITOR_INTERVAL_MS,
+  DISK_MONITOR_MAX_GAP_MS,
+  DISK_MONITOR_MAX_TICKS,
+  FINALIZATION_TIMEOUT_MS,
+  IOS_CI_SOURCE_BYTES,
+  IOS_CI_SOURCE_SHA256,
+  MAX_ACQUIRE_DISK_DELTA_BYTES,
+  MAX_ATTEMPT_ROOT_BYTES,
+  MAX_COMBINED_CAPTURE_BYTES,
+  MAX_COMBINED_OWNED_ROOT_BYTES,
+  MAX_MINIMUM_WORK_ROOT_BYTES,
+  MAX_SCAN_DURATION_MS,
+  MAX_SCAN_ENTRIES,
+  MAX_CONTROLLER_SOURCE_BYTES,
+  MAX_RECEIPT_BYTES,
+  MINIMUM_EVIDENCE_TIMEOUT_MS,
+  MIN_FREE_AFTER_ACQUIRE_BYTES,
+  MIN_FREE_AFTER_CLEANUP_BYTES,
+  MIN_FREE_BEFORE_BYTES,
+  POLICY_ID,
+  PARENT_TITLE,
+  PREFLIGHT_TIMEOUT_MS,
+  PS,
+  PS_STDERR_MAX_BYTES,
+  PS_STDOUT_MAX_BYTES,
+  PS_TIMEOUT_MS,
+  REQUIRED_FREE_RESERVE_BYTES,
+  TOTAL_TRANSACTION_TIMEOUT_MS,
+  WORKFLOW_MARGIN_MS,
+  WORKFLOW_STEP_TIMEOUT_MS,
+  XCODEBUILD,
+  XCODE_DEVELOPER_DIR,
+  XCODE_ARGS,
+  BootstrapFailure,
+  assertCatalogTuple,
+  assertProcessGroupAbsent,
+  bindStorageAnchor,
+  buildWrapperEnvironment,
+  closedChildEnvironment,
+  discoverStorageAnchor,
+  exactRuntimeRows,
+  parsePsIdentity,
+  parseParentPsIdentity,
+  parentIdentityRecord,
+  parseRuntimeInventory,
+  parseXcodeVersion,
+  scanOwnedRoot,
+  releaseTransactionOwnership,
+  runGatedPhase,
+  signalVerifiedProcessGroup,
+  terminateVerifiedProcessGroup,
+  testing,
+  testingReceipt,
+  validatePostInventory,
+  validateChildGateEnvironment,
+  validateChildGateDescriptors,
+  validateReceipt,
+  validateRunnerEnvironment,
+} from "./ios-runtime-bootstrap.mjs";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const controllerSource = readFileSync(resolve(root, "scripts/ios-runtime-bootstrap.mjs"), "utf8");
+const workflowSource = readFileSync(resolve(root, ".github/workflows/ios.yml"), "utf8");
+const iosCiSource = readFileSync(resolve(root, "scripts/ios-ci.sh"), "utf8");
+
+function throwsCode(action, code) {
+  assert.throws(action, (error) => error?.code === code);
+}
+
+function fakeChild(pid = 321) {
+  const child = new EventEmitter();
+  child.pid = pid;
+  child.exitCode = null;
+  child.signalCode = null;
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  return child;
+}
+
+const esrch = () => Object.assign(new Error("absent"), { code: "ESRCH" });
+
+function row(overrides = {}) {
+  return {
+    identifier: "com.apple.CoreSimulator.SimRuntime.iOS-18-5",
+    name: "iOS 18.5",
+    version: "18.5",
+    build: "22F76",
+    available: true,
+    bundlePath: "/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 18.5.simruntime",
+    runtimeRoot:
+      "/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 18.5.simruntime/Contents/Resources/RuntimeRoot",
+    ...overrides,
+  };
+}
+
+const provenanceCases = [
+  [
+    "catalog tuple is exactly 261 UTF-8 bytes",
+    () => assert.equal(Buffer.byteLength(CATALOG_TUPLE), 261),
+  ],
+  [
+    "catalog tuple hash is exact",
+    () =>
+      assert.equal(
+        CATALOG_TUPLE_SHA256,
+        "27c0b7cd887423ccf4ac33c0378accc9b4e659adab748e6b0e66f009b8da0510",
+      ),
+  ],
+  ["catalog tuple validates", () => assert.equal(assertCatalogTuple().simulatorBuild, "21F79")],
+  ["payload byte count is exact", () => assert.equal(CATALOG_PAYLOAD_BYTES, 7_336_630_623n)],
+  [
+    "SDK build is not conflated with simulator build",
+    () => assert.equal(CATALOG_TUPLE.includes("21F77"), false),
+  ],
+  [
+    "artifact identifier is exact",
+    () => assert.match(CATALOG_TUPLE, /com\.apple\.dmg\.iPhoneSimulatorSDK17_5/u),
+  ],
+  [
+    "catalog version is exact",
+    () => assert.match(CATALOG_TUPLE, /"catalogVersion":"17\.5\.0\.0"/u),
+  ],
+  ["content type is diskImage", () => assert.match(CATALOG_TUPLE, /"contentType":"diskImage"/u)],
+  [
+    "tuple hash is not named payload hash",
+    () => assert.doesNotMatch(controllerSource, /payloadSha256/u),
+  ],
+  ["policy id is exact", () => assert.equal(POLICY_ID, "ios_17_5_runtime_bootstrap_v1")],
+];
+
+for (const [name, action] of provenanceCases) test(`provenance: ${name}`, action);
+
+const runnerCases = [
+  [
+    "runner validation accepts exact tuple",
+    () =>
+      assert.equal(
+        validateRunnerEnvironment(
+          {
+            RUNNER_OS: "macOS",
+            RUNNER_ARCH: "ARM64",
+            ImageOS: "macos15",
+            ImageVersion: "20261104.0514.1",
+            GITHUB_RUN_ATTEMPT: "1",
+            GITHUB_RUN_ID: "1",
+            FLUYO_SOURCE_SHA: "a".repeat(40),
+          },
+          "a".repeat(40),
+          "darwin",
+          "arm64",
+        ),
+        true,
+      ),
+  ],
+  [
+    "runner rejects wrong platform",
+    () =>
+      throwsCode(
+        () =>
+          validateRunnerEnvironment(
+            {
+              RUNNER_OS: "macOS",
+              RUNNER_ARCH: "ARM64",
+              ImageOS: "macos15",
+              ImageVersion: "20261104.0514.1",
+              GITHUB_RUN_ATTEMPT: "1",
+              GITHUB_RUN_ID: "1",
+              FLUYO_SOURCE_SHA: "a".repeat(40),
+            },
+            "a".repeat(40),
+            "linux",
+            "arm64",
+          ),
+        "PRECONDITION_RUNNER",
+      ),
+  ],
+  [
+    "runner rejects x64",
+    () =>
+      throwsCode(
+        () =>
+          validateRunnerEnvironment(
+            {
+              RUNNER_OS: "macOS",
+              RUNNER_ARCH: "ARM64",
+              ImageOS: "macos15",
+              ImageVersion: "20261104.0514.1",
+              GITHUB_RUN_ATTEMPT: "1",
+              GITHUB_RUN_ID: "1",
+              FLUYO_SOURCE_SHA: "a".repeat(40),
+            },
+            "a".repeat(40),
+            "darwin",
+            "x64",
+          ),
+        "PRECONDITION_RUNNER",
+      ),
+  ],
+  [
+    "runner rejects attempt two",
+    () =>
+      throwsCode(
+        () =>
+          validateRunnerEnvironment(
+            {
+              RUNNER_OS: "macOS",
+              RUNNER_ARCH: "ARM64",
+              ImageOS: "macos15",
+              ImageVersion: "20261104.0514.1",
+              GITHUB_RUN_ATTEMPT: "2",
+              GITHUB_RUN_ID: "1",
+              FLUYO_SOURCE_SHA: "a".repeat(40),
+            },
+            "a".repeat(40),
+            "darwin",
+            "arm64",
+          ),
+        "PRECONDITION_RUN_ATTEMPT",
+      ),
+  ],
+  [
+    "runner rejects source drift",
+    () =>
+      throwsCode(
+        () =>
+          validateRunnerEnvironment(
+            {
+              RUNNER_OS: "macOS",
+              RUNNER_ARCH: "ARM64",
+              ImageOS: "macos15",
+              ImageVersion: "20261104.0514.1",
+              GITHUB_RUN_ATTEMPT: "1",
+              GITHUB_RUN_ID: "1",
+              FLUYO_SOURCE_SHA: "a".repeat(40),
+            },
+            "b".repeat(40),
+            "darwin",
+            "arm64",
+          ),
+        "PRECONDITION_SOURCE",
+      ),
+  ],
+  [
+    "closed env accepts no credentials",
+    () =>
+      assert.deepEqual(
+        Object.keys(closedChildEnvironment({ HOME: "/Users/runner" }, "/tmp/owned")),
+        ["DEVELOPER_DIR", "HOME", "TMPDIR", "PATH", "LANG", "LC_ALL"],
+      ),
+  ],
+  [
+    "closed env rejects proxy case-insensitively",
+    () =>
+      throwsCode(
+        () => closedChildEnvironment({ HOME: "/Users/runner", HtTp_PrOxY: "x" }, "/tmp/owned"),
+        "PRECONDITION_ENV",
+      ),
+  ],
+  [
+    "closed env rejects token",
+    () =>
+      throwsCode(
+        () => closedChildEnvironment({ HOME: "/Users/runner", ANY_TOKEN: "x" }, "/tmp/owned"),
+        "PRECONDITION_ENV",
+      ),
+  ],
+  [
+    "closed env pins developer dir",
+    () =>
+      assert.equal(
+        closedChildEnvironment({ HOME: "/Users/runner" }, "/tmp/owned").DEVELOPER_DIR,
+        "/Applications/Xcode_16.2.app/Contents/Developer",
+      ),
+  ],
+  [
+    "Xcode version accepts exact build",
+    () =>
+      assert.deepEqual(parseXcodeVersion("Xcode 16.2\nBuild version 16C5032a\n"), {
+        version: "16.2",
+        build: "16C5032a",
+      }),
+  ],
+  [
+    "Xcode version rejects other build",
+    () =>
+      throwsCode(() => parseXcodeVersion("Xcode 16.2\nBuild version BAD\n"), "PRECONDITION_XCODE"),
+  ],
+  ["workflow pins macos-15", () => assert.match(workflowSource, /runs-on: macos-15/u)],
+  [
+    "workflow disables cancellation",
+    () => assert.match(workflowSource, /cancel-in-progress: false/u),
+  ],
+  [
+    "workflow has no direct minimum bash step",
+    () =>
+      assert.doesNotMatch(
+        workflowSource.split("  current-ios:")[0],
+        /run: bash scripts\/ios-ci\.sh/u,
+      ),
+  ],
+];
+
+for (const [name, action] of runnerCases) test(`runner/env: ${name}`, action);
+
+function directoryInfo(dev = 1n, ino = 2n) {
+  return {
+    dev,
+    ino,
+    size: 0n,
+    isDirectory: () => true,
+    isFile: () => false,
+    isSymbolicLink: () => false,
+  };
+}
+
+const fakePaths = {
+  realpath: (value) => value,
+  lstat: () => directoryInfo(),
+};
+
+const inventoryCases = [
+  [
+    "runtime inventory parses exact rows",
+    () =>
+      assert.equal(
+        parseRuntimeInventory(
+          JSON.stringify({
+            runtimes: [
+              {
+                identifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+                name: "iOS 17.5",
+                version: "17.5",
+                buildversion: "21F79",
+                isAvailable: true,
+                bundlePath: "/Library/Developer/CoreSimulator/a",
+                runtimeRoot: "/Library/Developer/CoreSimulator/b",
+              },
+            ],
+          }),
+        )[0].build,
+        "21F79",
+      ),
+  ],
+  [
+    "runtime inventory rejects invalid JSON",
+    () => throwsCode(() => parseRuntimeInventory("{"), "PRECONDITION_RUNTIME_INVENTORY"),
+  ],
+  [
+    "exact row requires availability",
+    () =>
+      assert.equal(
+        exactRuntimeRows([row({ version: "17.5", build: "21F79", available: false })]).length,
+        0,
+      ),
+  ],
+  [
+    "exact row requires simulator build",
+    () => assert.equal(exactRuntimeRows([row({ version: "17.5", build: "21F77" })]).length, 0),
+  ],
+  [
+    "anchor is nearest CoreSimulator ancestor",
+    () =>
+      assert.equal(
+        discoverStorageAnchor([row()], [], fakePaths).path,
+        "/Library/Developer/CoreSimulator",
+      ),
+  ],
+  [
+    "anchor rejects no Apple-emitted candidate",
+    () => throwsCode(() => discoverStorageAnchor([], [], fakePaths), "PRECONDITION_STORAGE_ANCHOR"),
+  ],
+  [
+    "anchor rejects two canonical roots",
+    () =>
+      throwsCode(
+        () =>
+          discoverStorageAnchor(
+            [
+              row(),
+              row({
+                identifier: "com.apple.CoreSimulator.SimRuntime.iOS-18-6",
+                bundlePath: "/Volumes/Other/CoreSimulator/a",
+                runtimeRoot: "/Volumes/Other/CoreSimulator/b",
+              }),
+            ],
+            [],
+            fakePaths,
+          ),
+        "PRECONDITION_STORAGE_ANCHOR",
+      ),
+  ],
+  [
+    "anchor rejects a symlink candidate",
+    () =>
+      throwsCode(
+        () =>
+          discoverStorageAnchor([row()], [], {
+            realpath: (value) => value,
+            lstat: () => ({ ...directoryInfo(), isSymbolicLink: () => true }),
+          }),
+        "PRECONDITION_STORAGE_ANCHOR",
+      ),
+  ],
+  [
+    "post inventory accepts exact introduced row",
+    () =>
+      assert.equal(
+        validatePostInventory(
+          [row()],
+          [
+            row(),
+            row({
+              identifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+              name: "iOS 17.5",
+              version: "17.5",
+              build: "21F79",
+              bundlePath: "/Library/Developer/CoreSimulator/new",
+              runtimeRoot: "/Library/Developer/CoreSimulator/new/root",
+            }),
+          ],
+          { path: "/Library/Developer/CoreSimulator", dev: 1n },
+          fakePaths,
+        ).build,
+        "21F79",
+      ),
+  ],
+  [
+    "post inventory rejects two exact rows",
+    () =>
+      throwsCode(
+        () =>
+          validatePostInventory(
+            [],
+            [
+              row({
+                identifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+                version: "17.5",
+                build: "21F79",
+              }),
+              row({
+                identifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5-b",
+                version: "17.5",
+                build: "21F79",
+              }),
+            ],
+            { path: "/Library/Developer/CoreSimulator", dev: 1n },
+            fakePaths,
+          ),
+        "POST_RUNTIME_CARDINALITY",
+      ),
+  ],
+  [
+    "post inventory rejects invalid identifier",
+    () =>
+      throwsCode(
+        () =>
+          validatePostInventory(
+            [],
+            [row({ identifier: "bad", version: "17.5", build: "21F79" })],
+            { path: "/Library/Developer/CoreSimulator", dev: 1n },
+            fakePaths,
+          ),
+        "POST_RUNTIME_IDENTITY",
+      ),
+  ],
+  [
+    "post inventory rejects unrelated drift",
+    () =>
+      throwsCode(
+        () =>
+          validatePostInventory(
+            [row()],
+            [
+              row({ name: "changed" }),
+              row({
+                identifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+                version: "17.5",
+                build: "21F79",
+              }),
+            ],
+            { path: "/Library/Developer/CoreSimulator", dev: 1n },
+            fakePaths,
+          ),
+        "POST_RUNTIME_CARDINALITY",
+      ),
+  ],
+  [
+    "post inventory rejects outside anchor",
+    () =>
+      throwsCode(
+        () =>
+          validatePostInventory(
+            [],
+            [
+              row({
+                identifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+                version: "17.5",
+                build: "21F79",
+                bundlePath: "/Volumes/Other/new",
+                runtimeRoot: "/Volumes/Other/new/root",
+              }),
+            ],
+            { path: "/Library/Developer/CoreSimulator", dev: 1n },
+            fakePaths,
+          ),
+        "POST_RUNTIME_STORAGE_VOLUME",
+      ),
+  ],
+  [
+    "runtime identifier is observed not pre-pinned",
+    () => assert.doesNotMatch(CATALOG_TUPLE, /CoreSimulator/u),
+  ],
+];
+
+for (const [name, action] of inventoryCases) test(`inventory/anchor: ${name}`, action);
+
+const diskCases = [
+  [
+    "payload plus reserve equals preflight floor",
+    () => assert.equal(CATALOG_PAYLOAD_BYTES + REQUIRED_FREE_RESERVE_BYTES, MIN_FREE_BEFORE_BYTES),
+  ],
+  ["floor equality passes", () => assert.equal(MIN_FREE_AFTER_ACQUIRE_BYTES, 2_147_483_648n)],
+  ["delta equality passes", () => assert.equal(MAX_ACQUIRE_DISK_DELTA_BYTES, 11_811_160_064n)],
+  ["monitor cadence is 250ms", () => assert.equal(DISK_MONITOR_INTERVAL_MS, 250)],
+  ["monitor max gap is 1000ms", () => assert.equal(DISK_MONITOR_MAX_GAP_MS, 1000)],
+  [
+    "monitor cap includes boundary samples",
+    () => assert.equal(DISK_MONITOR_MAX_TICKS, ACQUIRE_TIMEOUT_MS / DISK_MONITOR_INTERVAL_MS + 2),
+  ],
+  ["attempt root cap is 256MiB", () => assert.equal(MAX_ATTEMPT_ROOT_BYTES, 256 * 1024 * 1024)],
+  [
+    "minimum root cap is 4GiB",
+    () => assert.equal(MAX_MINIMUM_WORK_ROOT_BYTES, 4 * 1024 * 1024 * 1024),
+  ],
+  [
+    "combined root cap is exact sum",
+    () =>
+      assert.equal(
+        MAX_COMBINED_OWNED_ROOT_BYTES,
+        MAX_ATTEMPT_ROOT_BYTES + MAX_MINIMUM_WORK_ROOT_BYTES,
+      ),
+  ],
+  ["capture cap is 4MiB", () => assert.equal(MAX_COMBINED_CAPTURE_BYTES, 4 * 1024 * 1024)],
+  [
+    "transaction phase budget is exact",
+    () =>
+      assert.equal(
+        PREFLIGHT_TIMEOUT_MS +
+          ACQUIRE_TIMEOUT_MS +
+          MINIMUM_EVIDENCE_TIMEOUT_MS +
+          CLEANUP_TIMEOUT_MS +
+          FINALIZATION_TIMEOUT_MS,
+        TOTAL_TRANSACTION_TIMEOUT_MS,
+      ),
+  ],
+  [
+    "workflow margin is exact",
+    () => assert.equal(WORKFLOW_STEP_TIMEOUT_MS - TOTAL_TRANSACTION_TIMEOUT_MS, WORKFLOW_MARGIN_MS),
+  ],
+  [
+    "cleanup final reserve is exact",
+    () => assert.equal(CLEANUP_TIMEOUT_MS + FINALIZATION_TIMEOUT_MS, CLEANUP_FINAL_RESERVE_MS),
+  ],
+  [
+    "root scanner bounds entries and duration",
+    () => {
+      assert.equal(MAX_SCAN_ENTRIES, 100000);
+      assert.equal(MAX_SCAN_DURATION_MS, 1000);
+    },
+  ],
+];
+
+for (const [name, action] of diskCases) test(`disk/monitor: ${name}`, action);
+
+const receiptCases = [
+  [
+    "success receipt validates",
+    () => assert.equal(validateReceipt(testingReceipt()).state, "TRANSACTION_SUCCEEDED_CLEANED"),
+  ],
+  [
+    "receipt rejects extra key",
+    () =>
+      throwsCode(() => validateReceipt({ ...testingReceipt(), extra: true }), "RECEIPT_INVALID"),
+  ],
+  [
+    "receipt rejects missing key",
+    () => {
+      const value = testingReceipt();
+      delete value.runId;
+      throwsCode(() => validateReceipt(value), "RECEIPT_INVALID");
+    },
+  ],
+  [
+    "receipt rejects unsafe integer",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ durationMs: Number.MAX_SAFE_INTEGER + 1 })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects unknown primary",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ primaryFailureCode: "UNKNOWN" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects unknown cleanup",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ cleanupFailureCode: "UNKNOWN" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects unknown minimum result",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ minimumEvidenceResult: "UNKNOWN" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt binds requested variant wording",
+    () => assert.equal(testingReceipt().requestedArchitectureVariant, "arm64"),
+  ],
+  [
+    "receipt has no architectureVariant field",
+    () => assert.equal("architectureVariant" in testingReceipt(), false),
+  ],
+  [
+    "precondition receipt validates",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "PRECONDITION_REJECTED",
+            primaryFailureCode: "PRECONDITION_ENV",
+            cleanupFailureCode: "NONE",
+            downloadInvocationCount: 0,
+            downloadResult: "NOT_ATTEMPTED",
+            minimumEvidenceResult: "NOT_RUN",
+            cleanupResult: "NOT_REQUIRED",
+            runtimeIdentifier: null,
+            runtimeVersion: null,
+            runtimeBuild: null,
+            freeBytesBefore: null,
+            freeBytesAfterAcquire: null,
+            freeBytesAfterMinimumEvidence: null,
+            freeBytesAfterCleanup: null,
+            minimumFreeBytesObserved: null,
+            acquireDiskDeltaBytes: 0,
+            diskMonitorSampleCount: 0,
+            preExactRuntimeCount: null,
+            postAcquireExactRuntimeCount: null,
+            postCleanupExactRuntimeCount: null,
+          }),
+        ).state,
+        "PRECONDITION_REJECTED",
+      ),
+  ],
+  [
+    "precondition receipt rejects invocation",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            testingReceipt({
+              state: "PRECONDITION_REJECTED",
+              primaryFailureCode: "PRECONDITION_ENV",
+              cleanupFailureCode: "NONE",
+              downloadInvocationCount: 1,
+              downloadResult: "NOT_ATTEMPTED",
+              minimumEvidenceResult: "NOT_RUN",
+              cleanupResult: "NOT_REQUIRED",
+              runtimeIdentifier: null,
+              runtimeVersion: null,
+              runtimeBuild: null,
+              minimumFreeBytesObserved: null,
+              diskMonitorSampleCount: 0,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "acquire failed clean validates",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "ACQUIRE_FAILED_CLEAN",
+            primaryFailureCode: "ACQUIRE_EXIT",
+            cleanupFailureCode: "NONE",
+            downloadResult: "FAILED",
+            minimumEvidenceResult: "NOT_RUN",
+            cleanupResult: "SUCCEEDED",
+            runtimeIdentifier: null,
+            runtimeVersion: null,
+            runtimeBuild: null,
+            postAcquireExactRuntimeCount: 0,
+            freeBytesAfterMinimumEvidence: null,
+          }),
+        ).state,
+        "ACQUIRE_FAILED_CLEAN",
+      ),
+  ],
+  [
+    "test failed clean validates",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "TEST_FAILED_CLEAN",
+            primaryFailureCode: "MINIMUM_EVIDENCE_EXIT",
+            cleanupFailureCode: "NONE",
+            downloadResult: "SUCCEEDED",
+            minimumEvidenceResult: "FAILED",
+            cleanupResult: "SUCCEEDED",
+          }),
+        ).state,
+        "TEST_FAILED_CLEAN",
+      ),
+  ],
+  [
+    "cleanup failed requires cleanup code",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            testingReceipt({
+              state: "CLEANUP_FAILED",
+              cleanupResult: "FAILED",
+              cleanupFailureCode: "NONE",
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "tuple hash field is exact",
+    () => assert.equal(testingReceipt().artifactTupleSha256, CATALOG_TUPLE_SHA256),
+  ],
+  [
+    "receipt permits observed runtime identifier",
+    () => assert.match(testingReceipt().runtimeIdentifier, /^com\.apple\.CoreSimulator/u),
+  ],
+  [
+    "receipt rejects arbitrary runtime identifier",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ runtimeIdentifier: "/private/path" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt has no raw output field",
+    () =>
+      assert.equal(
+        Object.keys(testingReceipt()).some((key) =>
+          /stdout|stderr|path|pid|device|user|env/iu.test(key),
+        ),
+        false,
+      ),
+  ],
+  [
+    "receipt retained flags are false on success",
+    () =>
+      assert.deepEqual(
+        [testingReceipt().rawLogRetained, testingReceipt().runtimeRetained],
+        [false, false],
+      ),
+  ],
+  [
+    "receipt fallback is always false",
+    () =>
+      throwsCode(() => validateReceipt(testingReceipt({ fallbackUsed: true })), "RECEIPT_INVALID"),
+  ],
+];
+
+for (const [name, action] of receiptCases) test(`receipt: ${name}`, action);
+
+const validPs = `123 123 Fri Nov 14 12:34:56 2026 ${XCODEBUILD} ${XCODE_ARGS.join(" ")}\n`;
+const verifierCases = [
+  ["ps path is exact", () => assert.equal(PS, "/bin/ps")],
+  ["ps timeout is exact", () => assert.equal(PS_TIMEOUT_MS, 2000)],
+  [
+    "ps caps are exact",
+    () => assert.deepEqual([PS_STDOUT_MAX_BYTES, PS_STDERR_MAX_BYTES], [4096, 1024]),
+  ],
+  ["valid C-locale identity parses", () => assert.equal(parsePsIdentity(validPs, 123).pgid, 123)],
+  [
+    "invalid locale date rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs.replace("Fri Nov", "Freitag Nov"), 123),
+        "ACQUIRE_PROCESS_IDENTITY_GRAMMAR",
+      ),
+  ],
+  [
+    "zero lines reject",
+    () => throwsCode(() => parsePsIdentity("", 123), "ACQUIRE_PROCESS_IDENTITY_OUTPUT_LIMIT"),
+  ],
+  [
+    "multiple lines reject",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs + validPs, 123),
+        "ACQUIRE_PROCESS_IDENTITY_OUTPUT_LIMIT",
+      ),
+  ],
+  [
+    "extra command token rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs.trimEnd() + " extra\n", 123),
+        "ACQUIRE_PROCESS_IDENTITY_GRAMMAR",
+      ),
+  ],
+  [
+    "stdout cap rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity("x".repeat(4097), 123),
+        "ACQUIRE_PROCESS_IDENTITY_OUTPUT_LIMIT",
+      ),
+  ],
+  [
+    "PID reuse rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs.replace(/^123/u, "124"), 123),
+        "ACQUIRE_PROCESS_IDENTITY_GRAMMAR",
+      ),
+  ],
+  [
+    "PGID mismatch rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs.replace(/^123 123/u, "123 124"), 123),
+        "ACQUIRE_PROCESS_IDENTITY_GRAMMAR",
+      ),
+  ],
+  [
+    "executable drift rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs.replace(XCODEBUILD, "/tmp/xcodebuild"), 123),
+        "ACQUIRE_PROCESS_IDENTITY_GRAMMAR",
+      ),
+  ],
+  [
+    "argv drift rejects",
+    () =>
+      throwsCode(
+        () => parsePsIdentity(validPs.replace("17.5", "18.0"), 123),
+        "ACQUIRE_PROCESS_IDENTITY_GRAMMAR",
+      ),
+  ],
+  [
+    "group absence accepts ESRCH",
+    () =>
+      assert.equal(
+        assertProcessGroupAbsent(123, {
+          kill: () => {
+            const error = new Error();
+            error.code = "ESRCH";
+            throw error;
+          },
+        }),
+        true,
+      ),
+  ],
+  [
+    "group residue fails without signal",
+    () =>
+      throwsCode(
+        () => assertProcessGroupAbsent(123, { kill: () => undefined }),
+        "ACQUIRE_PROCESS_GROUP_RESIDUE",
+      ),
+  ],
+  [
+    "identity parser emits frozen four fields",
+    () =>
+      assert.deepEqual(Object.keys(parsePsIdentity(validPs, 123)), [
+        "pid",
+        "pgid",
+        "executable",
+        "startTime",
+      ]),
+  ],
+];
+
+for (const [name, action] of verifierCases) test(`process verifier: ${name}`, action);
+
+const supervisorCases = [
+  ["single foreground run mode is wired", () => assert.match(controllerSource, /mode === "run"/u)],
+  [
+    "workflow has no separate cleanup mode",
+    () => assert.doesNotMatch(workflowSource, /ios-runtime-bootstrap\.mjs cleanup/u),
+  ],
+  [
+    "workflow always verifies receipt",
+    () => assert.match(workflowSource, /if: always\(\)[\s\S]*verify-receipt/u),
+  ],
+  [
+    "workflow always uploads receipt",
+    () =>
+      assert.match(
+        workflowSource,
+        /Upload sanitized runtime-bootstrap receipt[\s\S]*if: always\(\)/u,
+      ),
+  ],
+  [
+    "workflow errors on missing receipt",
+    () =>
+      assert.match(
+        workflowSource,
+        /ios-runtime-bootstrap\/receipt\.json[\s\S]*if-no-files-found: error/u,
+      ),
+  ],
+  [
+    "minimum artifact uploads only on success",
+    () =>
+      assert.match(
+        workflowSource,
+        /Upload sanitized minimum-runtime evidence[\s\S]*if: success\(\)/u,
+      ),
+  ],
+  [
+    "bash child is exact",
+    () => assert.match(controllerSource, /\[command, args\] = \["\/bin\/bash"/u),
+  ],
+  [
+    "bash argv is canonical script only",
+    () => assert.match(controllerSource, /join\(root, "scripts", "ios-ci\.sh"\)/u),
+  ],
+  [
+    "bash cwd is canonical repository",
+    () => assert.match(controllerSource, /cwd: role === "MINIMUM" \? root : "\/"/u),
+  ],
+  [
+    "child environment is closed literal",
+    () => assert.match(controllerSource, /const minimumEnv = Object\.freeze\(\{/u),
+  ],
+  [
+    "child PATH includes validated Node directory",
+    () => assert.match(controllerSource, /\/usr\/bin:\/bin:\/usr\/sbin:\/sbin:\$\{nodeDir\}/u),
+  ],
+  [
+    "minimum requires exact Node host",
+    () => assert.match(iosCiSource, /FLUYO_NODE_EXECUTABLE:\?Set FLUYO_NODE_EXECUTABLE/u),
+  ],
+  [
+    "script hash is pinned",
+    () => {
+      assert.equal(Buffer.byteLength(iosCiSource), IOS_CI_SOURCE_BYTES);
+      assert.equal(createHash("sha256").update(iosCiSource).digest("hex"), IOS_CI_SOURCE_SHA256);
+    },
+  ],
+  [
+    "source is checked before acquisition",
+    () =>
+      assert.ok(
+        controllerSource.indexOf("validateScriptIdentity(repositoryRoot)") <
+          controllerSource.indexOf('role: "ACQUIRE"'),
+      ),
+  ],
+  [
+    "source is checked before minimum spawn",
+    () => assert.match(controllerSource, /const scriptIdentity = validateScriptIdentity/u),
+  ],
+  [
+    "source is checked after minimum close",
+    () =>
+      assert.ok(
+        controllerSource.lastIndexOf("validateScriptIdentity(paths.repositoryRoot)") >
+          controllerSource.indexOf('role: "MINIMUM"'),
+      ),
+  ],
+  [
+    "acquisition failure leaves minimum NOT_RUN",
+    () =>
+      assert.match(
+        controllerSource,
+        /downloadResult = "FAILED";\s+minimumEvidenceResult = "NOT_RUN"/u,
+      ),
+  ],
+  [
+    "test starts only after post inventory",
+    () =>
+      assert.ok(
+        controllerSource.indexOf("validatePostInventory") <
+          controllerSource.indexOf('role: "MINIMUM"'),
+      ),
+  ],
+  ["test verifier is generalized", () => assert.match(controllerSource, /expectedCommandTokens/u)],
+  ["test timeout is 720000ms", () => assert.equal(MINIMUM_EVIDENCE_TIMEOUT_MS, 720000)],
+  [
+    "combined output cap is transaction-wide",
+    () => assert.match(controllerSource, /const capture = \{ bytes: 0 \}/u),
+  ],
+  [
+    "dual result receipt is emitted",
+    () => assert.match(controllerSource, /minimumEvidenceResult/u),
+  ],
+];
+
+for (const [name, action] of supervisorCases) test(`supervisor: ${name}`, action);
+
+const v116Cases = [
+  ["bootstrap root cap is exact", () => assert.equal(MAX_ATTEMPT_ROOT_BYTES, 268435456)],
+  ["minimum root cap is exact", () => assert.equal(MAX_MINIMUM_WORK_ROOT_BYTES, 4294967296)],
+  ["combined root cap is exact", () => assert.equal(MAX_COMBINED_OWNED_ROOT_BYTES, 4563402752)],
+  ["scanner rejects symlinks", () => assert.match(scanOwnedRoot.toString(), /isSymbolicLink/u)],
+  [
+    "scanner rejects special entries",
+    () => assert.match(scanOwnedRoot.toString(), /!info\.isDirectory\(\) && !info\.isFile\(\)/u),
+  ],
+  [
+    "scanner uses BigInt sizes",
+    () => assert.match(scanOwnedRoot.toString(), /BigInt\(maximumBytes\)/u),
+  ],
+  ["scanner entry cap is exact", () => assert.equal(MAX_SCAN_ENTRIES, 100000)],
+  ["scanner duration cap is exact", () => assert.equal(MAX_SCAN_DURATION_MS, 1000)],
+  ["preflight timeout is exact", () => assert.equal(PREFLIGHT_TIMEOUT_MS, 120000)],
+  ["acquisition timeout is exact", () => assert.equal(ACQUIRE_TIMEOUT_MS, 1200000)],
+  ["test timeout is exact", () => assert.equal(MINIMUM_EVIDENCE_TIMEOUT_MS, 720000)],
+  ["cleanup timeout is exact", () => assert.equal(CLEANUP_TIMEOUT_MS, 300000)],
+  ["final timeout is exact", () => assert.equal(FINALIZATION_TIMEOUT_MS, 30000)],
+  ["total timeout is exact", () => assert.equal(TOTAL_TRANSACTION_TIMEOUT_MS, 2370000)],
+  ["workflow step timeout is exact", () => assert.equal(WORKFLOW_STEP_TIMEOUT_MS, 2520000)],
+  ["workflow margin is exact", () => assert.equal(WORKFLOW_MARGIN_MS, 150000)],
+  [
+    "receipt splits primary and cleanup failures",
+    () =>
+      assert.deepEqual(
+        ["primaryFailureCode" in testingReceipt(), "cleanupFailureCode" in testingReceipt()],
+        [true, true],
+      ),
+  ],
+  [
+    "minimum interruption code is frozen",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("MINIMUM_EVIDENCE_INTERRUPTED"), true),
+  ],
+];
+
+for (const [name, action] of v116Cases) test(`v1.1.6: ${name}`, action);
+
+const validInternal = Object.freeze({
+  FLUYO_INTERNAL_CHECKOUT_ROOT: "/Users/runner/work/Fluyo/Fluyo",
+  FLUYO_INTERNAL_IMAGE_OS: "macos15",
+  FLUYO_INTERNAL_PARENT_IDENTITY_SHA256: "b".repeat(64),
+  FLUYO_INTERNAL_PARENT_PID: "123",
+  FLUYO_INTERNAL_RUN_ATTEMPT: "1",
+  FLUYO_INTERNAL_RUN_ID: "456",
+  FLUYO_INTERNAL_RUNNER_ARCH: "ARM64",
+  FLUYO_INTERNAL_RUNNER_OS: "macOS",
+  FLUYO_INTERNAL_RELEASE_SHA256: "d".repeat(64),
+  FLUYO_INTERNAL_SOURCE_COMMIT: "a".repeat(40),
+  FLUYO_INTERNAL_SOURCE_SHA256: "c".repeat(64),
+  LANG: "C",
+  LC_ALL: "C",
+});
+const validAcquireTarget = Object.freeze({
+  DEVELOPER_DIR: XCODE_DEVELOPER_DIR,
+  HOME: "/Users/runner",
+  PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+  TMPDIR: "/Users/runner/work/_temp/owned",
+});
+
+const v1110Cases = [
+  ["release is exactly 32 bytes", () => assert.equal(CHILD_GATE_RELEASE_BYTES, 32)],
+  ["ready token is exact", () => assert.equal(CHILD_GATE_READY, "READY_V1\n")],
+  ["wrapper self timeout is exact", () => assert.equal(CHILD_GATE_TIMEOUT_MS, 5000)],
+  ["controller source cap is exact", () => assert.equal(MAX_CONTROLLER_SOURCE_BYTES, 262144)],
+  ["receipt cap is exact", () => assert.equal(MAX_RECEIPT_BYTES, 8192)],
+  ["parent spawns detached wrapper", () => assert.match(controllerSource, /detached: true/u)],
+  [
+    "wrapper target stays in wrapper group",
+    () => assert.match(controllerSource, /detached: false/u),
+  ],
+  [
+    "wrapper stdio has six exact slots",
+    () =>
+      assert.match(
+        controllerSource,
+        /stdio: \["ignore", "pipe", "pipe", "pipe", controllerSource\.fd, "pipe"\]/u,
+      ),
+  ],
+  [
+    "settlement attaches before ready",
+    () =>
+      assert.ok(
+        controllerSource.indexOf("const lifecycle = childLifecycle(child)") <
+          controllerSource.indexOf("await waitForReady"),
+      ),
+  ],
+  [
+    "ready precedes release",
+    () =>
+      assert.ok(
+        controllerSource.indexOf("await waitForReady") < controllerSource.indexOf("gate.end"),
+      ),
+  ],
+  [
+    "release follows identity probe",
+    () =>
+      assert.ok(controllerSource.indexOf("probeIdentity") < controllerSource.indexOf("gate.end")),
+  ],
+  [
+    "unverified child receives no signal",
+    () =>
+      assert.match(
+        controllerSource,
+        /gate\?\.destroy\(\);[\s\S]*awaitActualClose\(lifecycle\.close, CHILD_CLOSE_WAIT_MS/u,
+      ),
+  ],
+  [
+    "unverified residue enters hold",
+    () => assert.match(controllerSource, /PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD/u),
+  ],
+  [
+    "verified TERM and KILL are retained",
+    () => assert.match(controllerSource, /terminateVerifiedProcessGroup/u),
+  ],
+  [
+    "group absence is checked after close",
+    () => assert.match(controllerSource, /assertProcessGroupAbsent\(captured\.pgid/u),
+  ],
+  ["cleanup uses the same gate", () => assert.match(controllerSource, /role: "CLEANUP"/u)],
+  [
+    "signal latch is installed before first preflight",
+    () => {
+      const transaction = controllerSource.slice(
+        controllerSource.indexOf("export async function runTransaction"),
+      );
+      assert.ok(
+        transaction.indexOf('signalTarget.once("SIGINT"') <
+          transaction.indexOf("assertCatalogTuple()"),
+      );
+    },
+  ],
+  [
+    "signal callback performs no I O",
+    () =>
+      assert.match(
+        controllerSource,
+        /const onTransactionSignal = \(\) => \{\s*cancellation\.requested = true;\s*cancellation\.phase = transactionPhase;\s*\}/u,
+      ),
+  ],
+  [
+    "precondition interruption is closed",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_INTERRUPTED"), true),
+  ],
+  [
+    "acquire interruption remains closed",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("ACQUIRE_INTERRUPTED"), true),
+  ],
+  [
+    "minimum interruption remains closed",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("MINIMUM_EVIDENCE_INTERRUPTED"), true),
+  ],
+  [
+    "cleanup interruption is closed",
+    () => assert.equal(testing.CLEANUP_FAILURE_CODES.has("CLEANUP_INTERRUPTED"), true),
+  ],
+  [
+    "receipt rejects overlong run id",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ runId: "1".repeat(21) })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects wrong runner image",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ runnerImageOs: "macos14" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects wrong runner arch",
+    () =>
+      throwsCode(() => validateReceipt(testingReceipt({ runnerArch: "X64" })), "RECEIPT_INVALID"),
+  ],
+  [
+    "receipt rejects wrong host arch",
+    () => throwsCode(() => validateReceipt(testingReceipt({ hostArch: "x64" })), "RECEIPT_INVALID"),
+  ],
+  [
+    "receipt rejects wrong Xcode version",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ xcodeVersion: "16.3" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects wrong Xcode build",
+    () =>
+      throwsCode(() => validateReceipt(testingReceipt({ xcodeBuild: "other" })), "RECEIPT_INVALID"),
+  ],
+  [
+    "finalization interrupted row validates",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "FINALIZATION_FAILED_CLEAN",
+            primaryFailureCode: "FINALIZATION_INTERRUPTED",
+          }),
+        ).state,
+        "FINALIZATION_FAILED_CLEAN",
+      ),
+  ],
+  [
+    "cleanup failure terminal code is independent",
+    () => assert.equal(testing.CLEANUP_FAILURE_CODES.has("CLEANUP_RECEIPT_INVALID"), true),
+  ],
+  [
+    "generalized parser reports expected executable",
+    () =>
+      assert.equal(
+        parsePsIdentity("12 12 Fri Nov 14 12:34:56 2026 /bin/node gate\n", 12, [
+          "/bin/node",
+          "gate",
+        ]).executable,
+        "/bin/node",
+      ),
+  ],
+  [
+    "minimum target executable remains bash",
+    () => assert.match(controllerSource, /\[command, args\] = \["\/bin\/bash"/u),
+  ],
+];
+for (const [name, action] of v1110Cases) test(`v1.1.10: ${name}`, action);
+
+const v11101Cases = [
+  [
+    "invocation count changes only before release",
+    () => assert.match(controllerSource, /beforeRelease: \(\) => \{\s*invocationCount = 1/u),
+  ],
+  [
+    "unverified hold emits fixed stderr",
+    () => assert.match(controllerSource, /IOS_RUNTIME_BOOTSTRAP_UNVERIFIED_CHILD_HOLD/u),
+  ],
+  [
+    "controller source uses O NOFOLLOW",
+    () => assert.match(controllerSource, /O_RDONLY \| fsConstants\.O_NOFOLLOW/u),
+  ],
+  [
+    "source reads are positional",
+    () => assert.match(controllerSource, /readSync\(fd, value, offset, size - offset, offset\)/u),
+  ],
+  [
+    "source rejects an extra byte",
+    () => assert.match(controllerSource, /readSync\(fd, extra, 0, 1, size\) !== 0/u),
+  ],
+  [
+    "source binding checks dev ino and size",
+    () =>
+      assert.match(
+        controllerSource,
+        /pathInfo\.dev !== binding\.dev[\s\S]*pathInfo\.ino !== binding\.ino[\s\S]*pathInfo\.size !== binding\.size/u,
+      ),
+  ],
+  [
+    "parent identity has exact title",
+    () => assert.equal(PARENT_TITLE, "fluyo-ios17-bootstrap-parent-v1"),
+  ],
+  [
+    "parent identity record has three NULs and LF",
+    () => {
+      const value = parentIdentityRecord({
+        pid: 1,
+        pgid: 2,
+        startTime: "Fri Nov 14 12:34:56 2026",
+      });
+      assert.equal(value.split("\0").length - 1, 3);
+      assert.equal(value.endsWith("\n"), true);
+    },
+  ],
+  [
+    "nonleader parent pgid is accepted",
+    () =>
+      assert.equal(
+        parseParentPsIdentity(`5 1 9 Fri Nov 14 12:34:56 2026 ${PARENT_TITLE}\n`, 5, 1).pgid,
+        9,
+      ),
+  ],
+  [
+    "parent title collision rejects",
+    () =>
+      throwsCode(
+        () => parseParentPsIdentity("5 1 9 Fri Nov 14 12:34:56 2026 other\n", 5, 1),
+        "PRECONDITION_ENV",
+      ),
+  ],
+  [
+    "wrapper title is role bound",
+    () => assert.match(controllerSource, /CHILD_TITLE_PREFIX.*role\.toLowerCase/u),
+  ],
+  ["child gate mode is explicit", () => assert.match(controllerSource, /mode === "child-gate"/u)],
+];
+for (const [name, action] of v11101Cases) test(`v1.1.10.1: ${name}`, action);
+
+const v11102Cases = [
+  [
+    "acquire environment is closed",
+    () =>
+      assert.deepEqual(
+        Object.keys(buildWrapperEnvironment("ACQUIRE", validInternal, validAcquireTarget)).sort(),
+        [...new Set([...testing.INTERNAL_ENV_KEYS, ...testing.ACQUIRE_TARGET_KEYS])].sort(),
+      ),
+  ],
+  [
+    "missing environment key rejects",
+    () => {
+      const value = { ...buildWrapperEnvironment("ACQUIRE", validInternal, validAcquireTarget) };
+      delete value.HOME;
+      throwsCode(() => validateChildGateEnvironment("ACQUIRE", value), "PRECONDITION_ENV");
+    },
+  ],
+  [
+    "extra environment key rejects",
+    () =>
+      throwsCode(
+        () =>
+          validateChildGateEnvironment("ACQUIRE", {
+            ...buildWrapperEnvironment("ACQUIRE", validInternal, validAcquireTarget),
+            EXTRA: "x",
+          }),
+        "PRECONDITION_ENV",
+      ),
+  ],
+  [
+    "forbidden environment key rejects",
+    () =>
+      throwsCode(
+        () =>
+          validateChildGateEnvironment("ACQUIRE", {
+            ...buildWrapperEnvironment("ACQUIRE", validInternal, validAcquireTarget),
+            TOKEN: "x",
+          }),
+        "PRECONDITION_ENV",
+      ),
+  ],
+  [
+    "controller source fd remains inherited",
+    () => assert.match(controllerSource, /controllerSource\.fd/u),
+  ],
+  [
+    "wrapper validates detached checkout",
+    () => assert.match(controllerSource, /parseHead \?\? parseDetachedHead/u),
+  ],
+  [
+    "wrapper validates Darwin arm64",
+    () => assert.match(controllerSource, /!== "darwin"[\s\S]*!== "arm64"/u),
+  ],
+  [
+    "wrapper validates parent identity hash",
+    () => assert.match(controllerSource, /sha256\(parentIdentityRecord\(parent\)\)/u),
+  ],
+  [
+    "security claim avoids OS authorization",
+    () => assert.doesNotMatch(controllerSource, /OS authorization against malicious same-user/u),
+  ],
+  [
+    "all three roles are closed",
+    () => {
+      for (const role of ["ACQUIRE", "MINIMUM", "CLEANUP"])
+        assert.match(controllerSource, new RegExp(`role === "${role}"`, "u"));
+    },
+  ],
+];
+for (const [name, action] of v11102Cases) test(`v1.1.10.2: ${name}`, action);
+
+function descriptorFixture(overrides = {}) {
+  const bytes = Buffer.from("controller-source", "utf8");
+  const fifo = { isFIFO: () => true };
+  const regular = {
+    dev: 11,
+    ino: 22,
+    size: bytes.length,
+    isFIFO: () => false,
+    isFile: () => true,
+    isSymbolicLink: () => false,
+  };
+  const values = new Map([
+    [3, fifo],
+    [4, regular],
+    [5, fifo],
+  ]);
+  let sourceReads = 0;
+  return {
+    bytes,
+    dependencies: {
+      sourcePath: "/repo/scripts/ios-runtime-bootstrap.mjs",
+      realpath: (value) => value,
+      lstat: () => ({ ...regular, ...(overrides.pathInfo ?? {}) }),
+      fstat: (fd) => {
+        if (fd === 4) sourceReads += 1;
+        const base = values.get(fd);
+        const sequence = overrides.sourceSequence;
+        if (fd === 4 && sequence) return sequence[Math.min(sourceReads - 1, sequence.length - 1)];
+        return fd === 3 && overrides.releaseInfo
+          ? overrides.releaseInfo
+          : fd === 5 && overrides.readyInfo
+            ? overrides.readyInfo
+            : base;
+      },
+      readSource: () => bytes,
+    },
+  };
+}
+
+const v11103Cases = [
+  [
+    "release nonce uses production randomBytes without deterministic fallback",
+    () => {
+      assert.match(controllerSource, /import \{ createHash, randomBytes \} from "node:crypto"/u);
+      assert.doesNotMatch(controllerSource, /Buffer\.alloc\(size, 0xa5\)/u);
+    },
+  ],
+  [
+    "release hash is the only nonce-derived environment value",
+    () => {
+      assert.match(controllerSource, /FLUYO_INTERNAL_RELEASE_SHA256: sha256\(releaseToken\)/u);
+      assert.doesNotMatch(controllerSource, /FLUYO_INTERNAL_RELEASE_TOKEN/u);
+    },
+  ],
+  [
+    "parent and child zeroize release bytes",
+    () => assert.equal((controllerSource.match(/\.fill\(0\)/gu) ?? []).length >= 4, true),
+  ],
+  [
+    "valid FIFO and held source descriptors pass",
+    () => {
+      const fixture = descriptorFixture();
+      assert.equal(
+        validateChildGateDescriptors(
+          {
+            releaseFd: 3,
+            sourceFd: 4,
+            readyFd: 5,
+            expectedSourceSha256: createHash("sha256").update(fixture.bytes).digest("hex"),
+          },
+          fixture.dependencies,
+        ).equals(fixture.bytes),
+        true,
+      );
+    },
+  ],
+  [
+    "non FIFO release descriptor rejects",
+    () => {
+      const fixture = descriptorFixture({ releaseInfo: { isFIFO: () => false } });
+      throwsCode(
+        () =>
+          validateChildGateDescriptors(
+            {
+              releaseFd: 3,
+              sourceFd: 4,
+              readyFd: 5,
+              expectedSourceSha256: createHash("sha256").update(fixture.bytes).digest("hex"),
+            },
+            fixture.dependencies,
+          ),
+        "PRECONDITION_SOURCE",
+      );
+    },
+  ],
+  [
+    "non FIFO ready descriptor rejects",
+    () => {
+      const fixture = descriptorFixture({ readyInfo: { isFIFO: () => false } });
+      throwsCode(
+        () =>
+          validateChildGateDescriptors(
+            {
+              releaseFd: 3,
+              sourceFd: 4,
+              readyFd: 5,
+              expectedSourceSha256: createHash("sha256").update(fixture.bytes).digest("hex"),
+            },
+            fixture.dependencies,
+          ),
+        "PRECONDITION_SOURCE",
+      );
+    },
+  ],
+  [
+    "nonregular inherited source descriptor rejects",
+    () => {
+      const fixture = descriptorFixture({
+        sourceSequence: [{ dev: 11, ino: 22, size: 17, isFile: () => false }],
+      });
+      throwsCode(
+        () =>
+          validateChildGateDescriptors(
+            { releaseFd: 3, sourceFd: 4, readyFd: 5, expectedSourceSha256: "0".repeat(64) },
+            fixture.dependencies,
+          ),
+        "PRECONDITION_SOURCE",
+      );
+    },
+  ],
+  [
+    "same-content wrong source inode rejects",
+    () => {
+      const fixture = descriptorFixture({ pathInfo: { ino: 23 } });
+      throwsCode(
+        () =>
+          validateChildGateDescriptors(
+            {
+              releaseFd: 3,
+              sourceFd: 4,
+              readyFd: 5,
+              expectedSourceSha256: createHash("sha256").update(fixture.bytes).digest("hex"),
+            },
+            fixture.dependencies,
+          ),
+        "PRECONDITION_SOURCE",
+      );
+    },
+  ],
+  [
+    "source identity swap between positional read bounds rejects",
+    () => {
+      const fixture = descriptorFixture({
+        sourceSequence: [
+          { dev: 11, ino: 22, size: 17, isFile: () => true },
+          { dev: 11, ino: 24, size: 17, isFile: () => true },
+        ],
+      });
+      throwsCode(
+        () =>
+          validateChildGateDescriptors(
+            {
+              releaseFd: 3,
+              sourceFd: 4,
+              readyFd: 5,
+              expectedSourceSha256: createHash("sha256").update(fixture.bytes).digest("hex"),
+            },
+            fixture.dependencies,
+          ),
+        "PRECONDITION_SOURCE",
+      );
+    },
+  ],
+  [
+    "ownership release removes both handlers even when close throws",
+    () => {
+      const removed = [];
+      assert.throws(() =>
+        releaseTransactionOwnership(
+          {
+            unverifiedChildHold: false,
+            controllerSource: { fd: 9 },
+            signalTarget: { off: (name) => removed.push(name) },
+            onTransactionSignal: () => {},
+          },
+          {
+            closeControllerSource: () => {
+              throw new Error("close");
+            },
+          },
+        ),
+      );
+      assert.deepEqual(removed, ["SIGINT", "SIGTERM"]);
+    },
+  ],
+  [
+    "unverified hold alone retains source and handlers",
+    () => {
+      let closeCount = 0;
+      let offCount = 0;
+      assert.equal(
+        releaseTransactionOwnership(
+          {
+            unverifiedChildHold: true,
+            controllerSource: { fd: 9 },
+            signalTarget: {
+              off: () => {
+                offCount += 1;
+              },
+            },
+            onTransactionSignal: () => {},
+          },
+          {
+            closeControllerSource: () => {
+              closeCount += 1;
+            },
+          },
+        ),
+        false,
+      );
+      assert.deepEqual([closeCount, offCount], [0, 0]);
+    },
+  ],
+];
+for (const [name, action] of v11103Cases) test(`v1.1.10.3: ${name}`, action);
+
+const v11113LifecycleCases = [
+  ["release latch starts false", () => assert.match(controllerSource, /let released = false/u)],
+  [
+    "release latch flips only after synchronous callback",
+    () =>
+      assert.match(controllerSource, /beforeRelease\(\);[\s\S]*released = true;[\s\S]*gate\.end/u),
+  ],
+  [
+    "acquire prerelease maps to precondition",
+    () => assert.match(controllerSource, /role === "ACQUIRE"[\s\S]*"PRECONDITION_INTERRUPTED"/u),
+  ],
+  [
+    "minimum prerelease maps to process identity",
+    () => assert.match(controllerSource, /"MINIMUM_EVIDENCE_PROCESS_IDENTITY"/u),
+  ],
+  [
+    "cleanup prerelease maps to process identity",
+    () => assert.match(controllerSource, /"CLEANUP_PROCESS_IDENTITY"/u),
+  ],
+  [
+    "release write is bounded",
+    () => assert.match(controllerSource, /CHILD_GATE_TIMEOUT_MS[\s\S]*gate\.end/u),
+  ],
+  [
+    "prerelease failure closes gate and waits",
+    () =>
+      assert.match(
+        controllerSource,
+        /if \(!released\)[\s\S]*gate\?\.destroy\(\)[\s\S]*awaitActualClose\(lifecycle\.close/u,
+      ),
+  ],
+  [
+    "unverified residue is internal HOLD",
+    () => assert.match(controllerSource, /PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD/u),
+  ],
+  [
+    "operational failure is independent",
+    () => assert.match(controllerSource, /let operationalFailure = null/u),
+  ],
+  [
+    "termination failure is independent",
+    () => assert.match(controllerSource, /let terminationFailure = null/u),
+  ],
+  [
+    "verified residue is internal HOLD",
+    () => assert.match(controllerSource, /PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD/u),
+  ],
+  [
+    "verified HOLD has fixed stderr",
+    () => assert.match(controllerSource, /IOS_RUNTIME_BOOTSTRAP_VERIFIED_CHILD_HOLD/u),
+  ],
+  [
+    "cleanup has a dedicated sanitizer",
+    () => assert.match(controllerSource, /function sanitizeCleanupFailure/u),
+  ],
+  ["legacy owned phase is removed", () => assert.doesNotMatch(controllerSource, /runOwnedPhase/u)],
+  [
+    "legacy cleanup child is removed",
+    () => assert.doesNotMatch(controllerSource, /runCleanupChild/u),
+  ],
+  [
+    "minimum phase precedes post inventory",
+    () =>
+      assert.ok(
+        controllerSource.indexOf('transactionPhase = "MINIMUM"') <
+          controllerSource.indexOf("const afterResult"),
+      ),
+  ],
+  [
+    "minimum defaults failed after acquire",
+    () =>
+      assert.ok(
+        controllerSource.indexOf('minimumEvidenceResult = "FAILED"') <
+          controllerSource.indexOf("const afterResult"),
+      ),
+  ],
+  [
+    "post failure resets minimum not run",
+    () =>
+      assert.match(
+        controllerSource,
+        /primaryFailureCode\.startsWith\("POST_RUNTIME_"\)[\s\S]*minimumEvidenceResult = "NOT_RUN"/u,
+      ),
+  ],
+  [
+    "acquire cancellation checked after gate",
+    () =>
+      assert.match(
+        controllerSource,
+        /await runGatedPhase\([\s\S]*checkCancellation\(\);[\s\S]*downloadResult = "SUCCEEDED"/u,
+      ),
+  ],
+  [
+    "post inventory cancellation is checked",
+    () =>
+      assert.match(
+        controllerSource,
+        /const afterResult = await runTool[\s\S]*checkCancellation\(\);[\s\S]*const afterInventory/u,
+      ),
+  ],
+  [
+    "minimum cancellation checked after gate",
+    () => {
+      const role = controllerSource.indexOf('role: "MINIMUM"');
+      const start = controllerSource.lastIndexOf("await runGatedPhase(", role);
+      const checked = controllerSource.indexOf("checkCancellation();", start);
+      const validated = controllerSource.indexOf("validateScriptIdentity", start);
+      assert.ok(start >= 0 && checked > start && validated > checked);
+    },
+  ],
+  [
+    "cleanup cancellation checked after gate",
+    () => {
+      const role = controllerSource.indexOf('role: "CLEANUP"');
+      const start = controllerSource.lastIndexOf("await runGatedPhase(", role);
+      const checked = controllerSource.indexOf("checkCancellation();", start);
+      const sampled = controllerSource.indexOf("sampleCleanupFilesystem", start);
+      assert.ok(start >= 0 && checked > start && sampled > checked);
+    },
+  ],
+  [
+    "termination failure has precedence",
+    () =>
+      assert.ok(
+        controllerSource.indexOf("if (terminationFailure) fail") <
+          controllerSource.indexOf("if (operationalFailure) fail"),
+      ),
+  ],
+  [
+    "group absence runs after termination await",
+    () => {
+      const phase = controllerSource.slice(
+        controllerSource.indexOf("export async function runGatedPhase"),
+      );
+      assert.ok(
+        phase.indexOf("if (terminating) await terminating") <
+          phase.indexOf("assertProcessGroupAbsent(captured.pgid"),
+      );
+    },
+  ],
+  [
+    "receipt adds minimum evidence free slot",
+    () => assert.match(controllerSource, /"freeBytesAfterMinimumEvidence"/u),
+  ],
+];
+for (const [name, action] of v11113LifecycleCases) test(`v1.1.11.3 lifecycle: ${name}`, action);
+
+const preconditionReceipt = (overrides = {}) =>
+  testingReceipt({
+    state: "PRECONDITION_REJECTED",
+    primaryFailureCode: "PRECONDITION_ENV",
+    cleanupFailureCode: "NONE",
+    downloadInvocationCount: 0,
+    downloadResult: "NOT_ATTEMPTED",
+    minimumEvidenceResult: "NOT_RUN",
+    cleanupResult: "NOT_REQUIRED",
+    runtimeIdentifier: null,
+    runtimeVersion: null,
+    runtimeBuild: null,
+    freeBytesBefore: null,
+    freeBytesAfterAcquire: null,
+    freeBytesAfterMinimumEvidence: null,
+    freeBytesAfterCleanup: null,
+    minimumFreeBytesObserved: null,
+    acquireDiskDeltaBytes: 0,
+    diskMonitorSampleCount: 0,
+    preExactRuntimeCount: null,
+    postAcquireExactRuntimeCount: null,
+    postCleanupExactRuntimeCount: null,
+    rawLogRetained: false,
+    runtimeRetained: false,
+    ...overrides,
+  });
+
+const v11113ReceiptCases = [
+  [
+    "preexisting runtime records actual count",
+    () =>
+      assert.equal(
+        validateReceipt(
+          preconditionReceipt({
+            primaryFailureCode: "PRECONDITION_RUNTIME_ALREADY_PRESENT",
+            preExactRuntimeCount: 2,
+          }),
+        ).preExactRuntimeCount,
+        2,
+      ),
+  ],
+  [
+    "runtime count cap rejects",
+    () =>
+      throwsCode(
+        () => validateReceipt(preconditionReceipt({ preExactRuntimeCount: 4097 })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "partial runtime triple rejects",
+    () =>
+      throwsCode(() => validateReceipt(testingReceipt({ runtimeBuild: null })), "RECEIPT_INVALID"),
+  ],
+  [
+    "zero samples require all nullable slots",
+    () =>
+      throwsCode(
+        () => validateReceipt(preconditionReceipt({ freeBytesBefore: 0 })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "positive samples require initial and minimum",
+    () =>
+      throwsCode(
+        () => validateReceipt(preconditionReceipt({ diskMonitorSampleCount: 1 })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "unknown postcleanup count reports retention",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "CLEANUP_FAILED",
+            primaryFailureCode: "ACQUIRE_EXIT",
+            cleanupFailureCode: "CLEANUP_RESIDUE",
+            downloadResult: "FAILED",
+            minimumEvidenceResult: "NOT_RUN",
+            cleanupResult: "FAILED",
+            runtimeIdentifier: null,
+            runtimeVersion: null,
+            runtimeBuild: null,
+            preExactRuntimeCount: 0,
+            postAcquireExactRuntimeCount: 0,
+            postCleanupExactRuntimeCount: null,
+            freeBytesAfterMinimumEvidence: null,
+            runtimeRetained: true,
+          }),
+        ).runtimeRetained,
+        true,
+      ),
+  ],
+  [
+    "unknown postcleanup count cannot claim no retention",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            testingReceipt({
+              state: "CLEANUP_FAILED",
+              primaryFailureCode: "ACQUIRE_EXIT",
+              cleanupFailureCode: "CLEANUP_RESIDUE",
+              downloadResult: "FAILED",
+              minimumEvidenceResult: "NOT_RUN",
+              cleanupResult: "FAILED",
+              runtimeIdentifier: null,
+              runtimeVersion: null,
+              runtimeBuild: null,
+              preExactRuntimeCount: 0,
+              postAcquireExactRuntimeCount: 0,
+              postCleanupExactRuntimeCount: null,
+              runtimeRetained: false,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "runtime inventory cap rejects 4097 rows",
+    () =>
+      throwsCode(
+        () =>
+          parseRuntimeInventory(
+            JSON.stringify({ runtimes: Array.from({ length: 4097 }, () => ({})) }),
+          ),
+        "PRECONDITION_RUNTIME_INVENTORY",
+      ),
+  ],
+];
+for (const [name, action] of v11113ReceiptCases) test(`v1.1.11.3 receipt: ${name}`, action);
+
+const acquireDiskReceipt = (primaryFailureCode, overrides = {}) =>
+  testingReceipt({
+    state: "ACQUIRE_FAILED_CLEAN",
+    primaryFailureCode,
+    cleanupFailureCode: "NONE",
+    downloadInvocationCount: 1,
+    downloadResult: "FAILED",
+    minimumEvidenceResult: "NOT_RUN",
+    cleanupResult: "SUCCEEDED",
+    runtimeIdentifier: null,
+    runtimeVersion: null,
+    runtimeBuild: null,
+    freeBytesBefore: Number(MIN_FREE_BEFORE_BYTES),
+    freeBytesAfterAcquire: Number(MIN_FREE_AFTER_ACQUIRE_BYTES),
+    freeBytesAfterMinimumEvidence: null,
+    freeBytesAfterCleanup: Number(MIN_FREE_AFTER_CLEANUP_BYTES),
+    minimumFreeBytesObserved: Number(MIN_FREE_AFTER_ACQUIRE_BYTES),
+    acquireDiskDeltaBytes: 0,
+    diskMonitorSampleCount: 2,
+    preExactRuntimeCount: 0,
+    postAcquireExactRuntimeCount: 0,
+    postCleanupExactRuntimeCount: 0,
+    rawLogRetained: false,
+    runtimeRetained: false,
+    ...overrides,
+  });
+
+const v11113ThresholdCases = [
+  [
+    "precondition disk accepts observed zero",
+    () =>
+      assert.equal(
+        validateReceipt(
+          preconditionReceipt({
+            primaryFailureCode: "PRECONDITION_DISK",
+            preExactRuntimeCount: 0,
+            freeBytesBefore: 0,
+            minimumFreeBytesObserved: 0,
+            diskMonitorSampleCount: 1,
+          }),
+        ).freeBytesBefore,
+        0,
+      ),
+  ],
+  [
+    "precondition disk accepts floor minus one",
+    () =>
+      assert.equal(
+        validateReceipt(
+          preconditionReceipt({
+            primaryFailureCode: "PRECONDITION_DISK",
+            preExactRuntimeCount: 0,
+            freeBytesBefore: Number(MIN_FREE_BEFORE_BYTES) - 1,
+            minimumFreeBytesObserved: Number(MIN_FREE_BEFORE_BYTES) - 1,
+            diskMonitorSampleCount: 1,
+          }),
+        ).state,
+        "PRECONDITION_REJECTED",
+      ),
+  ],
+  [
+    "precondition disk rejects exact floor",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            preconditionReceipt({
+              primaryFailureCode: "PRECONDITION_DISK",
+              preExactRuntimeCount: 0,
+              freeBytesBefore: Number(MIN_FREE_BEFORE_BYTES),
+              minimumFreeBytesObserved: Number(MIN_FREE_BEFORE_BYTES),
+              diskMonitorSampleCount: 1,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "acquire floor accepts floor minus one",
+    () =>
+      assert.equal(
+        validateReceipt(
+          acquireDiskReceipt("ACQUIRE_DISK_FLOOR", {
+            freeBytesAfterAcquire: Number(MIN_FREE_AFTER_ACQUIRE_BYTES) - 1,
+            minimumFreeBytesObserved: Number(MIN_FREE_AFTER_ACQUIRE_BYTES) - 1,
+          }),
+        ).primaryFailureCode,
+        "ACQUIRE_DISK_FLOOR",
+      ),
+  ],
+  [
+    "acquire floor rejects exact floor",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            acquireDiskReceipt("ACQUIRE_DISK_FLOOR", {
+              freeBytesAfterAcquire: Number(MIN_FREE_AFTER_ACQUIRE_BYTES),
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "acquire delta accepts cap plus one and rejects cap",
+    () => {
+      assert.equal(
+        validateReceipt(
+          acquireDiskReceipt("ACQUIRE_DISK_LIMIT", {
+            acquireDiskDeltaBytes: Number(MAX_ACQUIRE_DISK_DELTA_BYTES) + 1,
+          }),
+        ).primaryFailureCode,
+        "ACQUIRE_DISK_LIMIT",
+      );
+      throwsCode(
+        () =>
+          validateReceipt(
+            acquireDiskReceipt("ACQUIRE_DISK_LIMIT", {
+              acquireDiskDeltaBytes: Number(MAX_ACQUIRE_DISK_DELTA_BYTES),
+            }),
+          ),
+        "RECEIPT_INVALID",
+      );
+    },
+  ],
+];
+for (const [name, action] of v11113ThresholdCases) test(`v1.1.11.3 threshold: ${name}`, action);
+
+const v11121CancellationCases = [
+  [
+    "finalization interruption preserves an existing primary failure",
+    () =>
+      assert.match(
+        controllerSource,
+        /cancellation\.requested[\s\S]*cleanupResult !== "FAILED"[\s\S]*primaryFailureCode === "NONE"/u,
+      ),
+  ],
+  [
+    "precondition interruption remains invocation zero",
+    () =>
+      assert.match(
+        controllerSource,
+        /"PRECONDITION_INTERRUPTED"[\s\S]*downloadInvocationCount === 0/u,
+      ),
+  ],
+  [
+    "acquire interruption remains closed",
+    () => assert.match(controllerSource, /"ACQUIRE_INTERRUPTED"/u),
+  ],
+  [
+    "minimum interruption remains closed",
+    () => assert.match(controllerSource, /"MINIMUM_EVIDENCE_INTERRUPTED"/u),
+  ],
+  [
+    "cleanup interruption remains a cleanup failure",
+    () => assert.match(controllerSource, /"CLEANUP_INTERRUPTED"[\s\S]*sanitizeCleanupFailure/u),
+  ],
+];
+for (const [name, action] of v11121CancellationCases)
+  test(`v1.1.12.1 cancellation: ${name}`, action);
+
+const v11121SubprocessCases = [
+  [
+    "uses a dedicated ps verifier",
+    () => assert.match(controllerSource, /async function runPsVerifier/u),
+  ],
+  [
+    "ps verifier is direct and detached",
+    async () => {
+      const child = fakeChild(401);
+      let invocation;
+      const promise = testing.runPsVerifier(
+        ["-ww", "-p", "9"],
+        {
+          timeout: 2_000,
+          stdout: 64,
+          stderr: 64,
+          timeoutCode: "PRECONDITION_ENV",
+          outputCode: "PRECONDITION_ENV",
+          exitCode: "PRECONDITION_ENV",
+        },
+        {
+          spawnPs: (command, args, options) => {
+            invocation = { command, args, options };
+            return child;
+          },
+          kill: () => {
+            throw esrch();
+          },
+        },
+      );
+      queueMicrotask(() => {
+        child.stdout.end("ok");
+        child.stderr.end();
+        child.exitCode = 0;
+        child.emit("close", 0, null);
+      });
+      assert.equal((await promise).stdout, "ok");
+      assert.deepEqual(invocation, {
+        command: PS,
+        args: ["-ww", "-p", "9"],
+        options: {
+          cwd: "/",
+          env: { LANG: "C", LC_ALL: "C" },
+          shell: false,
+          detached: true,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      });
+    },
+  ],
+  [
+    "ps verifier has the exact C locale",
+    () => assert.match(controllerSource, /env: \{ LANG: "C", LC_ALL: "C" \}/u),
+  ],
+  [
+    "ps verifier kills only its direct group",
+    async () => {
+      const child = fakeChild(402);
+      const calls = [];
+      await assert.rejects(
+        testing.runPsVerifier(
+          [],
+          {
+            timeout: 1,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_SOURCE",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawnPs: () => child,
+            setTimeout: (callback) => {
+              queueMicrotask(callback);
+              return { unref() {} };
+            },
+            kill: (pid, signal) => {
+              calls.push([pid, signal]);
+              if (signal === "SIGKILL") {
+                child.signalCode = "SIGKILL";
+                child.emit("close", null, "SIGKILL");
+                return;
+              }
+              throw esrch();
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_ENV",
+      );
+      assert.deepEqual(calls, [
+        [-402, "SIGKILL"],
+        [-402, 0],
+      ]);
+    },
+  ],
+  [
+    "general captured probes are detached",
+    async () => {
+      const child = fakeChild(403);
+      let invocation;
+      let expected;
+      const promise = testing.runCaptured(
+        "/tool",
+        ["--flag"],
+        {
+          cwd: "/repo",
+          env: { LANG: "C" },
+        },
+        {
+          timeout: 2_000,
+          stdout: 64,
+          stderr: 64,
+          timeoutCode: "PRECONDITION_ENV",
+          outputCode: "PRECONDITION_SOURCE",
+          exitCode: "PRECONDITION_XCODE",
+        },
+        {
+          spawn: (command, args, options) => {
+            invocation = { command, args, options };
+            return child;
+          },
+          probeIdentity: async (_pid, tokens) => {
+            expected = tokens;
+            return {
+              pid: 403,
+              pgid: 403,
+              executable: "/tool",
+              startTime: "Mon Jan 01 00:00:00 2024",
+            };
+          },
+          kill: () => {
+            throw esrch();
+          },
+        },
+      );
+      queueMicrotask(() => {
+        child.stdout.end("ok");
+        child.stderr.end();
+        child.exitCode = 0;
+        child.emit("close", 0, null);
+      });
+      assert.equal((await promise).stdout, "ok");
+      assert.deepEqual(expected, ["/tool", "--flag"]);
+      assert.equal(invocation.options.detached, true);
+      assert.equal(invocation.options.shell, false);
+    },
+  ],
+  [
+    "general probes capture exact executable and argv",
+    () => assert.match(controllerSource, /child\.pid,[\s\S]*\[command, \.\.\.args\]/u),
+  ],
+  [
+    "settlement attaches immediately after spawn",
+    () => {
+      const start = controllerSource.indexOf("async function runCaptured");
+      assert.ok(
+        controllerSource.indexOf("const settlement = childSettlement(child)", start) <
+          controllerSource.indexOf("const stdout = []", start),
+      );
+    },
+  ],
+  [
+    "timeout and output latch the original phase code",
+    async () => {
+      const child = fakeChild(404);
+      const calls = [];
+      await assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 1,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_SOURCE",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawn: () => child,
+            probeIdentity: async () => ({
+              pid: 404,
+              pgid: 404,
+              executable: "/tool",
+              startTime: "Mon Jan 01 00:00:00 2024",
+            }),
+            setTimeout: (callback) => {
+              queueMicrotask(callback);
+              return { unref() {} };
+            },
+            kill: (pid, signal) => {
+              calls.push([pid, signal]);
+              if (signal === "SIGTERM") {
+                child.signalCode = "SIGTERM";
+                child.emit("close", null, "SIGTERM");
+                return;
+              }
+              throw esrch();
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_ENV",
+      );
+      assert.deepEqual(calls, [
+        [-404, "SIGTERM"],
+        [-404, 0],
+        [-404, 0],
+      ]);
+      assert.match(controllerSource, /latch\(limits\.outputCode\)/u);
+    },
+  ],
+  [
+    "verified general failures use bounded TERM and KILL",
+    () => assert.match(controllerSource, /terminateVerifiedProcessGroup\([\s\S]*lifecycle\.close/u),
+  ],
+  [
+    "unverified live probes enter nonreceipt HOLD",
+    async () => {
+      const child = fakeChild(405);
+      await assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 2_000,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_SOURCE",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawn: () => child,
+            probeIdentity: async () => {
+              throw new Error("unverified");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+    },
+  ],
+  [
+    "verified probes always prove process-group absence",
+    async () => {
+      const child = fakeChild(406);
+      const promise = testing.runCaptured(
+        "/tool",
+        [],
+        { cwd: "/", env: {} },
+        {
+          timeout: 2_000,
+          stdout: 64,
+          stderr: 64,
+          timeoutCode: "PRECONDITION_ENV",
+          outputCode: "PRECONDITION_SOURCE",
+          exitCode: "PRECONDITION_XCODE",
+        },
+        {
+          spawn: () => child,
+          probeIdentity: async () => ({
+            pid: 406,
+            pgid: 406,
+            executable: "/tool",
+            startTime: "Mon Jan 01 00:00:00 2024",
+          }),
+          kill: () => undefined,
+        },
+      );
+      queueMicrotask(() => {
+        child.exitCode = 0;
+        child.emit("close", 0, null);
+      });
+      await assert.rejects(
+        promise,
+        (error) => error?.code === "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      );
+    },
+  ],
+];
+for (const [name, action] of v11121SubprocessCases) test(`v1.1.12.1 subprocess: ${name}`, action);
+
+const v11121RoleSampleCases = [
+  [
+    "requires an explicit role sample sink",
+    () => assert.match(controllerSource, /typeof onRoleSample !== "function"/u),
+  ],
+  [
+    "writes the role slot on the initial gated sample",
+    () => assert.match(controllerSource, /sampleHeldFilesystem\([\s\S]*onRoleSample/u),
+  ],
+  [
+    "writes the role slot during interval monitoring",
+    () => assert.ok((controllerSource.match(/\bonRoleSample\b/gu) ?? []).length >= 5),
+  ],
+  [
+    "acquire samples bind freeBytesAfterAcquire",
+    () => {
+      assert.ok(controllerSource.includes("onRoleSample: (value) => {"));
+      assert.ok(controllerSource.includes("freeAfterAcquire = value;"));
+    },
+  ],
+  [
+    "minimum samples bind freeBytesAfterMinimumEvidence",
+    () => {
+      assert.ok(controllerSource.includes("onRoleSample: (value) => {"));
+      assert.ok(controllerSource.includes("freeAfterMinimumEvidence = value;"));
+    },
+  ],
+  [
+    "cleanup samples bind freeBytesAfterCleanup while preflight binds freeBefore",
+    () => {
+      assert.ok(controllerSource.includes("onRoleSample: (value) => {"));
+      assert.ok(controllerSource.includes("freeAfterCleanup = value;"));
+      assert.match(controllerSource, /freeBefore = sampleHeldFilesystem\(/u);
+    },
+  ],
+];
+for (const [name, action] of v11121RoleSampleCases) test(`v1.1.12.1 role sample: ${name}`, action);
+
+const postIdentityReceipt = () =>
+  testingReceipt({
+    state: "ACQUIRE_FAILED_CLEAN",
+    primaryFailureCode: "POST_RUNTIME_IDENTITY",
+    cleanupFailureCode: "NONE",
+    downloadResult: "SUCCEEDED",
+    minimumEvidenceResult: "NOT_RUN",
+    cleanupResult: "SUCCEEDED",
+    runtimeIdentifier: null,
+    runtimeVersion: null,
+    runtimeBuild: null,
+    freeBytesAfterMinimumEvidence: null,
+    preExactRuntimeCount: 0,
+    postAcquireExactRuntimeCount: 1,
+    postCleanupExactRuntimeCount: 0,
+  });
+
+const v11121ReceiptCases = [
+  [
+    "invalid first inventory uses the dedicated code",
+    () => throwsCode(() => parseRuntimeInventory("{"), "PRECONDITION_RUNTIME_INVENTORY"),
+  ],
+  [
+    "oversized first inventory uses the dedicated code",
+    () =>
+      throwsCode(
+        () =>
+          parseRuntimeInventory(
+            JSON.stringify({ runtimes: Array.from({ length: 4097 }, () => ({})) }),
+          ),
+        "PRECONDITION_RUNTIME_INVENTORY",
+      ),
+  ],
+  [
+    "runtime-inventory precondition has no fabricated observations",
+    () =>
+      assert.equal(
+        validateReceipt(
+          preconditionReceipt({ primaryFailureCode: "PRECONDITION_RUNTIME_INVENTORY" }),
+        ).state,
+        "PRECONDITION_REJECTED",
+      ),
+  ],
+  [
+    "storage-anchor precondition begins after exact count zero",
+    () =>
+      assert.equal(
+        validateReceipt(
+          preconditionReceipt({
+            primaryFailureCode: "PRECONDITION_STORAGE_ANCHOR",
+            preExactRuntimeCount: 0,
+          }),
+        ).preExactRuntimeCount,
+        0,
+      ),
+  ],
+  [
+    "invocation one rejects a null pre-count",
+    () =>
+      throwsCode(
+        () => validateReceipt(testingReceipt({ preExactRuntimeCount: null })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "cleanup success rejects a null post-cleanup count",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            testingReceipt({ postCleanupExactRuntimeCount: null, runtimeRetained: true }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "acquire floor cannot borrow a later low slot",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            acquireDiskReceipt("ACQUIRE_DISK_FLOOR", {
+              freeBytesAfterAcquire: Number(MIN_FREE_AFTER_ACQUIRE_BYTES),
+              freeBytesAfterMinimumEvidence: 0,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "minimum floor cannot borrow an acquire low slot",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            testingReceipt({
+              state: "TEST_FAILED_CLEAN",
+              primaryFailureCode: "MINIMUM_EVIDENCE_DISK_FLOOR",
+              minimumEvidenceResult: "FAILED",
+              freeBytesAfterAcquire: 0,
+              freeBytesAfterMinimumEvidence: Number(MIN_FREE_AFTER_ACQUIRE_BYTES),
+              minimumFreeBytesObserved: 0,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "post-runtime identity may record cardinality before selecting a runtime",
+    () => assert.equal(validateReceipt(postIdentityReceipt()).postAcquireExactRuntimeCount, 1),
+  ],
+  [
+    "acquire failure rejects an unreached minimum slot",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            acquireDiskReceipt("ACQUIRE_EXIT", {
+              freeBytesAfterMinimumEvidence: Number(MIN_FREE_AFTER_ACQUIRE_BYTES),
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+];
+for (const [name, action] of v11121ReceiptCases) test(`v1.1.12.1 receipt table: ${name}`, action);
+
+const capturedWrapper = (pid = 511) => ({
+  pid,
+  pgid: pid,
+  executable: "/tool",
+  startTime: "Mon Jan 01 00:00:00 2024",
+});
+
+const v11122LifecycleCases = [
+  [
+    "live re-probe failure holds unverified without signaling",
+    async () => {
+      const child = fakeChild(511);
+      const signals = [];
+      await assert.rejects(
+        signalVerifiedProcessGroup(child, capturedWrapper(), "SIGTERM", ["/tool"], {
+          probeIdentity: async () => {
+            throw new Error("probe failed");
+          },
+          kill: (...args) => signals.push(args),
+        }),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.deepEqual(signals, []);
+    },
+  ],
+  [
+    "close during re-probe accepts only proven group absence",
+    async () => {
+      const child = fakeChild(512);
+      const signals = [];
+      assert.equal(
+        await signalVerifiedProcessGroup(child, capturedWrapper(512), "SIGTERM", ["/tool"], {
+          probeIdentity: async () => {
+            child.exitCode = 0;
+            throw new Error("closed during probe");
+          },
+          kill: (...args) => {
+            signals.push(args);
+            throw esrch();
+          },
+        }),
+        false,
+      );
+      assert.deepEqual(signals, [[-512, 0]]);
+    },
+  ],
+  [
+    "live immutable identity drift holds unverified without signaling",
+    async () => {
+      const child = fakeChild(513);
+      const signals = [];
+      await assert.rejects(
+        signalVerifiedProcessGroup(child, capturedWrapper(513), "SIGTERM", ["/tool"], {
+          probeIdentity: async () => ({
+            ...capturedWrapper(513),
+            startTime: "Tue Jan 02 00:00:00 2024",
+          }),
+          kill: (...args) => signals.push(args),
+        }),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.deepEqual(signals, []);
+    },
+  ],
+  [
+    "verified signal failure holds verified",
+    async () => {
+      const child = fakeChild(514);
+      await assert.rejects(
+        signalVerifiedProcessGroup(child, capturedWrapper(514), "SIGTERM", ["/tool"], {
+          probeIdentity: async () => capturedWrapper(514),
+          kill: () => {
+            throw Object.assign(new Error("denied"), { code: "EPERM" });
+          },
+        }),
+        (error) => error?.code === "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      );
+    },
+  ],
+  [
+    "termination preserves the unverified hold code",
+    async () => {
+      const child = fakeChild(515);
+      await assert.rejects(
+        terminateVerifiedProcessGroup(
+          child,
+          testing.childLifecycle(child).close,
+          capturedWrapper(515),
+          ["/tool"],
+          {
+            probeIdentity: async () => {
+              throw new Error("unverifiable");
+            },
+            kill: () => assert.fail("unverified identity must not be signaled"),
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+    },
+  ],
+  [
+    "gated phases race immutable HOLD settlement against child close",
+    async () => {
+      const sourcePath = realpathSync.native(resolve(root, "scripts/ios-runtime-bootstrap.mjs"));
+      const sourceFd = openSync(sourcePath, "r");
+      const sourceInfo = fstatSync(sourceFd);
+      const sourceBytes = readFileSync(sourcePath);
+      const heldSource = Object.freeze({
+        fd: sourceFd,
+        path: sourcePath,
+        dev: sourceInfo.dev,
+        ino: sourceInfo.ino,
+        size: sourceInfo.size,
+        sha256: createHash("sha256").update(sourceBytes).digest("hex"),
+      });
+      const child = fakeChild(516);
+      const gate = new PassThrough();
+      const ready = new PassThrough();
+      child.stdio = [null, null, null, gate, null, ready];
+      const originalEnd = gate.end.bind(gate);
+      gate.end = (chunk, callback) => {
+        child.stdout.write(Buffer.alloc(MAX_COMBINED_CAPTURE_BYTES + 1));
+        return originalEnd(chunk, callback);
+      };
+      const gatedInternal = { ...validInternal };
+      delete gatedInternal.FLUYO_INTERNAL_RELEASE_SHA256;
+      let probes = 0;
+      let signals = 0;
+      let downstreamReceiptCleanupCalls = 0;
+      const observations = { minimumFree: null, maximumDelta: 0n, samples: 0 };
+      const directoryInfo = Object.freeze({
+        dev: 1n,
+        ino: 2n,
+        isDirectory: () => true,
+        isSymbolicLink: () => false,
+      });
+      const dependencies = {
+        now: () => performance.now(),
+        randomBytes: () => Buffer.alloc(CHILD_GATE_RELEASE_BYTES, 7),
+        spawn: () => {
+          queueMicrotask(() => ready.end(CHILD_GATE_READY));
+          return child;
+        },
+        probeIdentity: async () => {
+          probes += 1;
+          if (probes === 1) return capturedWrapper(516);
+          throw new Error("live termination identity became unprovable");
+        },
+        kill: () => {
+          signals += 1;
+        },
+        fs: {
+          fstat: () => directoryInfo,
+          lstat: () => directoryInfo,
+          statfs: () => ({ bavail: 20_000_000_000n, bsize: 1n }),
+        },
+      };
+      const phase = runGatedPhase(
+        {
+          role: "ACQUIRE",
+          repositoryRoot: root,
+          controllerSource: heldSource,
+          internalEnvironment: Object.freeze(gatedInternal),
+          targetEnvironment: validAcquireTarget,
+          timeoutMs: 10_000,
+          binding: { fd: 1, path: "/owned", dev: 1n, ino: 2n },
+          freeBefore: 20_000_000_000n,
+          observations,
+          ownedRoots: [],
+          capture: { bytes: 0 },
+          onRoleSample: () => {},
+          beforeRelease: () => {},
+        },
+        dependencies,
+      ).then(() => {
+        downstreamReceiptCleanupCalls += 1;
+      });
+      try {
+        await assert.rejects(
+          Promise.race([
+            phase,
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("HOLD did not settle promptly")), 500),
+            ),
+          ]),
+          (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+        );
+        const samplesAtHold = observations.samples;
+        await new Promise((resolveWait) => setTimeout(resolveWait, DISK_MONITOR_INTERVAL_MS + 25));
+        assert.equal(observations.samples, samplesAtHold);
+        assert.equal(signals, 0);
+        assert.equal(downstreamReceiptCleanupCalls, 0);
+        assert.equal(child.exitCode, null);
+        assert.equal(child.signalCode, null);
+        assert.ok(child.listenerCount("close") <= 1);
+        assert.ok(child.listenerCount("error") <= 1);
+        assert.equal(ready.listenerCount("data"), 0);
+        assert.equal(ready.listenerCount("end"), 0);
+      } finally {
+        closeSync(sourceFd);
+        gate.destroy();
+        ready.destroy();
+        child.stdout.destroy();
+        child.stderr.destroy();
+      }
+    },
+  ],
+];
+for (const [name, action] of v11122LifecycleCases) test(`v1.1.12.2 lifecycle: ${name}`, action);
+
+function invalidTrackedChild(onPidRead) {
+  const child = fakeChild(1);
+  Object.defineProperty(child, "pid", {
+    configurable: true,
+    get: () => {
+      onPidRead(child);
+      return 0;
+    },
+  });
+  return child;
+}
+
+async function prereleaseHold(code, pid) {
+  const sourcePath = realpathSync.native(resolve(root, "scripts/ios-runtime-bootstrap.mjs"));
+  const sourceFd = openSync(sourcePath, "r");
+  const sourceInfo = fstatSync(sourceFd);
+  const heldSource = Object.freeze({
+    fd: sourceFd,
+    path: sourcePath,
+    dev: sourceInfo.dev,
+    ino: sourceInfo.ino,
+    size: sourceInfo.size,
+    sha256: createHash("sha256").update(readFileSync(sourcePath)).digest("hex"),
+  });
+  const child = fakeChild(pid);
+  const gate = new PassThrough();
+  const ready = new PassThrough();
+  child.stdio = [null, null, null, gate, null, ready];
+  const gatedInternal = { ...validInternal };
+  delete gatedInternal.FLUYO_INTERNAL_RELEASE_SHA256;
+  const phase = runGatedPhase(
+    {
+      role: "ACQUIRE",
+      repositoryRoot: root,
+      controllerSource: heldSource,
+      internalEnvironment: Object.freeze(gatedInternal),
+      targetEnvironment: validAcquireTarget,
+      timeoutMs: 10_000,
+      binding: { fd: 1, path: "/owned", dev: 1n, ino: 2n },
+      freeBefore: 20_000_000_000n,
+      observations: { minimumFree: null, maximumDelta: 0n, samples: 0 },
+      ownedRoots: [],
+      capture: { bytes: 0 },
+      onRoleSample: () => assert.fail("pre-release HOLD must not sample"),
+    },
+    {
+      randomBytes: () => Buffer.alloc(CHILD_GATE_RELEASE_BYTES, 9),
+      spawn: () => {
+        queueMicrotask(() => ready.end(CHILD_GATE_READY));
+        return child;
+      },
+      probeIdentity: async () => {
+        throw new BootstrapFailure(code);
+      },
+    },
+  );
+  try {
+    await assert.rejects(
+      Promise.race([
+        phase,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("pre-release HOLD was remapped or delayed")), 500),
+        ),
+      ]),
+      (error) => error?.code === code,
+    );
+    assert.equal(child.exitCode, null);
+    assert.equal(child.signalCode, null);
+    assert.equal(gate.destroyed, false);
+  } finally {
+    closeSync(sourceFd);
+    gate.destroy();
+    ready.destroy();
+    child.stdout.destroy();
+    child.stderr.destroy();
+  }
+}
+
+async function gatedMissingClose({ released, pid, expectedCode }) {
+  const sourcePath = realpathSync.native(resolve(root, "scripts/ios-runtime-bootstrap.mjs"));
+  const sourceFd = openSync(sourcePath, "r");
+  const sourceInfo = fstatSync(sourceFd);
+  const heldSource = Object.freeze({
+    fd: sourceFd,
+    path: sourcePath,
+    dev: sourceInfo.dev,
+    ino: sourceInfo.ino,
+    size: sourceInfo.size,
+    sha256: createHash("sha256").update(readFileSync(sourcePath)).digest("hex"),
+  });
+  const child = fakeChild(pid);
+  const gate = new PassThrough();
+  const ready = new PassThrough();
+  child.stdio = [null, null, null, gate, null, ready];
+  if (released) {
+    const originalEnd = gate.end.bind(gate);
+    gate.end = (chunk, callback) =>
+      originalEnd(chunk, (error) => {
+        callback(error);
+        child.exitCode = 1;
+        queueMicrotask(() => child.emit("error", new Error("released child exited without close")));
+      });
+  }
+  const gatedInternal = { ...validInternal };
+  delete gatedInternal.FLUYO_INTERNAL_RELEASE_SHA256;
+  let signals = 0;
+  let downstream = 0;
+  const info = {
+    dev: 1n,
+    ino: 2n,
+    isDirectory: () => true,
+    isSymbolicLink: () => false,
+  };
+  const phase = runGatedPhase(
+    {
+      role: "ACQUIRE",
+      repositoryRoot: root,
+      controllerSource: heldSource,
+      internalEnvironment: Object.freeze(gatedInternal),
+      targetEnvironment: validAcquireTarget,
+      timeoutMs: 10_000,
+      binding: { fd: 1, path: "/owned", dev: 1n, ino: 2n },
+      freeBefore: 20_000_000_000n,
+      observations: { minimumFree: null, maximumDelta: 0n, samples: 0 },
+      ownedRoots: [],
+      capture: { bytes: 0 },
+      onRoleSample: () => {},
+    },
+    {
+      randomBytes: () => Buffer.alloc(CHILD_GATE_RELEASE_BYTES, 4),
+      spawn: () => {
+        queueMicrotask(() => ready.end(CHILD_GATE_READY));
+        return child;
+      },
+      probeIdentity: async () => {
+        if (!released) throw new Error("pre-release identity unavailable");
+        return capturedWrapper(pid);
+      },
+      now: () => 0,
+      setTimeout: (callback, milliseconds) =>
+        setTimeout(callback, milliseconds === CHILD_CLOSE_WAIT_MS ? 0 : milliseconds),
+      kill: () => {
+        signals += 1;
+      },
+      fs: {
+        fstat: () => info,
+        lstat: () => info,
+        statfs: () => ({ bavail: 20_000_000_000n, bsize: 1n }),
+      },
+    },
+  ).then(() => {
+    downstream += 1;
+  });
+  try {
+    await assert.rejects(
+      Promise.race([
+        phase,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("missing-close HOLD did not settle")), 500),
+        ),
+      ]),
+      (error) => error?.code === expectedCode,
+    );
+    assert.equal(signals, 0);
+    assert.equal(downstream, 0);
+    assert.equal(child.listenerCount("close"), 1);
+  } finally {
+    closeSync(sourceFd);
+    gate.destroy();
+    ready.destroy();
+    child.stdout.destroy();
+    child.stderr.destroy();
+  }
+}
+
+const cleanupDiskReceipt = (cleanupFailureCode, overrides = {}) =>
+  testingReceipt({
+    state: "CLEANUP_FAILED",
+    primaryFailureCode: "NONE",
+    cleanupFailureCode,
+    cleanupResult: "FAILED",
+    postCleanupExactRuntimeCount: null,
+    runtimeRetained: true,
+    ...overrides,
+  });
+
+const v113Cases = [
+  [
+    "ps settlement attaches before invalid PID read and maps a close",
+    async () => {
+      const child = invalidTrackedChild((value) => {
+        assert.equal(value.listenerCount("error"), 1);
+        assert.equal(value.listenerCount("close"), 1);
+      });
+      const promise = testing.runPsVerifier(
+        [],
+        {
+          timeout: 2_000,
+          stdout: 64,
+          stderr: 64,
+          timeoutCode: "PRECONDITION_ENV",
+          outputCode: "PRECONDITION_ENV",
+          exitCode: "PRECONDITION_XCODE",
+        },
+        { spawnPs: () => child },
+      );
+      queueMicrotask(() => child.emit("close", 1, null));
+      await assert.rejects(promise, (error) => error?.code === "PRECONDITION_XCODE");
+      assert.equal(child.listenerCount("error"), 0);
+      assert.equal(child.listenerCount("close"), 0);
+    },
+  ],
+  [
+    "ps invalid PID without settlement enters bounded unverified HOLD and never signals",
+    async () => {
+      const child = invalidTrackedChild(() => {});
+      let delay;
+      let signals = 0;
+      await assert.rejects(
+        testing.runPsVerifier(
+          [],
+          {
+            timeout: 2_000,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_ENV",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawnPs: () => child,
+            setTimeout: (callback, milliseconds) => {
+              delay = milliseconds;
+              return setTimeout(callback, 0);
+            },
+            kill: () => {
+              signals += 1;
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.equal(delay, 7_000);
+      assert.equal(signals, 0);
+    },
+  ],
+  [
+    "general settlement attaches before invalid PID read and maps a close",
+    async () => {
+      const child = invalidTrackedChild((value) => {
+        assert.equal(value.listenerCount("error"), 1);
+        assert.equal(value.listenerCount("close"), 1);
+      });
+      const promise = testing.runCaptured(
+        "/tool",
+        [],
+        { cwd: "/", env: {} },
+        {
+          timeout: 2_000,
+          stdout: 64,
+          stderr: 64,
+          timeoutCode: "PRECONDITION_ENV",
+          outputCode: "PRECONDITION_ENV",
+          exitCode: "PRECONDITION_SOURCE",
+        },
+        { spawn: () => child },
+      );
+      queueMicrotask(() => {
+        child.emit("error", new Error("spawned child failed"));
+        queueMicrotask(() => child.emit("close", 1, null));
+      });
+      await assert.rejects(promise, (error) => error?.code === "PRECONDITION_SOURCE");
+      assert.equal(child.listenerCount("error"), 0);
+      assert.equal(child.listenerCount("close"), 0);
+    },
+  ],
+  [
+    "general invalid PID without settlement enters bounded unverified HOLD and never signals",
+    async () => {
+      const child = invalidTrackedChild(() => {});
+      let delay;
+      let signals = 0;
+      await assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 2_000,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_ENV",
+            exitCode: "PRECONDITION_SOURCE",
+          },
+          {
+            spawn: () => child,
+            setTimeout: (callback, milliseconds) => {
+              delay = milliseconds;
+              return setTimeout(callback, 0);
+            },
+            kill: () => {
+              signals += 1;
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.equal(delay, 7_000);
+      assert.equal(signals, 0);
+    },
+  ],
+  [
+    "synchronous ps spawn rejection is the fixed phase exit code",
+    async () =>
+      assert.rejects(
+        testing.runPsVerifier(
+          [],
+          {
+            timeout: 2_000,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_ENV",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawnPs: () => {
+              throw new Error("private raw error");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_XCODE" && !error.message.includes("private"),
+      ),
+  ],
+  [
+    "synchronous general spawn rejection is the fixed phase exit code",
+    async () =>
+      assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 2_000,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_ENV",
+            exitCode: "PRECONDITION_SOURCE",
+          },
+          {
+            spawn: () => {
+              throw new Error("private raw error");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SOURCE" && !error.message.includes("private"),
+      ),
+  ],
+  [
+    "pre-release unverified HOLD is retained before gate teardown or role mapping",
+    async () => prereleaseHold("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD", 611),
+  ],
+  [
+    "pre-release verified HOLD is retained before gate teardown or role mapping",
+    async () => prereleaseHold("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD", 612),
+  ],
+  [
+    "storage anchor failure closes its candidate exactly once and clears evidence",
+    () => {
+      const observations = { minimumFree: 1n, maximumDelta: 2n, samples: 3 };
+      let closes = 0;
+      throwsCode(
+        () =>
+          bindStorageAnchor([], [], observations, {
+            discover: () => ({ path: "/anchor", dev: 1n, ino: 2n }),
+            open: () => 77,
+            close: (fd) => {
+              assert.equal(fd, 77);
+              closes += 1;
+            },
+            fs: {
+              fstat: () => {
+                throw new Error("identity failed");
+              },
+            },
+          }),
+        "PRECONDITION_STORAGE_ANCHOR",
+      );
+      assert.equal(closes, 1);
+      assert.deepEqual(observations, { minimumFree: null, maximumDelta: 0n, samples: 0 });
+    },
+  ],
+  [
+    "successful storage anchor transfers its held descriptor and first sample",
+    () => {
+      const observations = { minimumFree: null, maximumDelta: 0n, samples: 0 };
+      let closes = 0;
+      const info = {
+        dev: 1n,
+        ino: 2n,
+        isDirectory: () => true,
+        isSymbolicLink: () => false,
+      };
+      const value = bindStorageAnchor([], [], observations, {
+        discover: () => ({ path: "/anchor", dev: 1n, ino: 2n }),
+        open: () => 78,
+        close: () => {
+          closes += 1;
+        },
+        fs: {
+          fstat: () => info,
+          lstat: () => info,
+          statfs: () => ({ bavail: MIN_FREE_BEFORE_BYTES, bsize: 1n }),
+        },
+      });
+      assert.equal(value.binding.fd, 78);
+      assert.equal(value.freeBefore, MIN_FREE_BEFORE_BYTES);
+      assert.equal(closes, 0);
+      assert.deepEqual(observations, {
+        minimumFree: MIN_FREE_BEFORE_BYTES,
+        maximumDelta: 0n,
+        samples: 1,
+      });
+    },
+  ],
+  [
+    "cleanup floor requires the cleanup slot and aggregate minimum below floor",
+    () => {
+      const value = validateReceipt(
+        cleanupDiskReceipt("CLEANUP_DISK_FLOOR", {
+          freeBytesAfterCleanup: Number(MIN_FREE_AFTER_CLEANUP_BYTES - 1n),
+          minimumFreeBytesObserved: Number(MIN_FREE_AFTER_CLEANUP_BYTES - 1n),
+        }),
+      );
+      assert.equal(value.cleanupFailureCode, "CLEANUP_DISK_FLOOR");
+    },
+  ],
+  [
+    "cleanup floor cannot excuse an acquire-phase low slot",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            cleanupDiskReceipt("CLEANUP_DISK_FLOOR", {
+              freeBytesAfterAcquire: Number(MIN_FREE_AFTER_ACQUIRE_BYTES - 1n),
+              freeBytesAfterCleanup: Number(MIN_FREE_AFTER_CLEANUP_BYTES - 1n),
+              minimumFreeBytesObserved: Number(MIN_FREE_AFTER_CLEANUP_BYTES - 1n),
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "cleanup limit requires its reached slot and an over-cap aggregate delta",
+    () => {
+      const value = validateReceipt(
+        cleanupDiskReceipt("CLEANUP_DISK_LIMIT", {
+          acquireDiskDeltaBytes: Number(MAX_ACQUIRE_DISK_DELTA_BYTES + 1n),
+        }),
+      );
+      assert.equal(value.cleanupFailureCode, "CLEANUP_DISK_LIMIT");
+    },
+  ],
+  [
+    "non-disk cleanup failure permits an unreached cleanup sample only",
+    () => {
+      const value = validateReceipt(
+        cleanupDiskReceipt("CLEANUP_STORAGE_IDENTITY", { freeBytesAfterCleanup: null }),
+      );
+      assert.equal(value.freeBytesAfterCleanup, null);
+    },
+  ],
+];
+for (const [name, action] of v113Cases) test(`v1.1.13: ${name}`, action);
+
+const v1142Cases = [
+  [
+    "child lifecycle settles on error but closes only on actual close",
+    async () => {
+      const child = fakeChild(701);
+      const lifecycle = testing.childLifecycle(child);
+      child.emit("error", new Error("first error"));
+      assert.deepEqual(await lifecycle.settlement, { code: null, signal: null, error: true });
+      let closed = false;
+      lifecycle.close.then(() => {
+        closed = true;
+      });
+      await Promise.resolve();
+      assert.equal(closed, false);
+      child.emit("close", 1, null);
+      assert.deepEqual(await lifecycle.close, { code: 1, signal: null, error: false });
+      assert.equal(child.listenerCount("error"), 0);
+      assert.equal(child.listenerCount("close"), 0);
+    },
+  ],
+  [
+    "actual-close wait never infers closure from exit or signal state",
+    async () => {
+      const child = fakeChild(702);
+      child.exitCode = 1;
+      child.signalCode = "SIGTERM";
+      const lifecycle = testing.childLifecycle(child);
+      let delay;
+      const result = await testing.awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, {
+        setTimeout: (callback, milliseconds) => {
+          delay = milliseconds;
+          return setTimeout(callback, 0);
+        },
+      });
+      assert.equal(result, null);
+      assert.equal(delay, 7_000);
+    },
+  ],
+  [
+    "ps exit state without close enters verified HOLD without another signal",
+    async () => {
+      const child = fakeChild(703);
+      child.exitCode = 1;
+      let signals = 0;
+      await assert.rejects(
+        testing.runPsVerifier(
+          [],
+          {
+            timeout: 1,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_SOURCE",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawnPs: () => child,
+            setTimeout: (callback) => setTimeout(callback, 0),
+            kill: () => {
+              signals += 1;
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.equal(signals, 0);
+    },
+  ],
+  [
+    "general exit state without close enters verified HOLD without another signal",
+    async () => {
+      const child = fakeChild(704);
+      child.exitCode = 1;
+      let signals = 0;
+      await assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 1,
+            stdout: 64,
+            stderr: 64,
+            timeoutCode: "PRECONDITION_ENV",
+            outputCode: "PRECONDITION_SOURCE",
+            exitCode: "PRECONDITION_XCODE",
+          },
+          {
+            spawn: () => child,
+            probeIdentity: async () => capturedWrapper(704),
+            setTimeout: (callback) => setTimeout(callback, 0),
+            kill: () => {
+              signals += 1;
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.equal(signals, 0);
+    },
+  ],
+  [
+    "termination requires actual close even after observed exit",
+    async () => {
+      const child = fakeChild(705);
+      child.exitCode = 1;
+      const lifecycle = testing.childLifecycle(child);
+      let signals = 0;
+      await assert.rejects(
+        terminateVerifiedProcessGroup(child, lifecycle.close, capturedWrapper(705), ["/tool"], {
+          setTimeout: (callback) => setTimeout(callback, 0),
+          kill: () => {
+            signals += 1;
+          },
+        }),
+        (error) => error?.code === "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      );
+      assert.equal(signals, 0);
+    },
+  ],
+  [
+    "gated pre-release missing close enters unverified HOLD",
+    async () =>
+      gatedMissingClose({
+        released: false,
+        pid: 706,
+        expectedCode: "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      }),
+  ],
+  [
+    "gated released missing close enters verified HOLD without downstream work",
+    async () =>
+      gatedMissingClose({
+        released: true,
+        pid: 707,
+        expectedCode: "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      }),
+  ],
+  ...[
+    "CLEANUP_PROCESS_IDENTITY",
+    "CLEANUP_DELETE_FAILED",
+    "CLEANUP_RAW_RESIDUE",
+    "CLEANUP_RECEIPT_INVALID",
+  ].map((code) => [
+    `invocation-one ${code} rejects missing post-sample evidence`,
+    () =>
+      throwsCode(
+        () => validateReceipt(cleanupDiskReceipt(code, { freeBytesAfterCleanup: null })),
+        "RECEIPT_INVALID",
+      ),
+  ]),
+  [
+    "post-sample cleanup failure table accepts each required code",
+    () => {
+      for (const code of [
+        "CLEANUP_PROCESS_IDENTITY",
+        "CLEANUP_DELETE_FAILED",
+        "CLEANUP_RAW_RESIDUE",
+        "CLEANUP_RECEIPT_INVALID",
+      ]) {
+        assert.equal(validateReceipt(cleanupDiskReceipt(code)).cleanupFailureCode, code);
+      }
+    },
+  ],
+  [
+    "invocation-zero raw cleanup residue may retain a null cleanup slot",
+    () => {
+      const value = validateReceipt(
+        preconditionReceipt({
+          state: "CLEANUP_FAILED",
+          cleanupFailureCode: "CLEANUP_RAW_RESIDUE",
+          cleanupResult: "FAILED",
+        }),
+      );
+      assert.equal(value.freeBytesAfterCleanup, null);
+    },
+  ],
+  [
+    "three exact pre-sample cleanup failures may retain a null cleanup slot",
+    () => {
+      for (const code of ["CLEANUP_INTERRUPTED", "CLEANUP_RESIDUE", "CLEANUP_STORAGE_IDENTITY"]) {
+        assert.equal(
+          validateReceipt(cleanupDiskReceipt(code, { freeBytesAfterCleanup: null }))
+            .cleanupFailureCode,
+          code,
+        );
+      }
+    },
+  ],
+  [
+    "unknown cleanup failures sanitize by the cleanup-sample stage",
+    () => {
+      assert.equal(testing.sanitizeCleanupFailure(new Error("private"), false), "CLEANUP_RESIDUE");
+      assert.equal(
+        testing.sanitizeCleanupFailure(new Error("private"), true),
+        "CLEANUP_RECEIPT_INVALID",
+      );
+    },
+  ],
+  [
+    "explicit receipt-invalid cleanup failures sanitize by the cleanup-sample stage",
+    () => {
+      const error = new BootstrapFailure("CLEANUP_RECEIPT_INVALID");
+      assert.equal(testing.sanitizeCleanupFailure(error, false), "CLEANUP_RESIDUE");
+      assert.equal(testing.sanitizeCleanupFailure(error, true), "CLEANUP_RECEIPT_INVALID");
+    },
+  ],
+];
+for (const [name, action] of v1142Cases) test(`v1.1.14.2: ${name}`, action);

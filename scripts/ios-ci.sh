@@ -19,11 +19,21 @@ LOG_DIR="$WORK_ROOT/logs"
 DEVICE_FILE="$WORK_ROOT/device.json"
 METADATA_FILE="$WORK_ROOT/metadata.json"
 DEVICE_UDID=""
+NODE_EXECUTABLE="${FLUYO_NODE_EXECUTABLE:-node}"
 
 case "$LEG" in
   minimum)
     export DEVELOPER_DIR="${FLUYO_DEVELOPER_DIR:-/Applications/Xcode_16.2.app/Contents/Developer}"
     XCODE_PREFIX="${FLUYO_XCODE_PREFIX:-Xcode 16.2}"
+    : "${FLUYO_NODE_EXECUTABLE:?Set FLUYO_NODE_EXECUTABLE for the minimum evidence leg}"
+    : "${FLUYO_IOS_RUNTIME_IDENTIFIER:?Set the exact observed iOS runtime identifier}"
+    : "${FLUYO_IOS_RUNTIME_VERSION:?Set the exact observed iOS runtime version}"
+    : "${FLUYO_IOS_RUNTIME_BUILD:?Set the exact observed iOS runtime build}"
+    if [[ "$FLUYO_IOS_RUNTIME_VERSION" != "17.5" ]] || [[ "$FLUYO_IOS_RUNTIME_BUILD" != "21F79" ]] ||
+       [[ ! "$FLUYO_IOS_RUNTIME_IDENTIFIER" =~ ^com\.apple\.CoreSimulator\.SimRuntime\.[A-Za-z0-9.-]+$ ]]; then
+      echo "The approved minimum iOS 17.5 runtime identity is invalid" >&2
+      exit 1
+    fi
     ;;
   current)
     export DEVELOPER_DIR="${FLUYO_DEVELOPER_DIR:-/Applications/Xcode_26.6.app/Contents/Developer}"
@@ -55,13 +65,14 @@ if [[ "$XCODE_VERSION" != "$XCODE_PREFIX"* ]]; then
   exit 1
 fi
 
-python3 - "$DEVICE_FILE" "$LEG" <<'PY'
+python3 - "$DEVICE_FILE" "$LEG" "${FLUYO_IOS_RUNTIME_IDENTIFIER:-}" "${FLUYO_IOS_RUNTIME_VERSION:-}" "${FLUYO_IOS_RUNTIME_BUILD:-}" <<'PY'
 import json
 import subprocess
 import sys
 
-output_path, leg = sys.argv[1:]
+output_path, leg, expected_identifier, expected_version, expected_build = sys.argv[1:]
 payload = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"]))
+runtimes_payload = json.loads(subprocess.check_output(["xcrun", "simctl", "list", "runtimes", "--json"]))
 runtimes = []
 for runtime, devices in payload.get("devices", {}).items():
     if "iOS-" not in runtime:
@@ -80,10 +91,23 @@ for runtime, devices in payload.get("devices", {}).items():
         runtimes.append((parts, version, iphones))
 
 if leg == "minimum":
-    candidates = [row for row in runtimes if row[0][0] == 17]
-    if not candidates:
-        raise SystemExit("The approved minimum iOS 17 simulator runtime is unavailable")
-    selected = max(candidates, key=lambda row: row[0])
+    approved = [
+        row
+        for row in runtimes_payload.get("runtimes", [])
+        if row.get("identifier") == expected_identifier
+        and row.get("version") == expected_version
+        and (row.get("buildversion") or row.get("buildVersion")) == expected_build
+        and row.get("isAvailable") is True
+    ]
+    candidates = [
+        row
+        for row in runtimes
+        if row[1] == expected_version
+        and any(runtime == expected_identifier for runtime in payload.get("devices", {}))
+    ]
+    if len(approved) != 1 or len(candidates) != 1:
+        raise SystemExit("The approved minimum iOS 17.5 simulator runtime is unavailable")
+    selected = candidates[0]
     patterns = ["SE", "mini"]
     device_class = "smallest_supported"
 else:
@@ -154,7 +178,7 @@ run_xcodebuild() {
     if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
       summary_args+=(--github-annotation)
     fi
-    node "$ROOT_DIR/scripts/summarize-ios-test-failures.mjs" "${summary_args[@]}"
+    "$NODE_EXECUTABLE" "$ROOT_DIR/scripts/summarize-ios-test-failures.mjs" "${summary_args[@]}"
     return 1
   fi
   echo "$log_name passed"
@@ -276,7 +300,7 @@ if [[ "$LEG" == "minimum" ]]; then
 else
   AUTH_KERNEL_TEST_LOG="$LOG_DIR/test-current.log"
 fi
-node "$ROOT_DIR/scripts/verify-android-auth-kernel-results.mjs" --ios-log "$AUTH_KERNEL_TEST_LOG"
+"$NODE_EXECUTABLE" "$ROOT_DIR/scripts/verify-android-auth-kernel-results.mjs" --ios-log "$AUTH_KERNEL_TEST_LOG"
 
 BUILD_SCAN="$WORK_ROOT/all-build-strings.txt"
 if [[ "$LEG" == "minimum" ]]; then
@@ -314,7 +338,7 @@ xcrun strip -S "$STAGED_APP/Fluyo"
 ARTIFACT_NAME="Fluyo-$LEG-simulator.zip"
 ditto -c -k --keepParent "$STAGED_APP" "$EVIDENCE_DIR/$ARTIFACT_NAME"
 
-node "$ROOT_DIR/scripts/scan-ios-evidence.mjs" "$STAGED_APP" "$SANITIZED_LOG_DIR"
+"$NODE_EXECUTABLE" "$ROOT_DIR/scripts/scan-ios-evidence.mjs" "$STAGED_APP" "$SANITIZED_LOG_DIR"
 
 python3 - "$METADATA_FILE" "$SOURCE_SHA" "$BUILD_IDENTIFIER" "$MACOS_VERSION" "$XCODE_VERSION" "$SWIFT_VERSION" "$DEVICE_NAME" "$DEVICE_CLASS" "$DEVICE_OS" "$COMMAND_NAME" <<'PY'
 import json
@@ -342,8 +366,8 @@ json.dump(
 )
 PY
 
-node "$ROOT_DIR/scripts/ios-evidence.mjs" generate   "$LEG" "$POLICY" "$METADATA_FILE" "$EVIDENCE_DIR/$ARTIFACT_NAME"   "$EVIDENCE_DIR/evidence-$LEG.json"
-node "$ROOT_DIR/scripts/scan-ios-evidence.mjs" "$EVIDENCE_DIR"
+"$NODE_EXECUTABLE" "$ROOT_DIR/scripts/ios-evidence.mjs" generate   "$LEG" "$POLICY" "$METADATA_FILE" "$EVIDENCE_DIR/$ARTIFACT_NAME"   "$EVIDENCE_DIR/evidence-$LEG.json"
+"$NODE_EXECUTABLE" "$ROOT_DIR/scripts/scan-ios-evidence.mjs" "$EVIDENCE_DIR"
 
 python3 - "$EVIDENCE_DIR" "$LEG" <<'PY'
 import pathlib
