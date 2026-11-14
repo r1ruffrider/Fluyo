@@ -12,8 +12,11 @@ import {
   PORTABLE_R4B_TESTS,
   R4B_GIT_OUTPUT_CAP_BYTES,
   R4B_LANE_INVENTORY_SHA256,
+  R4B_LANE_LIFECYCLE_STATES,
+  R4B_LANE_TEST_PATH_KINDS,
   R4B_OUT_OF_SCOPE_UNTRACKED_SHA256,
   R4B_PHASE_TEST,
+  R4B_REVIEWED_LOCAL_TEST,
   r4bLaneSnapshotTesting,
   validateR4bTestLaneInventory,
   validateR4bTestLaneInventorySnapshot,
@@ -254,7 +257,7 @@ function laneSnapshot(overrides = {}) {
     trackedTestPaths: [...EXPECTED_LANE_PATHS].sort(),
     stagedTestPaths: [],
     untrackedTestPaths: [],
-    phaseTestKind: "regular",
+    testPathKinds: R4B_LANE_TEST_PATH_KINDS.map((row) => [...row]),
     ...overrides,
   };
 }
@@ -524,11 +527,17 @@ test("lane snapshot contract locks exact canonical paths and digests", () => {
     windowsNative: WINDOWS_NATIVE_R4B_TESTS,
   });
   const exclusionJson = JSON.stringify(OUT_OF_SCOPE_UNTRACKED_R4B_TESTS);
-  assert.equal(Buffer.byteLength(laneJson), 860);
+  assert.equal(Buffer.byteLength(laneJson), 926);
   assert.equal(hash(laneJson), R4B_LANE_INVENTORY_SHA256);
   assert.equal(
     R4B_LANE_INVENTORY_SHA256,
-    "6ccc0208c8d7e104d6ebfe2e9b196eb3b5ddbc599ef365ae92c65e6ec712d9f2",
+    "dcb968f685a4c7c2b271a2d32d7d2f7c3765f34e8c531831e932e1e3f9b5a1f5",
+  );
+  assert.equal(
+    PORTABLE_R4B_TESTS.filter(
+      (path) => path === "scripts/r4b-evidence/reviewed-local-python-transaction.test.mjs",
+    ).length,
+    1,
   );
   assert.equal(Buffer.byteLength(exclusionJson), 483);
   assert.equal(hash(exclusionJson), R4B_OUT_OF_SCOPE_UNTRACKED_SHA256);
@@ -537,33 +546,131 @@ test("lane snapshot contract locks exact canonical paths and digests", () => {
     "8d875d47149a98760b795907131676b4c334652a679ebe97645c942eae32b3bc",
   );
   assert.equal(R4B_PHASE_TEST, "scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs");
+  assert.deepEqual(R4B_LANE_TEST_PATH_KINDS, [
+    [R4B_PHASE_TEST, "regular"],
+    [R4B_REVIEWED_LOCAL_TEST, "regular"],
+  ]);
+  const transactionSource = readFileSync(
+    new URL("./reviewed-local-python-transaction.mjs", import.meta.url),
+    "utf8",
+  );
+  const nativeLeaseSource = readFileSync(
+    new URL("./reviewed-local-python-native-lease-v2.cs", import.meta.url),
+    "utf8",
+  );
+  for (const token of [
+    "createTransactionDirectoryExclusive",
+    "openEvidenceExclusive",
+    "fsyncEvidence",
+    "reopenEvidence",
+    "createOwnedTempExclusive",
+    "startNetworkObserver",
+    "cleanupOwnedTemp",
+    "holdTrustedWindowsTempRoot",
+    "revalidateTrustedWindowsTempRoot",
+    "revalidateOwnedTemp",
+    "inventoryEvidenceDirectory",
+    "REVIEWED_LOCAL_BOOTSTRAP_V2_SHA256",
+    "rootManifestFiles",
+    "validateLoadedImageEvidenceForTesting",
+    "validateNativeTerminalTraceForTesting",
+    "validateCombinedCaptureTraceForTesting",
+    "validateTwoWriterCaptureInterleavingForTesting",
+    "expectedSuccessStdoutByteCount",
+    "loadedImageEvidenceSha256",
+    "SETTLED_UNKNOWN_HOLD",
+    "REVIEWED_LOCAL_MARKER_INCOMPLETE_HOLD",
+  ])
+    assert.match(transactionSource, new RegExp(token, "u"));
+  for (const token of [
+    "ActiveProcessLimit = 1",
+    "FileFlagOpenReparsePoint",
+    "trustedTempRootPath",
+    "rootManifestFiles",
+    "introspectionSha256",
+    "RootManifestBoundary",
+    "GetFinalPathNameByHandleW",
+    "GetWindowsDirectoryW",
+    "GetSystemDirectoryW",
+    "OpenAuthoritativeWindowsRoot",
+    "OpenAuthoritativeSystem32Root",
+    "OpenAuthoritativeTrustedTempRoot",
+    "OpenEmptyOwnedDirectory\\(request\\.ownedPath, trustedTemp, request\\.transactionId\\)",
+    "BootstrapV2Sha256",
+    "TerminalCoordinator",
+    "BarrierStatusReader",
+    "READY_V1",
+    "LOADED_V1",
+    "LoadedImageEvidence",
+    "loadedImageEvidenceSha256",
+    "SharedCaptureBudget",
+    "budget.Overflowed",
+    "loaded.RevalidateAll",
+    "WAIT_SIGNALED",
+    "LoadedImagesAreWithin",
+    "ContinuousNetworkObserver",
+    "CaptureClosedDigest",
+    "CreateProcessW",
+    "AssignProcessToJobObject",
+    "JobObjectLimitActiveProcess",
+    "GetExtendedTcpTable",
+    "GetExtendedUdpTable",
+    "ZERO_OBSERVED_OWNED_TCP_UDP_ENDPOINTS_V1",
+    "pathEnvironmentSha256",
+    "modulePathSha256",
+    "nugetEnvironmentSha256",
+    "proxyEnvironmentSha256",
+    "powerShellProfileInventorySha256",
+    "gacInventorySha256",
+    "nugetCacheInventorySha256",
+    "repositoryStatusSha256",
+    "serviceTaskInventorySha256",
+    "autorunRegistrySha256",
+    "aggregateSha256",
+    "REVIEWED_LOCAL_NATIVE_LEASE_UNAVAILABLE_HOLD",
+  ])
+    assert.match(nativeLeaseSource, new RegExp(token, "u"));
+  for (const forbidden of [
+    "return new ChildOutcome { Started = true, ExitObserved = true, ExitCode = 0 }",
+    "return new NetworkOutcome(1, Math.Min(target, maximum), 0)",
+    "GLOBAL_SNAPSHOT_V1_PLACEHOLDER",
+  ])
+    assert.equal(nativeLeaseSource.includes(forbidden), false, forbidden);
 });
 
 test("pure lane snapshot accepts untracked, staged, tracked, and tracked-modified phase states", () => {
-  const trackedWithoutPhase = EXPECTED_LANE_PATHS.filter((path) => path !== R4B_PHASE_TEST).sort();
+  const trackedWithoutTransitions = EXPECTED_LANE_PATHS.filter(
+    (path) => path !== R4B_PHASE_TEST && path !== R4B_REVIEWED_LOCAL_TEST,
+  ).sort();
   const expected = {
-    portable: 11,
+    portable: 12,
     windowsNative: 5,
-    total: 16,
+    total: 17,
     inventorySha256: R4B_LANE_INVENTORY_SHA256,
     outOfScopeUntrackedSha256: R4B_OUT_OF_SCOPE_UNTRACKED_SHA256,
   };
   const states = [
     laneSnapshot({
-      trackedTestPaths: trackedWithoutPhase,
-      untrackedTestPaths: [...OUT_OF_SCOPE_UNTRACKED_R4B_TESTS, R4B_PHASE_TEST].sort(),
+      trackedTestPaths: [...trackedWithoutTransitions, R4B_PHASE_TEST].sort(),
+      untrackedTestPaths: [...OUT_OF_SCOPE_UNTRACKED_R4B_TESTS, R4B_REVIEWED_LOCAL_TEST].sort(),
     }),
     laneSnapshot({
-      trackedTestPaths: trackedWithoutPhase,
-      stagedTestPaths: [R4B_PHASE_TEST],
+      trackedTestPaths: [...trackedWithoutTransitions, R4B_PHASE_TEST].sort(),
+      stagedTestPaths: [R4B_PHASE_TEST, R4B_REVIEWED_LOCAL_TEST].sort(),
       untrackedTestPaths: [...OUT_OF_SCOPE_UNTRACKED_R4B_TESTS],
     }),
     laneSnapshot({ untrackedTestPaths: [...OUT_OF_SCOPE_UNTRACKED_R4B_TESTS] }),
     laneSnapshot({
-      stagedTestPaths: [R4B_PHASE_TEST],
+      stagedTestPaths: [R4B_PHASE_TEST, R4B_REVIEWED_LOCAL_TEST].sort(),
       untrackedTestPaths: [...OUT_OF_SCOPE_UNTRACKED_R4B_TESTS],
     }),
   ];
+  assert.deepEqual(R4B_LANE_LIFECYCLE_STATES, [
+    ["A", "100", "001"],
+    ["B", "110", "010"],
+    ["C", "100", "100"],
+    ["D", "110", "110"],
+  ]);
   for (const state of states) {
     const result = validateR4bTestLaneInventorySnapshot(state);
     assert.deepEqual(result, expected);
@@ -572,6 +679,9 @@ test("pure lane snapshot accepts untracked, staged, tracked, and tracked-modifie
 });
 
 test("pure lane snapshot rejects unexpected, near-match, missing, duplicate, and excluded tracked paths", () => {
+  const trackedWithoutReviewed = EXPECTED_LANE_PATHS.filter(
+    (path) => path !== R4B_REVIEWED_LOCAL_TEST,
+  ).sort();
   const mutations = [
     laneSnapshot({ untrackedTestPaths: ["scripts/r4b-evidence/unexpected.test.mjs"] }),
     laneSnapshot({ untrackedTestPaths: [`${R4B_PHASE_TEST}.bak`] }),
@@ -584,7 +694,23 @@ test("pure lane snapshot rejects unexpected, near-match, missing, duplicate, and
     laneSnapshot({ stagedTestPaths: [`${R4B_PHASE_TEST}.bak`] }),
     laneSnapshot({ stagedTestPaths: [OUT_OF_SCOPE_UNTRACKED_R4B_TESTS[0]] }),
     laneSnapshot({ stagedTestPaths: [R4B_PHASE_TEST, R4B_PHASE_TEST] }),
-    laneSnapshot({ phaseTestKind: "symlink" }),
+    laneSnapshot({
+      trackedTestPaths: trackedWithoutReviewed,
+      stagedTestPaths: [R4B_REVIEWED_LOCAL_TEST],
+    }),
+    laneSnapshot({
+      trackedTestPaths: trackedWithoutReviewed,
+      stagedTestPaths: [R4B_PHASE_TEST],
+      untrackedTestPaths: [R4B_REVIEWED_LOCAL_TEST],
+    }),
+    laneSnapshot({ stagedTestPaths: [R4B_REVIEWED_LOCAL_TEST] }),
+    laneSnapshot({ stagedTestPaths: [R4B_PHASE_TEST] }),
+    laneSnapshot({
+      testPathKinds: [
+        [R4B_PHASE_TEST, "regular"],
+        [R4B_REVIEWED_LOCAL_TEST, "symlink"],
+      ],
+    }),
   ];
   for (const candidate of mutations) {
     assert.throws(
@@ -839,7 +965,7 @@ test("isolated Git type change emits T and is rejected without touching the prod
 
 test("current repository Git snapshot satisfies the closed phase inventory", () => {
   const result = validateR4bTestLaneInventory();
-  assert.equal(result.total, 16);
+  assert.equal(result.total, 17);
   assert.equal(result.inventorySha256, R4B_LANE_INVENTORY_SHA256);
   assert.equal(result.outOfScopeUntrackedSha256, R4B_OUT_OF_SCOPE_UNTRACKED_SHA256);
 });

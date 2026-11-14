@@ -3002,3 +3002,157 @@ The two-file pre-record, pre-pin snapshot is:
 - Focused test: 191918 bytes; SHA-256 `1f86ec949db4942b2206eb11fe453a082d40aad3ccd070793c216c1192ee6959`; blob `9729f79b86860ec77382dd187a446a0d6184d732`.
 
 These values are not the final reviewed manifest; final canonical identity remains external review evidence and is not embedded. Fresh protected Linux portable, Windows-native, and full pinned gates remain required. `E01` through `E08` remain **8 required-unattempted**; all false-authority and `PRECONDITION_HOLD_NO_GET` controls remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-14 — reviewed-local Python binding v2 repository handoff
+
+- Decision: Adriana selected recommended Option A under Marlon's standing
+  delegation. `R4B-WINDOWS-PYTHON-REVIEWED-LOCAL-BINDING-v2` supersedes v1,
+  which failed security preflight at 51/64 controls and was never implemented.
+- Pre-implementation gates: Catalina architecture 103/103 PASS; Natalia
+  security/privacy 64/64 PASS with zero findings. Catalina and Natalia also
+  approved the v2.0.1 amendment. Authorization covers only the exact ten-path
+  repository implementation and nonexecuting injected tests.
+- Prior terminal evidence: manifest
+  `9c20d7bea8ebd5fb2144659b96745dbf43415c134fb283cf5943eaeea10b874b`
+  settled
+  `LOCAL_PATH / CHILD_NONZERO_OR_SIGNAL / TEST_PYTHON_INTROSPECTION_FAILED`.
+  That one-shot diagnostic is permanently consumed; its private child cause is
+  not proven and no retry or fallback is authorized.
+- Exact scope: the eight script/test/source paths plus
+  `docs/2026-11-14_r4b_windows_python_reviewed_local_binding_v2.md` and this
+  handoff, as enumerated in the dated record. Path 10,
+  `scripts/r4b-evidence/root-only-closure-roslyn-toolchain.test.mjs`, is the sole
+  transitive-consumer repair. The focused target remains 125 Node executions,
+  and the targeted lane snapshot is 3/3.
+- The v2.0.1 lane inventory is exactly 12 portable + 5 Windows = 17. Its
+  canonical JSON is 926 bytes with SHA-256
+  `dcb968f685a4c7c2b271a2d32d7d2f7c3765f34e8c531831e932e1e3f9b5a1f5`.
+  The exclusions digest remains
+  `8d875d47149a98760b795907131676b4c334652a679ebe97645c942eae32b3bc`.
+  The prior 11 + 5 = 16 inventory, 860-byte JSON, and
+  `6ccc0208c8d7e104d6ebfe2e9b196eb3b5ddbc599ef365ae92c65e6ec712d9f2`
+  are historical and superseded, not execution evidence. Final byte hashes,
+  manifest identity, and implementation results were finalized only after
+  Valentina's exact freeze.
+- v2.0.3 clarifies the per-path state table with bit order
+  `tracked / staged / untracked`: phase states `[100, 110]`; reviewed states
+  `[001, 010, 100, 110]`; lifecycle A=`100/001`, B=`110/010`, C=`100/100`,
+  D=`110/110`. The earlier shared union was a pre-implementation ambiguity and
+  is superseded before execution. Counts, the 926-byte lane JSON, lane digest,
+  exclusion digest, focused target, and authority remain unchanged.
+- Exact repaired implementation freeze on base
+  `a2485dc12c231dd482799834d5aca2966a6db494`: the eight non-record path hashes
+  are `f248b5256b7e356ad2693600aa5acd8b275cf97a01e02d009f9a2c3f50f99d2c`,
+  `1175b9e2e020cc2a1afbfcf393a349d2f585a6a3e229526be02bbffb6b74cc33`,
+  `94680fca6a0de04efbb46b5ab40f84ac3f885bbeeb167e8ebb6c60bc7d7b7d4d`,
+  `87f2ef4cd8e5b3c76175abf5bc173f8309ed5511a441345004487484925ce3cb`,
+  `c7187201657e0302c663d786205b231556fe8a749b26eb0e627c556f09574146`,
+  `0610699e1570dbeb6f5e74fc99930ee2468c03a33571496e351402f5accf413d`,
+  `3562a581f8dc5d88b180ce496778d32393bbd34a21d5400de2894b4bbc5e19ae`,
+  and `4f67a0ee7aced308b8e45d1731792fbfe26ddfa4796b9c98c111f269e424a970`
+  in the dated record's path order.
+- Superseded pre-repair review: Catalina **138/146** and Natalia **56/64** plus
+  **27/28** did not pass because paths 3, 4, 5, 9, and 10 still contained stubs,
+  shallow tests, or incomplete transitive-consumer behavior. Those failures are
+  preserved as historical evidence and did not authorize execution.
+- Intermediate v2.0.3 evidence was reviewed-local **61/61 PASS**, focused
+  **125/125 PASS**, lane/current **4/4 PASS**, portable **334/334 PASS**, and
+  shared **562/568** with the six expected precommit/history guards. It is
+  retained as history and superseded by v2.0.4.
+- Intermediate v2.0.4 repository-only evidence was reviewed-local **70/70
+  PASS**, focused **134/134 PASS**, portable **343/343 PASS**, and path 10
+  **180/180 PASS**. It is preserved as history and superseded by v2.0.5.
+- Intermediate v2.0.5 repository-only evidence was reviewed-local **76/76
+  PASS**, focused **140/140 PASS**, portable **349/349 PASS**, and path 10
+  **180/180 PASS**. It is preserved as history and superseded by v2.0.6.
+- Intermediate v2.0.6 makes terminal-module evidence live-only, requires post-signal
+  revalidation, and enforces one shared **4,096-byte** combined output cap.
+  Tests 76-79 cover those boundaries. Repository-only evidence is
+  reviewed-local **80/80 PASS**, focused **144/144 PASS**, portable **353/353
+  PASS**, and path 10 **180/180 PASS**. These counts are not live execution
+  evidence. Terminal audit is **542/542 PASS**. Shared is **562/568** with zero
+  behavioral failures and exactly six expected precommit/current-head guards:
+  auth allowlist **1**, readiness record pin **1**, and activation identity
+  **4**. Full lint, typecheck, formatting, and diff checks PASS.
+- Current v2.0.7 binds exact bootstrap and SHA evidence, requires READY and
+  LOADED, captures the two barriers through the closed coordinator, and freezes
+  the concurrency oracles. Both closed oracles reject proxy, mutable, accessor,
+  symbol, extra, and nested data forms. Repository-only counts remain reviewed-local
+  **80/80 PASS**, focused **144/144 PASS**, portable **353/353 PASS**, and path
+  10 **180/180 PASS**. Path 9 is source-only and remains uncompiled and
+  unexecuted; no live result or authority is inferred.
+- An unfiltered **336/337** invocation was a command-selection error and is
+  excluded from evidence; it is not a candidate result or gate verdict.
+- Path 9 is source-only and remains uncompiled and unexecuted. No reviewed-local
+  runtime, packet, Python child, native lease, network observation, transaction
+  evidence, or cleanup occurred; authority remains false.
+- The record files do not embed their own final hashes. The canonical full
+  ten-row manifest is external gate evidence and must be recomputed after the
+  records freeze; any provisional pre-record manifest is not the final reviewed
+  identity.
+- Privacy and evidence: no private root or packet, signer subject or thumbprint,
+  live signature evidence, complete live root manifest, transaction ID, public
+  binding digest, native-helper build, Python child, network observation,
+  cleanup, marker, settlement, or receipt has been created or executed in this
+  repository phase.
+- Holds: the source-only native lease remains unavailable until a post-merge
+  source-to-helper identity gate and fresh Catalina, Natalia, Renata, and Elana
+  passes. Live execution authority remains false.
+- Forbidden: acquisition, download, installation, manager execution, PATH or
+  global mutation, PowerShell, Add-Type, verifier/NuGet, broker, Attempt004,
+  E01-E08, production, signing, stores, spend, credentials, external-account
+  changes, stage, commit, and push.
+
+`externalActionAuthorized=false`, `downloadAuthorityPresent=false`,
+`executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain
+unchanged.
+
+## 2026-11-14 — reviewed-local Python binding v2.0.7 postcommit handoff
+
+This append-only entry supersedes only the precommit/current-head gate status in
+the preceding v2 repository handoff. It does not rewrite or invalidate that
+historical source-freeze evidence.
+
+- The reviewed repository-only work is an exact three-commit direct-child stack
+  from base `a2485dc12c231dd482799834d5aca2966a6db494`, with no merges:
+  1. `c579699c273301599d81c89cec6ba0696e34e313`, parent
+     `a2485dc12c231dd482799834d5aca2966a6db494`, tree
+     `1692b935e4d260d6ff9fef0a4c265f1d9c634ee8`: the original exact ten-path
+     source-only v2.0.7 candidate.
+  2. `e0325f067330a095aa337790d771ed2027204bbb`, parent
+     `c579699c273301599d81c89cec6ba0696e34e313`, tree
+     `f1e9fbe6f2de64611029a1d8852fcf09d509c7fd`: the exact two-test
+     historical/current overlay guard repair.
+  3. `2ee6312b02ad1393456603fe2a519cf3c20cce8c`, parent
+     `e0325f067330a095aa337790d771ed2027204bbb`, tree
+     `71f2fcf081e1b8a4463502546ff23b792d2c58ad`: the exact one-line,
+     test-local `30_000` millisecond bound for the Git-heavy readiness identity
+     check.
+- The cumulative base-to-head scope is exactly 12 repository paths. It contains
+  no package, lockfile, workflow, dependency, schema, deployment, production
+  runtime, or authority change.
+- Clean-tree repository evidence on exact head
+  `2ee6312b02ad1393456603fe2a519cf3c20cce8c` is:
+  - shared **568/568 PASS**;
+  - full portable pipeline **2,325/2,325 PASS**, comprising audit policy
+    **542/542**, shared **568/568**, API **381/381**, and web **834/834**;
+  - reviewed-local **80/80 PASS**, root-only **180/180 PASS**, and portable
+    **353/353 PASS**;
+  - full lint, all-workspace typecheck, formatting, production build, and diff
+    checks PASS; the worktree and index were clean.
+- Exact-commit specialist rebinds are Catalina architecture **44/44 PASS**,
+  Natalia security/privacy **44/44 PASS**, Renata reproducibility **30/30 PASS**,
+  and Julieta numerical/hash/claims **63/63 PASS**, with zero defects or
+  discrepancies in their reviewed scopes.
+- The earlier shared **562/568** result remains valid historical precommit
+  evidence. The clean-tree **568/568** result above is the superseding
+  postcommit gate; no prior record text is retroactively changed.
+- Path 9 remains source-only, uncompiled, and unexecuted. No native helper,
+  Python child, network observation, reviewed transaction, marker, settlement,
+  receipt, production action, or external action was executed. No push had
+  occurred at this handoff boundary.
+
+`externalActionAuthorized=false`, `downloadAuthorityPresent=false`,
+`executionAuthorityPresent=false`, and `PRECONDITION_HOLD_NO_GET` remain
+unchanged. Native compilation, live Python, network, and transaction execution
+remain separately gated and unauthorized.
