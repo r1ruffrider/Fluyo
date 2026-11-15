@@ -175,6 +175,9 @@ run_xcodebuild() {
   shift
   if ! xcodebuild "$@" "${COMMON_SETTINGS[@]}" >"$LOG_DIR/$log_name.log" 2>&1; then
     local summary_args=("$LOG_DIR/$log_name.log" --phase "${log_name//-/_}")
+    if [[ "$log_name" == "test-current" ]]; then
+      summary_args+=(--termination EXIT_NONZERO --consume-result-bundle "$RESULTS_ROOT/current.xcresult")
+    fi
     if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
       summary_args+=(--github-annotation)
     fi

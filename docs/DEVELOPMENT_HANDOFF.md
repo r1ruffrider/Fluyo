@@ -3247,3 +3247,68 @@ Current frozen source facts before this append are:
 The required final targets remain pending and are not claimed as executed by this entry: controller **372/372**, shared structure **78/78**, activation **100/100**, readiness **8/8**, focused **558/558**, phase-specific required ledger **438**, shared **665/665**, audit-policy unit **560/560**, portable **273/273**, isolated readiness **150/150**, and full repository **2,714/2,714**.
 
 This repository/test correction makes no protected-recovery, acquisition, simulator, production, or runtime claim. PR #94 remains draft/HOLD; no diagnostic execution, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry, and all existing prohibitions remain unchanged.
+
+## 2026-11-15 — PR #94 dual iOS diagnostic v1 design and development record
+
+Catalina's `PR94-IOS-DUAL-DIAGNOSTIC-v1` design gate is **96/96 PASS**, and Natalia's corresponding security and privacy design gate is **96/96 PASS**. The planned commit subject is `test(ci): refine iOS failure localization`. The exact nine-path scope is closed to:
+
+1. `docs/DEVELOPMENT_HANDOFF.md`
+2. `packages/shared/src/ios-foundation-structure.test.ts`
+3. `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`
+4. `packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts`
+5. `scripts/ios-ci.sh`
+6. `scripts/ios-runtime-bootstrap.mjs`
+7. `scripts/ios-runtime-bootstrap.test.mjs`
+8. `scripts/summarize-ios-test-failures.mjs`
+9. `scripts/summarize-ios-test-failures.test.mjs`
+
+The workflow remains pinned. This repository/test-only diagnostic grants no acquisition or runtime authority, adds no retry authority, and leaves both minimum-iOS and current-iOS outcomes unresolved until protected evidence exists. PR #94 remains draft/HOLD.
+
+Current executed development evidence is controller **381/381 PASS**, shared structure **85/85 PASS**, and the direct sanitizer current-failure **23-row suite PASS**. Activation is **97/100**, not green: exactly two restricted-sandbox Git-clone fixtures and the live-status case remain outstanding, and authoritative outside-sandbox **100/100** is pending. No readiness or final handoff/manifest pin is invented or claimed by this record.
+
+Current frozen source facts before this append are:
+
+- Shared structure test: **65,482 bytes**; SHA-256 `bc5d448f12561f77812119292ebbc9ff12f6eb390ec3cb226e97a18118a8f905`; Git blob `47d4f304513bf1c26578d54487a4038f64122431`.
+- Activation guard: **95,849 bytes**; SHA-256 `433e46c6ea7b57e296f4b8d0da833fbd0999367c05f292183f3bd97b4d9b4f43`; Git blob `44ca9ae2a86cb50a4c67a4633dd32c0606aec8c6`.
+- iOS CI script: **17,695 bytes**; SHA-256 `8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c`; Git blob `0b84abbd35ebc8e3ca28ec672ca513b288fec94b`.
+- Controller: **126,052 bytes**; SHA-256 `71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e`; Git blob `fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b`.
+- Controller test: **162,291 bytes**; SHA-256 `128533346f837dd2541d3e984bff67feb4da5e3a8b717b3146b76768abe083eb`; Git blob `dd6014b9b27df5b42331cd1f4d06cb61e2e0af71`.
+- iOS failure summarizer: **20,597 bytes**; SHA-256 `0f74bbcdeec96d331a9a0cc33a8da1a7d134b3ec8fd41342304d2b629f401c79`; Git blob `0d4fe7a679e5d3a5c3881c41bc6862e4b943ba26`.
+- iOS failure summarizer test: **61,023 bytes**; SHA-256 `7a74f2d8df4cb0480fc37fa3217f0e18291fd0bd00a3d32e3104616d66c2ebb6`; Git blob `08c4d75325ff9cc4161d7d21ce77602b2442dbad`.
+
+No acquisition, live controller execution, simulator installation, protected recovery, runtime action, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, proxy, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged. Valentina must mechanically bind the readiness, handoff, and final manifest pins only after this append freezes.
+
+## 2026-11-15 — PR #94 dual iOS diagnostic v1.2 sanitizer recovery checkpoint
+
+Catalina's sanitizer-recovery freeze is **72/72 PASS**, and Natalia's corresponding security and privacy design gate is **72/72 PASS**. This bounded repository/test recovery changes only the iOS failure summarizer and its test, the shared structure test, the activation guard, the readiness guard, and this append-only handoff. The controller, controller test, `simctl` behavior, `scripts/ios-ci.sh`, and the workflow remain preserved.
+
+Functional development evidence only is the exact sanitizer **35/35 PASS**, shared structure **90/90 PASS**, and focused formatter, ESLint, and Node syntax PASS. This evidence makes no protected recovery, acquisition, simulator, production, or runtime-success claim. Activation **100/100**, readiness **8/8**, focused **579/579**, the phase-specific required ledger **459**, audit-policy unit **569/569**, shared **677/677**, portable **273/273**, and full repository **2,735/2,735** remain pending after the append's mechanical pins and final gates.
+
+Current frozen source facts before this append are:
+
+- Shared structure test: **69,370 bytes**; SHA-256 `b9a3fda060432df495115dc1bb0ee88deb668e4b13afe6f6ea0513eba9ab3dca`; Git blob `379a5d3376f6ac4331b415166727d8bbee919690`.
+- iOS failure summarizer: **36,268 bytes**; SHA-256 `48914ef84623bb627650c3748cc3351ff6bad5bc735088cf66538fcc8484897f`; Git blob `304a8306a7fab2165f03852c6cf31dce0623fb77`.
+- iOS failure summarizer test: **67,405 bytes**; SHA-256 `e9c1697e683cec350bbde0fb1e1f0f7affe2d43f9e0b48b01f7e8d6a3165255e`; Git blob `4600785f4703469cfdabc4020087ec53bc297b87`.
+- Controller: **126,052 bytes**; SHA-256 `71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e`; Git blob `fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b`.
+- Controller test: **162,291 bytes**; SHA-256 `128533346f837dd2541d3e984bff67feb4da5e3a8b717b3146b76768abe083eb`; Git blob `dd6014b9b27df5b42331cd1f4d06cb61e2e0af71`.
+- iOS CI script: **17,695 bytes**; SHA-256 `8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c`; Git blob `0b84abbd35ebc8e3ca28ec672ca513b288fec94b`.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, protected recovery, runtime action, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, proxy, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged. Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-15 — PR #94 dual iOS diagnostic v1.2 three-defect repair supersession
+
+This append preserves the preceding v1.2 checkpoint as historical evidence and supersedes its functional sanitizer count and three repaired source identities. The exact repairs cover the **12 code fields**, the earlier-zero nested summary, and provisional file-descriptor/quarantine tracking.
+
+Current functional evidence is sanitizer semantic **43/43 PASS**, comprising **30 classifier** plus **13 lifecycle/oracle** cases. The prior **35/35** count is superseded by eight required `fstat`/quarantine cases. Shared structure is **90/90 PASS**, and focused ESLint, Prettier, and Node syntax PASS.
+
+Current repaired source facts before this append are:
+
+- Shared structure test: **70,736 bytes**; SHA-256 `d984964245b49fb07135bd47bba6a82ced44c83c8c9302b7828fe94c1da14b7a`; Git blob `d80d6d536a458df9cc5a8818879ab484a30cb397`.
+- iOS failure summarizer: **39,102 bytes**; SHA-256 `5f1ea392c303a281a421bf685331d5fad68962dbce11ec59c08408644492ee36`; Git blob `d516dbe6b10629e5e5684226d5522339cd35f756`.
+- iOS failure summarizer test: **72,804 bytes**; SHA-256 `8f0116ff167f0681020f7c1f33abd09e462a882d11eb74bdd7948e0cb85c96cd`; Git blob `f3e9097fd34a950a61aff23e566d9d061cc0d458`.
+
+The controller remains **126,052 bytes**, SHA-256 `71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e`, Git blob `fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b`; the controller test remains **162,291 bytes**, SHA-256 `128533346f837dd2541d3e984bff67feb4da5e3a8b717b3146b76768abe083eb`, Git blob `dd6014b9b27df5b42331cd1f4d06cb61e2e0af71`; and `scripts/ios-ci.sh` remains **17,695 bytes**, SHA-256 `8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c`, Git blob `0b84abbd35ebc8e3ca28ec672ca513b288fec94b`. Controller behavior, its test, `simctl` behavior, the iOS CI script, and the workflow remain preserved.
+
+Audit TAP topology remains **569**. Focused **579/579**, the phase-specific required ledger **459**, shared **677/677**, portable **273/273**, and full repository **2,735/2,735** targets are unchanged because the semantic cases remain inside one top-level script. Activation, readiness, and the full gates remain pending.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the downstream pins after this append freezes.

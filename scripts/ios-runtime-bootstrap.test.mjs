@@ -103,7 +103,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "65136f954db6c64d6806bce1c37fc91f756c951a7cb87cc4bc8d8a3a7a100a1a",
+  "71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -3672,7 +3672,7 @@ const v115Cases = [
         "ROOTS",
         "XCODE_VERSION_PROBE",
         "XCODE_VERSION_PARSE",
-        "SIMCTL_FIND_PROBE",
+        "SIMCTL_FIND_V2",
         "SIMCTL_FIND_PATH",
         "RUNTIME_INVENTORY",
         "STORAGE_ANCHOR",
@@ -3691,7 +3691,7 @@ const v115Cases = [
         ROOTS: "PRECONDITION_ENV",
         XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL",
         XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL",
-        SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+        SIMCTL_FIND_V2: "PRECONDITION_SIMCTL_FIND_INTERNAL",
         SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL",
         RUNTIME_INVENTORY: "PRECONDITION_RUNTIME_INVENTORY",
         STORAGE_ANCHOR: "PRECONDITION_STORAGE_ANCHOR",
@@ -4524,7 +4524,13 @@ const v117Cases = [
 for (const [name, action] of v117Cases) test(`v1.1.17: ${name}`, action);
 
 const diagnosticObservedCodes = new Set([
-  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_INVALID_PID",
+  "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
+  "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+  "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
+  "PRECONDITION_SIMCTL_FIND_EXIT",
+  "PRECONDITION_SIMCTL_FIND_UTF8",
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
   "PRECONDITION_XCODE_DIAGNOSTIC_READY",
@@ -4581,7 +4587,13 @@ const diagnosticTransactionDependencies = (runTool) => ({
 const diagnosticCodes = [
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_INVALID_PID",
+  "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
+  "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+  "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
+  "PRECONDITION_SIMCTL_FIND_EXIT",
+  "PRECONDITION_SIMCTL_FIND_UTF8",
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_XCODE_VERSION_INTERNAL",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
@@ -4591,14 +4603,14 @@ const diagnosticCodes = [
 const diagnosticCases = [
   [
     "mode is exact",
-    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1"),
+    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2"),
   ],
   [
     "probe set is exact",
     () =>
       assert.deepEqual(
         [...testing.XCODE_PROBE_FAILURE_CODES],
-        ["PRECONDITION_XCODE_VERSION_PROBE", "PRECONDITION_SIMCTL_FIND_PROBE"],
+        ["PRECONDITION_XCODE_VERSION_PROBE"],
       ),
   ],
   [
@@ -4625,17 +4637,14 @@ const diagnosticCases = [
     () =>
       assert.deepEqual(
         Object.fromEntries(
-          [
-            "XCODE_VERSION_PROBE",
-            "XCODE_VERSION_PARSE",
-            "SIMCTL_FIND_PROBE",
-            "SIMCTL_FIND_PATH",
-          ].map((stage) => [stage, testing.PRECONDITION_STAGE_FAILURE[stage]]),
+          ["XCODE_VERSION_PROBE", "XCODE_VERSION_PARSE", "SIMCTL_FIND_V2", "SIMCTL_FIND_PATH"].map(
+            (stage) => [stage, testing.PRECONDITION_STAGE_FAILURE[stage]],
+          ),
         ),
         {
           XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL",
           XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL",
-          SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+          SIMCTL_FIND_V2: "PRECONDITION_SIMCTL_FIND_INTERNAL",
           SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL",
         },
       ),
@@ -4808,7 +4817,7 @@ const diagnosticCases = [
       ),
   ],
   [
-    "simctl probe code is preserved by safe spawn failure",
+    "retired generic simctl probe code is rejected",
     async () =>
       assert.rejects(
         testing.runCaptured(
@@ -4830,9 +4839,51 @@ const diagnosticCases = [
             },
           },
         ),
-        (error) =>
-          error?.code === "PRECONDITION_SIMCTL_FIND_PROBE" && !error.message.includes("private"),
+        (error) => error instanceof TypeError && error.message === "invalid diagnostic probe code",
       ),
+  ],
+  [
+    "v1.2 simctl profile binds exact executable and argv",
+    () => {
+      assert.match(controllerSource, /const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";/u);
+      assert.match(
+        controllerSource,
+        /const SIMCTL_FIND_TOKENS = Object\.freeze\(\[XCRUN, "--find", "simctl"\]\);/u,
+      );
+      assert.doesNotMatch(controllerSource, /diagnosticCode: "PRECONDITION_SIMCTL_FIND/u);
+    },
+  ],
+  [
+    "v1.2 simctl synchronous spawn maps only to SPAWN",
+    async () =>
+      assert.rejects(
+        testing.runSimctlFindV2(
+          { cwd: "/", env: {} },
+          {
+            spawn: () => {
+              throw new Error("private");
+            },
+          },
+        ),
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN" && !error.message.includes("private"),
+      ),
+  ],
+  [
+    "v1.2 removes the retired generic code from receipt authority",
+    () => {
+      assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_SIMCTL_FIND_PROBE"), false);
+      throwsCode(
+        () =>
+          validateReceipt(
+            diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PROBE", {
+              observedVersion: EXPECTED_XCODE_VERSION,
+              observedBuild: EXPECTED_XCODE_BUILD,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      );
+    },
   ],
   [
     "diagnostic probe preserves live unverified HOLD",
@@ -5057,5 +5108,5 @@ const diagnosticCases = [
       ),
   ],
 ];
-assert.equal(diagnosticCases.length, 34);
-for (const [name, action] of diagnosticCases) test(`diagnostic v1.1: ${name}`, action);
+assert.equal(diagnosticCases.length, 43);
+for (const [name, action] of diagnosticCases) test(`diagnostic v1.2: ${name}`, action);

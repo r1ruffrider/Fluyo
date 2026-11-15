@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 
 import { githubWorkflowAnnotationTitle } from "./github-workflow-annotation.mjs";
+import {
+  classifyCurrentTestFailure,
+  sanitizeCurrentTestFailure,
+} from "./summarize-ios-test-failures.mjs";
 
 const summarizeAnnotation = (file, phase, githubActions = "true") =>
   spawnSync(
@@ -13,7 +17,7 @@ const summarizeAnnotation = (file, phase, githubActions = "true") =>
     { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: githubActions } },
   );
 
-const root = mkdtempSync(join(tmpdir(), "fluyo-ios-summary-"));
+const root = realpathSync.native(mkdtempSync(join(tmpdir(), "fluyo-ios-summary-")));
 try {
   const file = join(root, "raw.log");
   const privateValues = [
@@ -1242,6 +1246,523 @@ linker command failed with exit code 1`,
   const outsideActions = summarizeAnnotation(file, "test_current", "false");
   assert.notEqual(outsideActions.status, 0);
   assert.equal(outsideActions.stdout, "");
+
+  const currentRows = [
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n",
+      [
+        "phase=test_current",
+        "category=xctest",
+        "code=CURRENT_TEST_XCTEST_FAILURE",
+        "executed=2",
+        "failures=1",
+        "unexpected=0",
+      ],
+    ],
+    [
+      "Executed 1 test, with 1 failure (1 unexpected) in 1.25 (1.5) seconds\n** TEST FAILED **\n",
+      [
+        "phase=test_current",
+        "category=xctest",
+        "code=CURRENT_TEST_XCTEST_FAILURE",
+        "executed=1",
+        "failures=1",
+        "unexpected=1",
+      ],
+    ],
+    [
+      "Executed 1 test, with 0 failures (0 unexpected)\nExecuted 2 tests, with 2 failures (1 unexpected)\n** TEST FAILED **\n",
+      [
+        "phase=test_current",
+        "category=xctest",
+        "code=CURRENT_TEST_XCTEST_FAILURE",
+        "executed=2",
+        "failures=2",
+        "unexpected=1",
+      ],
+    ],
+    [
+      " xcodebuild: error: Unable to find a destination matching the provided destination specifier: \n",
+      ["phase=test_current", "category=simulator", "code=CURRENT_TEST_DESTINATION_UNAVAILABLE"],
+    ],
+    [
+      "operation timed out after private duration\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "[auth_corpus_callback_cancel_stage_snapshot_state]\n",
+      [
+        "phase=test_current",
+        "category=auth_contract",
+        "code=CURRENT_TEST_AUTH_DIAGNOSTIC",
+        "corpus=callback_cancel",
+        "stage=snapshot",
+        "mismatch=state",
+      ],
+    ],
+    [
+      "undefined symbol: private\nlinker command failed with exit code 1\n",
+      ["phase=test_current", "category=link", "code=CURRENT_TEST_LINK"],
+    ],
+    [
+      "AuthRuntimeKernel.swift:12:7: error: cannot find 'private' in scope\n",
+      [
+        "phase=test_current",
+        "category=compile",
+        "code=CURRENT_TEST_COMPILE",
+        "source=AuthRuntimeKernel.swift",
+        "line=12",
+        "column=7",
+        "reason=missing_member",
+      ],
+    ],
+    [
+      `Test Case '-[FluyoTests.AuthRuntimeKernelTests ${annotationTest}]' failed (0.001 seconds).\n`,
+      [
+        "phase=test_current",
+        "category=auth_contract",
+        "code=CURRENT_TEST_AUTH_TEST",
+        `test=${annotationTest}`,
+      ],
+    ],
+    [
+      "[auth_corpus_stage_trace_diagnostic_rejected]\n",
+      [
+        "phase=test_current",
+        "category=auth_contract",
+        "code=CURRENT_TEST_AUTH_FALLBACK",
+        "stage=trace",
+        "mismatch=diagnostic_rejected",
+      ],
+    ],
+    [
+      "[auth_corpus_diagnostic_unavailable]\n",
+      [
+        "phase=test_current",
+        "category=auth_contract",
+        "code=CURRENT_TEST_AUTH_DIAGNOSTIC_UNAVAILABLE",
+        "stage=diagnostic",
+        "mismatch=unavailable",
+      ],
+    ],
+    [
+      `${aggregateFailure}\n[auth_corpus_callback_cancel_stage_snapshot_assertion_recorded]\n`,
+      [
+        "phase=test_current",
+        "category=auth_contract",
+        "code=CURRENT_TEST_AUTH_ASSERTION_RECORDED",
+        "corpus=callback_cancel",
+        "stage=snapshot",
+        "mismatch=assertion_recorded",
+      ],
+    ],
+    [
+      `[auth_corpus_callback_cancel_stage_snapshot_checkpoint]\n${aggregateFailure}\n`,
+      [
+        "phase=test_current",
+        "category=auth_contract",
+        "code=CURRENT_TEST_AUTH_CHECKPOINT",
+        "corpus=callback_cancel",
+        "stage=snapshot",
+        "mismatch=assertion",
+      ],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\nExecuted 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed stale private summary\nExecuted 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\nExecuted trailing private summary\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 0 failures (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 3 failures (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (2 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 65536 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed two tests, with one failure (zero unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected) in 86401 (1) seconds\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected)\n\n** TEST FAILED **\n",
+      [
+        "phase=test_current",
+        "category=xctest",
+        "code=CURRENT_TEST_XCTEST_FAILURE",
+        "executed=2",
+        "failures=1",
+        "unexpected=0",
+      ],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\nxcodebuild: error: Unable to find a destination matching the provided destination specifier:\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "xcodebuild: error: Unable to find destination matching the provided destination specifier:\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "xcodebuild: error: Unable to find a destination matching the provided destination specifier:\nxcodebuild: error: Unable to find a destination matching the provided destination specifier:\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "private raw diagnostic without a closed grammar\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 2 tests, with 1 failure (0 unexpected)\nExecuted 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 3 tests, with 2 failures (1 unexpected)\nExecuted 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n",
+      ["phase=test_current", "category=unknown", "code=CURRENT_TEST_UNKNOWN"],
+    ],
+    [
+      "Executed 65535 tests, with 65535 failures (65535 unexpected)\n** TEST FAILED **\n",
+      [
+        "phase=test_current",
+        "category=xctest",
+        "code=CURRENT_TEST_XCTEST_FAILURE",
+        "executed=65535",
+        "failures=65535",
+        "unexpected=65535",
+      ],
+    ],
+  ];
+  assert.equal(currentRows.length, 30);
+  for (const [rawValue, expected] of currentRows) {
+    const fields = classifyCurrentTestFailure(rawValue);
+    assert.equal(Object.isFrozen(fields), true);
+    assert.deepEqual(fields, expected);
+    assert.doesNotMatch(fields.join("; "), /private|duration|timed out/iu);
+  }
+
+  const createDarwinOracle = ({
+    bundle = true,
+    fstatFailurePath = null,
+    openFailure = null,
+  } = {}) => {
+    const nodes = new Map();
+    const descriptors = new Map();
+    const closeAttempts = new Map();
+    let nextIno = 1n;
+    let nextFd = 20;
+    let touches = 0;
+    let fstatFailurePending = fstatFailurePath !== null;
+    let openFailurePending = openFailure !== null;
+    const add = (path, kind, data = Buffer.alloc(0)) => {
+      nodes.set(path, {
+        path,
+        kind,
+        data: Buffer.from(data),
+        dev: 7n,
+        ino: nextIno++,
+        uid: 501n,
+        mode: kind === "file" ? 0o100600n : kind === "symlink" ? 0o120777n : 0o040700n,
+      });
+    };
+    const runnerTemp = "/runner";
+    const attempt = "/runner/fluyo-ios-current";
+    const logs = `${attempt}/logs`;
+    const results = `${attempt}/results`;
+    const logPath = `${logs}/test-current.log`;
+    const resultBundlePath = `${results}/current.xcresult`;
+    const outsidePath = "/outside/keep";
+    for (const path of [runnerTemp, attempt, logs, results]) add(path, "directory");
+    add(logPath, "file", "Executed 2 tests, with 1 failure (0 unexpected)\n** TEST FAILED **\n");
+    if (bundle) add(resultBundlePath, "directory");
+    add(outsidePath, "file", "outside-safe");
+    const missing = () => Object.assign(new Error("missing"), { code: "ENOENT" });
+    const stat = (node) => ({
+      dev: node.dev,
+      ino: node.ino,
+      uid: node.uid,
+      mode: node.mode,
+      size: BigInt(node.data.length),
+      isDirectory: () => node.kind === "directory",
+      isFile: () => node.kind === "file",
+      isSymbolicLink: () => node.kind === "symlink",
+    });
+    const model = {
+      constants: { O_RDONLY: 1, O_DIRECTORY: 2, O_NOFOLLOW: 4 },
+      lstatSync(path) {
+        touches += 1;
+        const node = nodes.get(path);
+        if (!node) throw missing();
+        return stat(node);
+      },
+      realpathSync: {
+        native(path) {
+          touches += 1;
+          if (!nodes.has(path)) throw missing();
+          return path;
+        },
+      },
+      openSync(path, flags) {
+        touches += 1;
+        const node = nodes.get(path);
+        if (!node) throw missing();
+        if (
+          openFailurePending &&
+          openFailure === "quarantine" &&
+          path.startsWith(`${attempt}/.failure-sanitizer-`)
+        ) {
+          openFailurePending = false;
+          throw new Error("private quarantine open failure");
+        }
+        if ((flags & 4) !== 0 && node.kind === "symlink") throw new Error("link");
+        if ((flags & 2) !== 0 && node.kind !== "directory") throw new Error("not directory");
+        const fd = nextFd++;
+        descriptors.set(fd, { node, openedPath: path });
+        return fd;
+      },
+      fstatSync(fd) {
+        touches += 1;
+        const descriptor = descriptors.get(fd);
+        if (!descriptor) throw new Error("bad fd");
+        if (
+          fstatFailurePending &&
+          (descriptor.openedPath === fstatFailurePath ||
+            (fstatFailurePath === "quarantine" &&
+              descriptor.openedPath.startsWith(`${attempt}/.failure-sanitizer-`)))
+        ) {
+          fstatFailurePending = false;
+          throw new Error("private fstat failure");
+        }
+        return stat(descriptor.node);
+      },
+      closeSync(fd) {
+        touches += 1;
+        const descriptor = descriptors.get(fd);
+        if (!descriptor) throw new Error("bad fd");
+        closeAttempts.set(
+          descriptor.openedPath,
+          (closeAttempts.get(descriptor.openedPath) ?? 0) + 1,
+        );
+        descriptors.delete(fd);
+      },
+      readSync(fd, buffer, offset, length, position) {
+        touches += 1;
+        const descriptor = descriptors.get(fd);
+        const node = descriptor?.node;
+        if (!node || node.kind !== "file") throw new Error("bad fd");
+        const slice = node.data.subarray(position, position + length);
+        slice.copy(buffer, offset);
+        return slice.length;
+      },
+      mkdirSync(path) {
+        touches += 1;
+        if (nodes.has(path)) throw new Error("exists");
+        add(path, "directory");
+      },
+      renameSync(from, to) {
+        touches += 1;
+        const node = nodes.get(from);
+        if (!node || nodes.has(to)) throw new Error("rename");
+        nodes.delete(from);
+        node.path = to;
+        nodes.set(to, node);
+      },
+      unlinkSync(path) {
+        touches += 1;
+        const node = nodes.get(path);
+        if (!node || node.kind === "directory") throw new Error("unlink");
+        nodes.delete(path);
+      },
+      rmSync(path) {
+        touches += 1;
+        const node = nodes.get(path);
+        if (!node) throw missing();
+        for (const key of [...nodes.keys()])
+          if (key === path || key.startsWith(`${path}/`)) nodes.delete(key);
+      },
+      rmdirSync(path) {
+        touches += 1;
+        const node = nodes.get(path);
+        if (!node || node.kind !== "directory") throw new Error("rmdir");
+        if ([...nodes.keys()].some((key) => key.startsWith(`${path}/`)))
+          throw new Error("not empty");
+        nodes.delete(path);
+      },
+    };
+    const dependencies = {
+      fs: model,
+      isAbsolute: posix.isAbsolute,
+      join: posix.join,
+      platform: "darwin",
+      randomBytes: () => Buffer.alloc(16, 0xab),
+      uid: 501,
+    };
+    return {
+      add,
+      closeAttempts,
+      dependencies,
+      descriptors,
+      directories: { attempt, logs, results },
+      logPath,
+      nodes,
+      outsidePath,
+      resultBundlePath,
+      runnerTemp,
+      touches: () => touches,
+    };
+  };
+  let sanitizerOracleCount = 0;
+  {
+    const oracle = createDarwinOracle();
+    const result = sanitizeCurrentTestFailure(oracle, oracle.dependencies);
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.fields, currentRows[0][1]);
+    assert.equal(oracle.nodes.has(oracle.logPath), false);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), false);
+  }
+  {
+    const oracle = createDarwinOracle();
+    const result = sanitizeCurrentTestFailure(oracle, {
+      ...oracle.dependencies,
+      classify: () => {
+        throw new Error("private classification detail");
+      },
+    });
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, false);
+    assert.equal(oracle.nodes.has(oracle.logPath), false);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), false);
+  }
+  {
+    const oracle = createDarwinOracle();
+    const result = sanitizeCurrentTestFailure(oracle, {
+      ...oracle.dependencies,
+      classify: (rawValue) => {
+        oracle.add(oracle.logPath, "symlink");
+        return classifyCurrentTestFailure(rawValue);
+      },
+    });
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, false);
+    assert.equal(oracle.nodes.has(oracle.logPath), false);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), false);
+  }
+  {
+    const oracle = createDarwinOracle();
+    const before = oracle.touches();
+    const result = sanitizeCurrentTestFailure(
+      { ...oracle, logPath: "/outside/private.log" },
+      oracle.dependencies,
+    );
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, false);
+    assert.equal(oracle.touches(), before);
+    assert.equal(oracle.nodes.has(oracle.logPath), true);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), true);
+  }
+  {
+    const oracle = createDarwinOracle({ bundle: false });
+    const result = sanitizeCurrentTestFailure(oracle, oracle.dependencies);
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, true);
+    assert.equal(oracle.nodes.has(oracle.logPath), false);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), false);
+  }
+  for (const scenario of [
+    { name: "runner", path: "/runner", logRetained: true, bundleRetained: true },
+    {
+      name: "attempt",
+      path: "/runner/fluyo-ios-current",
+      logRetained: true,
+      bundleRetained: true,
+    },
+    {
+      name: "logs",
+      path: "/runner/fluyo-ios-current/logs",
+      logRetained: true,
+      bundleRetained: true,
+    },
+    {
+      name: "results",
+      path: "/runner/fluyo-ios-current/results",
+      logRetained: true,
+      bundleRetained: true,
+    },
+    {
+      name: "log",
+      path: "/runner/fluyo-ios-current/logs/test-current.log",
+      logRetained: true,
+      bundleRetained: false,
+    },
+    {
+      name: "bundle",
+      path: "/runner/fluyo-ios-current/results/current.xcresult",
+      logRetained: false,
+      bundleRetained: true,
+    },
+    { name: "quarantine", path: "quarantine", logRetained: true, bundleRetained: true },
+  ]) {
+    const oracle = createDarwinOracle({ fstatFailurePath: scenario.path });
+    const outsideBytes = Buffer.from(oracle.nodes.get(oracle.outsidePath).data);
+    const result = sanitizeCurrentTestFailure(oracle, oracle.dependencies);
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, false, scenario.name);
+    assert.equal(result.fields, null, scenario.name);
+    assert.equal(oracle.descriptors.size, 0, scenario.name);
+    assert.equal(
+      [...oracle.closeAttempts.values()].every((count) => count === 1),
+      true,
+      scenario.name,
+    );
+    assert.equal(oracle.nodes.has(oracle.logPath), scenario.logRetained, scenario.name);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), scenario.bundleRetained, scenario.name);
+    assert.equal(
+      [...oracle.nodes.keys()].some((path) => path.includes("/.failure-sanitizer-")),
+      false,
+      scenario.name,
+    );
+    assert.deepEqual(oracle.nodes.get(oracle.outsidePath).data, outsideBytes, scenario.name);
+  }
+  {
+    const oracle = createDarwinOracle({ openFailure: "quarantine" });
+    const outsideBytes = Buffer.from(oracle.nodes.get(oracle.outsidePath).data);
+    const result = sanitizeCurrentTestFailure(oracle, oracle.dependencies);
+    sanitizerOracleCount += 1;
+    assert.equal(result.ok, false);
+    assert.equal(result.fields, null);
+    assert.equal(oracle.descriptors.size, 0);
+    assert.equal(
+      [...oracle.closeAttempts.values()].every((count) => count === 1),
+      true,
+    );
+    assert.equal(oracle.nodes.has(oracle.logPath), true);
+    assert.equal(oracle.nodes.has(oracle.resultBundlePath), true);
+    assert.equal(
+      [...oracle.nodes.keys()].some((path) => path.includes("/.failure-sanitizer-")),
+      false,
+    );
+    assert.deepEqual(oracle.nodes.get(oracle.outsidePath).data, outsideBytes);
+  }
+  assert.equal(sanitizerOracleCount, 13);
+  assert.equal(currentRows.length + sanitizerOracleCount, 43);
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

@@ -935,7 +935,7 @@ describe("iOS unsigned foundation structure", () => {
       "ROOTS",
       "XCODE_VERSION_PROBE",
       "XCODE_VERSION_PARSE",
-      "SIMCTL_FIND_PROBE",
+      "SIMCTL_FIND_V2",
       "SIMCTL_FIND_PATH",
       "RUNTIME_INVENTORY",
       "STORAGE_ANCHOR",
@@ -1044,7 +1044,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("binds the exact diagnostic mode and schema-v2 ordered evidence fields", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1"');
+    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2"');
     expect(controller).toContain("receipt.schemaVersion !== 2");
     expect(controller).toMatch(
       /"diagnosticMode",\s*"expectedVersion",\s*"expectedBuild",\s*"observedVersion",\s*"observedBuild"/u,
@@ -1053,12 +1053,18 @@ describe("iOS unsigned foundation structure", () => {
     expect(controller).not.toMatch(/observedXcodeVersion|observedXcodeBuild/u);
   });
 
-  it("closes the two probe codes and seven diagnostic outcomes without a generic Xcode code", () => {
+  it("closes the v1.2 thirteen-code diagnostic table without retired generic codes", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
     for (const code of [
       "PRECONDITION_XCODE_VERSION_PROBE",
       "PRECONDITION_XCODE_VERSION_PARSE",
-      "PRECONDITION_SIMCTL_FIND_PROBE",
+      "PRECONDITION_SIMCTL_FIND_SPAWN",
+      "PRECONDITION_SIMCTL_FIND_INVALID_PID",
+      "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
+      "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+      "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
+      "PRECONDITION_SIMCTL_FIND_EXIT",
+      "PRECONDITION_SIMCTL_FIND_UTF8",
       "PRECONDITION_SIMCTL_FIND_PATH",
       "PRECONDITION_XCODE_VERSION_INTERNAL",
       "PRECONDITION_SIMCTL_FIND_INTERNAL",
@@ -1067,13 +1073,14 @@ describe("iOS unsigned foundation structure", () => {
       expect(controller).toContain(`"${code}"`);
     }
     expect(controller).not.toMatch(/"PRECONDITION_XCODE"/u);
+    expect(controller).not.toContain('"PRECONDITION_SIMCTL_FIND_PROBE"');
   });
 
   it("maps each diagnostic stage to its exact sanitized internal fallback", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
     expect(controller).toContain('XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL"');
     expect(controller).toContain('XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL"');
-    expect(controller).toContain('SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL"');
+    expect(controller).toContain('SIMCTL_FIND_V2: "PRECONDITION_SIMCTL_FIND_INTERNAL"');
     expect(controller).toContain('SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL"');
   });
 
@@ -1082,7 +1089,7 @@ describe("iOS unsigned foundation structure", () => {
     const parsed = controller.indexOf("const parsedXcode = parseXcodeVersion(xcode.stdout)");
     const version = controller.indexOf("observedVersion = parsedXcode.version", parsed);
     const build = controller.indexOf("observedBuild = parsedXcode.build", parsed);
-    const simctl = controller.indexOf('preconditionStage = "SIMCTL_FIND_PROBE"', parsed);
+    const simctl = controller.indexOf('preconditionStage = "SIMCTL_FIND_V2"', parsed);
     expect(parsed).toBeGreaterThanOrEqual(0);
     expect(version).toBeGreaterThan(parsed);
     expect(build).toBeGreaterThan(version);
@@ -1145,8 +1152,201 @@ describe("iOS unsigned foundation structure", () => {
     const workflow = read(".github/workflows/ios.yml");
     const iosCi = read("scripts/ios-ci.sh");
     expect(workflow).toContain("node scripts/ios-runtime-bootstrap.mjs run");
-    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1");
-    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1");
+    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2");
+    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2");
     expect(iosCi).toContain("FLUYO_IOS_EVIDENCE_LEG");
+  });
+
+  it("binds SIMCTL_FIND_V2 to exact xcrun argv without a generic diagnostic key", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain('const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2"');
+    expect(controller).toContain('Object.freeze([XCRUN, "--find", "simctl"])');
+    expect(controller).toContain("async function runSimctlFindV2");
+    expect(controller).not.toMatch(/diagnosticCode: "PRECONDITION_SIMCTL_FIND/u);
+  });
+
+  it("requires immutable simctl identity and actual close before safe classification", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("function parseSimctlFindIdentity");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const runner = controller.slice(start, end);
+    for (const field of ["pid", "pgid", "ppid", "executable", "startToken", "commandTokens"]) {
+      expect(runner).toContain(field);
+    }
+    expect(runner).toContain("terminateVerifiedProcessGroup");
+    expect(runner).toContain("awaitActualClose");
+    expect(runner).toContain("assertProcessGroupAbsent");
+    expect(runner).toContain("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    expect(runner).toContain("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+  });
+
+  it("keeps every safe v1.2 simctl result invocation-zero with exact observations", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("function validateDiagnosticReceipt");
+    const end = controller.indexOf("export function validateReceipt", start);
+    const receipt = controller.slice(start, end);
+    for (const suffix of [
+      "SPAWN",
+      "INVALID_PID",
+      "IDENTITY_AFTER_SETTLEMENT",
+      "TIMEOUT",
+      "OUTPUT_LIMIT",
+      "EXIT",
+      "UTF8",
+    ]) {
+      expect(receipt).toContain(`PRECONDITION_SIMCTL_FIND_${suffix}`);
+    }
+    expect(receipt).toContain("receipt.downloadInvocationCount !== 0");
+    expect(receipt).toContain("EXPECTED_XCODE_VERSION");
+    expect(receipt).toContain("EXPECTED_XCODE_BUILD");
+  });
+
+  it("invokes current-test sanitization with exact termination and result-bundle argv", () => {
+    const iosCi = read("scripts/ios-ci.sh");
+    expect(iosCi).toContain(
+      'summary_args+=(--termination EXIT_NONZERO --consume-result-bundle "$RESULTS_ROOT/current.xcresult")',
+    );
+    expect(iosCi).not.toContain("CURRENT_TEST_TIMEOUT");
+  });
+
+  it("closes current-test output to one frozen ordered-field classifier", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    expect(summarizer).toContain("export function classifyCurrentTestFailure(raw)");
+    expect(summarizer).toContain('"category=xctest"');
+    expect(summarizer).toContain('"category=simulator"');
+    expect(summarizer).toContain('"category=unknown"');
+    expect(summarizer).toContain("Object.freeze(fields)");
+    const codes = [
+      "CURRENT_TEST_AUTH_INVARIANT",
+      "CURRENT_TEST_AUTH_DIAGNOSTIC",
+      "CURRENT_TEST_AUTH_ASSERTION_RECORDED",
+      "CURRENT_TEST_AUTH_CHECKPOINT",
+      "CURRENT_TEST_AUTH_FALLBACK",
+      "CURRENT_TEST_AUTH_DIAGNOSTIC_UNAVAILABLE",
+      "CURRENT_TEST_LINK",
+      "CURRENT_TEST_COMPILE",
+      "CURRENT_TEST_AUTH_TEST",
+      "CURRENT_TEST_XCTEST_FAILURE",
+      "CURRENT_TEST_DESTINATION_UNAVAILABLE",
+      "CURRENT_TEST_UNKNOWN",
+    ];
+    let priorCode = -1;
+    for (const code of codes) {
+      const codeIndex = summarizer.indexOf(`code=${code}`);
+      expect(codeIndex).toBeGreaterThan(priorCode);
+      priorCode = codeIndex;
+    }
+    expect(summarizer).toContain("number <= 65_535");
+    expect(summarizer).toContain("const validEarlier =");
+    expect(summarizer).toContain("const validFinal = validEarlier && failures > 0");
+    expect(summarizer).toContain("value.validEarlier");
+    expect(summarizer).toContain("unexpected <= failures");
+    expect(summarizer).toContain(
+      "Unable to find a destination matching the provided destination specifier:",
+    );
+  });
+
+  it("cleans both held raw targets in an unconditional finally before output", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    const finalizer = summarizer.indexOf("} finally {");
+    const output = summarizer.indexOf('const detail = result.fields.join("; ")');
+    expect(finalizer).toBeGreaterThanOrEqual(0);
+    expect(output).toBeGreaterThan(finalizer);
+    expect(summarizer).toContain("cleanupTarget(logBinding");
+    expect(summarizer).toContain(
+      'cleanupTarget(bundleBinding, resultBundlePath, results, "current.xcresult")',
+    );
+    expect(summarizer).toContain("IOS_CURRENT_FAILURE_SANITIZATION_FAILED");
+    expect(summarizer).toContain("O_NOFOLLOW");
+    const sanitizer = summarizer.slice(
+      summarizer.indexOf("export function sanitizeCurrentTestFailure"),
+      summarizer.indexOf("const main = () =>"),
+    );
+    expect(sanitizer).not.toContain("existsSync");
+  });
+
+  it("never reads result bundles and preserves success-only evidence upload", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    const iosCi = read("scripts/ios-ci.sh");
+    const workflow = read(".github/workflows/ios.yml");
+    expect(summarizer).not.toMatch(/readFileSync\(resultBundlePath/u);
+    expect(summarizer).toContain('binding.kind === "bundle"');
+    expect(summarizer).toContain("filesystem.rmSync(leaf, { recursive: true, force: false })");
+    expect(iosCi).toContain("return 1");
+    expect(workflow).toContain("if: success()");
+  });
+
+  it("authorizes only exact Darwin current-test paths under canonical RUNNER_TEMP", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    expect(summarizer).toContain('platform !== "darwin"');
+    expect(summarizer).toContain('joinPath(runnerTemp, "fluyo-ios-current")');
+    expect(summarizer).toContain('joinPath(attemptRoot, "logs", "test-current.log")');
+    expect(summarizer).toContain('joinPath(attemptRoot, "results", "current.xcresult")');
+    expect(summarizer).toContain("logPath !== expectedLog");
+    expect(summarizer).toContain("resultBundlePath !== expectedBundle");
+  });
+
+  it("holds every ancestor and target with nofollow identity bindings", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    expect(summarizer).toContain(
+      "constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW",
+    );
+    expect(summarizer).toContain("filesystem.fstatSync(fd, { bigint: true })");
+    expect(summarizer).toContain("before.uid !== asUid");
+    expect(summarizer).toContain("(before.mode & 0o022n) !== 0n");
+    expect(summarizer).toContain("held.dev !== before.dev");
+    expect(summarizer).toContain("held.ino !== before.ino");
+    expect(summarizer.match(/provisionalFds\.add\(fd\)/gu)).toHaveLength(3);
+    expect(summarizer).toContain("const closeProvisional = (fd) =>");
+    expect(summarizer).toContain("const promoteBinding = (binding) =>");
+    expect(summarizer).toContain("closeProvisional(fd)");
+  });
+
+  it("uses an exact random held quarantine and lstat-only absence proofs", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    const sanitizer = summarizer.slice(
+      summarizer.indexOf("export function sanitizeCurrentTestFailure"),
+      summarizer.indexOf("const main = () =>"),
+    );
+    expect(summarizer).toContain("const random = nonce(16)");
+    expect(summarizer).toContain("/^[0-9a-f]{32}$/u.test(hex)");
+    expect(summarizer).toContain("`.failure-sanitizer-${hex}`");
+    const create = summarizer.indexOf(
+      "filesystem.mkdirSync(quarantinePath, { recursive: false, mode: 0o700 })",
+    );
+    const track = summarizer.indexOf(
+      "quarantineCreation = { path: quarantinePath, dev: null, ino: null }",
+    );
+    const open = summarizer.indexOf("quarantine = openDirectory(quarantinePath, attempt)");
+    expect(create).toBeGreaterThanOrEqual(0);
+    expect(track).toBeGreaterThan(create);
+    expect(open).toBeGreaterThan(track);
+    expect(summarizer).toContain(
+      "const proveAbsent = (filesystem, path) => lstatOrNull(filesystem, path) === null",
+    );
+    expect(sanitizer).not.toContain("existsSync");
+  });
+
+  it("quarantines only matching held identities and unlinks a replacement symlink", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    expect(summarizer).toContain("if (current.isSymbolicLink())");
+    expect(summarizer).toContain("filesystem.unlinkSync(path)");
+    expect(summarizer).toContain("filesystem.renameSync(path, leaf)");
+    expect(summarizer).toContain("current.dev !== binding.dev");
+    expect(summarizer).toContain("current.ino !== binding.ino");
+  });
+
+  it("emits no result until cleanup succeeds and preserves one fixed failure", () => {
+    const summarizer = read("scripts/summarize-ios-test-failures.mjs");
+    const sanitizerCall = summarizer.indexOf("const result = sanitizeCurrentTestFailure");
+    const resultGuard = summarizer.indexOf("if (!result.ok)", sanitizerCall);
+    const annotation = summarizer.indexOf("githubWorkflowErrorAnnotation(detail)", resultGuard);
+    expect(sanitizerCall).toBeGreaterThanOrEqual(0);
+    expect(resultGuard).toBeGreaterThan(sanitizerCall);
+    expect(annotation).toBeGreaterThan(resultGuard);
+    expect(summarizer).toContain(
+      'process.stderr.write("IOS_CURRENT_FAILURE_SANITIZATION_FAILED\\n")',
+    );
+    expect(summarizer).toContain("return Object.freeze({ ok: !failed && fields !== null");
   });
 });

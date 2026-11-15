@@ -26,7 +26,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_ID = "ios_17_5_runtime_bootstrap_v1";
-export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1";
+export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2";
 export const EXPECTED_XCODE_VERSION = "16.2";
 export const EXPECTED_XCODE_BUILD = "16C5032a";
 export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";
@@ -83,9 +83,9 @@ export const MAX_CONTROLLER_SOURCE_BYTES = 262_144;
 export const MAX_RECEIPT_BYTES = 8_192;
 export const PARENT_TITLE = "fluyo-ios17-bootstrap-parent-v1";
 export const CHILD_TITLE_PREFIX = "fluyo-ios17-bootstrap-child-v1-";
-export const IOS_CI_SOURCE_BYTES = 17_533;
+export const IOS_CI_SOURCE_BYTES = 17_695;
 export const IOS_CI_SOURCE_SHA256 =
-  "644debc5f03bfe9fa70863fb8531e6fab9e844a5df4e8283c8e77e879c47852a";
+  "8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c";
 export const SAFE_CANONICAL_PATH = /^\/[A-Za-z0-9._/+\-]+$/u;
 
 const SOURCE_SHA = /^[0-9a-f]{40}$/u;
@@ -159,7 +159,13 @@ const PRIMARY_FAILURE_CODES = new Set([
   "PRECONDITION_SOURCE",
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_INVALID_PID",
+  "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
+  "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+  "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
+  "PRECONDITION_SIMCTL_FIND_EXIT",
+  "PRECONDITION_SIMCTL_FIND_UTF8",
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_XCODE_VERSION_INTERNAL",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
@@ -222,14 +228,17 @@ const CLEANUP_FAILURE_CODES = new Set([
   "CLEANUP_DISK_LIMIT",
 ]);
 const FORBIDDEN_ENV_NAME = /(?:proxy|credential|token|cookie|password|secret|authorization)/iu;
-const XCODE_PROBE_FAILURE_CODES = new Set([
-  "PRECONDITION_XCODE_VERSION_PROBE",
-  "PRECONDITION_SIMCTL_FIND_PROBE",
-]);
+const XCODE_PROBE_FAILURE_CODES = new Set(["PRECONDITION_XCODE_VERSION_PROBE"]);
 const XCODE_DIAGNOSTIC_FAILURE_CODES = new Set([
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_INVALID_PID",
+  "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
+  "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+  "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
+  "PRECONDITION_SIMCTL_FIND_EXIT",
+  "PRECONDITION_SIMCTL_FIND_UTF8",
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_XCODE_VERSION_INTERNAL",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
@@ -243,7 +252,7 @@ const PRECONDITION_STAGE_VALUES = Object.freeze([
   "ROOTS",
   "XCODE_VERSION_PROBE",
   "XCODE_VERSION_PARSE",
-  "SIMCTL_FIND_PROBE",
+  "SIMCTL_FIND_V2",
   "SIMCTL_FIND_PATH",
   "RUNTIME_INVENTORY",
   "STORAGE_ANCHOR",
@@ -258,7 +267,7 @@ const PRECONDITION_STAGE_FAILURE = Object.freeze({
   ROOTS: "PRECONDITION_ENV",
   XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL",
   XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL",
-  SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+  SIMCTL_FIND_V2: "PRECONDITION_SIMCTL_FIND_INTERNAL",
   SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL",
   RUNTIME_INVENTORY: "PRECONDITION_RUNTIME_INVENTORY",
   STORAGE_ANCHOR: "PRECONDITION_STORAGE_ANCHOR",
@@ -869,6 +878,182 @@ async function runCaptured(command, args, options, limits, dependencies = {}) {
   });
 }
 
+const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";
+const SIMCTL_FIND_TOKENS = Object.freeze([XCRUN, "--find", "simctl"]);
+
+function parseSimctlFindIdentity(stdout, requestedPid) {
+  if (
+    Buffer.byteLength(stdout, "utf8") > PS_STDOUT_MAX_BYTES ||
+    stdout.includes("\0") ||
+    stdout.split(/\r?\n/u).filter(Boolean).length !== 1
+  ) {
+    fail("PRECONDITION_SIMCTL_FIND_INTERNAL");
+  }
+  const line = stdout.trim();
+  const match =
+    /^(\d+)\s+(\d+)\s+(\d+)\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ 0-3]\d \d{2}:\d{2}:\d{2} \d{4})\s+(.+)$/u.exec(
+      line,
+    );
+  if (!match || !ASCII_LINE.test(line)) fail("PRECONDITION_SIMCTL_FIND_INTERNAL");
+  const pid = Number(match[1]);
+  const ppid = Number(match[2]);
+  const pgid = Number(match[3]);
+  const commandTokens = match[5].split(" ");
+  if (
+    pid !== requestedPid ||
+    pgid !== pid ||
+    !Number.isSafeInteger(ppid) ||
+    ppid < 1 ||
+    ppid > 2_147_483_647 ||
+    JSON.stringify(commandTokens) !== JSON.stringify(SIMCTL_FIND_TOKENS)
+  ) {
+    fail("PRECONDITION_SIMCTL_FIND_INTERNAL");
+  }
+  return Object.freeze({
+    pid,
+    pgid,
+    ppid,
+    executable: XCRUN,
+    startToken: match[4],
+    commandTokens: Object.freeze([...commandTokens]),
+  });
+}
+
+async function probeSimctlFindIdentity(pid, _expectedTokens, dependencies = {}) {
+  const result = await runPsVerifier(
+    [
+      "-ww",
+      "-p",
+      String(pid),
+      "-o",
+      "pid=",
+      "-o",
+      "ppid=",
+      "-o",
+      "pgid=",
+      "-o",
+      "lstart=",
+      "-o",
+      "command=",
+    ],
+    {
+      timeout: PS_TIMEOUT_MS,
+      stdout: PS_STDOUT_MAX_BYTES,
+      stderr: PS_STDERR_MAX_BYTES,
+      timeoutCode: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+      outputCode: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+      exitCode: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+    },
+    dependencies,
+  );
+  if (result.stderr !== "") fail("PRECONDITION_SIMCTL_FIND_INTERNAL");
+  return parseSimctlFindIdentity(result.stdout, pid);
+}
+
+async function runSimctlFindV2(options, dependencies = {}) {
+  const spawnProcess = dependencies.spawn ?? spawn;
+  let child;
+  try {
+    child = spawnProcess(XCRUN, ["--find", "simctl"], {
+      ...options,
+      shell: false,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    fail("PRECONDITION_SIMCTL_FIND_SPAWN");
+  }
+  const lifecycle = childLifecycle(child);
+  if (!Number.isSafeInteger(child.pid) || child.pid < 1 || child.pid > 2_147_483_647) {
+    if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
+      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
+  }
+
+  const stdout = [];
+  const stderr = [];
+  let stdoutBytes = 0;
+  let stderrBytes = 0;
+  let failureCode = null;
+  let resolveFailure;
+  const failure = new Promise((resolveFailurePromise) => {
+    resolveFailure = resolveFailurePromise;
+  });
+  const latch = (code) => {
+    if (failureCode !== null) return;
+    failureCode = code;
+    resolveFailure({ failure: true });
+  };
+  const add = (bucket, chunk, which) => {
+    const value = Buffer.from(chunk);
+    if (which === "stdout") stdoutBytes += value.length;
+    else stderrBytes += value.length;
+    if (stdoutBytes > 4096 || stderrBytes > 1024) {
+      latch("PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT");
+      return;
+    }
+    bucket.push(value);
+  };
+  child.stdout?.on("data", (chunk) => add(stdout, chunk, "stdout"));
+  child.stderr?.on("data", (chunk) => add(stderr, chunk, "stderr"));
+  const timer = (dependencies.setTimeout ?? setTimeout)(
+    () => latch("PRECONDITION_SIMCTL_FIND_TIMEOUT"),
+    PROBE_TIMEOUT_MS,
+  );
+  timer.unref?.();
+
+  const identityDependencies = Object.freeze({
+    ...dependencies,
+    probeIdentity: probeSimctlFindIdentity,
+  });
+  let captured;
+  try {
+    captured = await probeSimctlFindIdentity(child.pid, SIMCTL_FIND_TOKENS, dependencies);
+  } catch {
+    clearTimeout(timer);
+    if (child.exitCode == null && child.signalCode == null) {
+      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
+      throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    directGroupAbsent(child.pid, dependencies);
+    fail("PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT");
+  }
+
+  const first = await Promise.race([
+    lifecycle.settlement.then((value) => ({ settlement: value })),
+    failure,
+  ]);
+  if (first.failure) {
+    await terminateVerifiedProcessGroup(
+      child,
+      lifecycle.close,
+      captured,
+      SIMCTL_FIND_TOKENS,
+      identityDependencies,
+    );
+  } else if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
+    throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+  }
+  clearTimeout(timer);
+  try {
+    assertProcessGroupAbsent(captured.pgid, dependencies);
+  } catch {
+    throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+  }
+  const result = first.settlement ?? (await lifecycle.settlement);
+  if (failureCode !== null) fail(failureCode);
+  if (result.error || result.code !== 0 || result.signal != null || stderrBytes !== 0) {
+    fail("PRECONDITION_SIMCTL_FIND_EXIT");
+  }
+  return Object.freeze({
+    stdout: capturedText(stdout, "PRECONDITION_SIMCTL_FIND_UTF8"),
+    stderr: capturedText(stderr, "PRECONDITION_SIMCTL_FIND_UTF8"),
+  });
+}
+
 export async function probeProcessIdentity(
   pid,
   expectedCommandTokens = EXPECTED_COMMAND_TOKENS,
@@ -1238,7 +1423,13 @@ function validateReceiptPhaseEvidence(receipt) {
 function validateDiagnosticReceipt(receipt) {
   const observed = [receipt.observedVersion, receipt.observedBuild];
   const expectsObserved = [
-    "PRECONDITION_SIMCTL_FIND_PROBE",
+    "PRECONDITION_SIMCTL_FIND_SPAWN",
+    "PRECONDITION_SIMCTL_FIND_INVALID_PID",
+    "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
+    "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+    "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
+    "PRECONDITION_SIMCTL_FIND_EXIT",
+    "PRECONDITION_SIMCTL_FIND_UTF8",
     "PRECONDITION_SIMCTL_FIND_PATH",
     "PRECONDITION_SIMCTL_FIND_INTERNAL",
     "PRECONDITION_XCODE_DIAGNOSTIC_READY",
@@ -2836,27 +3027,28 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       const parsedXcode = parseXcodeVersion(xcode.stdout);
       observedVersion = parsedXcode.version;
       observedBuild = parsedXcode.build;
-      preconditionStage = "SIMCTL_FIND_PROBE";
-      const simctl = await runTool(
-        XCRUN,
-        ["--find", "simctl"],
-        {
-          cwd: paths.repositoryRoot,
-          env: childEnv,
-          shell: false,
-          detached: true,
-          stdio: ["ignore", "pipe", "pipe"],
-        },
-        {
-          timeout: PROBE_TIMEOUT_MS,
-          stdout: 4096,
-          stderr: 1024,
-          timeoutCode: "PRECONDITION_SIMCTL_FIND_PROBE",
-          outputCode: "PRECONDITION_SIMCTL_FIND_PROBE",
-          exitCode: "PRECONDITION_SIMCTL_FIND_PROBE",
-          diagnosticCode: "PRECONDITION_SIMCTL_FIND_PROBE",
-        },
-      );
+      preconditionStage = "SIMCTL_FIND_V2";
+      const simctl =
+        runTool === runCaptured
+          ? await runSimctlFindV2(
+              {
+                cwd: paths.repositoryRoot,
+                env: childEnv,
+              },
+              dependencies,
+            )
+          : await runTool(
+              XCRUN,
+              ["--find", "simctl"],
+              {
+                cwd: paths.repositoryRoot,
+                env: childEnv,
+                shell: false,
+                detached: true,
+                stdio: ["ignore", "pipe", "pipe"],
+              },
+              Object.freeze({ profile: SIMCTL_FIND_PROFILE }),
+            );
       checkCancellation();
       preconditionStage = "SIMCTL_FIND_PATH";
       let simctlPath;
@@ -3351,6 +3543,7 @@ export const testing = Object.freeze({
   childLifecycle,
   awaitActualClose,
   runCaptured,
+  runSimctlFindV2,
   runPsVerifier,
   sanitizePrimaryFailure,
   sanitizeCleanupFailure,
