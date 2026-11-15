@@ -933,7 +933,10 @@ describe("iOS unsigned foundation structure", () => {
       "PARENT_IDENTITY",
       "SOURCE",
       "ROOTS",
-      "XCODE",
+      "XCODE_VERSION_PROBE",
+      "XCODE_VERSION_PARSE",
+      "SIMCTL_FIND_PROBE",
+      "SIMCTL_FIND_PATH",
       "RUNTIME_INVENTORY",
       "STORAGE_ANCHOR",
       "DISK",
@@ -1037,5 +1040,113 @@ describe("iOS unsigned foundation structure", () => {
     expect(controller).toContain('cleanupResult = "NOT_REQUIRED"');
     expect(controller).toContain("XCODE_ARGS");
     expect(controller).toContain("downloadInvocationCount: invocationCount");
+  });
+
+  it("binds the exact diagnostic mode and schema-v2 ordered evidence fields", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1"');
+    expect(controller).toContain("receipt.schemaVersion !== 2");
+    expect(controller).toMatch(
+      /"diagnosticMode",\s*"expectedVersion",\s*"expectedBuild",\s*"observedVersion",\s*"observedBuild"/u,
+    );
+    expect(controller).not.toMatch(/expectedXcodeVersion|expectedXcodeBuild/u);
+    expect(controller).not.toMatch(/observedXcodeVersion|observedXcodeBuild/u);
+  });
+
+  it("closes the two probe codes and seven diagnostic outcomes without a generic Xcode code", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    for (const code of [
+      "PRECONDITION_XCODE_VERSION_PROBE",
+      "PRECONDITION_XCODE_VERSION_PARSE",
+      "PRECONDITION_SIMCTL_FIND_PROBE",
+      "PRECONDITION_SIMCTL_FIND_PATH",
+      "PRECONDITION_XCODE_VERSION_INTERNAL",
+      "PRECONDITION_SIMCTL_FIND_INTERNAL",
+      "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+    ]) {
+      expect(controller).toContain(`"${code}"`);
+    }
+    expect(controller).not.toMatch(/"PRECONDITION_XCODE"/u);
+  });
+
+  it("maps each diagnostic stage to its exact sanitized internal fallback", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain('XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL"');
+    expect(controller).toContain('XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL"');
+    expect(controller).toContain('SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL"');
+    expect(controller).toContain('SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL"');
+  });
+
+  it("stores the exact observed tuple only after strict version parsing", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const parsed = controller.indexOf("const parsedXcode = parseXcodeVersion(xcode.stdout)");
+    const version = controller.indexOf("observedVersion = parsedXcode.version", parsed);
+    const build = controller.indexOf("observedBuild = parsedXcode.build", parsed);
+    const simctl = controller.indexOf('preconditionStage = "SIMCTL_FIND_PROBE"', parsed);
+    expect(parsed).toBeGreaterThanOrEqual(0);
+    expect(version).toBeGreaterThan(parsed);
+    expect(build).toBeGreaterThan(version);
+    expect(build).toBeLessThan(simctl);
+  });
+
+  it("permits only the exact probe-code set on general captured probes", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain("const diagnosticCode = limits.diagnosticCode ?? null");
+    expect(controller).toContain("!XCODE_PROBE_FAILURE_CODES.has(diagnosticCode)");
+    expect(controller).toContain("diagnosticCode ?? limits.exitCode");
+  });
+
+  it("preserves live-child HOLD outcomes beside diagnostic probe failures", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runCaptured");
+    const end = controller.indexOf("function canonicalReceipt", start);
+    const captured = controller.slice(start, end);
+    expect(captured).toContain("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    expect(captured).toContain("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+    expect(captured).toContain("throw error");
+  });
+
+  it("stops at DIAGNOSTIC_READY before inventory or acquisition release", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const ready = controller.indexOf('fail("PRECONDITION_XCODE_DIAGNOSTIC_READY")');
+    const inventory = controller.indexOf('preconditionStage = "RUNTIME_INVENTORY"', ready);
+    const release = controller.indexOf("invocationCount = 1", ready);
+    expect(ready).toBeGreaterThanOrEqual(0);
+    expect(inventory).toBeGreaterThan(ready);
+    expect(release).toBeGreaterThan(inventory);
+  });
+
+  it("validates only the clean and raw-residue diagnostic invocation-zero rows", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("function validateDiagnosticReceipt");
+    const end = controller.indexOf("export function validateReceipt", start);
+    const validator = controller.slice(start, end);
+    expect(validator).toContain('receipt.state === "PRECONDITION_REJECTED"');
+    expect(validator).toContain('receipt.state === "CLEANUP_FAILED"');
+    expect(validator).toContain('receipt.cleanupFailureCode === "CLEANUP_RAW_RESIDUE"');
+    expect(validator).toContain("receipt.rawLogRetained === true");
+    expect(validator).toContain("(!cleanRow && !cleanupFailureRow)");
+    expect(validator).toContain("receipt.downloadInvocationCount !== 0");
+    expect(validator).toContain('receipt.downloadResult !== "NOT_ATTEMPTED"');
+    expect(validator).toContain('receipt.cleanupResult === "NOT_REQUIRED"');
+    expect(validator).toContain('receipt.cleanupResult === "FAILED"');
+    expect(validator).toContain("receipt.diskMonitorSampleCount !== 0");
+  });
+
+  it("binds null-versus-exact observation evidence to the closed diagnostic table", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain("const expectsObserved = [");
+    expect(controller).toContain("PRECONDITION_SIMCTL_FIND_INTERNAL");
+    expect(controller).toContain("PRECONDITION_XCODE_DIAGNOSTIC_READY");
+    expect(controller).toContain("!observed.every((value) => value === null)");
+  });
+
+  it("keeps workflow and ios-ci acquisition authority unchanged by diagnostic mode", () => {
+    const workflow = read(".github/workflows/ios.yml");
+    const iosCi = read("scripts/ios-ci.sh");
+    expect(workflow).toContain("node scripts/ios-runtime-bootstrap.mjs run");
+    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1");
+    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1");
+    expect(iosCi).toContain("FLUYO_IOS_EVIDENCE_LEG");
   });
 });

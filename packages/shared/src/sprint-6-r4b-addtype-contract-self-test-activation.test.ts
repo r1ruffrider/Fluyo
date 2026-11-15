@@ -35,7 +35,7 @@ const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
 const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
 const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "1b4a26e855b396462ff98ea6314fdfd0f37ce03719b8b50e8950f009253635fb";
+const currentTenManifestSha = "b44365b55fc1548340286199c8df6546a176d8afc99340283f832a2bc188297e";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -130,9 +130,9 @@ const oracleRepairBaseTree = Object.freeze({
     blob: "a13d394954304f7fb06e9cc6d19c7a17f04380d0",
   }),
 });
-const clockRootRepairBase = "a1e43d4f0494a23019f4712d3bb292bd9af83296";
-const clockRootRepairBaseTreeId = "0fed24af5507eca32477280aa9775ee3dc21c065";
-const clockRootRepairBaseSubject = "test(ci): make iOS bootstrap fixtures portable";
+const clockRootRepairBase = "ea651344e5fee88e73ded66ecf9c1c770afa5d34";
+const clockRootRepairBaseTreeId = "ffb2c3fa53efe88f235975d722946d71a869f1e0";
+const clockRootRepairBaseSubject = "fix(ci): bind iOS bootstrap clock and temp roots";
 const clockRootRepairPaths = repairPaths;
 const clockRootRepairBaseTree = Object.freeze({
   ".github/workflows/ios.yml": Object.freeze({
@@ -141,19 +141,19 @@ const clockRootRepairBaseTree = Object.freeze({
   }),
   "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
     mode: "100644",
-    blob: "cbd96fccbe0b717274cfc189a0322672d9a49a65",
+    blob: "dc1df447606f05ffbe557637a41ab70140565e1c",
   }),
   "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
     mode: "100644",
-    blob: "d3adcee7a2697ef731880b9bd4406d1ed7cbafa6",
+    blob: "02f274964ace424365132940b2f11cdd1f67902a",
   }),
   "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
     mode: "100644",
-    blob: "9f2001104594ac0a4445698e77b7414db83b7b51",
+    blob: "643e8395995f3e75fa11c46d0bd5f9dfa07d91c1",
   }),
   "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
     mode: "100644",
-    blob: "c0afad491a8fd4e090e4237fe65b1151b4349905",
+    blob: "ad5468a78428d7cfc70e66be110c9de808399f59",
   }),
   "scripts/ios-ci.sh": Object.freeze({
     mode: "100755",
@@ -161,11 +161,11 @@ const clockRootRepairBaseTree = Object.freeze({
   }),
   "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
     mode: "100644",
-    blob: "dbc2dd366cf9a9716fce0680616d9c0824d10e73",
+    blob: "29e7d92bb88c75f261054f8e20155b18f6348a63",
   }),
   "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
     mode: "100644",
-    blob: "2b5db4e05d4d1d95dd50ab218b589c45b9ef4c31",
+    blob: "94af350afb70d43131c167479edd1689d58c4ce2",
   }),
 });
 const repairBaseTree = Object.freeze({
@@ -2240,13 +2240,13 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       );
   });
 
-  it("43 binds immutable a1 clock-root-repair base and exact-eight tree", () => {
-    expect(clockRootRepairBase).toBe("a1e43d4f0494a23019f4712d3bb292bd9af83296");
+  it("43 binds immutable ea diagnostic base and exact-eight tree", () => {
+    expect(clockRootRepairBase).toBe("ea651344e5fee88e73ded66ecf9c1c770afa5d34");
     const commit = git(["cat-file", "commit", clockRootRepairBase]);
     const [headers, ...messageParts] = commit.split("\n\n");
     const headerLines = headers?.split("\n") ?? [];
     expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
-      `parent ${oracleRepairBase}`,
+      "parent a1e43d4f0494a23019f4712d3bb292bd9af83296",
     ]);
     expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
       `tree ${clockRootRepairBaseTreeId}`,
@@ -2262,7 +2262,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     }
   });
 
-  it("44 classifies exact six-path clock-root repair unstaged and staged", () => {
+  it("44 classifies exact six-path diagnostic repair unstaged and staged", () => {
     expect(clockRootRepairPaths).toEqual(repairPaths);
     for (const [xy, expected] of [
       [".M", "PRECOMMIT_UNSTAGED"],
@@ -2346,7 +2346,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
   });
 
-  it("46 requires one direct a1 child with exact six-path raw diff", () => {
+  it("46 requires one direct ea child with exact six-path raw diff", () => {
     expect(() =>
       assertClockRootRepairDirectChildCommit(
         Buffer.from(`tree ${"4".repeat(40)}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`),
@@ -2362,7 +2362,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       );
   });
 
-  it("47 rejects clock-root-repair mode, base blob, candidate blob, path, or row drift", () => {
+  it("47 rejects diagnostic-repair mode, base blob, candidate blob, path, or row drift", () => {
     const mutations = [
       (rows: string[]) => [rows[0]!.replace(/^:100644/u, ":100755"), ...rows.slice(1)],
       (rows: string[]) => [rows[0]!.replace(/[0-9a-f]{40}/u, "0".repeat(40)), ...rows.slice(1)],

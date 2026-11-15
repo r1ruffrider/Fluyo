@@ -26,6 +26,9 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_ID = "ios_17_5_runtime_bootstrap_v1";
+export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1";
+export const EXPECTED_XCODE_VERSION = "16.2";
+export const EXPECTED_XCODE_BUILD = "16C5032a";
 export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";
 export const XCODEBUILD = `${XCODE_DEVELOPER_DIR}/usr/bin/xcodebuild`;
 export const XCRUN = `${XCODE_DEVELOPER_DIR}/usr/bin/xcrun`;
@@ -101,8 +104,11 @@ const RECEIPT_FIELDS = Object.freeze([
   "runnerImageVersion",
   "runnerArch",
   "hostArch",
-  "xcodeVersion",
-  "xcodeBuild",
+  "diagnosticMode",
+  "expectedVersion",
+  "expectedBuild",
+  "observedVersion",
+  "observedBuild",
   "artifactTupleSha256",
   "artifactIdentifier",
   "artifactVersion",
@@ -151,7 +157,13 @@ const PRIMARY_FAILURE_CODES = new Set([
   "PRECONDITION_RUN_ATTEMPT",
   "PRECONDITION_RUNNER",
   "PRECONDITION_SOURCE",
-  "PRECONDITION_XCODE",
+  "PRECONDITION_XCODE_VERSION_PROBE",
+  "PRECONDITION_XCODE_VERSION_PARSE",
+  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_PATH",
+  "PRECONDITION_XCODE_VERSION_INTERNAL",
+  "PRECONDITION_SIMCTL_FIND_INTERNAL",
+  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
   "PRECONDITION_ENV",
   "PRECONDITION_PROVENANCE",
   "PRECONDITION_DISK",
@@ -210,13 +222,29 @@ const CLEANUP_FAILURE_CODES = new Set([
   "CLEANUP_DISK_LIMIT",
 ]);
 const FORBIDDEN_ENV_NAME = /(?:proxy|credential|token|cookie|password|secret|authorization)/iu;
+const XCODE_PROBE_FAILURE_CODES = new Set([
+  "PRECONDITION_XCODE_VERSION_PROBE",
+  "PRECONDITION_SIMCTL_FIND_PROBE",
+]);
+const XCODE_DIAGNOSTIC_FAILURE_CODES = new Set([
+  "PRECONDITION_XCODE_VERSION_PROBE",
+  "PRECONDITION_XCODE_VERSION_PARSE",
+  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_PATH",
+  "PRECONDITION_XCODE_VERSION_INTERNAL",
+  "PRECONDITION_SIMCTL_FIND_INTERNAL",
+  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+]);
 const PRECONDITION_STAGE_VALUES = Object.freeze([
   "INITIAL",
   "RUNNER",
   "PARENT_IDENTITY",
   "SOURCE",
   "ROOTS",
-  "XCODE",
+  "XCODE_VERSION_PROBE",
+  "XCODE_VERSION_PARSE",
+  "SIMCTL_FIND_PROBE",
+  "SIMCTL_FIND_PATH",
   "RUNTIME_INVENTORY",
   "STORAGE_ANCHOR",
   "DISK",
@@ -228,7 +256,10 @@ const PRECONDITION_STAGE_FAILURE = Object.freeze({
   PARENT_IDENTITY: "PRECONDITION_PARENT_IDENTITY",
   SOURCE: "PRECONDITION_SOURCE",
   ROOTS: "PRECONDITION_ENV",
-  XCODE: "PRECONDITION_XCODE",
+  XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL",
+  XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL",
+  SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+  SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL",
   RUNTIME_INVENTORY: "PRECONDITION_RUNTIME_INVENTORY",
   STORAGE_ANCHOR: "PRECONDITION_STORAGE_ANCHOR",
   DISK: "PRECONDITION_DISK",
@@ -349,8 +380,8 @@ export function parseDetachedHead(repositoryRoot) {
 
 export function parseXcodeVersion(value) {
   const match = /^Xcode 16\.2\nBuild version 16C5032a\n?$/u.exec(value);
-  if (!match) fail("PRECONDITION_XCODE");
-  return Object.freeze({ version: "16.2", build: "16C5032a" });
+  if (!match) fail("PRECONDITION_XCODE_VERSION_PARSE");
+  return Object.freeze({ version: EXPECTED_XCODE_VERSION, build: EXPECTED_XCODE_BUILD });
 }
 
 function runtimeBuild(row) {
@@ -731,6 +762,9 @@ async function runPsVerifier(args, limits, dependencies = {}) {
 }
 
 async function runCaptured(command, args, options, limits, dependencies = {}) {
+  const diagnosticCode = limits.diagnosticCode ?? null;
+  if (diagnosticCode !== null && !XCODE_PROBE_FAILURE_CODES.has(diagnosticCode))
+    throw new TypeError("invalid diagnostic probe code");
   const spawnProcess = dependencies.spawn ?? spawn;
   let child;
   try {
@@ -741,11 +775,11 @@ async function runCaptured(command, args, options, limits, dependencies = {}) {
       stdio: ["ignore", "pipe", "pipe"],
     });
   } catch {
-    fail(limits.exitCode);
+    fail(diagnosticCode ?? limits.exitCode);
   }
   const lifecycle = childLifecycle(child);
   if (!Number.isSafeInteger(child.pid) || child.pid < 1 || child.pid > 2_147_483_647)
-    await rejectInvalidSpawn(lifecycle, limits.exitCode, dependencies);
+    await rejectInvalidSpawn(lifecycle, diagnosticCode ?? limits.exitCode, dependencies);
   const stdout = [];
   const stderr = [];
   let stdoutBytes = 0;
@@ -791,7 +825,7 @@ async function runCaptured(command, args, options, limits, dependencies = {}) {
     if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies)))
       throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
     directGroupAbsent(child.pid, dependencies);
-    fail(limits.exitCode);
+    fail(diagnosticCode ?? limits.exitCode);
   }
   const first = await Promise.race([
     lifecycle.settlement.then((value) => ({ settlement: value })),
@@ -1201,10 +1235,58 @@ function validateReceiptPhaseEvidence(receipt) {
   return true;
 }
 
+function validateDiagnosticReceipt(receipt) {
+  const observed = [receipt.observedVersion, receipt.observedBuild];
+  const expectsObserved = [
+    "PRECONDITION_SIMCTL_FIND_PROBE",
+    "PRECONDITION_SIMCTL_FIND_PATH",
+    "PRECONDITION_SIMCTL_FIND_INTERNAL",
+    "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+  ].includes(receipt.primaryFailureCode);
+  const cleanRow =
+    receipt.state === "PRECONDITION_REJECTED" &&
+    receipt.cleanupFailureCode === "NONE" &&
+    receipt.cleanupResult === "NOT_REQUIRED" &&
+    receipt.rawLogRetained === false;
+  const cleanupFailureRow =
+    receipt.state === "CLEANUP_FAILED" &&
+    receipt.cleanupFailureCode === "CLEANUP_RAW_RESIDUE" &&
+    receipt.cleanupResult === "FAILED" &&
+    receipt.rawLogRetained === true;
+  if (
+    receipt.diagnosticMode !== DIAGNOSTIC_MODE ||
+    !XCODE_DIAGNOSTIC_FAILURE_CODES.has(receipt.primaryFailureCode) ||
+    (!cleanRow && !cleanupFailureRow) ||
+    receipt.downloadInvocationCount !== 0 ||
+    receipt.downloadResult !== "NOT_ATTEMPTED" ||
+    receipt.minimumEvidenceResult !== "NOT_RUN" ||
+    receipt.runtimeIdentifier !== null ||
+    receipt.runtimeVersion !== null ||
+    receipt.runtimeBuild !== null ||
+    receipt.freeBytesBefore !== null ||
+    receipt.freeBytesAfterAcquire !== null ||
+    receipt.freeBytesAfterMinimumEvidence !== null ||
+    receipt.freeBytesAfterCleanup !== null ||
+    receipt.minimumFreeBytesObserved !== null ||
+    receipt.acquireDiskDeltaBytes !== 0 ||
+    receipt.diskMonitorSampleCount !== 0 ||
+    receipt.preExactRuntimeCount !== null ||
+    receipt.postAcquireExactRuntimeCount !== null ||
+    receipt.postCleanupExactRuntimeCount !== null ||
+    receipt.runtimeRetained !== false ||
+    (expectsObserved &&
+      (observed[0] !== EXPECTED_XCODE_VERSION || observed[1] !== EXPECTED_XCODE_BUILD)) ||
+    (!expectsObserved && !observed.every((value) => value === null))
+  ) {
+    fail("RECEIPT_INVALID");
+  }
+  return Object.freeze({ ...receipt });
+}
+
 export function validateReceipt(receipt) {
   if (!exactKeys(receipt, RECEIPT_FIELDS)) fail("RECEIPT_INVALID");
   if (
-    receipt.schemaVersion !== 1 ||
+    receipt.schemaVersion !== 2 ||
     receipt.policyId !== POLICY_ID ||
     !SOURCE_SHA.test(receipt.sourceCommit) ||
     !/^\d{1,20}$/u.test(receipt.runId) ||
@@ -1214,8 +1296,12 @@ export function validateReceipt(receipt) {
     receipt.runnerImageVersion.length > 32 ||
     receipt.runnerArch !== "ARM64" ||
     receipt.hostArch !== "arm64" ||
-    receipt.xcodeVersion !== "16.2" ||
-    receipt.xcodeBuild !== "16C5032a" ||
+    ![null, DIAGNOSTIC_MODE].includes(receipt.diagnosticMode) ||
+    receipt.expectedVersion !== EXPECTED_XCODE_VERSION ||
+    receipt.expectedBuild !== EXPECTED_XCODE_BUILD ||
+    ![null, EXPECTED_XCODE_VERSION].includes(receipt.observedVersion) ||
+    ![null, EXPECTED_XCODE_BUILD].includes(receipt.observedBuild) ||
+    (receipt.observedVersion === null) !== (receipt.observedBuild === null) ||
     receipt.artifactTupleSha256 !== CATALOG_TUPLE_SHA256 ||
     receipt.artifactIdentifier !== "com.apple.dmg.iPhoneSimulatorSDK17_5" ||
     receipt.artifactVersion !== "17.5" ||
@@ -1242,6 +1328,17 @@ export function validateReceipt(receipt) {
     "diskMonitorSampleCount",
   ]) {
     safeNumber(receipt[key]);
+  }
+  if (receipt.diagnosticMode === DIAGNOSTIC_MODE) return validateDiagnosticReceipt(receipt);
+  if (
+    XCODE_DIAGNOSTIC_FAILURE_CODES.has(receipt.primaryFailureCode) ||
+    (receipt.downloadInvocationCount === 0 &&
+      (receipt.observedVersion !== null || receipt.observedBuild !== null)) ||
+    (receipt.downloadInvocationCount === 1 &&
+      (receipt.observedVersion !== EXPECTED_XCODE_VERSION ||
+        receipt.observedBuild !== EXPECTED_XCODE_BUILD))
+  ) {
+    fail("RECEIPT_INVALID");
   }
   const nullableFreeFields = [
     "freeBytesBefore",
@@ -1486,7 +1583,7 @@ export function validateReceipt(receipt) {
 
 export function testingReceipt(overrides = {}) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     policyId: POLICY_ID,
     sourceCommit: "a".repeat(40),
     runId: "1",
@@ -1495,8 +1592,11 @@ export function testingReceipt(overrides = {}) {
     runnerImageVersion: "20261104.0514.1",
     runnerArch: "ARM64",
     hostArch: "arm64",
-    xcodeVersion: "16.2",
-    xcodeBuild: "16C5032a",
+    diagnosticMode: null,
+    expectedVersion: EXPECTED_XCODE_VERSION,
+    expectedBuild: EXPECTED_XCODE_BUILD,
+    observedVersion: EXPECTED_XCODE_VERSION,
+    observedBuild: EXPECTED_XCODE_BUILD,
     artifactTupleSha256: CATALOG_TUPLE_SHA256,
     artifactIdentifier: "com.apple.dmg.iPhoneSimulatorSDK17_5",
     artifactVersion: "17.5",
@@ -1654,6 +1754,9 @@ function baseReceipt(env, sourceCommit) {
     runnerImageVersion: env.ImageVersion ?? "unknown",
     runnerArch: env.RUNNER_ARCH ?? "unknown",
     hostArch: hostArchitecture(),
+    diagnosticMode: null,
+    observedVersion: null,
+    observedBuild: null,
     runtimeIdentifier: null,
     runtimeVersion: null,
     runtimeBuild: null,
@@ -2162,7 +2265,8 @@ export async function childGate(role, cleanupRuntime, dependencies = {}) {
   if (root !== env.FLUYO_INTERNAL_CHECKOUT_ROOT) fail("PRECONDITION_SOURCE");
   if ((dependencies.parseHead ?? parseDetachedHead)(root) !== env.FLUYO_INTERNAL_SOURCE_COMMIT)
     fail("PRECONDITION_SOURCE");
-  if (realpathSync.native(XCODE_DEVELOPER_DIR) !== XCODE_DEVELOPER_DIR) fail("PRECONDITION_XCODE");
+  if (realpathSync.native(XCODE_DEVELOPER_DIR) !== XCODE_DEVELOPER_DIR)
+    fail("PRECONDITION_XCODE_VERSION_INTERNAL");
   const parent = await (dependencies.probeParent ?? probeParentIdentity)(
     Number(env.FLUYO_INTERNAL_PARENT_PID),
     null,
@@ -2621,6 +2725,9 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
     let downloadResult = "NOT_ATTEMPTED";
     let minimumEvidenceResult = "NOT_RUN";
     let cleanupResult = "NOT_REQUIRED";
+    let diagnosticMode = null;
+    let observedVersion = null;
+    let observedBuild = null;
     let invocationCount = 0;
     let preconditionStage = "INITIAL";
     let runtime;
@@ -2702,7 +2809,8 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       childEnv = closedChildEnvironment(env, bootstrapRoot);
       const runTool = dependencies.runTool ?? runCaptured;
       checkCancellation();
-      preconditionStage = "XCODE";
+      diagnosticMode = DIAGNOSTIC_MODE;
+      preconditionStage = "XCODE_VERSION_PROBE";
       const xcode = await runTool(
         XCODEBUILD,
         ["-version"],
@@ -2717,13 +2825,18 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
           timeout: PROBE_TIMEOUT_MS,
           stdout: 4096,
           stderr: 1024,
-          timeoutCode: "PRECONDITION_XCODE",
-          outputCode: "PRECONDITION_XCODE",
-          exitCode: "PRECONDITION_XCODE",
+          timeoutCode: "PRECONDITION_XCODE_VERSION_PROBE",
+          outputCode: "PRECONDITION_XCODE_VERSION_PROBE",
+          exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
+          diagnosticCode: "PRECONDITION_XCODE_VERSION_PROBE",
         },
       );
       checkCancellation();
-      parseXcodeVersion(xcode.stdout);
+      preconditionStage = "XCODE_VERSION_PARSE";
+      const parsedXcode = parseXcodeVersion(xcode.stdout);
+      observedVersion = parsedXcode.version;
+      observedBuild = parsedXcode.build;
+      preconditionStage = "SIMCTL_FIND_PROBE";
       const simctl = await runTool(
         XCRUN,
         ["--find", "simctl"],
@@ -2738,14 +2851,22 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
           timeout: PROBE_TIMEOUT_MS,
           stdout: 4096,
           stderr: 1024,
-          timeoutCode: "PRECONDITION_XCODE",
-          outputCode: "PRECONDITION_XCODE",
-          exitCode: "PRECONDITION_XCODE",
+          timeoutCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+          outputCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+          exitCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+          diagnosticCode: "PRECONDITION_SIMCTL_FIND_PROBE",
         },
       );
       checkCancellation();
-      if (!within(realpathSync.native(simctl.stdout.trim()), XCODE_DEVELOPER_DIR))
-        fail("PRECONDITION_XCODE");
+      preconditionStage = "SIMCTL_FIND_PATH";
+      let simctlPath;
+      try {
+        simctlPath = realpathSync.native(simctl.stdout.trim());
+      } catch {
+        fail("PRECONDITION_SIMCTL_FIND_PATH");
+      }
+      if (!within(simctlPath, XCODE_DEVELOPER_DIR)) fail("PRECONDITION_SIMCTL_FIND_PATH");
+      fail("PRECONDITION_XCODE_DIAGNOSTIC_READY");
       preconditionStage = "RUNTIME_INVENTORY";
       const beforeResult = await runTool(
         XCRUN,
@@ -3130,6 +3251,9 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
     else state = "TRANSACTION_SUCCEEDED_CLEANED";
     if (state === "PRECONDITION_REJECTED") cleanupResult = "NOT_REQUIRED";
     const finalReceipt = transactionReceipt(receipt, {
+      diagnosticMode,
+      observedVersion,
+      observedBuild,
       state,
       primaryFailureCode,
       cleanupFailureCode,
@@ -3209,6 +3333,8 @@ export function validateReceiptFile(repositoryRoot) {
 export const testing = Object.freeze({
   RECEIPT_FIELDS,
   PRIMARY_FAILURE_CODES,
+  XCODE_PROBE_FAILURE_CODES,
+  XCODE_DIAGNOSTIC_FAILURE_CODES,
   PRECONDITION_STAGE_VALUES,
   PRECONDITION_STAGE_FAILURE,
   CLEANUP_FAILURE_CODES,

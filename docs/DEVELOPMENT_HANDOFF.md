@@ -3197,3 +3197,53 @@ The preceding v1.1.17 source-fact record remains preserved as historical evidenc
 This entry supersedes only the controller-test source fact: `scripts/ios-runtime-bootstrap.test.mjs` is now **142,016 bytes**, SHA-256 `fd470f24392fc64a5475a42badffa7711946c51447f86426915ea222738654a7`, Git blob `94af350afb70d43131c167479edd1689d58c4ce2`. The controller, shared structure test, and activation-guard source facts in the preceding record remain unchanged.
 
 This repository/test correction makes no protected-recovery, acquisition, simulator, production, or runtime claim. PR #94 remains draft/HOLD; no stage, commit, push, ready, or merge is authorized or recorded by this entry, and all existing prohibitions remain unchanged.
+
+## 2026-11-15 — PR #94 Xcode precondition diagnostic v1.1 record
+
+The diagnostic repair base is exact commit `ea651344e5fee88e73ded66ecf9c1c770afa5d34`, tree `ffb2c3fa53efe88f235975d722946d71a869f1e0`, subject `fix(ci): bind iOS bootstrap clock and temp roots`. Its protected rollup contained **14** terminal results: **12 success**, **1 minimum-iOS failure**, and **1 aggregate skipped**. The sanitized minimum receipt was `PRECONDITION_REJECTED` with `PRECONDITION_XCODE`, invocation count **0**, no acquisition, and no runtime retention. Current-iOS, Windows, portable, and all other protected gates passed.
+
+That generic code did not prove the exact failing Xcode subcheck because it collapsed both the Xcode version probe/parse boundary and the `simctl` probe/path boundary. No protected recovery is claimed.
+
+The approved repository/test-only diagnostic mode is `PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1`. It does not change the workflow or `scripts/ios-ci.sh` and grants no acquisition or runtime authority. Its receipt schema v2 keeps the expected Xcode version and build exact while the observed version and build remain nullable. It permits exactly seven closed primary codes:
+
+1. `PRECONDITION_XCODE_VERSION_PROBE`
+2. `PRECONDITION_XCODE_VERSION_PARSE`
+3. `PRECONDITION_SIMCTL_FIND_PROBE`
+4. `PRECONDITION_SIMCTL_FIND_PATH`
+5. `PRECONDITION_XCODE_VERSION_INTERNAL`
+6. `PRECONDITION_SIMCTL_FIND_INTERNAL`
+7. `PRECONDITION_XCODE_DIAGNOSTIC_READY`
+
+Child-residue HOLD outcomes retain precedence over diagnostic classification. `PRECONDITION_XCODE_DIAGNOSTIC_READY` stops before runtime inventory or acquisition. At most one protected diagnostic attempt may run later. Its success criterion is one closed sanitized receipt with one exact code; a green protected job is not required and is not claimed. The diagnostic authorizes no retry, acquisition, merge, or broader runtime action.
+
+Stable source facts before this append are:
+
+- Controller: **119,516 bytes**; SHA-256 `ee8245134facede4824f6a7ee3c44256c375ecd6ce741025d43dcb5bd345c149`; Git blob `df4f2c8070cb464271af332eb8551798c76b3412`.
+- Controller test: **156,773 bytes**; SHA-256 `604dee8e33a474ec9b24be51328fedc69a3d777666e66c6d58422c7774616c1f`; Git blob `3fb9590e0803ca0d3f4e164c259a1bdd85ea1c01`.
+- Shared structure test: **60,310 bytes**; SHA-256 `b4ae9e1722c6dccaf33dc057e6243c94589ece79cb154f3ad0b609bed93c5a51`; Git blob `ec16ffedbdc3a7a66d3be4e54bc105bd7061621e`.
+- Activation guard: **94,590 bytes**; SHA-256 `a672e7d4fa5b5eec25d69e0ea55d7c52ad95cffbe668cb08a0676039ddc13ce7`; Git blob `112be37063ec2cc40ae6ed2b5161dc14a19198f8`.
+
+Executed development evidence is controller **370/370 PASS** and shared structure **78/78 PASS**. Prettier for all four reviewed paths and diff integrity PASS. Activation **100/100** remains pending until the exact six-path handoff/readiness topology is complete.
+
+The required final targets remain pending and are not claimed as executed by this entry: controller **370/370**, shared structure **78/78**, activation **100/100**, readiness **8/8**, focused **556/556**, phase-specific required ledger **436**, shared **665/665**, audit-policy unit **558/558**, portable **273/273**, and full repository **2,712/2,712**.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, proxy, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — PR #94 Xcode precondition diagnostic v1.1.1 supersession
+
+Final exact-byte review of the unexecuted diagnostic v1.1 found a cleanup-failure receipt-validator defect and an initial schema-name conflict. Catalina and Natalia converged before any diagnostic execution on the canonical short keys `expectedVersion`, `expectedBuild`, `observedVersion`, and `observedBuild`. This v1.1.1 record explicitly supersedes the unexecuted full-name requirement; all preceding v1.1 history remains preserved.
+
+The cleanup contract is a closed two-row table. It distinguishes the clean row from the exact failure row `CLEANUP_FAILED` / `CLEANUP_RAW_RESIDUE` / `FAILED` / `raw=true`, with `fallbackUsed=false`. The observed-version/build table is selected by the exact primary code. A child HOLD retains precedence and writes no receipt.
+
+The repair adds exactly two controller cases and leaves the shared-structure count unchanged. Executed development evidence is controller **372/372 PASS** and shared structure **78/78 PASS**; Prettier and diff integrity PASS. Activation **100/100** remains pending until the exact handoff/readiness pins are refreshed.
+
+Current frozen source facts before this append are:
+
+- Controller: **119,783 bytes**; SHA-256 `65136f954db6c64d6806bce1c37fc91f756c951a7cb87cc4bc8d8a3a7a100a1a`; Git blob `d712c4c0bcc0087225df406e602b9bae3dd70425`.
+- Controller test: **160,587 bytes**; SHA-256 `681f1c1a35832e8170f572c945bfa7a5ebdeceef7c7dea6cf6425df65d3cabef`; Git blob `912e5c717301590a7e73daac4fa38a80a453eccf`.
+- Shared structure test: **60,850 bytes**; SHA-256 `6b21265ef0ae98ffde2dc83e426e29e7b337faaae4a3ba6d850e1935c4bb3aae`; Git blob `bfd701ad2958393e46cd51d63a180e0d865d850a`.
+- Activation guard: **94,590 bytes**; SHA-256 `4a2fed88583b24cd0aaaef81f7920eac3913eb8a156c450635b4fba7e142455e`; Git blob `91b218c3235d9c2a4bafd094c6ac8f31a172ad43`.
+
+The required final targets remain pending and are not claimed as executed by this entry: controller **372/372**, shared structure **78/78**, activation **100/100**, readiness **8/8**, focused **558/558**, phase-specific required ledger **438**, shared **665/665**, audit-policy unit **560/560**, portable **273/273**, isolated readiness **150/150**, and full repository **2,714/2,714**.
+
+This repository/test correction makes no protected-recovery, acquisition, simulator, production, or runtime claim. PR #94 remains draft/HOLD; no diagnostic execution, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry, and all existing prohibitions remain unchanged.

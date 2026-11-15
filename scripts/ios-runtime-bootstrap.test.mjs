@@ -36,6 +36,9 @@ import {
   DISK_MONITOR_INTERVAL_MS,
   DISK_MONITOR_MAX_GAP_MS,
   DISK_MONITOR_MAX_TICKS,
+  DIAGNOSTIC_MODE,
+  EXPECTED_XCODE_BUILD,
+  EXPECTED_XCODE_VERSION,
   FINALIZATION_TIMEOUT_MS,
   IOS_CI_SOURCE_BYTES,
   IOS_CI_SOURCE_SHA256,
@@ -100,7 +103,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "91485c4ba0830da497e4d9992dd5afd4764dabab9b00085dc51221ac12969139",
+  "65136f954db6c64d6806bce1c37fc91f756c951a7cb87cc4bc8d8a3a7a100a1a",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -528,7 +531,10 @@ const runnerCases = [
   [
     "Xcode version rejects other build",
     () =>
-      throwsCode(() => parseXcodeVersion("Xcode 16.2\nBuild version BAD\n"), "PRECONDITION_XCODE"),
+      throwsCode(
+        () => parseXcodeVersion("Xcode 16.2\nBuild version BAD\n"),
+        "PRECONDITION_XCODE_VERSION_PARSE",
+      ),
   ],
   ["workflow pins macos-15", () => assert.match(workflowSource, /runs-on: macos-15/u)],
   [
@@ -888,6 +894,8 @@ const receiptCases = [
             downloadResult: "NOT_ATTEMPTED",
             minimumEvidenceResult: "NOT_RUN",
             cleanupResult: "NOT_REQUIRED",
+            observedVersion: null,
+            observedBuild: null,
             runtimeIdentifier: null,
             runtimeVersion: null,
             runtimeBuild: null,
@@ -1441,14 +1449,17 @@ const v1110Cases = [
     "receipt rejects wrong Xcode version",
     () =>
       throwsCode(
-        () => validateReceipt(testingReceipt({ xcodeVersion: "16.3" })),
+        () => validateReceipt(testingReceipt({ expectedVersion: "16.3" })),
         "RECEIPT_INVALID",
       ),
   ],
   [
     "receipt rejects wrong Xcode build",
     () =>
-      throwsCode(() => validateReceipt(testingReceipt({ xcodeBuild: "other" })), "RECEIPT_INVALID"),
+      throwsCode(
+        () => validateReceipt(testingReceipt({ expectedBuild: "other" })),
+        "RECEIPT_INVALID",
+      ),
   ],
   [
     "finalization interrupted row validates",
@@ -2007,6 +2018,8 @@ const preconditionReceipt = (overrides = {}) =>
     downloadResult: "NOT_ATTEMPTED",
     minimumEvidenceResult: "NOT_RUN",
     cleanupResult: "NOT_REQUIRED",
+    observedVersion: null,
+    observedBuild: null,
     runtimeIdentifier: null,
     runtimeVersion: null,
     runtimeBuild: null,
@@ -2361,7 +2374,7 @@ const v11121SubprocessCases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_SOURCE",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawnPs: () => child,
@@ -2407,7 +2420,7 @@ const v11121SubprocessCases = [
           stderr: 64,
           timeoutCode: "PRECONDITION_ENV",
           outputCode: "PRECONDITION_SOURCE",
-          exitCode: "PRECONDITION_XCODE",
+          exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
         },
         {
           spawn: (command, args, options) => {
@@ -2470,7 +2483,7 @@ const v11121SubprocessCases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_SOURCE",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawn: () => child,
@@ -2524,7 +2537,7 @@ const v11121SubprocessCases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_SOURCE",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawn: () => child,
@@ -2551,7 +2564,7 @@ const v11121SubprocessCases = [
           stderr: 64,
           timeoutCode: "PRECONDITION_ENV",
           outputCode: "PRECONDITION_SOURCE",
-          exitCode: "PRECONDITION_XCODE",
+          exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
         },
         {
           spawn: () => child,
@@ -3154,12 +3167,12 @@ const v113Cases = [
           stderr: 64,
           timeoutCode: "PRECONDITION_ENV",
           outputCode: "PRECONDITION_ENV",
-          exitCode: "PRECONDITION_XCODE",
+          exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
         },
         { spawnPs: () => child },
       );
       queueMicrotask(() => child.emit("close", 1, null));
-      await assert.rejects(promise, (error) => error?.code === "PRECONDITION_XCODE");
+      await assert.rejects(promise, (error) => error?.code === "PRECONDITION_XCODE_VERSION_PROBE");
       assert.equal(child.listenerCount("error"), 0);
       assert.equal(child.listenerCount("close"), 0);
     },
@@ -3179,7 +3192,7 @@ const v113Cases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_ENV",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawnPs: () => child,
@@ -3276,7 +3289,7 @@ const v113Cases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_ENV",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawnPs: () => {
@@ -3284,7 +3297,8 @@ const v113Cases = [
             },
           },
         ),
-        (error) => error?.code === "PRECONDITION_XCODE" && !error.message.includes("private"),
+        (error) =>
+          error?.code === "PRECONDITION_XCODE_VERSION_PROBE" && !error.message.includes("private"),
       ),
   ],
   [
@@ -3482,7 +3496,7 @@ const v1142Cases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_SOURCE",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawnPs: () => child,
@@ -3514,7 +3528,7 @@ const v1142Cases = [
             stderr: 64,
             timeoutCode: "PRECONDITION_ENV",
             outputCode: "PRECONDITION_SOURCE",
-            exitCode: "PRECONDITION_XCODE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
           },
           {
             spawn: () => child,
@@ -3656,7 +3670,10 @@ const v115Cases = [
         "PARENT_IDENTITY",
         "SOURCE",
         "ROOTS",
-        "XCODE",
+        "XCODE_VERSION_PROBE",
+        "XCODE_VERSION_PARSE",
+        "SIMCTL_FIND_PROBE",
+        "SIMCTL_FIND_PATH",
         "RUNTIME_INVENTORY",
         "STORAGE_ANCHOR",
         "DISK",
@@ -3672,7 +3689,10 @@ const v115Cases = [
         PARENT_IDENTITY: "PRECONDITION_PARENT_IDENTITY",
         SOURCE: "PRECONDITION_SOURCE",
         ROOTS: "PRECONDITION_ENV",
-        XCODE: "PRECONDITION_XCODE",
+        XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL",
+        XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL",
+        SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+        SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL",
         RUNTIME_INVENTORY: "PRECONDITION_RUNTIME_INVENTORY",
         STORAGE_ANCHOR: "PRECONDITION_STORAGE_ANCHOR",
         DISK: "PRECONDITION_DISK",
@@ -3885,7 +3905,7 @@ const v115Cases = [
     },
   ],
   [
-    "raw final-source failure preserves reached evidence and invokes no gated child",
+    "diagnostic ready stops before final source validation or gated child",
     async () => {
       await withRunTransactionWindowsOracle(
         async ({
@@ -3944,16 +3964,16 @@ const v115Cases = [
           };
           await assert.rejects(
             controller.runTransaction(repositoryRoot, environment, dependencies),
-            (error) => error?.code === "PRECONDITION_SOURCE",
+            (error) => error?.code === "PRECONDITION_XCODE_DIAGNOSTIC_READY",
           );
-          assert.deepEqual(counters, { final: 1, runTool: 3, spawn: 0 });
+          assert.deepEqual(counters, { final: 0, runTool: 2, spawn: 0 });
           const receipt = controller.validateReceiptFile(repositoryRoot);
-          assert.equal(receipt.primaryFailureCode, "PRECONDITION_SOURCE");
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_XCODE_DIAGNOSTIC_READY");
           assert.equal(receipt.downloadInvocationCount, 0);
-          assert.equal(receipt.preExactRuntimeCount, 0);
-          assert.equal(receipt.freeBytesBefore, Number(MIN_FREE_BEFORE_BYTES));
-          assert.equal(receipt.minimumFreeBytesObserved, Number(MIN_FREE_BEFORE_BYTES));
-          assert.equal(receipt.diskMonitorSampleCount, 1);
+          assert.equal(receipt.preExactRuntimeCount, null);
+          assert.equal(receipt.freeBytesBefore, null);
+          assert.equal(receipt.minimumFreeBytesObserved, null);
+          assert.equal(receipt.diskMonitorSampleCount, 0);
           assert.equal(receipt.freeBytesAfterAcquire, null);
           assert.equal(receipt.freeBytesAfterMinimumEvidence, null);
           assert.equal(receipt.freeBytesAfterCleanup, null);
@@ -4427,11 +4447,11 @@ const v117Cases = [
                 title: PARENT_TITLE,
               }),
               runTool: async () => {
-                throw new controller.BootstrapFailure("PRECONDITION_XCODE");
+                throw new controller.BootstrapFailure("PRECONDITION_XCODE_VERSION_PROBE");
               },
               signalTarget: new EventEmitter(),
             }),
-            (error) => error?.code === "PRECONDITION_XCODE",
+            (error) => error?.code === "PRECONDITION_XCODE_VERSION_PROBE",
           );
           assert.equal(existsSync(bootstrapLeaf), false);
           assert.equal(existsSync(minimumLeaf), false);
@@ -4502,3 +4522,540 @@ const v117Cases = [
   ],
 ];
 for (const [name, action] of v117Cases) test(`v1.1.17: ${name}`, action);
+
+const diagnosticObservedCodes = new Set([
+  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_PATH",
+  "PRECONDITION_SIMCTL_FIND_INTERNAL",
+  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+]);
+const diagnosticReceipt = (primaryFailureCode, overrides = {}) =>
+  testingReceipt({
+    diagnosticMode: DIAGNOSTIC_MODE,
+    observedVersion: diagnosticObservedCodes.has(primaryFailureCode)
+      ? EXPECTED_XCODE_VERSION
+      : null,
+    observedBuild: diagnosticObservedCodes.has(primaryFailureCode) ? EXPECTED_XCODE_BUILD : null,
+    state: "PRECONDITION_REJECTED",
+    primaryFailureCode,
+    cleanupFailureCode: "NONE",
+    downloadInvocationCount: 0,
+    downloadResult: "NOT_ATTEMPTED",
+    minimumEvidenceResult: "NOT_RUN",
+    cleanupResult: "NOT_REQUIRED",
+    runtimeIdentifier: null,
+    runtimeVersion: null,
+    runtimeBuild: null,
+    freeBytesBefore: null,
+    freeBytesAfterAcquire: null,
+    freeBytesAfterMinimumEvidence: null,
+    freeBytesAfterCleanup: null,
+    minimumFreeBytesObserved: null,
+    acquireDiskDeltaBytes: 0,
+    diskMonitorSampleCount: 0,
+    preExactRuntimeCount: null,
+    postAcquireExactRuntimeCount: null,
+    postCleanupExactRuntimeCount: null,
+    rawLogRetained: false,
+    runtimeRetained: false,
+    ...overrides,
+  });
+
+const diagnosticTransactionDependencies = (runTool) => ({
+  arch: "arm64",
+  now: () => 0,
+  parseHead: () => ORACLE_SOURCE_COMMIT,
+  platform: "darwin",
+  probeParent: async () => ({
+    pgid: 9401,
+    pid: 9401,
+    ppid: 1,
+    startTime: "Fri Nov 14 12:34:56 2026",
+    title: PARENT_TITLE,
+  }),
+  runTool,
+  signalTarget: new EventEmitter(),
+  spawn: () => assert.fail("unexpected spawn"),
+});
+
+const diagnosticCodes = [
+  "PRECONDITION_XCODE_VERSION_PROBE",
+  "PRECONDITION_XCODE_VERSION_PARSE",
+  "PRECONDITION_SIMCTL_FIND_PROBE",
+  "PRECONDITION_SIMCTL_FIND_PATH",
+  "PRECONDITION_XCODE_VERSION_INTERNAL",
+  "PRECONDITION_SIMCTL_FIND_INTERNAL",
+  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+];
+
+const diagnosticCases = [
+  [
+    "mode is exact",
+    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1"),
+  ],
+  [
+    "probe set is exact",
+    () =>
+      assert.deepEqual(
+        [...testing.XCODE_PROBE_FAILURE_CODES],
+        ["PRECONDITION_XCODE_VERSION_PROBE", "PRECONDITION_SIMCTL_FIND_PROBE"],
+      ),
+  ],
+  [
+    "diagnostic set is exact and ordered",
+    () => assert.deepEqual([...testing.XCODE_DIAGNOSTIC_FAILURE_CODES], diagnosticCodes),
+  ],
+  [
+    "receipt schema v2 fields are ordered",
+    () =>
+      assert.deepEqual(testing.RECEIPT_FIELDS.slice(9, 14), [
+        "diagnosticMode",
+        "expectedVersion",
+        "expectedBuild",
+        "observedVersion",
+        "observedBuild",
+      ]),
+  ],
+  [
+    "generic Xcode precondition code is absent",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_XCODE"), false),
+  ],
+  [
+    "diagnostic stage fallbacks are exact",
+    () =>
+      assert.deepEqual(
+        Object.fromEntries(
+          [
+            "XCODE_VERSION_PROBE",
+            "XCODE_VERSION_PARSE",
+            "SIMCTL_FIND_PROBE",
+            "SIMCTL_FIND_PATH",
+          ].map((stage) => [stage, testing.PRECONDITION_STAGE_FAILURE[stage]]),
+        ),
+        {
+          XCODE_VERSION_PROBE: "PRECONDITION_XCODE_VERSION_INTERNAL",
+          XCODE_VERSION_PARSE: "PRECONDITION_XCODE_VERSION_INTERNAL",
+          SIMCTL_FIND_PROBE: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+          SIMCTL_FIND_PATH: "PRECONDITION_SIMCTL_FIND_INTERNAL",
+        },
+      ),
+  ],
+  ...diagnosticCodes.map((code) => [
+    `receipt validates closed row ${code}`,
+    () => assert.equal(validateReceipt(diagnosticReceipt(code)).primaryFailureCode, code),
+  ]),
+  [
+    "diagnostic receipt rejects invocation one",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(diagnosticReceipt(diagnosticCodes[0], { downloadInvocationCount: 1 })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "diagnostic receipt rejects a cleanup result",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(diagnosticReceipt(diagnosticCodes[0], { cleanupResult: "SUCCEEDED" })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "diagnostic receipt rejects runtime evidence",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            diagnosticReceipt(diagnosticCodes[0], {
+              runtimeIdentifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+              runtimeVersion: "17.5",
+              runtimeBuild: "21F79",
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "diagnostic receipt rejects disk evidence",
+    () =>
+      throwsCode(
+        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { freeBytesBefore: 0 })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "diagnostic receipt rejects retained raw output",
+    () =>
+      throwsCode(
+        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { rawLogRetained: true })),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "diagnostic receipt rejects wrong expected tuple",
+    () => {
+      throwsCode(
+        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { expectedVersion: "16.3" })),
+        "RECEIPT_INVALID",
+      );
+      throwsCode(
+        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { expectedBuild: "other" })),
+        "RECEIPT_INVALID",
+      );
+    },
+  ],
+  [
+    "diagnostic receipt rejects wrong observed tuple",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PATH", { observedVersion: "16.3" }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "diagnostic receipt rejects partial observations",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PATH", { observedBuild: null }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "normal receipt rejects diagnostic failure code",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            testingReceipt({
+              state: "PRECONDITION_REJECTED",
+              primaryFailureCode: "PRECONDITION_XCODE_VERSION_PROBE",
+              downloadInvocationCount: 0,
+              downloadResult: "NOT_ATTEMPTED",
+              minimumEvidenceResult: "NOT_RUN",
+              cleanupResult: "NOT_REQUIRED",
+              observedVersion: null,
+              observedBuild: null,
+              runtimeIdentifier: null,
+              runtimeVersion: null,
+              runtimeBuild: null,
+              freeBytesBefore: null,
+              freeBytesAfterAcquire: null,
+              freeBytesAfterMinimumEvidence: null,
+              freeBytesAfterCleanup: null,
+              minimumFreeBytesObserved: null,
+              acquireDiskDeltaBytes: 0,
+              diskMonitorSampleCount: 0,
+              preExactRuntimeCount: null,
+              postAcquireExactRuntimeCount: null,
+              postCleanupExactRuntimeCount: null,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "normal precondition keeps observations null",
+    () =>
+      assert.equal(
+        validateReceipt(diagnosticReceipt("PRECONDITION_ENV", { diagnosticMode: null }))
+          .diagnosticMode,
+        null,
+      ),
+  ],
+  [
+    "normal invocation one requires exact observations",
+    () => {
+      assert.equal(validateReceipt(testingReceipt()).observedVersion, EXPECTED_XCODE_VERSION);
+      throwsCode(
+        () => validateReceipt(testingReceipt({ observedVersion: null, observedBuild: null })),
+        "RECEIPT_INVALID",
+      );
+    },
+  ],
+  [
+    "version probe code is preserved by safe spawn failure",
+    async () =>
+      assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 1,
+            stdout: 1,
+            stderr: 1,
+            timeoutCode: "PRECONDITION_XCODE_VERSION_PROBE",
+            outputCode: "PRECONDITION_XCODE_VERSION_PROBE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
+            diagnosticCode: "PRECONDITION_XCODE_VERSION_PROBE",
+          },
+          {
+            spawn: () => {
+              throw new Error("private");
+            },
+          },
+        ),
+        (error) =>
+          error?.code === "PRECONDITION_XCODE_VERSION_PROBE" && !error.message.includes("private"),
+      ),
+  ],
+  [
+    "simctl probe code is preserved by safe spawn failure",
+    async () =>
+      assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 1,
+            stdout: 1,
+            stderr: 1,
+            timeoutCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+            outputCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+            exitCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+            diagnosticCode: "PRECONDITION_SIMCTL_FIND_PROBE",
+          },
+          {
+            spawn: () => {
+              throw new Error("private");
+            },
+          },
+        ),
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_PROBE" && !error.message.includes("private"),
+      ),
+  ],
+  [
+    "diagnostic probe preserves live unverified HOLD",
+    async () => {
+      const child = fakeChild(9402);
+      await assert.rejects(
+        testing.runCaptured(
+          "/tool",
+          [],
+          { cwd: "/", env: {} },
+          {
+            timeout: 2_000,
+            stdout: 1,
+            stderr: 1,
+            timeoutCode: "PRECONDITION_XCODE_VERSION_PROBE",
+            outputCode: "PRECONDITION_XCODE_VERSION_PROBE",
+            exitCode: "PRECONDITION_XCODE_VERSION_PROBE",
+            diagnosticCode: "PRECONDITION_XCODE_VERSION_PROBE",
+          },
+          {
+            spawn: () => child,
+            probeIdentity: async () => {
+              throw new Error("private");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      );
+    },
+  ],
+  [
+    "wrong Xcode tuple writes parse receipt with null observation",
+    async () =>
+      withRunTransactionWindowsOracle(async ({ controller, environment, repositoryRoot }) => {
+        await assert.rejects(
+          controller.runTransaction(
+            repositoryRoot,
+            environment,
+            diagnosticTransactionDependencies(async () => ({
+              stdout: "Xcode 16.3\nBuild version private\n",
+              stderr: "",
+            })),
+          ),
+          (error) => error?.code === "PRECONDITION_XCODE_VERSION_PARSE",
+        );
+        const receipt = controller.validateReceiptFile(repositoryRoot);
+        assert.equal(receipt.observedVersion, null);
+        assert.equal(receipt.observedBuild, null);
+      }),
+  ],
+  [
+    "raw version-stage failure writes internal receipt",
+    async () =>
+      withRunTransactionWindowsOracle(async ({ controller, environment, repositoryRoot }) => {
+        await assert.rejects(
+          controller.runTransaction(
+            repositoryRoot,
+            environment,
+            diagnosticTransactionDependencies(async () => {
+              throw new Error("private");
+            }),
+          ),
+          (error) => error?.code === "PRECONDITION_XCODE_VERSION_INTERNAL",
+        );
+        const receipt = controller.validateReceiptFile(repositoryRoot);
+        assert.equal(receipt.primaryFailureCode, "PRECONDITION_XCODE_VERSION_INTERNAL");
+        assert.equal(JSON.stringify(receipt).includes("private"), false);
+      }),
+  ],
+  [
+    "raw simctl-stage failure keeps exact observed tuple",
+    async () =>
+      withRunTransactionWindowsOracle(async ({ controller, environment, repositoryRoot }) => {
+        let call = 0;
+        await assert.rejects(
+          controller.runTransaction(
+            repositoryRoot,
+            environment,
+            diagnosticTransactionDependencies(async () => {
+              if (call++ === 0)
+                return { stdout: "Xcode 16.2\nBuild version 16C5032a\n", stderr: "" };
+              throw new Error("private");
+            }),
+          ),
+          (error) => error?.code === "PRECONDITION_SIMCTL_FIND_INTERNAL",
+        );
+        const receipt = controller.validateReceiptFile(repositoryRoot);
+        assert.equal(receipt.observedVersion, EXPECTED_XCODE_VERSION);
+        assert.equal(receipt.observedBuild, EXPECTED_XCODE_BUILD);
+      }),
+  ],
+  [
+    "ready receipt stops before runtime inventory and acquisition",
+    async () =>
+      withRunTransactionWindowsOracle(
+        async ({ controller, environment, repositoryRoot, simctlPath }) => {
+          let call = 0;
+          await assert.rejects(
+            controller.runTransaction(
+              repositoryRoot,
+              environment,
+              diagnosticTransactionDependencies(async () => {
+                call += 1;
+                return call === 1
+                  ? { stdout: "Xcode 16.2\nBuild version 16C5032a\n", stderr: "" }
+                  : { stdout: `${simctlPath}\n`, stderr: "" };
+              }),
+            ),
+            (error) => error?.code === "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+          );
+          assert.equal(call, 2);
+          const receipt = controller.validateReceiptFile(repositoryRoot);
+          assert.equal(receipt.downloadInvocationCount, 0);
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_XCODE_DIAGNOSTIC_READY");
+        },
+      ),
+  ],
+  [
+    "diagnostic receipt never serializes raw output or paths",
+    () => {
+      const serialized = JSON.stringify(diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PATH"));
+      assert.equal(serialized.includes("stdout"), false);
+      assert.equal(serialized.includes("stderr"), false);
+      assert.equal(serialized.includes("/Applications/"), false);
+    },
+  ],
+  [
+    "diagnostic receipt accepts only the closed clean and cleanup-failure rows",
+    () => {
+      for (const code of diagnosticCodes) {
+        assert.equal(validateReceipt(diagnosticReceipt(code)).primaryFailureCode, code);
+        assert.equal(
+          validateReceipt(
+            diagnosticReceipt(code, {
+              state: "CLEANUP_FAILED",
+              cleanupFailureCode: "CLEANUP_RAW_RESIDUE",
+              cleanupResult: "FAILED",
+              rawLogRetained: true,
+            }),
+          ).primaryFailureCode,
+          code,
+        );
+      }
+      for (const overrides of [
+        { state: "ACQUIRE_FAILED_CLEAN" },
+        { cleanupFailureCode: "CLEANUP_RESIDUE" },
+        { cleanupResult: "SUCCEEDED" },
+        { rawLogRetained: false },
+        { downloadInvocationCount: 1 },
+        { runtimeIdentifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5" },
+        { freeBytesBefore: 0 },
+        { fallbackUsed: true },
+      ]) {
+        throwsCode(
+          () =>
+            validateReceipt(
+              diagnosticReceipt(diagnosticCodes[0], {
+                state: "CLEANUP_FAILED",
+                cleanupFailureCode: "CLEANUP_RAW_RESIDUE",
+                cleanupResult: "FAILED",
+                rawLogRetained: true,
+                ...overrides,
+              }),
+            ),
+          "RECEIPT_INVALID",
+        );
+      }
+    },
+  ],
+  [
+    "owned-root cleanup failure preserves the diagnostic primary and truthful residue",
+    async () =>
+      withRunTransactionWindowsOracle(
+        async ({ bootstrapLeaf, controller, environment, minimumLeaf, repositoryRoot }) => {
+          const callbacks = { remove: 0, runTool: 0, spawn: 0 };
+          await assert.rejects(
+            controller.runTransaction(repositoryRoot, environment, {
+              ...diagnosticTransactionDependencies(async () => {
+                callbacks.runTool += 1;
+                throw new controller.BootstrapFailure("PRECONDITION_XCODE_VERSION_PROBE");
+              }),
+              rootFs: {
+                remove: () => {
+                  callbacks.remove += 1;
+                  throw new Error("private-cleanup-detail");
+                },
+              },
+              spawn: () => {
+                callbacks.spawn += 1;
+                assert.fail("unexpected spawn");
+              },
+            }),
+            (error) => error?.code === "CLEANUP_RAW_RESIDUE",
+          );
+          assert.deepEqual(callbacks, { remove: 1, runTool: 1, spawn: 0 });
+          const receipt = controller.validateReceiptFile(repositoryRoot);
+          assert.equal(receipt.state, "CLEANUP_FAILED");
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_XCODE_VERSION_PROBE");
+          assert.equal(receipt.cleanupFailureCode, "CLEANUP_RAW_RESIDUE");
+          assert.equal(receipt.cleanupResult, "FAILED");
+          assert.equal(receipt.rawLogRetained, true);
+          assert.equal(receipt.downloadInvocationCount, 0);
+          assert.equal(receipt.downloadResult, "NOT_ATTEMPTED");
+          assert.equal(receipt.minimumEvidenceResult, "NOT_RUN");
+          assert.equal(receipt.runtimeRetained, false);
+          assert.equal(receipt.fallbackUsed, false);
+          assert.equal(existsSync(bootstrapLeaf), true);
+          assert.equal(existsSync(minimumLeaf), true);
+          const serialized = JSON.stringify(receipt);
+          for (const privateValue of [
+            "private-cleanup-detail",
+            bootstrapLeaf,
+            minimumLeaf,
+            String(process.pid),
+            "RUNNER_TEMP",
+          ]) {
+            assert.equal(serialized.includes(privateValue), false);
+          }
+          rmSync(minimumLeaf, { recursive: true, force: false });
+          rmSync(bootstrapLeaf, { recursive: true, force: false });
+        },
+      ),
+  ],
+];
+assert.equal(diagnosticCases.length, 34);
+for (const [name, action] of diagnosticCases) test(`diagnostic v1.1: ${name}`, action);
