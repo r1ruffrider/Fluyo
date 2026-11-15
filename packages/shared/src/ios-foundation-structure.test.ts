@@ -914,4 +914,63 @@ describe("iOS unsigned foundation structure", () => {
     expect(handoff).toContain("443 relevant cases");
     expect(handoff).toContain("346 = 300 controller + 46 newly applicable structure cases");
   });
+
+  it("uses the dedicated ps verifier for parent identity without recursive capture", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("export async function probeParentIdentity");
+    const end = controller.indexOf("function positionalSourceBytes", start);
+    const parentProbe = controller.slice(start, end);
+    expect(parentProbe).toContain("runPsVerifier(");
+    expect(parentProbe).not.toContain("runCaptured(");
+    expect(parentProbe).toContain('"PRECONDITION_PARENT_IDENTITY"');
+  });
+
+  it("closes every precondition stage and restores SOURCE after the time budget", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    for (const stage of [
+      "INITIAL",
+      "RUNNER",
+      "PARENT_IDENTITY",
+      "SOURCE",
+      "ROOTS",
+      "XCODE",
+      "RUNTIME_INVENTORY",
+      "STORAGE_ANCHOR",
+      "DISK",
+      "TIME_BUDGET",
+    ]) {
+      expect(controller).toContain(`"${stage}"`);
+    }
+    expect(controller).toMatch(
+      /preconditionStage = "TIME_BUDGET";[\s\S]*PRECONDITION_INSUFFICIENT_TIME[\s\S]*preconditionStage = "SOURCE";\s*validateFinalScriptIdentity\(paths\.repositoryRoot\);\s*verifyControllerSource\(controllerSource\)/u,
+    );
+    expect(
+      controller.match(
+        /preconditionStage = "SOURCE";\s*validateFinalScriptIdentity\(paths\.repositoryRoot\);/gu,
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("sanitizes invocation-zero failures only within the closed precondition namespace", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("function sanitizePrimaryFailure");
+    const end = controller.indexOf("function sanitizeCleanupFailure", start);
+    const sanitizer = controller.slice(start, end);
+    expect(sanitizer).toContain("invocationCount");
+    expect(sanitizer).toContain('knownCode?.startsWith("PRECONDITION_")');
+    expect(sanitizer).toContain("PRECONDITION_STAGE_FAILURE[preconditionStage]");
+    expect(sanitizer).toContain('"ACQUIRE_PROCESS_IDENTITY"');
+  });
+
+  it("records the v1.1.15 truthful invocation-zero receipt ledger", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const handoff = read("docs/DEVELOPMENT_HANDOFF.md");
+    expect(controller).toContain('"PRECONDITION_PARENT_IDENTITY"');
+    expect(controller).toContain('"PRECONDITION_INSUFFICIENT_TIME"');
+    expect(handoff).toContain("iOS 17.5 prerequisite parent-identity v1.1.15.1 repair topology");
+    expect(handoff).toContain("314/314 controller cases");
+    expect(handoff).toContain("62/62 shared structure cases");
+    expect(handoff).toContain("469 relevant cases");
+    expect(handoff).toContain("364 = 314 controller + 50 newly applicable structure cases");
+  });
 });

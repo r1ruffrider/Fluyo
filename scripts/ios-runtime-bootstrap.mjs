@@ -158,6 +158,8 @@ const PRIMARY_FAILURE_CODES = new Set([
   "PRECONDITION_RUNTIME_ALREADY_PRESENT",
   "PRECONDITION_RUNTIME_INVENTORY",
   "PRECONDITION_STORAGE_ANCHOR",
+  "PRECONDITION_PARENT_IDENTITY",
+  "PRECONDITION_INSUFFICIENT_TIME",
   "PRECONDITION_INTERRUPTED",
   "ACQUIRE_INSUFFICIENT_TIME",
   "ACQUIRE_TIMEOUT",
@@ -208,6 +210,30 @@ const CLEANUP_FAILURE_CODES = new Set([
   "CLEANUP_DISK_LIMIT",
 ]);
 const FORBIDDEN_ENV_NAME = /(?:proxy|credential|token|cookie|password|secret|authorization)/iu;
+const PRECONDITION_STAGE_VALUES = Object.freeze([
+  "INITIAL",
+  "RUNNER",
+  "PARENT_IDENTITY",
+  "SOURCE",
+  "ROOTS",
+  "XCODE",
+  "RUNTIME_INVENTORY",
+  "STORAGE_ANCHOR",
+  "DISK",
+  "TIME_BUDGET",
+]);
+const PRECONDITION_STAGE_FAILURE = Object.freeze({
+  INITIAL: "PRECONDITION_ENV",
+  RUNNER: "PRECONDITION_RUNNER",
+  PARENT_IDENTITY: "PRECONDITION_PARENT_IDENTITY",
+  SOURCE: "PRECONDITION_SOURCE",
+  ROOTS: "PRECONDITION_ENV",
+  XCODE: "PRECONDITION_XCODE",
+  RUNTIME_INVENTORY: "PRECONDITION_RUNTIME_INVENTORY",
+  STORAGE_ANCHOR: "PRECONDITION_STORAGE_ANCHOR",
+  DISK: "PRECONDITION_DISK",
+  TIME_BUDGET: "PRECONDITION_INSUFFICIENT_TIME",
+});
 
 export class BootstrapFailure extends Error {
   constructor(code) {
@@ -963,6 +989,33 @@ function validateReceiptPhaseEvidence(receipt) {
     diskSlots.every((value) => value === null) &&
     receipt.acquireDiskDeltaBytes === 0 &&
     receipt.diskMonitorSampleCount === 0;
+  if (receipt.primaryFailureCode === "PRECONDITION_PARENT_IDENTITY") {
+    if (
+      receipt.preExactRuntimeCount !== null ||
+      receipt.postAcquireExactRuntimeCount !== null ||
+      receipt.postCleanupExactRuntimeCount !== null ||
+      !hasNoRuntime ||
+      !nullDiskEvidence()
+    )
+      fail("RECEIPT_INVALID");
+  }
+  if (receipt.primaryFailureCode === "PRECONDITION_INSUFFICIENT_TIME") {
+    if (
+      receipt.preExactRuntimeCount !== 0 ||
+      receipt.postAcquireExactRuntimeCount !== null ||
+      receipt.postCleanupExactRuntimeCount !== null ||
+      !hasNoRuntime ||
+      receipt.freeBytesBefore == null ||
+      receipt.freeBytesBefore < Number(MIN_FREE_BEFORE_BYTES) ||
+      receipt.freeBytesAfterAcquire !== null ||
+      receipt.freeBytesAfterMinimumEvidence !== null ||
+      receipt.freeBytesAfterCleanup !== null ||
+      receipt.minimumFreeBytesObserved !== receipt.freeBytesBefore ||
+      receipt.acquireDiskDeltaBytes !== 0 ||
+      receipt.diskMonitorSampleCount !== 1
+    )
+      fail("RECEIPT_INVALID");
+  }
   if (receipt.primaryFailureCode === "PRECONDITION_RUNTIME_INVENTORY") {
     if (
       receipt.preExactRuntimeCount !== null ||
@@ -1530,10 +1583,18 @@ function baseReceipt(env, sourceCommit) {
   });
 }
 
-function sanitizePrimaryFailure(error) {
-  return error instanceof BootstrapFailure && PRIMARY_FAILURE_CODES.has(error.code)
-    ? error.code
-    : "ACQUIRE_PROCESS_IDENTITY";
+function sanitizePrimaryFailure(error, invocationCount, preconditionStage) {
+  if (![0, 1].includes(invocationCount) || !PRECONDITION_STAGE_VALUES.includes(preconditionStage)) {
+    return invocationCount === 1 ? "ACQUIRE_PROCESS_IDENTITY" : "PRECONDITION_ENV";
+  }
+  const knownCode =
+    error instanceof BootstrapFailure && PRIMARY_FAILURE_CODES.has(error.code) ? error.code : null;
+  if (invocationCount === 0) {
+    return knownCode?.startsWith("PRECONDITION_")
+      ? knownCode
+      : PRECONDITION_STAGE_FAILURE[preconditionStage];
+  }
+  return knownCode ?? "ACQUIRE_PROCESS_IDENTITY";
 }
 
 function sanitizeCleanupFailure(error, cleanupSampleRecorded) {
@@ -1693,7 +1754,12 @@ export function parentIdentityRecord(identity) {
   return value;
 }
 
-export function parseParentPsIdentity(stdout, expectedPid, expectedPpid = null) {
+export function parseParentPsIdentity(
+  stdout,
+  expectedPid,
+  expectedPpid = null,
+  failureCode = "PRECONDITION_ENV",
+) {
   const line = stdout.trim();
   if (
     Buffer.byteLength(stdout) > PS_STDOUT_MAX_BYTES ||
@@ -1701,12 +1767,12 @@ export function parseParentPsIdentity(stdout, expectedPid, expectedPpid = null) 
     stdout.split(/\r?\n/u).filter(Boolean).length !== 1 ||
     !ASCII_LINE.test(line)
   )
-    fail("PRECONDITION_ENV");
+    fail(failureCode);
   const match =
     /^(\d+)\s+(\d+)\s+(\d+)\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ 0-3]\d \d{2}:\d{2}:\d{2} \d{4})\s+(.+)$/u.exec(
       line,
     );
-  if (!match) fail("PRECONDITION_ENV");
+  if (!match) fail(failureCode);
   const pid = Number(match[1]);
   const ppid = Number(match[2]);
   const pgid = Number(match[3]);
@@ -1718,13 +1784,12 @@ export function parseParentPsIdentity(stdout, expectedPid, expectedPpid = null) 
     pgid > 2_147_483_647 ||
     match[5] !== PARENT_TITLE
   )
-    fail("PRECONDITION_ENV");
+    fail(failureCode);
   return Object.freeze({ pid, ppid, pgid, startTime: match[4], title: match[5] });
 }
 
 export async function probeParentIdentity(pid, expectedPpid = null, dependencies = {}) {
-  const result = await runCaptured(
-    PS,
+  const result = await runPsVerifier(
     [
       "-ww",
       "-p",
@@ -1740,19 +1805,18 @@ export async function probeParentIdentity(pid, expectedPpid = null, dependencies
       "-o",
       "command=",
     ],
-    { cwd: "/", env: { LANG: "C", LC_ALL: "C" }, shell: false, detached: true },
     {
       timeout: PS_TIMEOUT_MS,
       stdout: PS_STDOUT_MAX_BYTES,
       stderr: PS_STDERR_MAX_BYTES,
-      timeoutCode: "PRECONDITION_ENV",
-      outputCode: "PRECONDITION_ENV",
-      exitCode: "PRECONDITION_ENV",
+      timeoutCode: "PRECONDITION_PARENT_IDENTITY",
+      outputCode: "PRECONDITION_PARENT_IDENTITY",
+      exitCode: "PRECONDITION_PARENT_IDENTITY",
     },
     dependencies,
   );
-  if (result.stderr !== "") fail("PRECONDITION_ENV");
-  return parseParentPsIdentity(result.stdout, pid, expectedPpid);
+  if (result.stderr !== "") fail("PRECONDITION_PARENT_IDENTITY");
+  return parseParentPsIdentity(result.stdout, pid, expectedPpid, "PRECONDITION_PARENT_IDENTITY");
 }
 
 function positionalSourceBytes(fd, size, code = "PRECONDITION_SOURCE") {
@@ -2411,6 +2475,8 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
   let controllerSource;
   let unverifiedChildHold = false;
   try {
+    const validateFinalScriptIdentity =
+      dependencies.validateFinalScriptIdentity ?? validateScriptIdentity;
     const checkCancellation = () => {
       if (!cancellation.requested) return;
       if (transactionPhase === "PRECONDITION") fail("PRECONDITION_INTERRUPTED");
@@ -2431,6 +2497,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
     let minimumEvidenceResult = "NOT_RUN";
     let cleanupResult = "NOT_REQUIRED";
     let invocationCount = 0;
+    let preconditionStage = "INITIAL";
     let runtime;
     let before = null;
     let preExactRuntimeCount = null;
@@ -2456,10 +2523,12 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
     try {
       checkCancellation();
       assertCatalogTuple();
+      preconditionStage = "RUNNER";
       const paths = validateScriptIdentity(repositoryRoot);
       const actualHead = (dependencies.parseHead ?? parseDetachedHead)(paths.repositoryRoot);
       validateRunnerEnvironment(env, actualHead, dependencies.platform, dependencies.arch);
       checkCancellation();
+      preconditionStage = "PARENT_IDENTITY";
       process.title = PARENT_TITLE;
       const parentIdentity = await (dependencies.probeParent ?? probeParentIdentity)(
         process.pid,
@@ -2467,6 +2536,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
         dependencies,
       );
       checkCancellation();
+      preconditionStage = "SOURCE";
       controllerSource = openControllerSource(fileURLToPath(import.meta.url));
       internalEnvironment = Object.freeze({
         FLUYO_INTERNAL_CHECKOUT_ROOT: paths.repositoryRoot,
@@ -2483,12 +2553,14 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
         LC_ALL: "C",
       });
       verifyControllerSource(controllerSource);
+      preconditionStage = "ROOTS";
       childEnv = closedChildEnvironment(env, bootstrapRoot);
       if (existsSync(bootstrapRoot) || existsSync(minimumRoot)) fail("PRECONDITION_ENV");
       mkdirSync(bootstrapRoot, { recursive: false, mode: 0o700 });
       mkdirSync(minimumRoot, { recursive: false, mode: 0o700 });
       const runTool = dependencies.runTool ?? runCaptured;
       checkCancellation();
+      preconditionStage = "XCODE";
       const xcode = await runTool(
         XCODEBUILD,
         ["-version"],
@@ -2532,6 +2604,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       checkCancellation();
       if (!within(realpathSync.native(simctl.stdout.trim()), XCODE_DEVELOPER_DIR))
         fail("PRECONDITION_XCODE");
+      preconditionStage = "RUNTIME_INVENTORY";
       const beforeResult = await runTool(
         XCRUN,
         ["simctl", "list", "runtimes", "--json"],
@@ -2555,6 +2628,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       before = parseRuntimeInventory(beforeResult.stdout, "PRECONDITION_RUNTIME_INVENTORY");
       preExactRuntimeCount = exactRuntimeRows(before).length;
       if (preExactRuntimeCount !== 0) fail("PRECONDITION_RUNTIME_ALREADY_PRESENT");
+      preconditionStage = "STORAGE_ANCHOR";
       ({ binding, freeBefore } = bindStorageAnchor(
         before,
         [env.HOME, env.RUNNER_TEMP, paths.repositoryRoot],
@@ -2566,10 +2640,14 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
           discover: dependencies.discoverStorageAnchor,
         },
       ));
+      preconditionStage = "DISK";
       if (freeBefore < MIN_FREE_BEFORE_BYTES) fail("PRECONDITION_DISK");
-      if (elapsedMs(started) > PREFLIGHT_TIMEOUT_MS) fail("ACQUIRE_INSUFFICIENT_TIME");
-      ensurePhaseBudget(started, ACQUIRE_TIMEOUT_MS, "ACQUIRE_INSUFFICIENT_TIME");
-      validateScriptIdentity(paths.repositoryRoot);
+      preconditionStage = "TIME_BUDGET";
+      if (elapsedMs(started) > PREFLIGHT_TIMEOUT_MS) fail("PRECONDITION_INSUFFICIENT_TIME");
+      ensurePhaseBudget(started, ACQUIRE_TIMEOUT_MS, "PRECONDITION_INSUFFICIENT_TIME");
+      preconditionStage = "SOURCE";
+      validateFinalScriptIdentity(paths.repositoryRoot);
+      verifyControllerSource(controllerSource);
       const acquireTargetEnvironment = Object.freeze({
         DEVELOPER_DIR: XCODE_DEVELOPER_DIR,
         HOME: childEnv.HOME,
@@ -2696,7 +2774,8 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
         dependencies,
       );
       checkCancellation();
-      validateScriptIdentity(paths.repositoryRoot);
+      preconditionStage = "SOURCE";
+      validateFinalScriptIdentity(paths.repositoryRoot);
       freeAfterMinimumEvidence = sampleHeldFilesystem(
         binding,
         freeBefore,
@@ -2718,7 +2797,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
         unverifiedChildHold = true;
         throw error;
       }
-      primaryFailureCode = sanitizePrimaryFailure(error);
+      primaryFailureCode = sanitizePrimaryFailure(error, invocationCount, preconditionStage);
       if (primaryFailureCode.startsWith("PRECONDITION_")) {
         downloadResult = "NOT_ATTEMPTED";
         minimumEvidenceResult = "NOT_RUN";
@@ -2976,6 +3055,8 @@ export function validateReceiptFile(repositoryRoot) {
 export const testing = Object.freeze({
   RECEIPT_FIELDS,
   PRIMARY_FAILURE_CODES,
+  PRECONDITION_STAGE_VALUES,
+  PRECONDITION_STAGE_FAILURE,
   CLEANUP_FAILURE_CODES,
   EXPECTED_COMMAND_TOKENS,
   exactKeys,
@@ -2991,6 +3072,7 @@ export const testing = Object.freeze({
   awaitActualClose,
   runCaptured,
   runPsVerifier,
+  sanitizePrimaryFailure,
   sanitizeCleanupFailure,
   validateReceiptPhaseEvidence,
 });

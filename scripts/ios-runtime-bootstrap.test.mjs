@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { closeSync, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
+import {
+  closeSync,
+  constants as fsConstants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { PassThrough } from "node:stream";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { TextDecoder } from "node:util";
 
 import {
   ACQUIRE_TIMEOUT_MS,
@@ -61,6 +76,7 @@ import {
   exactRuntimeRows,
   parsePsIdentity,
   parseParentPsIdentity,
+  probeParentIdentity,
   parentIdentityRecord,
   parseRuntimeInventory,
   parseXcodeVersion,
@@ -79,9 +95,217 @@ import {
 } from "./ios-runtime-bootstrap.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const controllerSource = readFileSync(resolve(root, "scripts/ios-runtime-bootstrap.mjs"), "utf8");
+const controllerPath = resolve(root, "scripts/ios-runtime-bootstrap.mjs");
+const controllerSourceBytes = readFileSync(controllerPath);
+const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
+assert.equal(
+  controllerSourceSha256,
+  "64acf8d9b930b7d8a4780c1e766937819668b98e2a01b7e6dbbe497d937871e2",
+);
+const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
+const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
+function decodeOracleControllerBytes(bytes) {
+  let source;
+  try {
+    source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(ORACLE_SOURCE_INVALID);
+  }
+  if (source !== source.normalize("NFC")) throw new Error(ORACLE_SOURCE_INVALID);
+  if (!Buffer.from(source, "utf8").equals(Buffer.from(bytes))) {
+    throw new Error(ORACLE_SOURCE_INVALID);
+  }
+  return source;
+}
+const controllerSource = decodeOracleControllerBytes(controllerSourceBytes);
 const workflowSource = readFileSync(resolve(root, ".github/workflows/ios.yml"), "utf8");
 const iosCiSource = readFileSync(resolve(root, "scripts/ios-ci.sh"), "utf8");
+const oracleImportUrls = new Set();
+
+const SAFE_PATH_SOURCE_TOKEN = String.raw`export const SAFE_CANONICAL_PATH = /^\/[A-Za-z0-9._/+\-]+$/u;`;
+const XCODE_DIRECTORY_SOURCE_TOKEN =
+  'export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";';
+const HOST_ARCHITECTURE_SOURCE_TOKEN = 'import { arch as hostArchitecture } from "node:os";';
+const HOST_ARCHITECTURE_ORACLE_REPLACEMENT = 'const hostArchitecture = () => "arm64";';
+const ORACLE_SIMCTL_RELATIVE_PATH = "usr/bin/simctl";
+const ORACLE_SIMCTL_CONTENT = "fixture\n";
+const ORACLE_SIMCTL_MODE = 0o600;
+const ORACLE_SOURCE_MODE = 0o600;
+const ORACLE_IOS_CI_MODE = 0o700;
+const ORACLE_DIRECTORY_MODE = 0o700;
+const ORACLE_SOURCE_COMMIT = "b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5";
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+
+function replaceOracleToken(source, token, replacement) {
+  const first = source.indexOf(token);
+  assert.notEqual(first, -1);
+  assert.equal(source.indexOf(token, first + token.length), -1);
+  return source.slice(0, first) + replacement + source.slice(first + token.length);
+}
+
+async function withRunTransactionWindowsOracle(action) {
+  const originalTitle = process.title;
+  const productionControllerHash = controllerSourceSha256;
+  const currentControllerBytes = readFileSync(controllerPath);
+  assert.deepEqual(currentControllerBytes, controllerSourceBytes);
+  assert.equal(
+    createHash("sha256").update(currentControllerBytes).digest("hex"),
+    productionControllerHash,
+  );
+  const oracleControllerSource = decodeOracleControllerBytes(currentControllerBytes);
+  const createdRoot = mkdtempSync(resolve(tmpdir(), "fluyo-ios17-runtransaction-oracle-"));
+  const fixtureRoot = realpathSync.native(createdRoot);
+  try {
+    const repositoryRoot = resolve(fixtureRoot, "repo");
+    const scriptsDirectory = resolve(repositoryRoot, "scripts");
+    const home = resolve(fixtureRoot, "home");
+    const runnerTemp = resolve(fixtureRoot, "runner-temp");
+    const storageRoot = resolve(fixtureRoot, "storage");
+    const developerDirectory = resolve(fixtureRoot, "Xcode_16.2.app", "Contents", "Developer");
+    const simctlPath = resolve(developerDirectory, ORACLE_SIMCTL_RELATIVE_PATH);
+    for (const directory of [
+      scriptsDirectory,
+      home,
+      runnerTemp,
+      storageRoot,
+      dirname(simctlPath),
+    ]) {
+      mkdirSync(directory, { recursive: true, mode: ORACLE_DIRECTORY_MODE });
+    }
+    const bootstrapParent = resolve(runnerTemp, "fluyo-ios-runtime-bootstrap");
+    mkdirSync(bootstrapParent, { recursive: false, mode: ORACLE_DIRECTORY_MODE });
+    const bootstrapParentInfo = lstatSync(bootstrapParent, { bigint: true });
+    assert.equal(bootstrapParentInfo.isDirectory(), true);
+    assert.equal(bootstrapParentInfo.isSymbolicLink(), false);
+    assert.equal(realpathSync.native(bootstrapParent), bootstrapParent);
+    const bootstrapLeaf = resolve(bootstrapParent, "9401-1");
+    const minimumLeaf = resolve(runnerTemp, "fluyo-ios-minimum-9401-1");
+    assert.equal(existsSync(bootstrapLeaf), false);
+    assert.equal(existsSync(minimumLeaf), false);
+
+    const iosCiBytes = Buffer.from(iosCiSource, "utf8");
+    assert.equal(iosCiBytes.length, IOS_CI_SOURCE_BYTES);
+    assert.equal(createHash("sha256").update(iosCiBytes).digest("hex"), IOS_CI_SOURCE_SHA256);
+    writeFileSync(resolve(scriptsDirectory, "ios-ci.sh"), iosCiBytes, {
+      flag: "wx",
+      mode: ORACLE_IOS_CI_MODE,
+    });
+    writeFileSync(simctlPath, ORACLE_SIMCTL_CONTENT, {
+      encoding: "utf8",
+      flag: "wx",
+      mode: ORACLE_SIMCTL_MODE,
+    });
+    const simctlInfo = lstatSync(simctlPath);
+    assert.equal(simctlInfo.isFile(), true);
+    assert.equal(simctlInfo.isSymbolicLink(), false);
+
+    const oraclePathPattern = `^${escapeRegExp(fixtureRoot)}(?:\\\\[A-Za-z0-9._+ -]+)*$`;
+    const safePathReplacement = `export const SAFE_CANONICAL_PATH = new RegExp(${JSON.stringify(oraclePathPattern)}, "u");`;
+    const developerDirectoryReplacement = `export const XCODE_DEVELOPER_DIR = ${JSON.stringify(developerDirectory)};`;
+    let transformed = replaceOracleToken(
+      oracleControllerSource,
+      SAFE_PATH_SOURCE_TOKEN,
+      safePathReplacement,
+    );
+    transformed = replaceOracleToken(
+      transformed,
+      XCODE_DIRECTORY_SOURCE_TOKEN,
+      developerDirectoryReplacement,
+    );
+    transformed = replaceOracleToken(
+      transformed,
+      HOST_ARCHITECTURE_SOURCE_TOKEN,
+      HOST_ARCHITECTURE_ORACLE_REPLACEMENT,
+    );
+    assert.equal(transformed.includes(HOST_ARCHITECTURE_SOURCE_TOKEN), false);
+    assert.equal(
+      transformed.indexOf(HOST_ARCHITECTURE_ORACLE_REPLACEMENT),
+      transformed.lastIndexOf(HOST_ARCHITECTURE_ORACLE_REPLACEMENT),
+    );
+    assert.notEqual(transformed, oracleControllerSource);
+    assert.equal(
+      createHash("sha256").update(readFileSync(controllerPath)).digest("hex"),
+      productionControllerHash,
+    );
+    assert.deepEqual(readFileSync(controllerPath), controllerSourceBytes);
+
+    const fixtureControllerPath = resolve(fixtureRoot, "ios-runtime-bootstrap.fixture.mjs");
+    writeFileSync(fixtureControllerPath, transformed, {
+      encoding: "utf8",
+      flag: "wx",
+      mode: ORACLE_SOURCE_MODE,
+    });
+    const importUrl = pathToFileURL(fixtureControllerPath);
+    const oracleQuery = randomBytes(16).toString("hex");
+    assert.match(oracleQuery, ORACLE_IMPORT_QUERY);
+    importUrl.searchParams.set("oracle", oracleQuery);
+    assert.equal([...importUrl.searchParams.keys()].length, 1);
+    assert.equal(importUrl.searchParams.get("oracle"), oracleQuery);
+    assert.equal(importUrl.hash, "");
+    assert.equal(oracleImportUrls.has(importUrl.href), false);
+    oracleImportUrls.add(importUrl.href);
+    const controller = await import(importUrl.href);
+    const environment = Object.freeze({
+      FLUYO_SOURCE_SHA: ORACLE_SOURCE_COMMIT,
+      GITHUB_RUN_ATTEMPT: "1",
+      GITHUB_RUN_ID: "9401",
+      HOME: home,
+      ImageOS: "macos15",
+      ImageVersion: "20261104.0514.1",
+      RUNNER_ARCH: "ARM64",
+      RUNNER_OS: "macOS",
+      RUNNER_TEMP: runnerTemp,
+    });
+    const oracleReceiptPath = resolve(
+      repositoryRoot,
+      "artifacts",
+      "ios-runtime-bootstrap",
+      "receipt.json",
+    );
+    const result = await action(
+      Object.freeze({
+        controller,
+        bootstrapLeaf,
+        bootstrapParent,
+        bootstrapParentIdentity: Object.freeze({
+          dev: bootstrapParentInfo.dev,
+          ino: bootstrapParentInfo.ino,
+        }),
+        developerDirectory,
+        environment,
+        fixtureControllerPath,
+        fixtureRoot,
+        receiptPath: oracleReceiptPath,
+        repositoryRoot,
+        runnerTemp,
+        simctlPath,
+        storageRoot,
+      }),
+    );
+    const finalBootstrapParentInfo = lstatSync(bootstrapParent, { bigint: true });
+    assert.equal(finalBootstrapParentInfo.isDirectory(), true);
+    assert.equal(finalBootstrapParentInfo.isSymbolicLink(), false);
+    assert.equal(realpathSync.native(bootstrapParent), bootstrapParent);
+    assert.equal(finalBootstrapParentInfo.dev, bootstrapParentInfo.dev);
+    assert.equal(finalBootstrapParentInfo.ino, bootstrapParentInfo.ino);
+    assert.equal(existsSync(bootstrapLeaf), false);
+    assert.equal(existsSync(minimumLeaf), false);
+    if (existsSync(oracleReceiptPath)) {
+      assert.equal(readFileSync(oracleReceiptPath, "utf8").includes(oracleQuery), false);
+    }
+    assert.deepEqual(readFileSync(controllerPath), controllerSourceBytes);
+    assert.equal(
+      createHash("sha256").update(readFileSync(controllerPath)).digest("hex"),
+      productionControllerHash,
+    );
+    return result;
+  } finally {
+    process.title = originalTitle;
+    rmSync(fixtureRoot, { recursive: true, force: false });
+    assert.equal(existsSync(fixtureRoot), false);
+  }
+}
 
 function throwsCode(action, code) {
   assert.throws(action, (error) => error?.code === code);
@@ -996,7 +1220,7 @@ const supervisorCases = [
     "source is checked after minimum close",
     () =>
       assert.ok(
-        controllerSource.lastIndexOf("validateScriptIdentity(paths.repositoryRoot)") >
+        controllerSource.lastIndexOf("validateFinalScriptIdentity(paths.repositoryRoot)") >
           controllerSource.indexOf('role: "MINIMUM"'),
       ),
   ],
@@ -1732,7 +1956,7 @@ const v11113LifecycleCases = [
       const role = controllerSource.indexOf('role: "MINIMUM"');
       const start = controllerSource.lastIndexOf("await runGatedPhase(", role);
       const checked = controllerSource.indexOf("checkCancellation();", start);
-      const validated = controllerSource.indexOf("validateScriptIdentity", start);
+      const validated = controllerSource.indexOf("validateFinalScriptIdentity", start);
       assert.ok(start >= 0 && checked > start && validated > checked);
     },
   ],
@@ -3413,3 +3637,384 @@ const v1142Cases = [
   ],
 ];
 for (const [name, action] of v1142Cases) test(`v1.1.14.2: ${name}`, action);
+
+const v115Cases = [
+  [
+    "parent identity and insufficient-time codes are closed preconditions",
+    () => {
+      assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_PARENT_IDENTITY"), true);
+      assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_INSUFFICIENT_TIME"), true);
+    },
+  ],
+  [
+    "precondition stages are an exact closed ordered set",
+    () =>
+      assert.deepEqual(testing.PRECONDITION_STAGE_VALUES, [
+        "INITIAL",
+        "RUNNER",
+        "PARENT_IDENTITY",
+        "SOURCE",
+        "ROOTS",
+        "XCODE",
+        "RUNTIME_INVENTORY",
+        "STORAGE_ANCHOR",
+        "DISK",
+        "TIME_BUDGET",
+      ]),
+  ],
+  [
+    "precondition stage fallback table is exact",
+    () =>
+      assert.deepEqual(testing.PRECONDITION_STAGE_FAILURE, {
+        INITIAL: "PRECONDITION_ENV",
+        RUNNER: "PRECONDITION_RUNNER",
+        PARENT_IDENTITY: "PRECONDITION_PARENT_IDENTITY",
+        SOURCE: "PRECONDITION_SOURCE",
+        ROOTS: "PRECONDITION_ENV",
+        XCODE: "PRECONDITION_XCODE",
+        RUNTIME_INVENTORY: "PRECONDITION_RUNTIME_INVENTORY",
+        STORAGE_ANCHOR: "PRECONDITION_STORAGE_ANCHOR",
+        DISK: "PRECONDITION_DISK",
+        TIME_BUDGET: "PRECONDITION_INSUFFICIENT_TIME",
+      }),
+  ],
+  [
+    "invocation zero preserves a known closed precondition",
+    () =>
+      assert.equal(
+        testing.sanitizePrimaryFailure(
+          new BootstrapFailure("PRECONDITION_SOURCE"),
+          0,
+          "PARENT_IDENTITY",
+        ),
+        "PRECONDITION_SOURCE",
+      ),
+  ],
+  [
+    "invocation zero maps raw parent failure without exposing cause",
+    () =>
+      assert.equal(
+        testing.sanitizePrimaryFailure(new Error("private parent detail"), 0, "PARENT_IDENTITY"),
+        "PRECONDITION_PARENT_IDENTITY",
+      ),
+  ],
+  [
+    "invocation zero never retains an acquisition code",
+    () =>
+      assert.equal(
+        testing.sanitizePrimaryFailure(
+          new BootstrapFailure("ACQUIRE_PROCESS_IDENTITY"),
+          0,
+          "PARENT_IDENTITY",
+        ),
+        "PRECONDITION_PARENT_IDENTITY",
+      ),
+  ],
+  [
+    "time-budget fallback is the dedicated precondition code",
+    () =>
+      assert.equal(
+        testing.sanitizePrimaryFailure(new Error("private timing detail"), 0, "TIME_BUDGET"),
+        "PRECONDITION_INSUFFICIENT_TIME",
+      ),
+  ],
+  [
+    "invocation one preserves its known operational code",
+    () =>
+      assert.equal(
+        testing.sanitizePrimaryFailure(new BootstrapFailure("MINIMUM_EVIDENCE_EXIT"), 1, "SOURCE"),
+        "MINIMUM_EVIDENCE_EXIT",
+      ),
+  ],
+  [
+    "invocation one retains the fixed acquisition fallback",
+    () =>
+      assert.equal(
+        testing.sanitizePrimaryFailure(new Error("private operational detail"), 1, "SOURCE"),
+        "ACQUIRE_PROCESS_IDENTITY",
+      ),
+  ],
+  [
+    "parent identity uses the dedicated direct ps verifier",
+    async () => {
+      let invocation;
+      const child = fakeChild(711);
+      queueMicrotask(() => {
+        child.stdout.end(`5 1 9 Fri Nov 14 12:34:56 2026 ${PARENT_TITLE}\n`);
+        child.stderr.end();
+        child.exitCode = 0;
+        child.emit("close", 0, null);
+      });
+      const identity = await probeParentIdentity(5, null, {
+        spawnPs: (command, args, options) => {
+          invocation = { command, args, options };
+          return child;
+        },
+        kill: () => {
+          throw esrch();
+        },
+      });
+      assert.equal(invocation.command, PS);
+      assert.deepEqual(invocation.options.env, { LANG: "C", LC_ALL: "C" });
+      assert.equal(invocation.options.detached, true);
+      assert.deepEqual(identity, {
+        pid: 5,
+        ppid: 1,
+        pgid: 9,
+        startTime: "Fri Nov 14 12:34:56 2026",
+        title: PARENT_TITLE,
+      });
+    },
+  ],
+  [
+    "raw parent failure writes a truthful callback-free invocation-zero receipt",
+    async () => {
+      await withRunTransactionWindowsOracle(
+        async ({ bootstrapLeaf, controller, environment, minimumLeaf, repositoryRoot }) => {
+          const counters = { final: 0, runTool: 0, spawn: 0 };
+          const signalTarget = new EventEmitter();
+          const dependencies = {
+            arch: "arm64",
+            now: () => 0,
+            parseHead: () => ORACLE_SOURCE_COMMIT,
+            platform: "darwin",
+            probeParent: async () => {
+              throw new Error("private-parent-detail");
+            },
+            runTool: async () => {
+              counters.runTool += 1;
+              throw new Error("unexpected-run-tool");
+            },
+            signalTarget,
+            spawn: () => {
+              counters.spawn += 1;
+              throw new Error("unexpected-spawn");
+            },
+            validateFinalScriptIdentity: () => {
+              counters.final += 1;
+              throw new Error("unexpected-final-validator");
+            },
+          };
+          await assert.rejects(
+            controller.runTransaction(repositoryRoot, environment, dependencies),
+            (error) => error?.code === "PRECONDITION_PARENT_IDENTITY",
+          );
+          assert.deepEqual(counters, { final: 0, runTool: 0, spawn: 0 });
+          const receipt = controller.validateReceiptFile(repositoryRoot);
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_PARENT_IDENTITY");
+          assert.equal(receipt.downloadInvocationCount, 0);
+          assert.equal(receipt.preExactRuntimeCount, null);
+          assert.equal(receipt.freeBytesBefore, null);
+          assert.equal(receipt.minimumFreeBytesObserved, null);
+          assert.equal(receipt.diskMonitorSampleCount, 0);
+          assert.equal(receipt.acquireDiskDeltaBytes, 0);
+          assert.equal(receipt.rawLogRetained, false);
+          assert.equal(receipt.runtimeRetained, false);
+          assert.equal(existsSync(bootstrapLeaf), false);
+          assert.equal(existsSync(minimumLeaf), false);
+          assert.equal(signalTarget.listenerCount("SIGINT"), 0);
+          assert.equal(signalTarget.listenerCount("SIGTERM"), 0);
+          assert.equal(
+            readFileSync(
+              resolve(repositoryRoot, "artifacts", "ios-runtime-bootstrap", "receipt.json"),
+              "utf8",
+            ).includes("private-parent-detail"),
+            false,
+          );
+        },
+      );
+    },
+  ],
+  [
+    "raw final-source failure preserves reached evidence and invokes no gated child",
+    async () => {
+      await withRunTransactionWindowsOracle(
+        async ({
+          bootstrapLeaf,
+          controller,
+          environment,
+          minimumLeaf,
+          repositoryRoot,
+          simctlPath,
+          storageRoot,
+        }) => {
+          const counters = { final: 0, runTool: 0, spawn: 0 };
+          const signalTarget = new EventEmitter();
+          const storageInfo = lstatSync(storageRoot, { bigint: true });
+          const outputs = [
+            { stdout: "Xcode 16.2\nBuild version 16C5032a\n", stderr: "" },
+            { stdout: `${simctlPath}\n`, stderr: "" },
+            { stdout: '{"runtimes":[]}\n', stderr: "" },
+          ];
+          const dependencies = {
+            arch: "arm64",
+            now: () => 0,
+            discoverStorageAnchor: () => ({
+              dev: storageInfo.dev,
+              ino: storageInfo.ino,
+              path: storageRoot,
+            }),
+            fs: {
+              statfs: () => ({ bavail: MIN_FREE_BEFORE_BYTES, bsize: 1n }),
+            },
+            openStorageAnchor: (path) => openSync(path, fsConstants.O_RDONLY),
+            parseHead: () => ORACLE_SOURCE_COMMIT,
+            platform: "darwin",
+            probeParent: async () => ({
+              pgid: 9401,
+              pid: 9401,
+              ppid: 1,
+              startTime: "Fri Nov 14 12:34:56 2026",
+              title: PARENT_TITLE,
+            }),
+            runTool: async () => {
+              const output = outputs[counters.runTool];
+              counters.runTool += 1;
+              assert.ok(output);
+              return output;
+            },
+            signalTarget,
+            spawn: () => {
+              counters.spawn += 1;
+              throw new Error("unexpected-spawn");
+            },
+            validateFinalScriptIdentity: () => {
+              counters.final += 1;
+              throw new Error("private-final-source-detail");
+            },
+          };
+          await assert.rejects(
+            controller.runTransaction(repositoryRoot, environment, dependencies),
+            (error) => error?.code === "PRECONDITION_SOURCE",
+          );
+          assert.deepEqual(counters, { final: 1, runTool: 3, spawn: 0 });
+          const receipt = controller.validateReceiptFile(repositoryRoot);
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_SOURCE");
+          assert.equal(receipt.downloadInvocationCount, 0);
+          assert.equal(receipt.preExactRuntimeCount, 0);
+          assert.equal(receipt.freeBytesBefore, Number(MIN_FREE_BEFORE_BYTES));
+          assert.equal(receipt.minimumFreeBytesObserved, Number(MIN_FREE_BEFORE_BYTES));
+          assert.equal(receipt.diskMonitorSampleCount, 1);
+          assert.equal(receipt.freeBytesAfterAcquire, null);
+          assert.equal(receipt.freeBytesAfterMinimumEvidence, null);
+          assert.equal(receipt.freeBytesAfterCleanup, null);
+          assert.equal(receipt.acquireDiskDeltaBytes, 0);
+          assert.equal(receipt.rawLogRetained, false);
+          assert.equal(receipt.runtimeRetained, false);
+          const receiptText = readFileSync(
+            resolve(repositoryRoot, "artifacts", "ios-runtime-bootstrap", "receipt.json"),
+            "utf8",
+          );
+          assert.equal(receiptText.includes("private-final-source-detail"), false);
+          assert.equal(existsSync(bootstrapLeaf), false);
+          assert.equal(existsSync(minimumLeaf), false);
+          assert.equal(signalTarget.listenerCount("SIGINT"), 0);
+          assert.equal(signalTarget.listenerCount("SIGTERM"), 0);
+        },
+      );
+    },
+  ],
+  [
+    "final source validation seam is local and called at exactly two final sites",
+    () => {
+      assert.equal(
+        (controllerSource.match(/const validateFinalScriptIdentity =/gu) ?? []).length,
+        1,
+      );
+      assert.equal(
+        (controllerSource.match(/validateFinalScriptIdentity\(paths\.repositoryRoot\);/gu) ?? [])
+          .length,
+        2,
+      );
+      assert.equal(
+        (
+          controllerSource.match(
+            /preconditionStage = "SOURCE";\s*validateFinalScriptIdentity\(paths\.repositoryRoot\);/gu,
+          ) ?? []
+        ).length,
+        2,
+      );
+      assert.equal(
+        (controllerSource.match(/const paths = validateScriptIdentity\(repositoryRoot\);/gu) ?? [])
+          .length,
+        1,
+      );
+      assert.equal(
+        (
+          controllerSource.match(
+            /const scriptIdentity = validateScriptIdentity\(paths\.repositoryRoot\);/gu,
+          ) ?? []
+        ).length,
+        1,
+      );
+    },
+  ],
+  [
+    "oracle controller source rejects malformed UTF-8",
+    () =>
+      assert.throws(() => decodeOracleControllerBytes(Buffer.from([0xc3, 0x28])), {
+        message: ORACLE_SOURCE_INVALID,
+      }),
+  ],
+  [
+    "oracle controller source rejects non-NFC text",
+    () =>
+      assert.throws(() => decodeOracleControllerBytes(Buffer.from("e\u0301", "utf8")), {
+        message: ORACLE_SOURCE_INVALID,
+      }),
+  ],
+  [
+    "insufficient-time rejection receipt binds the reached sample",
+    () => {
+      const free = Number(MIN_FREE_BEFORE_BYTES);
+      const receipt = validateReceipt(
+        preconditionReceipt({
+          primaryFailureCode: "PRECONDITION_INSUFFICIENT_TIME",
+          preExactRuntimeCount: 0,
+          freeBytesBefore: free,
+          minimumFreeBytesObserved: free,
+          diskMonitorSampleCount: 1,
+        }),
+      );
+      assert.equal(receipt.freeBytesBefore, free);
+      assert.equal(receipt.downloadInvocationCount, 0);
+    },
+  ],
+  [
+    "precondition evidence rows reject fabricated phase observations",
+    () => {
+      throwsCode(
+        () =>
+          validateReceipt(
+            preconditionReceipt({
+              primaryFailureCode: "PRECONDITION_PARENT_IDENTITY",
+              preExactRuntimeCount: 0,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      );
+      throwsCode(
+        () =>
+          validateReceipt(
+            preconditionReceipt({
+              primaryFailureCode: "PRECONDITION_INSUFFICIENT_TIME",
+              preExactRuntimeCount: 0,
+              freeBytesBefore: Number(MIN_FREE_BEFORE_BYTES),
+              minimumFreeBytesObserved: Number(MIN_FREE_BEFORE_BYTES),
+              diskMonitorSampleCount: 2,
+            }),
+          ),
+        "RECEIPT_INVALID",
+      );
+    },
+  ],
+  [
+    "time budget returns to source before the final pre-release source proof",
+    () =>
+      assert.match(
+        controllerSource,
+        /preconditionStage = "TIME_BUDGET";[\s\S]*PRECONDITION_INSUFFICIENT_TIME[\s\S]*preconditionStage = "SOURCE";\s*validateFinalScriptIdentity\(paths\.repositoryRoot\);\s*verifyControllerSource\(controllerSource\)[\s\S]*beforeRelease: \(\) => \{\s*invocationCount = 1/u,
+      ),
+  ],
+];
+for (const [name, action] of v115Cases) test(`v1.1.15: ${name}`, action);

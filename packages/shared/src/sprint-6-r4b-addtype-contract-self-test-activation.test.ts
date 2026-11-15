@@ -30,8 +30,9 @@ const source = "7220bef062a93142f5bcde07de89199355eb5837";
 const merge = "7a5b345846eb29928dacb8f01b96796c01182dc2";
 const d70 = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
 const phaseBase = "a2485dc12c231dd482799834d5aca2966a6db494";
+const repairBase = "b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "aab4198e70e17a4846e265cbacb6bed2e01e340e37732e6c589969d1635684d8";
+const currentTenManifestSha = "d88f63576b3536ad0c2ca6e2e1294d0cb008f5b7ac921eaaa15ce3fd5ee2ad9e";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -75,6 +76,43 @@ const phaseAddedPaths = [
   "scripts/ios-runtime-bootstrap.mjs",
   "scripts/ios-runtime-bootstrap.test.mjs",
 ].sort(compareUtf8);
+const repairPaths = phasePaths.filter(
+  (path) => ![".github/workflows/ios.yml", "scripts/ios-ci.sh"].includes(path),
+);
+const repairBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "b387c3975acdb2070598c97904783e92d0e0cf31",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "5ba0842184b3303cd1b756d1c8e59281a7b6c7a0",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "9da45b36bcf3fea1ae305907a9852428ae29c0b5",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "938fd06ee609e9b12a4e9c5179890bea39696eb1",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "eb848f7eadd188e75799f631a5ca9a24763c06ad",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "103d685ebecfbc118c2f0d1b0c48a5c23eb8a4dc",
+  }),
+});
 const statusArguments = Object.freeze([
   "status",
   "--porcelain=v2",
@@ -230,6 +268,10 @@ const expectedTracked = (path: string) => {
     candidateObject: blob(bytes(path)),
   };
 };
+const expectedRepairTracked = (path: string) => {
+  const base = repairBaseTree[path as keyof typeof repairBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
 const exactType1 = (
   entry: StatusEntry,
   expected: ReturnType<typeof expectedTracked>,
@@ -294,9 +336,46 @@ const verifyPostcommitObject = (oid: string): void => {
     )
       topologyFailure();
 };
+const assertRepairDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${repairBase}`) topologyFailure();
+};
+const verifyRepairPostcommitObject = (oid: string): void => {
+  assertRepairDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  const diff = runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", repairBase, oid]);
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(repairPaths))
+    topologyFailure();
+  for (const path of repairPaths) {
+    const expected = expectedRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
 const classifyStatusSnapshot = (
   snapshot: StatusSnapshot,
-  verifyPostcommit: (oid: string) => void = verifyPostcommitObject,
+  verifyPostcommit: (oid: string) => void = verifyRepairPostcommitObject,
 ): "PRECOMMIT_UNSTAGED" | "PRECOMMIT_STAGED" | "POSTCOMMIT" => {
   const concurrent = snapshot.entries.filter(
     (entry) => entry.kind === "?" && concurrentApprovalRoot.test(entry.path),
@@ -317,6 +396,18 @@ const classifyStatusSnapshot = (
       phaseModifiedPaths.includes(entry.path)
         ? exactType1(entry, expectedTracked(entry.path), "M.")
         : phaseAddedPaths.includes(entry.path) && exactAdded(entry),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === repairBase) {
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(repairPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedRepairTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedRepairTracked(entry.path), "M."),
     );
     if (unstaged === staged) topologyFailure();
     return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
@@ -357,6 +448,21 @@ const stagedStatusRecords = (): string[] => [
   ...phaseModifiedPaths.map((path) => statusType1Record(path, "M.")),
   ...phaseAddedPaths.map(statusAddedRecord),
 ];
+const repairStatusRecords = (xy: ".M" | "M."): string[] =>
+  repairPaths.map((path) => {
+    const expected = expectedRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
 const ancestor = (left: string, right: string): boolean => {
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", left, right], {
@@ -1372,5 +1478,120 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     }
     expect(canonicalManifest([...sixPaths].reverse()).sha256).not.toBe(computed.sha256);
     expect(canonicalManifest(sixPaths.slice(1)).sha256).not.toBe(computed.sha256);
+  });
+
+  it("25 binds the repair base and immutable exact-eight tree", () => {
+    expect(repairBase).toBe("b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5");
+    const commit = git(["cat-file", "commit", repairBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      "parent a2485dc12c231dd482799834d5aca2966a6db494",
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      "tree 8e7ee267b8bd93ca05cfe07e9bff05c8f66c70fb",
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(
+      "ci(ios): bootstrap pinned iOS 17.5 runtime",
+    );
+    expect(typeof verifyPostcommitObject).toBe("function");
+    expect(Object.keys(repairBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+    for (const path of phasePaths) {
+      const expected = repairBaseTree[path as keyof typeof repairBaseTree];
+      expect(git(["rev-parse", `${repairBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", repairBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
+    }
+  });
+
+  it("26 classifies the exact live six-path repair as precommit unstaged", () => {
+    expect(repairPaths).toHaveLength(6);
+    expect(repairPaths).not.toContain(".github/workflows/ios.yml");
+    expect(repairPaths).not.toContain("scripts/ios-ci.sh");
+    expect(classifyStatusSnapshot(captureStatusSnapshot())).toBe("PRECOMMIT_UNSTAGED");
+  });
+
+  it("27 classifies the exact six-path staged repair", () => {
+    const snapshot = parseStatusSnapshot(
+      statusSnapshotBytes(repairBase, repairStatusRecords("M.")),
+    );
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_STAGED");
+  });
+
+  it("28 rejects mixed staged and unstaged repair state", () => {
+    const records = repairStatusRecords(".M");
+    records[0] = repairStatusRecords("M.")[0]!;
+    expect(() =>
+      classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(repairBase, records))),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("29 rejects immutable workflow or ios-ci drift in the repair", () => {
+    for (const path of [".github/workflows/ios.yml", "scripts/ios-ci.sh"]) {
+      const expected = repairBaseTree[path as keyof typeof repairBaseTree];
+      const row = [
+        "1",
+        ".M",
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.blob,
+        expected.blob,
+        path,
+      ].join(" ");
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(repairBase, [...repairStatusRecords(".M"), row])),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    }
+  });
+
+  it("30 permits one exact auth temp root but rejects near matches", () => {
+    const exact = parseStatusSnapshot(
+      statusSnapshotBytes(repairBase, [
+        ...repairStatusRecords(".M"),
+        "? .tmp-auth-readiness-approval-Ab12z9/",
+      ]),
+    );
+    expect(classifyStatusSnapshot(exact)).toBe("PRECOMMIT_UNSTAGED");
+    for (const path of [
+      ".tmp-auth-readiness-approval-Ab12z9.bak/",
+      ".tmp-auth-readiness-approval-Ab12z/",
+      "parent/.tmp-auth-readiness-approval-Ab12z9/",
+    ]) {
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(repairBase, [...repairStatusRecords(".M"), `? ${path}`]),
+          ),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    }
+  });
+
+  it("31 rejects every extra repair path", () => {
+    expect(() =>
+      classifyStatusSnapshot(
+        parseStatusSnapshot(
+          statusSnapshotBytes(repairBase, [...repairStatusRecords(".M"), "? unexpected.txt"]),
+        ),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("32 requires one direct repair child of b320", () => {
+    expect(() =>
+      assertRepairDirectChildCommit(
+        Buffer.from(`tree ${"2".repeat(40)}\nparent ${repairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertRepairDirectChildCommit(
+        Buffer.from(
+          `tree ${"2".repeat(40)}\nparent ${repairBase}\nparent ${"3".repeat(40)}\nauthor a\n\nmessage\n`,
+        ),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
   });
 });
