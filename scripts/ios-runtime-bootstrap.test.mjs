@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -137,6 +137,15 @@ const ORACLE_SOURCE_COMMIT = "b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5";
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
+const oraclePathPatternFor = (rootPath, separator) => {
+  assert.equal(typeof rootPath, "string");
+  assert.ok(separator === "/" || separator === "\\");
+  assert.equal(rootPath.endsWith(separator), false);
+  const escapedSeparator = escapeRegExp(separator);
+  const segment = `(?!\\.{1,2}(?:${escapedSeparator}|$))[A-Za-z0-9._+ -]+`;
+  return `^${escapeRegExp(rootPath)}(?:${escapedSeparator}${segment})*$`;
+};
+
 function replaceOracleToken(source, token, replacement) {
   const first = source.indexOf(token);
   assert.notEqual(first, -1);
@@ -200,7 +209,11 @@ async function withRunTransactionWindowsOracle(action) {
     assert.equal(simctlInfo.isFile(), true);
     assert.equal(simctlInfo.isSymbolicLink(), false);
 
-    const oraclePathPattern = `^${escapeRegExp(fixtureRoot)}(?:\\\\[A-Za-z0-9._+ -]+)*$`;
+    const oraclePathPattern = oraclePathPatternFor(fixtureRoot, sep);
+    const oraclePathRegex = new RegExp(oraclePathPattern, "u");
+    assert.equal(oraclePathRegex.test(fixtureRoot), true);
+    assert.equal(oraclePathRegex.test(resolve(fixtureRoot, "repo")), true);
+    assert.equal(oraclePathRegex.test(resolve(fixtureRoot, "repo", "scripts")), true);
     const safePathReplacement = `export const SAFE_CANONICAL_PATH = new RegExp(${JSON.stringify(oraclePathPattern)}, "u");`;
     const developerDirectoryReplacement = `export const XCODE_DEVELOPER_DIR = ${JSON.stringify(developerDirectory)};`;
     let transformed = replaceOracleToken(
@@ -3764,6 +3777,64 @@ const v115Cases = [
         startTime: "Fri Nov 14 12:34:56 2026",
         title: PARENT_TITLE,
       });
+    },
+  ],
+  [
+    "oracle path pattern is portable and closed for POSIX separators",
+    () => {
+      const rootPath = "/tmp/fluyo-oracle-Ab12";
+      const pattern = new RegExp(oraclePathPatternFor(rootPath, "/"), "u");
+      for (const value of [
+        rootPath,
+        `${rootPath}/repo`,
+        `${rootPath}/repo/scripts`,
+        `${rootPath}/.config`,
+      ]) {
+        assert.equal(pattern.test(value), true);
+      }
+      for (const value of [
+        `${rootPath}\\repo`,
+        `${rootPath}2`,
+        `${rootPath}/../escape`,
+        `${rootPath}/.`,
+        `${rootPath}/..`,
+        `${rootPath}//repo`,
+        `${rootPath}/repo/`,
+        `${rootPath}/repo\tprivate`,
+        `${rootPath}/repo\nprivate`,
+        `${rootPath}/repo\0private`,
+      ]) {
+        assert.equal(pattern.test(value), false);
+      }
+    },
+  ],
+  [
+    "oracle path pattern is portable and closed for Windows separators",
+    () => {
+      const rootPath = "C:\\Temp\\fluyo-oracle-Ab12";
+      const pattern = new RegExp(oraclePathPatternFor(rootPath, "\\"), "u");
+      for (const value of [
+        rootPath,
+        `${rootPath}\\repo`,
+        `${rootPath}\\repo\\scripts`,
+        `${rootPath}\\.config`,
+      ]) {
+        assert.equal(pattern.test(value), true);
+      }
+      for (const value of [
+        `${rootPath}/repo`,
+        `${rootPath}2`,
+        `${rootPath}\\..\\escape`,
+        `${rootPath}\\.`,
+        `${rootPath}\\..`,
+        `${rootPath}\\\\repo`,
+        `${rootPath}\\repo\\`,
+        `${rootPath}\\repo\tprivate`,
+        `${rootPath}\\repo\nprivate`,
+        `${rootPath}\\repo\0private`,
+      ]) {
+        assert.equal(pattern.test(value), false);
+      }
     },
   ],
   [
