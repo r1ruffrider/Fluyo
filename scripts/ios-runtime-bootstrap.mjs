@@ -26,7 +26,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_ID = "ios_17_5_runtime_bootstrap_v1";
-export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2";
+export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3";
 export const EXPECTED_XCODE_VERSION = "16.2";
 export const EXPECTED_XCODE_BUILD = "16C5032a";
 export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";
@@ -159,7 +159,13 @@ const PRIMARY_FAILURE_CODES = new Set([
   "PRECONDITION_SOURCE",
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
   "PRECONDITION_SIMCTL_FIND_INVALID_PID",
   "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
   "PRECONDITION_SIMCTL_FIND_TIMEOUT",
@@ -232,7 +238,13 @@ const XCODE_PROBE_FAILURE_CODES = new Set(["PRECONDITION_XCODE_VERSION_PROBE"]);
 const XCODE_DIAGNOSTIC_FAILURE_CODES = new Set([
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
   "PRECONDITION_SIMCTL_FIND_INVALID_PID",
   "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
   "PRECONDITION_SIMCTL_FIND_TIMEOUT",
@@ -906,6 +918,115 @@ async function runCaptured(command, args, options, limits, dependencies = {}) {
 
 const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";
 const SIMCTL_FIND_TOKENS = Object.freeze([XCRUN, "--find", "simctl"]);
+const SIMCTL_FIND_SPAWN_FAILURE = Object.freeze({
+  ENOENT: "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+  EACCES: "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+  EMFILE: "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+  ENFILE: "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+  EAGAIN: "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+});
+
+function simctlFindSpawnFailure(error) {
+  let code;
+  try {
+    code = error?.code;
+  } catch {
+    return "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER";
+  }
+  if (typeof code !== "string" || !/^[\x20-\x7e]+$/u.test(code)) {
+    return "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER";
+  }
+  return SIMCTL_FIND_SPAWN_FAILURE[code] ?? "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER";
+}
+
+function simctlExecutableTuple(info) {
+  if (
+    !info?.isFile?.() ||
+    info.isSymbolicLink?.() === true ||
+    typeof info.dev !== "bigint" ||
+    typeof info.ino !== "bigint" ||
+    typeof info.size !== "bigint" ||
+    typeof info.uid !== "bigint" ||
+    typeof info.mode !== "bigint" ||
+    info.size <= 0n ||
+    info.uid !== 0n ||
+    (info.mode & 0o7777n) !== 0o755n
+  ) {
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+  }
+  return Object.freeze({
+    dev: info.dev,
+    ino: info.ino,
+    size: info.size,
+    uid: info.uid,
+    mode: info.mode & 0o7777n,
+  });
+}
+
+function sameSimctlExecutableTuple(left, right) {
+  return ["dev", "ino", "size", "uid", "mode"].every((key) => left[key] === right[key]);
+}
+
+function verifySimctlExecutable(binding, dependencies = {}) {
+  const lstat = dependencies.lstatSimctlExecutable ?? lstatSync;
+  const fstat = dependencies.fstatSimctlExecutable ?? fstatSync;
+  const realpath = dependencies.realpathSimctlExecutable ?? realpathSync.native;
+  try {
+    const named = simctlExecutableTuple(lstat(XCRUN, { bigint: true }));
+    const held = simctlExecutableTuple(fstat(binding.fd, { bigint: true }));
+    if (
+      realpath(XCRUN) !== XCRUN ||
+      !sameSimctlExecutableTuple(named, binding.identity) ||
+      !sameSimctlExecutableTuple(held, binding.identity)
+    ) {
+      fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+    }
+  } catch (error) {
+    if (
+      error instanceof BootstrapFailure &&
+      error.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY"
+    ) {
+      throw error;
+    }
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+  }
+}
+
+function openSimctlExecutable(dependencies = {}) {
+  const open = dependencies.openSimctlExecutable ?? openSync;
+  const close = dependencies.closeSimctlExecutable ?? closeSync;
+  let fd = null;
+  try {
+    fd = open(XCRUN, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const binding = Object.freeze({
+      fd,
+      identity: simctlExecutableTuple(
+        (dependencies.fstatSimctlExecutable ?? fstatSync)(fd, { bigint: true }),
+      ),
+    });
+    verifySimctlExecutable(binding, dependencies);
+    return binding;
+  } catch {
+    if (fd !== null) {
+      try {
+        close(fd);
+      } catch {
+        // The closed failure code intentionally carries no local filesystem detail.
+      }
+    }
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+  }
+}
+
+function assertUnverifiedGroupAbsent(pid, dependencies = {}) {
+  try {
+    (dependencies.kill ?? process.kill)(-pid, 0);
+  } catch (error) {
+    if (error?.code === "ESRCH") return;
+    throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+  }
+  throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+}
 
 function parseSimctlFindIdentity(stdout, requestedPid) {
   if (
@@ -997,7 +1118,7 @@ function validatedSimctlFindOutput(stdoutChunks, stderrChunks, dependencies = {}
   return Object.freeze({ stdout: `${canonical}\n`, stderr: "" });
 }
 
-async function runSimctlFindV2(options, dependencies = {}) {
+async function runSimctlFindAttempt(options, dependencies = {}) {
   const spawnProcess = dependencies.spawn ?? spawn;
   let child;
   try {
@@ -1007,9 +1128,19 @@ async function runSimctlFindV2(options, dependencies = {}) {
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
-  } catch {
-    fail("PRECONDITION_SIMCTL_FIND_SPAWN");
+  } catch (error) {
+    fail(simctlFindSpawnFailure(error));
   }
+  let spawnCategory = "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER";
+  let categoryAuthority = true;
+  const onSpawnCategory = () => {
+    categoryAuthority = false;
+  };
+  const onErrorCategory = (error) => {
+    if (categoryAuthority) spawnCategory = simctlFindSpawnFailure(error);
+  };
+  child.once("spawn", onSpawnCategory);
+  child.on("error", onErrorCategory);
   const lifecycle = childLifecycle(child);
   const stdout = [];
   const stderr = [];
@@ -1065,6 +1196,8 @@ async function runSimctlFindV2(options, dependencies = {}) {
     clearTimeout(timer);
     cancelTarget.off("SIGINT", onCancel);
     cancelTarget.off("SIGTERM", onCancel);
+    child.off("spawn", onSpawnCategory);
+    child.off("error", onErrorCategory);
   };
   const awaitCloseAndAbsence = async (pid) => {
     if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
@@ -1108,7 +1241,10 @@ async function runSimctlFindV2(options, dependencies = {}) {
         if (!(await closeObservation)) {
           throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
         }
-        fail("PRECONDITION_SIMCTL_FIND_SPAWN");
+        if (Number.isSafeInteger(child.pid) && child.pid >= 1 && child.pid <= 2_147_483_647) {
+          assertUnverifiedGroupAbsent(child.pid, dependencies);
+        }
+        fail(spawnCategory);
       }
       if (observedLaunch.state === "CLOSE") {
         fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
@@ -1119,7 +1255,10 @@ async function runSimctlFindV2(options, dependencies = {}) {
       if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
         throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
       }
-      fail("PRECONDITION_SIMCTL_FIND_SPAWN");
+      if (Number.isSafeInteger(child.pid) && child.pid >= 1 && child.pid <= 2_147_483_647) {
+        assertUnverifiedGroupAbsent(child.pid, dependencies);
+      }
+      fail(spawnCategory);
     }
     if (launch.state === "CLOSE") fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
     if (!Number.isSafeInteger(child.pid) || child.pid < 1 || child.pid > 2_147_483_647) {
@@ -1215,6 +1354,53 @@ async function runSimctlFindV2(options, dependencies = {}) {
   } finally {
     clearObservers();
   }
+}
+
+async function runSimctlFindV2(options, dependencies = {}) {
+  const close = dependencies.closeSimctlExecutable ?? closeSync;
+  const binding = openSimctlExecutable(dependencies);
+  let result;
+  let failure = null;
+  let closeFailure = false;
+  try {
+    verifySimctlExecutable(binding, dependencies);
+    try {
+      result = await runSimctlFindAttempt(options, dependencies);
+    } catch (error) {
+      failure = error;
+    }
+    if (!(
+      failure instanceof BootstrapFailure &&
+      [
+        "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+        "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+      ].includes(failure.code)
+    )) {
+      try {
+        verifySimctlExecutable(binding, dependencies);
+      } catch (error) {
+        failure = error;
+      }
+    }
+  } finally {
+    try {
+      close(binding.fd);
+    } catch {
+      closeFailure = true;
+    }
+  }
+  if (
+    failure instanceof BootstrapFailure &&
+    [
+      "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD",
+      "PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD",
+    ].includes(failure.code)
+  ) {
+    throw failure;
+  }
+  if (closeFailure) fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+  if (failure) throw failure;
+  return result;
 }
 
 export async function probeProcessIdentity(
@@ -1586,7 +1772,13 @@ function validateReceiptPhaseEvidence(receipt) {
 function validateDiagnosticReceipt(receipt) {
   const observed = [receipt.observedVersion, receipt.observedBuild];
   const expectsObserved = [
-    "PRECONDITION_SIMCTL_FIND_SPAWN",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+    "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+    "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+    "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+    "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+    "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+    "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
     "PRECONDITION_SIMCTL_FIND_INVALID_PID",
     "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
     "PRECONDITION_SIMCTL_FIND_TIMEOUT",

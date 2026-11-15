@@ -104,7 +104,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "12425795f01ea4c723a514ebcf1664bd939dd2381ea950a685fb6e42f2cbd147",
+  "f07d3ba75a73f725cdb91c5a95e75dd873ada708f3f7fd0480e78ff5974b3d92",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -4525,7 +4525,13 @@ const v117Cases = [
 for (const [name, action] of v117Cases) test(`v1.1.17: ${name}`, action);
 
 const diagnosticObservedCodes = new Set([
-  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
   "PRECONDITION_SIMCTL_FIND_INVALID_PID",
   "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
   "PRECONDITION_SIMCTL_FIND_TIMEOUT",
@@ -4587,6 +4593,27 @@ const diagnosticTransactionDependencies = (runTool) => ({
 
 const SIMCTL_FIND_TEST_PATH = "/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/simctl";
 
+const simctlExecutableInfo = () =>
+  Object.freeze({
+    dev: 41n,
+    ino: 73n,
+    size: 8_192n,
+    uid: 0n,
+    mode: 0o100755n,
+    isFile: () => true,
+    isSymbolicLink: () => false,
+  });
+
+const runSimctlFindTest = (options, dependencies = {}) =>
+  testing.runSimctlFindV2(options, {
+    openSimctlExecutable: () => 9401,
+    closeSimctlExecutable: () => {},
+    lstatSimctlExecutable: () => simctlExecutableInfo(),
+    fstatSimctlExecutable: () => simctlExecutableInfo(),
+    realpathSimctlExecutable: (value) => value,
+    ...dependencies,
+  });
+
 const simctlFindIdentity = (pid) =>
   Object.freeze({
     pid,
@@ -4624,7 +4651,7 @@ const simctlShortLivedCases = [
     async () => {
       const child = fakeChild(9501);
       const signals = [];
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4642,20 +4669,26 @@ const simctlShortLivedCases = [
     },
   ],
   [
-    "async spawn error plus actual close maps only to SPAWN",
+    "async spawn error plus actual close maps only to the closed spawn category",
     async () => {
       const child = fakeChild(9502);
-      const promise = testing.runSimctlFindV2({ cwd: "/", env: {} }, { spawn: () => child });
-      child.emit("error", new Error("private"));
+      const promise = runSimctlFindTest(
+        { cwd: "/", env: {} },
+        { spawn: () => child, kill: noSignalKill([]) },
+      );
+      child.emit("error", Object.assign(new Error("private"), { code: "EACCES" }));
       closeFakeChild(child, null, null);
-      await assert.rejects(promise, (error) => error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN");
+      await assert.rejects(
+        promise,
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+      );
     },
   ],
   [
     "async spawn error without actual close is an unverified HOLD",
     async () => {
       const child = fakeChild(9503);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         { spawn: () => child, setTimeout: immediateCloseTimeout },
       );
@@ -4670,7 +4703,7 @@ const simctlShortLivedCases = [
     "spawned invalid PID waits for close and maps only to INVALID_PID",
     async () => {
       const child = fakeChild(0);
-      const promise = testing.runSimctlFindV2({ cwd: "/", env: {} }, { spawn: () => child });
+      const promise = runSimctlFindTest({ cwd: "/", env: {} }, { spawn: () => child });
       child.emit("spawn");
       closeFakeChild(child);
       await assert.rejects(
@@ -4684,7 +4717,7 @@ const simctlShortLivedCases = [
     async () => {
       const child = fakeChild(9505);
       const signals = [];
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4706,7 +4739,7 @@ const simctlShortLivedCases = [
     "settled ps failure rejects a nonzero exit",
     async () => {
       const child = fakeChild(9506);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4725,7 +4758,7 @@ const simctlShortLivedCases = [
     "settled ps failure rejects invalid UTF-8",
     async () => {
       const child = fakeChild(9507);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4745,7 +4778,7 @@ const simctlShortLivedCases = [
     "settled ps failure rejects a noncanonical simctl path",
     async () => {
       const child = fakeChild(9508);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4766,7 +4799,7 @@ const simctlShortLivedCases = [
     "settled ps failure with surviving group is an unverified HOLD",
     async () => {
       const child = fakeChild(9509);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4788,7 +4821,7 @@ const simctlShortLivedCases = [
     "live ps failure without close is an unverified HOLD",
     async () => {
       const child = fakeChild(9510);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4810,7 +4843,7 @@ const simctlShortLivedCases = [
     async () => {
       const child = fakeChild(9511);
       const signals = [];
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4834,7 +4867,7 @@ const simctlShortLivedCases = [
     async () => {
       const child = fakeChild(9512);
       const signals = [];
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4854,7 +4887,7 @@ const simctlShortLivedCases = [
     "pending abort rejects a late spawn without granting authority",
     async () => {
       const child = fakeChild(9513);
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4871,14 +4904,15 @@ const simctlShortLivedCases = [
     },
   ],
   [
-    "pending timeout followed by error and actual close maps only to SPAWN",
+    "pending timeout followed by error and actual close maps only to the spawn category",
     async () => {
       const child = fakeChild(9514);
       let timeoutCallback;
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
+          kill: noSignalKill([]),
           setTimeout: (callback, milliseconds) => {
             if (milliseconds === PROBE_TIMEOUT_MS) timeoutCallback = callback;
             const timer = setTimeout(() => {}, 60_000);
@@ -4888,16 +4922,19 @@ const simctlShortLivedCases = [
         },
       );
       timeoutCallback();
-      child.emit("error", new Error("private"));
+      child.emit("error", Object.assign(new Error("private"), { code: "ENOENT" }));
       closeFakeChild(child, null, null);
-      await assert.rejects(promise, (error) => error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN");
+      await assert.rejects(
+        promise,
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+      );
     },
   ],
   [
     "pending output cap followed by close-before-spawn maps only to INVALID_PID",
     async () => {
       const child = fakeChild(9515);
-      const promise = testing.runSimctlFindV2({ cwd: "/", env: {} }, { spawn: () => child });
+      const promise = runSimctlFindTest({ cwd: "/", env: {} }, { spawn: () => child });
       child.stdout.write(Buffer.alloc(4_097));
       closeFakeChild(child);
       await assert.rejects(
@@ -4917,7 +4954,7 @@ const simctlShortLivedCases = [
       const identity = new Promise((resolveIdentityPromise) => {
         resolveIdentity = resolveIdentityPromise;
       });
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4961,7 +4998,7 @@ const simctlShortLivedCases = [
       const identity = new Promise((_resolveIdentityPromise, rejectIdentityPromise) => {
         rejectIdentity = rejectIdentityPromise;
       });
-      const promise = testing.runSimctlFindV2(
+      const promise = runSimctlFindTest(
         { cwd: "/", env: {} },
         {
           spawn: () => child,
@@ -4994,7 +5031,13 @@ assert.equal(simctlShortLivedCases.length, 19);
 const diagnosticCodes = [
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_SPAWN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+  "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
   "PRECONDITION_SIMCTL_FIND_INVALID_PID",
   "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
   "PRECONDITION_SIMCTL_FIND_TIMEOUT",
@@ -5010,7 +5053,7 @@ const diagnosticCodes = [
 const diagnosticCases = [
   [
     "mode is exact",
-    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2"),
+    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3"),
   ],
   [
     "probe set is exact",
@@ -5250,7 +5293,7 @@ const diagnosticCases = [
       ),
   ],
   [
-    "v1.2 simctl profile binds exact executable and argv",
+    "v1.3 simctl profile binds exact executable and argv",
     () => {
       assert.match(controllerSource, /const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";/u);
       assert.match(
@@ -5261,10 +5304,10 @@ const diagnosticCases = [
     },
   ],
   [
-    "v1.2 simctl synchronous spawn maps only to SPAWN",
+    "v1.3 simctl synchronous spawn maps only to the closed OTHER category",
     async () =>
       assert.rejects(
-        testing.runSimctlFindV2(
+        runSimctlFindTest(
           { cwd: "/", env: {} },
           {
             spawn: () => {
@@ -5273,8 +5316,185 @@ const diagnosticCases = [
           },
         ),
         (error) =>
-          error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN" && !error.message.includes("private"),
+          error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER" &&
+          !error.message.includes("private"),
       ),
+  ],
+  [
+    "v1.3 rejects executable identity before spawn and closes the held descriptor once",
+    async () => {
+      let closeCalls = 0;
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            closeSimctlExecutable: () => {
+              closeCalls += 1;
+            },
+            lstatSimctlExecutable: () => ({
+              ...simctlExecutableInfo(),
+              isSymbolicLink: () => true,
+            }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+      );
+      assert.equal(closeCalls, 1);
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.3 executable drift outranks a synchronous spawn category",
+    async () => {
+      let lstatCalls = 0;
+      let closeCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            closeSimctlExecutable: () => {
+              closeCalls += 1;
+            },
+            lstatSimctlExecutable: () => {
+              lstatCalls += 1;
+              return Object.freeze({
+                ...simctlExecutableInfo(),
+                ino: lstatCalls === 3 ? 74n : 73n,
+              });
+            },
+            spawn: () => {
+              throw Object.assign(new Error("private"), { code: "ENOENT" });
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+      );
+      assert.equal(lstatCalls, 3);
+      assert.equal(closeCalls, 1);
+    },
+  ],
+  [
+    "v1.3 maps only the six closed synchronous spawn categories",
+    async () => {
+      for (const [rawCode, expectedCode] of [
+        ["ENOENT", "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT"],
+        ["EACCES", "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES"],
+        ["EMFILE", "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE"],
+        ["ENFILE", "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE"],
+        ["EAGAIN", "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN"],
+        ["EPERM", "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER"],
+      ]) {
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              spawn: () => {
+                throw Object.assign(new Error("private"), { code: rawCode });
+              },
+            },
+          ),
+          (error) => error?.code === expectedCode && !error.message.includes("private"),
+        );
+      }
+    },
+  ],
+  [
+    "v1.3 maps throwing or non-ASCII spawn codes only to OTHER",
+    async () => {
+      for (const error of [
+        Object.defineProperty(new Error("private"), "code", {
+          get: () => {
+            throw new Error("private-accessor");
+          },
+        }),
+        Object.assign(new Error("private"), { code: "E\u00d1OENT" }),
+      ]) {
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              spawn: () => {
+                throw error;
+              },
+            },
+          ),
+          (caught) =>
+            caught?.code === "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER" &&
+            !caught.message.includes("private"),
+        );
+      }
+    },
+  ],
+  [
+    "v1.3 holds the executable descriptor through settlement and revalidates before close",
+    async () => {
+      const child = fakeChild(9531);
+      const calls = { close: 0, fstat: 0, lstat: 0, realpath: 0 };
+      const promise = runSimctlFindTest(
+        { cwd: "/", env: {} },
+        {
+          closeSimctlExecutable: () => {
+            calls.close += 1;
+          },
+          fstatSimctlExecutable: () => {
+            calls.fstat += 1;
+            return simctlExecutableInfo();
+          },
+          lstatSimctlExecutable: () => {
+            calls.lstat += 1;
+            return simctlExecutableInfo();
+          },
+          realpathSimctlExecutable: (value) => {
+            calls.realpath += 1;
+            return value;
+          },
+          spawn: () => child,
+          probeSimctlIdentity: async () => simctlFindIdentity(child.pid),
+          kill: noSignalKill([]),
+          realpath: (value) => value,
+        },
+      );
+      child.emit("spawn");
+      child.stdout.end(`${SIMCTL_FIND_TEST_PATH}\n`);
+      closeFakeChild(child);
+      assert.equal((await promise).stdout, `${SIMCTL_FIND_TEST_PATH}\n`);
+      assert.deepEqual(calls, { close: 1, fstat: 4, lstat: 3, realpath: 3 });
+    },
+  ],
+  [
+    "v1.3 category listeners capture re-entrant pre-spawn error before lifecycle",
+    async () => {
+      const child = fakeChild(9532);
+      const originalOn = child.on.bind(child);
+      child.on = (event, listener) => {
+        const result = originalOn(event, listener);
+        if (event === "error" && listener.name === "onError") {
+          child.emit("error", Object.assign(new Error("private"), { code: "EACCES" }));
+        }
+        return result;
+      };
+      const promise = runSimctlFindTest(
+        { cwd: "/", env: {} },
+        {
+          spawn: () => child,
+          kill: noSignalKill([]),
+        },
+      );
+      closeFakeChild(child, null, null);
+      await assert.rejects(
+        promise,
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES" &&
+          !error.message.includes("private"),
+      );
+      assert.equal(child.listenerCount("spawn"), 0);
+      assert.equal(child.listenerCount("error"), 0);
+    },
   ],
   [
     "v1.2 removes the retired generic code from receipt authority",
@@ -5516,5 +5736,5 @@ const diagnosticCases = [
       ),
   ],
 ];
-assert.equal(diagnosticCases.length, 62);
-for (const [name, action] of diagnosticCases) test(`diagnostic v1.2: ${name}`, action);
+assert.equal(diagnosticCases.length, 74);
+for (const [name, action] of diagnosticCases) test(`diagnostic v1.3: ${name}`, action);

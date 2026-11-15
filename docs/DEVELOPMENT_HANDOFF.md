@@ -3361,3 +3361,47 @@ Current repaired source facts before this append are:
 Final targets remain activation **100/100**, readiness **8/8**, focused **603/603**, the phase-specific required ledger **483**, audit-policy unit **588/588**, portable **273/273**, shared **682/682**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,759/2,759**. These targets and the downstream mechanical pins remain pending.
 
 PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL spawn diagnostic v1.3 development checkpoint
+
+Protected execution on exact head `a721ff8df68f621b3eb4afcddd168ab52567f38f` produced a sanitized diagnostic receipt with primary code `PRECONDITION_SIMCTL_FIND_SPAWN`, invocation count **0**, download `NOT_ATTEMPTED`, minimum `NOT_RUN`, no runtime or disk evidence, no retention, and no fallback. That receipt is preserved only as historical diagnosis of the retired generic spawn category. It does not establish recovery, simulator acquisition, or runtime success.
+
+Catalina's architecture gate for `PR94-IOS-SIMCTL-SPAWN-DIAGNOSTIC-v1.3` is PASS, and Natalia's independent security gate is **64/64 STRICT PASS-TO-IMPLEMENT**. The bounded repository/test change pins the exact Xcode 16.2 `xcrun`, holds and revalidates its executable identity, and replaces the generic spawn result with one closed executable-identity code and six closed spawn categories. Functional development evidence is controller **412/412 PASS** and shared structure **100/100 PASS**.
+
+Current frozen source facts before this append are:
+
+- Controller: **138,001 bytes**; SHA-256 `b341b58c07492b7a5450753c67c33366cbd793b007ae7955957b5fb7dcd23579`; Git blob `5400ac205a1598e83f6058891a863ecf52f3c87a`.
+- Controller test: **181,835 bytes**; SHA-256 `29eda1edfa606264db650a0c7557dcf435334155d62f40eccee3ce6f200383bb`; Git blob `41fb5f926c96d870e8531f0cbf6e7028189f0cef`.
+- Shared structure test: **80,538 bytes**; SHA-256 `71791a4fdf60c4eb97be45f18157f3565a9d42adcc323a4b7191b0fa2d18d725`; Git blob `c00966608b05a12c4c3a2e29728da0881b2c6e48`.
+- Activation guard before its final mechanical manifest pin: **105,977 bytes**; SHA-256 `3ce8910bb0e5fda00025473d2dc1f402422b88b3d80fb41657b9c3290cafd24e`; Git blob `58b8d86669d701f69131dba645f7a0feaeecd496`.
+
+Final targets are activation **100/100**, readiness **8/8**, focused **620/620**, the phase-specific required ledger **500**, audit-policy unit **600/600**, portable **273/273**, shared **687/687**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,776/2,776**. Sanitizer semantic **43/43**, isolated readiness **150/150**, and static checks remain supporting requirements. These final gates and the exact six-path manifest remain pending mechanical pins.
+
+PR #94 remains draft/HOLD. No protected rerun, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. Workflow, `scripts/ios-ci.sh`, the summarizer and its test, dependencies, and lockfiles remain byte-identical.
+
+## 2026-11-16 — PR #94 SIMCTL spawn diagnostic v1.3 formatter supersession
+
+This append preserves the preceding v1.3 checkpoint as historical development evidence and supersedes only its four source identities after the required formatter pass. No behavior, authority, protected execution, or recovery claim changed. Final functional evidence remains controller **412/412 PASS** and shared structure **100/100 PASS**.
+
+The formatter-stable source facts are:
+
+- Controller: **137,977 bytes**; SHA-256 `1d8a91f5eb81ce003e485af7c58effad047bebbf40e3097a5a6e4fe5bd28ec14`; Git blob `5f26ea395886431bcd6517acd6f2f9d7d3a51234`.
+- Controller test: **181,835 bytes**; SHA-256 `7cebec379071b594abc95e6948f92907789914e4974096397ff80b32d8b73c73`; Git blob `3413fcc9c123b27fd277c66f9f15f3af9ace2906`.
+- Shared structure test: **80,576 bytes**; SHA-256 `902d984ab60bc035054aceba9dc63019896bbd1d045fd9345464774731608627`; Git blob `19c0c1d3277def1e7eaebf06ca7a7cd1ccb82ac1`.
+- Activation guard before its final mechanical manifest pin: **105,977 bytes**; SHA-256 `a30691f96d00ad6b781dd493f8ce10c81c1f4aadaff44e35f894b1987ec5574f`; Git blob `5dee30784ac0339b922c36b79d59548304d251ff`.
+
+The final repository-only development gates are audit-policy unit **600/600 PASS**, portable **273/273 PASS**, installed-tree **1/1 PASS**, shared **687/687 PASS**, isolated readiness **150/150 PASS**, API **381/381 PASS**, web **834/834 PASS**, and full repository **2,776/2,776 PASS**. Lint and typecheck PASS. The readiness/activation handoff pins and final exact-six manifest remain mechanical work after this append.
+
+PR #94 remains draft/HOLD. The `a721ff8` protected receipt remains historical diagnosis only. No protected rerun, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry.
+
+## 2026-11-16 — PR #94 SIMCTL spawn diagnostic v1.3 listener-order supersession
+
+This true-EOF append explicitly supersedes the pre-repair formatter-source record's statement that no behavior changed. Listener-before-lifecycle ordering was materially corrected in repository/test bytes, with an adversarial fixture covering the repaired ordering. The repair is count-stable: controller **412/412 PASS** and shared structure **100/100 PASS**.
+
+Exact repaired source identities are:
+
+- Controller: **137,977 bytes**; SHA-256 `f07d3ba75a73f725cdb91c5a95e75dd873ada708f3f7fd0480e78ff5974b3d92`; Git blob `3ba34cff3d7c82ef812fea08ed732a2056072ae3`.
+- Controller test: **182,168 bytes**; SHA-256 `7e1bc745fc04e30f3de8a6351e034f7a8d9dbb436470b9cbf0a27065b1137eb6`; Git blob `525f1019e7b9a61c925ccb13fc805596f994f500`.
+- Shared structure test: **80,884 bytes**; SHA-256 `b2867d64e06e8c6d2cf8f1ab1e98c9b28b93547e827fd9acd198ecef23b8e87a`; Git blob `64b92e92847efa448b3fa79f5926f823c0c71e2f`.
+
+The existing bounded repository/test authority is unchanged; no broader authority is created. PR #94 remains draft/HOLD. The repair has no protected execution or recovery evidence and makes no acquisition, live diagnostic, simulator installation, production, runtime-success, retry, stage, commit, push, ready, or merge claim. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.

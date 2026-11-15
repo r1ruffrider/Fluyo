@@ -1047,7 +1047,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("binds the exact diagnostic mode and schema-v2 ordered evidence fields", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2"');
+    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3"');
     expect(controller).toContain("receipt.schemaVersion !== 2");
     expect(controller).toMatch(
       /"diagnosticMode",\s*"expectedVersion",\s*"expectedBuild",\s*"observedVersion",\s*"observedBuild"/u,
@@ -1056,12 +1056,18 @@ describe("iOS unsigned foundation structure", () => {
     expect(controller).not.toMatch(/observedXcodeVersion|observedXcodeBuild/u);
   });
 
-  it("closes the v1.2 thirteen-code diagnostic table without retired generic codes", () => {
+  it("closes the v1.3 diagnostic table without retired generic codes", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
     for (const code of [
       "PRECONDITION_XCODE_VERSION_PROBE",
       "PRECONDITION_XCODE_VERSION_PARSE",
-      "PRECONDITION_SIMCTL_FIND_SPAWN",
+      "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+      "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
+      "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
+      "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
+      "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
+      "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
+      "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
       "PRECONDITION_SIMCTL_FIND_INVALID_PID",
       "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
       "PRECONDITION_SIMCTL_FIND_TIMEOUT",
@@ -1077,6 +1083,7 @@ describe("iOS unsigned foundation structure", () => {
     }
     expect(controller).not.toMatch(/"PRECONDITION_XCODE"/u);
     expect(controller).not.toContain('"PRECONDITION_SIMCTL_FIND_PROBE"');
+    expect(controller).not.toContain('"PRECONDITION_SIMCTL_FIND_SPAWN"');
   });
 
   it("maps each diagnostic stage to its exact sanitized internal fallback", () => {
@@ -1155,8 +1162,8 @@ describe("iOS unsigned foundation structure", () => {
     const workflow = read(".github/workflows/ios.yml");
     const iosCi = read("scripts/ios-ci.sh");
     expect(workflow).toContain("node scripts/ios-runtime-bootstrap.mjs run");
-    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2");
-    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_2");
+    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3");
+    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3");
     expect(iosCi).toContain("FLUYO_IOS_EVIDENCE_LEG");
   });
 
@@ -1198,7 +1205,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("attaches simctl output cancellation and timeout observers before PID inspection", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    const start = controller.indexOf("async function runSimctlFindV2");
+    const start = controller.indexOf("async function runSimctlFindAttempt");
     const end = controller.indexOf("export async function probeProcessIdentity", start);
     const runner = controller.slice(start, end);
     const stdoutListener = runner.indexOf('child.stdout?.on("data"');
@@ -1215,7 +1222,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("makes a preidentity abort permanent and forbids signaling", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    const start = controller.indexOf("async function runSimctlFindV2");
+    const start = controller.indexOf("async function runSimctlFindAttempt");
     const end = controller.indexOf("export async function probeProcessIdentity", start);
     const runner = controller.slice(start, end);
     expect(runner).toContain('let identityState = "PENDING"');
@@ -1251,7 +1258,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("accepts short-lived simctl only after actual close group absence and closed output checks", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    const start = controller.indexOf("async function runSimctlFindV2");
+    const start = controller.indexOf("async function runSimctlFindAttempt");
     const end = controller.indexOf("export async function probeProcessIdentity", start);
     const runner = controller.slice(start, end);
     expect(runner).toContain("await awaitCloseAndAbsence(child.pid)");
@@ -1267,7 +1274,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("keeps HOLD precedence while captured identity alone may authorize termination", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    const start = controller.indexOf("async function runSimctlFindV2");
+    const start = controller.indexOf("async function runSimctlFindAttempt");
     const end = controller.indexOf("export async function probeProcessIdentity", start);
     const runner = controller.slice(start, end);
     const capture = runner.indexOf('identityState = "CAPTURED"');
@@ -1279,13 +1286,19 @@ describe("iOS unsigned foundation structure", () => {
     expect(runner).toContain('if (abortEvidence === "CANCELLED") fail("PRECONDITION_INTERRUPTED")');
   });
 
-  it("keeps every safe v1.2 simctl result invocation-zero with exact observations", () => {
+  it("keeps every safe v1.3 simctl result invocation-zero with exact observations", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
     const start = controller.indexOf("function validateDiagnosticReceipt");
     const end = controller.indexOf("export function validateReceipt", start);
     const receipt = controller.slice(start, end);
     for (const suffix of [
-      "SPAWN",
+      "EXECUTABLE_IDENTITY",
+      "SPAWN_ENOENT",
+      "SPAWN_EACCES",
+      "SPAWN_EMFILE",
+      "SPAWN_ENFILE",
+      "SPAWN_EAGAIN",
+      "SPAWN_OTHER",
       "INVALID_PID",
       "IDENTITY_AFTER_SETTLEMENT",
       "TIMEOUT",
@@ -1298,6 +1311,75 @@ describe("iOS unsigned foundation structure", () => {
     expect(receipt).toContain("receipt.downloadInvocationCount !== 0");
     expect(receipt).toContain("EXPECTED_XCODE_VERSION");
     expect(receipt).toContain("EXPECTED_XCODE_BUILD");
+  });
+
+  it("binds simctl discovery to the pinned Xcode xcrun and one held nofollow descriptor", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain("export const XCRUN = `${XCODE_DEVELOPER_DIR}/usr/bin/xcrun`");
+    expect(controller).toContain('spawnProcess(XCRUN, ["--find", "simctl"]');
+    expect(controller).toContain("fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW");
+    expect(controller).toContain("info.uid !== 0n");
+    expect(controller).toContain("(info.mode & 0o7777n) !== 0o755n");
+    expect(controller).toContain("info.size <= 0n");
+  });
+
+  it("revalidates the held xcrun identity before spawn and after settlement then closes once", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindV2");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const wrapper = controller.slice(start, end);
+    expect(wrapper.match(/verifySimctlExecutable\(binding, dependencies\)/gu)).toHaveLength(2);
+    expect(wrapper).toContain("result = await runSimctlFindAttempt(options, dependencies)");
+    expect(wrapper).toContain("close(binding.fd)");
+    expect(wrapper.indexOf("close(binding.fd)")).toBeLessThan(
+      wrapper.indexOf("if (failure) throw failure"),
+    );
+  });
+
+  it("closes spawn failures to five errno categories plus OTHER and rejects the retired generic", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    for (const suffix of ["ENOENT", "EACCES", "EMFILE", "ENFILE", "EAGAIN", "OTHER"]) {
+      expect(controller).toContain(`PRECONDITION_SIMCTL_FIND_SPAWN_${suffix}`);
+    }
+    expect(controller).toContain('typeof code !== "string"');
+    expect(controller).toContain("/^[\\x20-\\x7e]+$/u.test(code)");
+    expect(controller).not.toContain('"PRECONDITION_SIMCTL_FIND_SPAWN"');
+  });
+
+  it("closes pre-spawn category authority at spawn and distinguishes absent unverified groups", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindAttempt");
+    const end = controller.indexOf("async function runSimctlFindV2", start);
+    const attempt = controller.slice(start, end);
+    expect(attempt).toContain("let categoryAuthority = true");
+    expect(attempt).toContain("categoryAuthority = false");
+    expect(attempt).toContain('child.once("spawn", onSpawnCategory)');
+    expect(attempt).toContain('child.on("error", onErrorCategory)');
+    expect(attempt.indexOf('child.once("spawn", onSpawnCategory)')).toBeLessThan(
+      attempt.indexOf("const lifecycle = childLifecycle(child)"),
+    );
+    expect(attempt.indexOf('child.on("error", onErrorCategory)')).toBeLessThan(
+      attempt.indexOf("const lifecycle = childLifecycle(child)"),
+    );
+    expect(attempt).toContain("assertUnverifiedGroupAbsent(child.pid, dependencies)");
+    expect(attempt).toContain("Number.isSafeInteger(child.pid)");
+  });
+
+  it("keeps HOLD outcomes above identity and category receipts without serializing private evidence", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindV2");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const wrapper = controller.slice(start, end);
+    expect(wrapper).toContain("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    expect(wrapper).toContain("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+    expect(wrapper.indexOf("if (closeFailure)")).toBeGreaterThan(wrapper.indexOf("throw failure"));
+    for (const privateName of ["errno", "stack", "message", "fd", "uid", "dev", "ino"]) {
+      expect(
+        read("scripts/ios-runtime-bootstrap.mjs").match(
+          new RegExp(`receipt\\.${privateName}`, "gu"),
+        ),
+      ).toBeNull();
+    }
   });
 
   it("invokes current-test sanitization with exact termination and result-bundle argv", () => {
