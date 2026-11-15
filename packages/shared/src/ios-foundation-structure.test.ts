@@ -848,7 +848,10 @@ describe("iOS unsigned foundation structure", () => {
   it("attaches one immutable lifecycle before inspecting every spawned child", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
     expect(controller).toContain("function childLifecycle(child)");
-    expect(controller).toContain("return Object.freeze({ settlement, close })");
+    expect(controller).toContain("settlement,");
+    expect(controller).toContain("close,");
+    expect(controller).toContain("launch,");
+    expect(controller).toContain("terminalLaunch,");
     for (const name of ["runPsVerifier", "runCaptured", "runGatedPhase"]) {
       const start = controller.indexOf(`function ${name}`);
       const end = controller.indexOf("const stdout = []", start);
@@ -1178,6 +1181,102 @@ describe("iOS unsigned foundation structure", () => {
     expect(runner).toContain("assertProcessGroupAbsent");
     expect(runner).toContain("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
     expect(runner).toContain("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+  });
+
+  it("settles simctl launch by one event-aware pending-state compare-and-set", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("function childLifecycle(child)");
+    const end = controller.indexOf("async function awaitActualClose", start);
+    const lifecycle = controller.slice(start, end);
+    expect(lifecycle).toContain('let launchState = "PENDING"');
+    expect(lifecycle).toContain('if (launchState !== "PENDING") return false');
+    expect(lifecycle).toContain('terminalLaunch({ state: "SPAWNED" })');
+    expect(lifecycle).toContain('terminalLaunch({ state: "ERROR" })');
+    expect(lifecycle).toContain('terminalLaunch({ state: "CLOSE", result: value })');
+    expect(lifecycle).toContain('child.once("spawn", onSpawn)');
+  });
+
+  it("attaches simctl output cancellation and timeout observers before PID inspection", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindV2");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const runner = controller.slice(start, end);
+    const stdoutListener = runner.indexOf('child.stdout?.on("data"');
+    const timeout = runner.indexOf('() => latchAbort("TIMEOUT")');
+    const cancellation = runner.indexOf('cancelTarget.on("SIGINT", onCancel)');
+    const launch = runner.indexOf("const launch = await Promise.race");
+    const pid = runner.indexOf("Number.isSafeInteger(child.pid)");
+    expect(stdoutListener).toBeGreaterThanOrEqual(0);
+    expect(timeout).toBeGreaterThan(stdoutListener);
+    expect(cancellation).toBeGreaterThan(timeout);
+    expect(launch).toBeGreaterThan(cancellation);
+    expect(pid).toBeGreaterThan(launch);
+  });
+
+  it("makes a preidentity abort permanent and forbids signaling", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindV2");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const runner = controller.slice(start, end);
+    expect(runner).toContain('let identityState = "PENDING"');
+    expect(runner).toContain("let preIdentityAbort = false");
+    expect(runner).toContain('if (identityState !== "CAPTURED") preIdentityAbort = true');
+    expect(runner).toContain('if (preIdentityAbort) return Object.freeze({ state: "ABORTED" })');
+    expect(runner).toContain(
+      'if (abortEvidence !== null) return Object.freeze({ state: "ABORTED" })',
+    );
+    expect(runner).toContain('if (first.state === "ABORTED" || preIdentityAbort)');
+    expect(runner).toContain('if (launch.state === "ABORTED")');
+    expect(runner).toContain("if (preIdentityAbort) await failForAbort(child.pid)");
+    const latch = runner.slice(
+      runner.indexOf("const latchAbort"),
+      runner.indexOf("const add", runner.indexOf("const latchAbort")),
+    );
+    expect(latch).not.toContain("terminalLaunch");
+    const preidentity = runner.slice(
+      runner.indexOf('if (first.state === "ABORTED" || preIdentityAbort)'),
+      runner.indexOf("let identityOutcome", runner.indexOf('if (first.state === "ABORTED"')),
+    );
+    expect(preidentity).toContain("await failForAbort(child.pid)");
+    expect(preidentity).not.toContain("terminateVerifiedProcessGroup");
+    const failedIdentity = runner.slice(
+      runner.indexOf('if (identityOutcome?.state === "FAILED")'),
+      runner.indexOf("const captured = identityOutcome.captured"),
+    );
+    expect(failedIdentity).toContain("await awaitCloseAndAbsence(child.pid)");
+    expect(failedIdentity).toContain(
+      "if (abortEvidence !== null || preIdentityAbort) await failForAbort(child.pid)",
+    );
+  });
+
+  it("accepts short-lived simctl only after actual close group absence and closed output checks", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindV2");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const runner = controller.slice(start, end);
+    expect(runner).toContain("await awaitCloseAndAbsence(child.pid)");
+    expect(runner).toContain("directGroupAbsent(pid, dependencies)");
+    expect(runner).toContain(
+      'throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD")',
+    );
+    expect(runner).toContain("result.error || result.code !== 0 || result.signal != null");
+    expect(runner).toContain("validatedSimctlFindOutput(stdout, stderr, dependencies)");
+    expect(controller).toContain("PRECONDITION_SIMCTL_FIND_UTF8");
+    expect(controller).toContain("PRECONDITION_SIMCTL_FIND_PATH");
+  });
+
+  it("keeps HOLD precedence while captured identity alone may authorize termination", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("async function runSimctlFindV2");
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const runner = controller.slice(start, end);
+    const capture = runner.indexOf('identityState = "CAPTURED"');
+    const termination = runner.indexOf("await terminateVerifiedProcessGroup", capture);
+    expect(capture).toBeGreaterThanOrEqual(0);
+    expect(termination).toBeGreaterThan(capture);
+    expect(runner).toContain("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    expect(runner).toContain("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+    expect(runner).toContain('if (abortEvidence === "CANCELLED") fail("PRECONDITION_INTERRUPTED")');
   });
 
   it("keeps every safe v1.2 simctl result invocation-zero with exact observations", () => {

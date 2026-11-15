@@ -628,31 +628,57 @@ export function parsePsIdentity(
 function childLifecycle(child) {
   let resolveSettlement;
   let resolveClose;
+  let resolveLaunch;
   let settled = false;
+  let launchState = "PENDING";
   const settlement = new Promise((resolve) => {
     resolveSettlement = resolve;
   });
   const close = new Promise((resolve) => {
     resolveClose = resolve;
   });
+  const launch = new Promise((resolve) => {
+    resolveLaunch = resolve;
+  });
+  const terminalLaunch = (value) => {
+    if (launchState !== "PENDING") return false;
+    launchState = value.state;
+    resolveLaunch(Object.freeze({ ...value }));
+    return true;
+  };
+  const onSpawn = () => {
+    terminalLaunch({ state: "SPAWNED" });
+  };
   const onError = () => {
+    terminalLaunch({ state: "ERROR" });
     if (settled) return;
     settled = true;
     resolveSettlement(Object.freeze({ code: null, signal: null, error: true }));
   };
   const onClose = (code, signal) => {
     const value = Object.freeze({ code, signal, error: false });
+    terminalLaunch({ state: "CLOSE", result: value });
     if (!settled) {
       settled = true;
       resolveSettlement(value);
     }
+    child.off("spawn", onSpawn);
     child.off("error", onError);
     child.off("close", onClose);
     resolveClose(value);
   };
+  child.once("spawn", onSpawn);
   child.on("error", onError);
   child.once("close", onClose);
-  return Object.freeze({ settlement, close });
+  return Object.freeze({
+    settlement,
+    close,
+    launch,
+    terminalLaunch,
+    get launchState() {
+      return launchState;
+    },
+  });
 }
 
 async function awaitActualClose(closePromise, milliseconds, dependencies = {}) {
@@ -950,6 +976,27 @@ async function probeSimctlFindIdentity(pid, _expectedTokens, dependencies = {}) 
   return parseSimctlFindIdentity(result.stdout, pid);
 }
 
+function validatedSimctlFindOutput(stdoutChunks, stderrChunks, dependencies = {}) {
+  const stdout = capturedText(stdoutChunks, "PRECONDITION_SIMCTL_FIND_UTF8");
+  const stderr = capturedText(stderrChunks, "PRECONDITION_SIMCTL_FIND_UTF8");
+  if (stderr !== "") fail("PRECONDITION_SIMCTL_FIND_EXIT");
+  const candidate = stdout.trim();
+  let canonical;
+  try {
+    canonical = (dependencies.realpath ?? realpathSync.native)(candidate);
+  } catch {
+    fail("PRECONDITION_SIMCTL_FIND_PATH");
+  }
+  if (
+    !SAFE_CANONICAL_PATH.test(candidate) ||
+    canonical !== candidate ||
+    !within(canonical, XCODE_DEVELOPER_DIR)
+  ) {
+    fail("PRECONDITION_SIMCTL_FIND_PATH");
+  }
+  return Object.freeze({ stdout: `${canonical}\n`, stderr: "" });
+}
+
 async function runSimctlFindV2(options, dependencies = {}) {
   const spawnProcess = dependencies.spawn ?? spawn;
   let child;
@@ -964,33 +1011,41 @@ async function runSimctlFindV2(options, dependencies = {}) {
     fail("PRECONDITION_SIMCTL_FIND_SPAWN");
   }
   const lifecycle = childLifecycle(child);
-  if (!Number.isSafeInteger(child.pid) || child.pid < 1 || child.pid > 2_147_483_647) {
-    if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
-      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
-    }
-    fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
-  }
-
   const stdout = [];
   const stderr = [];
   let stdoutBytes = 0;
   let stderrBytes = 0;
-  let failureCode = null;
-  let resolveFailure;
-  const failure = new Promise((resolveFailurePromise) => {
-    resolveFailure = resolveFailurePromise;
+  let acceptOutput = true;
+  let abortEvidence = null;
+  let identityState = "PENDING";
+  let preIdentityAbort = false;
+  let resolveAbort;
+  const abort = new Promise((resolveAbortPromise) => {
+    resolveAbort = resolveAbortPromise;
   });
-  const latch = (code) => {
-    if (failureCode !== null) return;
-    failureCode = code;
-    resolveFailure({ failure: true });
+  const zeroizeOutput = () => {
+    acceptOutput = false;
+    stdout.splice(0).forEach((chunk) => chunk.fill(0));
+    stderr.splice(0).forEach((chunk) => chunk.fill(0));
+    stdoutBytes = 0;
+    stderrBytes = 0;
+  };
+  const latchAbort = (reason) => {
+    if (abortEvidence !== null) return false;
+    abortEvidence = reason;
+    if (identityState !== "CAPTURED") preIdentityAbort = true;
+    zeroizeOutput();
+    resolveAbort(Object.freeze({ reason }));
+    return true;
   };
   const add = (bucket, chunk, which) => {
+    if (!acceptOutput) return;
     const value = Buffer.from(chunk);
     if (which === "stdout") stdoutBytes += value.length;
     else stderrBytes += value.length;
     if (stdoutBytes > 4096 || stderrBytes > 1024) {
-      latch("PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT");
+      value.fill(0);
+      latchAbort("OUTPUT_LIMIT");
       return;
     }
     bucket.push(value);
@@ -998,60 +1053,168 @@ async function runSimctlFindV2(options, dependencies = {}) {
   child.stdout?.on("data", (chunk) => add(stdout, chunk, "stdout"));
   child.stderr?.on("data", (chunk) => add(stderr, chunk, "stderr"));
   const timer = (dependencies.setTimeout ?? setTimeout)(
-    () => latch("PRECONDITION_SIMCTL_FIND_TIMEOUT"),
+    () => latchAbort("TIMEOUT"),
     PROBE_TIMEOUT_MS,
   );
   timer.unref?.();
-
-  const identityDependencies = Object.freeze({
-    ...dependencies,
-    probeIdentity: probeSimctlFindIdentity,
-  });
-  let captured;
-  try {
-    captured = await probeSimctlFindIdentity(child.pid, SIMCTL_FIND_TOKENS, dependencies);
-  } catch {
+  const cancelTarget = dependencies.signalTarget ?? process;
+  const onCancel = () => latchAbort("CANCELLED");
+  cancelTarget.on("SIGINT", onCancel);
+  cancelTarget.on("SIGTERM", onCancel);
+  const clearObservers = () => {
     clearTimeout(timer);
-    if (child.exitCode == null && child.signalCode == null) {
+    cancelTarget.off("SIGINT", onCancel);
+    cancelTarget.off("SIGTERM", onCancel);
+  };
+  const awaitCloseAndAbsence = async (pid) => {
+    if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
       throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    if (!Number.isSafeInteger(pid) || pid < 1 || pid > 2_147_483_647) {
+      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    try {
+      directGroupAbsent(pid, dependencies);
+    } catch {
+      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+  };
+  const failForAbort = async (pid) => {
+    await awaitCloseAndAbsence(pid);
+    if (abortEvidence === "CANCELLED") {
+      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    fail(
+      abortEvidence === "OUTPUT_LIMIT"
+        ? "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT"
+        : "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+    );
+  };
+
+  try {
+    const launch = await Promise.race([
+      lifecycle.launch,
+      abort.then(() => Object.freeze({ state: "ABORTED" })),
+    ]);
+    if (launch.state === "ABORTED") {
+      const closeObservation = awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies);
+      const observedLaunch = await Promise.race([
+        lifecycle.launch,
+        closeObservation.then((closed) =>
+          Object.freeze({ state: closed ? "CLOSE" : "OBSERVATION_EXPIRED" }),
+        ),
+      ]);
+      if (observedLaunch.state === "ERROR") {
+        if (!(await closeObservation)) {
+          throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+        }
+        fail("PRECONDITION_SIMCTL_FIND_SPAWN");
+      }
+      if (observedLaunch.state === "CLOSE") {
+        fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
+      }
+      throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    if (launch.state === "ERROR") {
+      if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
+        throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+      }
+      fail("PRECONDITION_SIMCTL_FIND_SPAWN");
+    }
+    if (launch.state === "CLOSE") fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
+    if (!Number.isSafeInteger(child.pid) || child.pid < 1 || child.pid > 2_147_483_647) {
+      if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
+        throw new BootstrapFailure("PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD");
+      }
+      fail("PRECONDITION_SIMCTL_FIND_INVALID_PID");
+    }
+
+    const identityDependencies = Object.freeze({
+      ...dependencies,
+      probeIdentity: probeSimctlFindIdentity,
+    });
+    const identity = Promise.resolve()
+      .then(() =>
+        (dependencies.probeSimctlIdentity ?? probeSimctlFindIdentity)(
+          child.pid,
+          SIMCTL_FIND_TOKENS,
+          dependencies,
+        ),
+      )
+      .then(
+        (captured) => {
+          if (preIdentityAbort) return Object.freeze({ state: "ABORTED" });
+          identityState = "CAPTURED";
+          return Object.freeze({ state: "CAPTURED", captured });
+        },
+        () => {
+          if (abortEvidence !== null) return Object.freeze({ state: "ABORTED" });
+          identityState = "FAILED";
+          return Object.freeze({ state: "FAILED" });
+        },
+      );
+    const first = await Promise.race([
+      identity,
+      abort.then(() => Object.freeze({ state: "ABORTED" })),
+      lifecycle.settlement.then((result) => Object.freeze({ state: "SETTLED", result })),
+    ]);
+
+    if (first.state === "ABORTED" || preIdentityAbort) {
+      await identity;
+      await failForAbort(child.pid);
+    }
+
+    let identityOutcome = first.state === "CAPTURED" || first.state === "FAILED" ? first : null;
+    if (first.state === "SETTLED") {
+      identityOutcome = await identity;
+      if (preIdentityAbort) await failForAbort(child.pid);
+    }
+    if (identityOutcome?.state === "FAILED") {
+      await awaitCloseAndAbsence(child.pid);
+      if (abortEvidence !== null || preIdentityAbort) await failForAbort(child.pid);
+      const result = await lifecycle.settlement;
+      if (result.error || result.code !== 0 || result.signal != null || stderrBytes !== 0) {
+        fail("PRECONDITION_SIMCTL_FIND_EXIT");
+      }
+      return validatedSimctlFindOutput(stdout, stderr, dependencies);
+    }
+
+    const captured = identityOutcome.captured;
+    const completion = await Promise.race([
+      lifecycle.settlement.then((result) => Object.freeze({ state: "SETTLED", result })),
+      abort.then(() => Object.freeze({ state: "ABORTED" })),
+    ]);
+    if (completion.state === "ABORTED") {
+      await terminateVerifiedProcessGroup(
+        child,
+        lifecycle.close,
+        captured,
+        SIMCTL_FIND_TOKENS,
+        identityDependencies,
+      );
+      if (abortEvidence === "CANCELLED") fail("PRECONDITION_INTERRUPTED");
+      fail(
+        abortEvidence === "OUTPUT_LIMIT"
+          ? "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT"
+          : "PRECONDITION_SIMCTL_FIND_TIMEOUT",
+      );
     }
     if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
       throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
     }
-    directGroupAbsent(child.pid, dependencies);
-    fail("PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT");
+    try {
+      assertProcessGroupAbsent(captured.pgid, dependencies);
+    } catch {
+      throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
+    }
+    const result = completion.result;
+    if (result.error || result.code !== 0 || result.signal != null || stderrBytes !== 0) {
+      fail("PRECONDITION_SIMCTL_FIND_EXIT");
+    }
+    return validatedSimctlFindOutput(stdout, stderr, dependencies);
+  } finally {
+    clearObservers();
   }
-
-  const first = await Promise.race([
-    lifecycle.settlement.then((value) => ({ settlement: value })),
-    failure,
-  ]);
-  if (first.failure) {
-    await terminateVerifiedProcessGroup(
-      child,
-      lifecycle.close,
-      captured,
-      SIMCTL_FIND_TOKENS,
-      identityDependencies,
-    );
-  } else if (!(await awaitActualClose(lifecycle.close, CHILD_CLOSE_WAIT_MS, dependencies))) {
-    throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
-  }
-  clearTimeout(timer);
-  try {
-    assertProcessGroupAbsent(captured.pgid, dependencies);
-  } catch {
-    throw new BootstrapFailure("PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD");
-  }
-  const result = first.settlement ?? (await lifecycle.settlement);
-  if (failureCode !== null) fail(failureCode);
-  if (result.error || result.code !== 0 || result.signal != null || stderrBytes !== 0) {
-    fail("PRECONDITION_SIMCTL_FIND_EXIT");
-  }
-  return Object.freeze({
-    stdout: capturedText(stdout, "PRECONDITION_SIMCTL_FIND_UTF8"),
-    stderr: capturedText(stderr, "PRECONDITION_SIMCTL_FIND_UTF8"),
-  });
 }
 
 export async function probeProcessIdentity(

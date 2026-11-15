@@ -35,7 +35,7 @@ const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
 const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
 const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "f4e58a93d75c18f0e3b2687b79c5dad669dbcec27f794631102ecad1ccba1cf9";
+const currentTenManifestSha = "7e67205e479801733c00b6bf81cdf8c224d711f603cb4db35b6e5bb47823f670";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -184,6 +184,59 @@ const clockRootRepairBaseTree = Object.freeze({
   "scripts/summarize-ios-test-failures.test.mjs": Object.freeze({
     mode: "100644",
     blob: "37c9d1d47db696e0633bd06ccf0028dad2ff6eda",
+  }),
+});
+const simctlShortLivedBase = "afd3f53145efb311396c1f20fed82129d1dad1d7";
+const simctlShortLivedBaseTreeId = "e8f6856a71a54f74f307bc11cf051a9e8711efd0";
+const simctlShortLivedBaseSubject = "test(ci): refine iOS failure localization";
+const simctlShortLivedPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const simctlShortLivedBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "43d1074cbfdf9c390b740f0db0c5760a9af26df2",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d80d6d536a458df9cc5a8818879ab484a30cb397",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "2d36a6ae6feb3b07792bd880be0e44a43df65e89",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "776dce794bd3ddce682365ad60b5ef3c16e2290e",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "0b84abbd35ebc8e3ca28ec672ca513b288fec94b",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "dd6014b9b27df5b42331cd1f4d06cb61e2e0af71",
+  }),
+  "scripts/summarize-ios-test-failures.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d516dbe6b10629e5e5684226d5522339cd35f756",
+  }),
+  "scripts/summarize-ios-test-failures.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "f3e9097fd34a950a61aff23e566d9d061cc0d458",
   }),
 });
 const repairBaseTree = Object.freeze({
@@ -427,6 +480,11 @@ const expectedClockRootRepairTracked = (path: string) => {
     clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree] ?? topologyFailure();
   return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
 };
+const expectedSimctlShortLivedTracked = (path: string) => {
+  const base =
+    simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
 const exactType1 = (
   entry: StatusEntry,
   expected: ReturnType<typeof expectedTracked>,
@@ -657,6 +715,49 @@ const verifyClockRootRepairPostcommitObject = (oid: string): void => {
     runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", clockRootRepairBase, oid]),
   );
 };
+const assertSimctlShortLivedDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${simctlShortLivedBase}`) topologyFailure();
+};
+const assertSimctlShortLivedRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (
+    JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(simctlShortLivedPaths)
+  )
+    topologyFailure();
+  for (const path of simctlShortLivedPaths) {
+    const expected = expectedSimctlShortLivedTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifySimctlShortLivedPostcommitObject = (oid: string): void => {
+  assertSimctlShortLivedDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertSimctlShortLivedRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", simctlShortLivedBase, oid]),
+  );
+};
 const verifyCurrentPostcommitObject = (oid: string): void => {
   const commit = decodeStatus(runBoundedGit(["cat-file", "commit", oid]));
   const boundary = commit.indexOf("\n\n");
@@ -671,6 +772,8 @@ const verifyCurrentPostcommitObject = (oid: string): void => {
   else if (parents[0] === `parent ${oracleRepairBase}`) verifyOracleRepairPostcommitObject(oid);
   else if (parents[0] === `parent ${clockRootRepairBase}`)
     verifyClockRootRepairPostcommitObject(oid);
+  else if (parents[0] === `parent ${simctlShortLivedBase}`)
+    verifySimctlShortLivedPostcommitObject(oid);
   else topologyFailure();
 };
 const classifyStatusSnapshot = (
@@ -764,6 +867,25 @@ const classifyStatusSnapshot = (
     );
     const staged = entries.every((entry) =>
       exactType1(entry, expectedClockRootRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === simctlShortLivedBase) {
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (
+      JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(simctlShortLivedPaths)
+    )
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedSimctlShortLivedTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedSimctlShortLivedTracked(entry.path), "M."),
     );
     if (unstaged === staged) topologyFailure();
     return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
@@ -877,6 +999,31 @@ const clockRootRepairStatusRecords = (xy: ".M" | "M."): string[] =>
 const clockRootRepairRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
   const rows = clockRootRepairPaths.flatMap((path) => {
     const expected = expectedClockRootRepairTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const simctlShortLivedStatusRecords = (xy: ".M" | "M."): string[] =>
+  simctlShortLivedPaths.map((path) => {
+    const expected = expectedSimctlShortLivedTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const simctlShortLivedRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = simctlShortLivedPaths.flatMap((path) => {
+    const expected = expectedSimctlShortLivedTracked(path);
     return [
       `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
       path,
@@ -2054,7 +2201,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     if (live.entries.length === 0) {
       expect(livePhase).toBe("POSTCOMMIT");
     } else {
-      expect([oracleRepairBase, clockRootRepairBase]).toContain(live.oid);
+      expect([oracleRepairBase, clockRootRepairBase, simctlShortLivedBase]).toContain(live.oid);
       const liveXy = [...new Set(live.entries.map((entry) => entry.xy))];
       expect(liveXy).toHaveLength(1);
       expect(livePhase).toBe(liveXy[0] === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED");
@@ -2281,6 +2428,26 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         expected.mode,
       );
     }
+    expect(simctlShortLivedBase).toBe("afd3f53145efb311396c1f20fed82129d1dad1d7");
+    const currentCommit = git(["cat-file", "commit", simctlShortLivedBase]);
+    const [currentHeaders, ...currentMessageParts] = currentCommit.split("\n\n");
+    const currentHeaderLines = currentHeaders?.split("\n") ?? [];
+    expect(currentHeaderLines.filter((line) => line.startsWith("parent "))).toEqual([
+      `parent ${clockRootRepairBase}`,
+    ]);
+    expect(currentHeaderLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${simctlShortLivedBaseTreeId}`,
+    ]);
+    expect(currentMessageParts.join("\n\n").split("\n")[0]).toBe(simctlShortLivedBaseSubject);
+    const currentTreePaths = Object.keys(simctlShortLivedBaseTree).sort(compareUtf8);
+    expect(currentTreePaths).toEqual(Object.keys(clockRootRepairBaseTree).sort(compareUtf8));
+    for (const path of currentTreePaths) {
+      const expected = simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree];
+      expect(git(["rev-parse", `${simctlShortLivedBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", simctlShortLivedBase, "--", path]).split(/\s+/u)[0]).toBe(
+        expected.mode,
+      );
+    }
   });
 
   it("44 classifies exact nine-path dual-diagnostic repair unstaged and staged", () => {
@@ -2303,6 +2470,25 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ] as const) {
       const snapshot = parseStatusSnapshot(
         statusSnapshotBytes(clockRootRepairBase, clockRootRepairStatusRecords(xy)),
+      );
+      expect(classifyStatusSnapshot(snapshot)).toBe(expected);
+    }
+    expect(simctlShortLivedPaths).toEqual(
+      [
+        "docs/DEVELOPMENT_HANDOFF.md",
+        "packages/shared/src/ios-foundation-structure.test.ts",
+        testPath,
+        "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+        "scripts/ios-runtime-bootstrap.mjs",
+        "scripts/ios-runtime-bootstrap.test.mjs",
+      ].sort(compareUtf8),
+    );
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      const snapshot = parseStatusSnapshot(
+        statusSnapshotBytes(simctlShortLivedBase, simctlShortLivedStatusRecords(xy)),
       );
       expect(classifyStatusSnapshot(snapshot)).toBe(expected);
     }
@@ -2377,6 +2563,50 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         parseStatusSnapshot(statusSnapshotBytes(clockRootRepairBase, [exactConcurrent])),
       ),
     ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    const shortRows = simctlShortLivedStatusRecords(".M");
+    const shortMixed = [...shortRows];
+    shortMixed[0] = simctlShortLivedStatusRecords("M.")[0]!;
+    const shortExpected = expectedSimctlShortLivedTracked(simctlShortLivedPaths[0]!);
+    const shortWrongStatus = [
+      "1",
+      "A.",
+      "N...",
+      shortExpected.mode,
+      shortExpected.mode,
+      shortExpected.mode,
+      shortExpected.baseObject,
+      shortExpected.baseObject,
+      simctlShortLivedPaths[0],
+    ].join(" ");
+    const preservedPaths = [
+      ".github/workflows/ios.yml",
+      "scripts/ios-ci.sh",
+      "scripts/summarize-ios-test-failures.mjs",
+      "scripts/summarize-ios-test-failures.test.mjs",
+    ];
+    const shortInvalid = [
+      shortMixed,
+      [...shortRows, shortRows[0]!],
+      [...shortRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...shortRows, "? unexpected.txt"],
+      [shortWrongStatus, ...shortRows.slice(1)],
+      ...preservedPaths.map((path) => {
+        const base = simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree];
+        return [
+          ...shortRows,
+          ["1", ".M", "N...", base.mode, base.mode, base.mode, base.blob, base.blob, path].join(
+            " ",
+          ),
+        ];
+      }),
+    ];
+    for (const rows of shortInvalid)
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(simctlShortLivedBase, rows)),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
   });
 
   it("46 requires one direct 607 child with exact nine-path raw diff", () => {
@@ -2391,6 +2621,22 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       `tree ${"4".repeat(40)}\nparent ${clockRootRepairBase}\nparent ${oracleRepairBase}\nauthor a\n\nmessage\n`,
     ])
       expect(() => assertClockRootRepairDirectChildCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+
+    expect(() =>
+      assertSimctlShortLivedDirectChildCommit(
+        Buffer.from(
+          `tree ${"5".repeat(40)}\nparent ${simctlShortLivedBase}\nauthor a\n\nmessage\n`,
+        ),
+      ),
+    ).not.toThrow();
+    expect(() => assertSimctlShortLivedRawDiff(simctlShortLivedRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"5".repeat(40)}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`,
+      `tree ${"5".repeat(40)}\nparent ${simctlShortLivedBase}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`,
+    ])
+      expect(() => assertSimctlShortLivedDirectChildCommit(Buffer.from(commit))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
   });
@@ -2409,6 +2655,10 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ];
     for (const mutate of mutations)
       expect(() => assertClockRootRepairRawDiff(clockRootRepairRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    for (const mutate of mutations)
+      expect(() => assertSimctlShortLivedRawDiff(simctlShortLivedRawDiff(mutate))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
   });

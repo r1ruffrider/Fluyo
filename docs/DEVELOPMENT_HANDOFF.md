@@ -3312,3 +3312,52 @@ The controller remains **126,052 bytes**, SHA-256 `71b83aaf821a05093131087a9d30e
 Audit TAP topology remains **569**. Focused **579/579**, the phase-specific required ledger **459**, shared **677/677**, portable **273/273**, and full repository **2,735/2,735** targets are unchanged because the semantic cases remain inside one top-level script. Activation, readiness, and the full gates remain pending.
 
 PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the downstream pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL short-lived v1.2 functional freeze
+
+Protected execution on exact head `afd3f53145efb311396c1f20fed82129d1dad1d7` produced `receipt.json` at **1,441 bytes** with SHA-256 `64681d648f2f3ea0c4765486e3816bf523d70df4a49f2ef1b15ee20c42ef83a0`. The receipt records mode `PR94-IOS-SIMCTL-SHORT-LIVED-v1.2`, primary code `PRECONDITION_SIMCTL_FIND_INVALID_PID`, invocation count **0**, download `NOT_ATTEMPTED`, minimum `NOT_RUN`, no retention, and no fallback. This evidence diagnoses the precondition only; the repair remains unexecuted and no recovery is claimed.
+
+Catalina's architecture design gate is **52/52 PASS**, and Natalia's security and privacy design gate is **52/52 PASS**. Functional development evidence is controller **397/397 PASS**, shared structure **95/95 PASS**, activation topology subset **5/5 PASS**, and Prettier and Node syntax PASS.
+
+Current frozen source facts before this append are:
+
+- Controller: **130,684 bytes**; SHA-256 `44f809aaf5e8693464f5ac016a57fd7536286599b0430d64649a5662966ef189`; Git blob `72c6d99ad1f4eac6b7785e880919d9780dec5a8a`.
+- Controller test: **172,838 bytes**; SHA-256 `fa0794c123f8a6ad18ac19717babaae7616ef2e5c6133fda05580be5e26db87c`; Git blob `7c0c0e54bf6884abc4f1be868bf22e720e4b7727`.
+- Shared structure test: **75,468 bytes**; SHA-256 `fe15d1cc300647132c95be282c49ce1cdb8adac0cae8f5ed1233213f2650ff71`; Git blob `e1fde4451bd5bcded134f0b410f1e481a73247ae`.
+- Activation guard: **105,937 bytes**; SHA-256 `c2488558e0cc0b757a43d92bb3e4699e60373dd42c63ebd51f56de77bcd166fa`; Git blob `0b762a3e3822aa6f41715809a27e797c518b47b0`.
+
+Final activation **100/100**, readiness **8/8**, focused **600/600**, the phase-specific required ledger **480**, audit-policy unit **585/585**, shared **682/682**, and full repository **2,756/2,756** remain pending after the append's mechanical pins and final gates.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the downstream pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL short-lived v1.2 lifecycle-repair supersession
+
+This append preserves the preceding SIMCTL v1.2 record as historical evidence and supersedes its functional source facts and counts after Catalina's **18/18 PASS** count ruling. Three bounded lifecycle defects are corrected in repository/test bytes; the repair remains unexecuted in protected execution and no recovery is claimed.
+
+Functional development evidence is controller **400/400 PASS**, shared structure **95/95 PASS**, and Prettier, Node syntax, and diff integrity PASS.
+
+Current repaired source facts before this append are:
+
+- Controller: **131,609 bytes**; SHA-256 `0975fd028e63ef76e7c0ed844c9192687526279480e7271dd6c69d87fab622e1`; Git blob `dab0d1fdf323eaa1e68ed6f58efd02104d2ed2ae`.
+- Controller test: **175,245 bytes**; SHA-256 `f73eff66e1fe813ca74b20347a060d67e0c15d54d7a4c41b11342a33d0f63e6d`; Git blob `8da13b4ea6b885875c7d60a27c6ef8b82d30555c`.
+- Shared structure test: **75,936 bytes**; SHA-256 `046aac08dd96653212c5b68d71328bb2f3d3403ea87f531071f70c6204a4a2b5`; Git blob `d24e2e324a8b2a159407edff0c7b079119be92f8`.
+
+The exact final targets are activation **100/100**, readiness **8/8**, focused **603/603**, the phase-specific required ledger **483**, audit-policy unit **588/588**, portable **273/273**, shared **682/682**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,759/2,759**. Sanitizer semantic **43/43**, isolated readiness **150/150**, and static checks remain supporting requirements. Activation, readiness, the final manifest pins, and these final gates remain pending mechanical binding and execution.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL short-lived v1.2 lifecycle-race supersession
+
+This append preserves the preceding lifecycle-repair record as historical evidence. Catalina's HOLD race is corrected in repository/test bytes, but the repair remains unexecuted in protected execution and no recovery is claimed. The correction is count-stable.
+
+Functional development evidence remains controller **400/400 PASS**, shared structure **95/95 PASS**, and Prettier, Node syntax, and diff integrity PASS.
+
+Current repaired source facts before this append are:
+
+- Controller: **131,777 bytes**; SHA-256 `12425795f01ea4c723a514ebcf1664bd939dd2381ea950a685fb6e42f2cbd147`; Git blob `88202502447ebfddc0b7fc476b7821404151dd74`.
+- Controller test: **175,348 bytes**; SHA-256 `1bc53a0bd6ff0af57bb21f9a64d645f54708346d91da47e801fc4350475213bb`; Git blob `4e8e97b24a84c5a72e14a9fa439cedee759f24a7`.
+- Shared structure test: **76,446 bytes**; SHA-256 `cb950e40caf83d768052909c7f4553fb7c4732c238de4b216af8237499b38fca`; Git blob `786917046c0f41b458bfe84170a8e958da685f7e`.
+
+Final targets remain activation **100/100**, readiness **8/8**, focused **603/603**, the phase-specific required ledger **483**, audit-policy unit **588/588**, portable **273/273**, shared **682/682**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,759/2,759**. These targets and the downstream mechanical pins remain pending.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
