@@ -1544,11 +1544,106 @@ function writeCanonicalJson(path, value) {
   writeFileSync(path, bytes, { mode: 0o600, flag: "wx" });
 }
 
-function attemptRoot(env) {
-  if (!isAbsolute(env.RUNNER_TEMP ?? "") || !/^\d+$/u.test(env.GITHUB_RUN_ID ?? "")) {
+function rootOperations(dependencies = {}) {
+  return Object.freeze({
+    exists: dependencies.exists ?? existsSync,
+    lstat: dependencies.lstat ?? lstatSync,
+    mkdir: dependencies.mkdir ?? mkdirSync,
+    realpath: dependencies.realpath ?? realpathSync.native,
+    remove: dependencies.remove ?? rmSync,
+  });
+}
+
+function validateRunnerTemp(env, dependencies = {}) {
+  try {
+    const path = env.RUNNER_TEMP;
+    const safePath = dependencies.safePath ?? SAFE_CANONICAL_PATH;
+    if (
+      typeof path !== "string" ||
+      !isAbsolute(path) ||
+      !safePath.test(path) ||
+      /[\0\r\n]/u.test(path)
+    )
+      fail("PRECONDITION_ENV");
+    const fs = rootOperations(dependencies);
+    const info = fs.lstat(path, { bigint: true });
+    if (!info.isDirectory() || info.isSymbolicLink() || fs.realpath(path) !== path)
+      fail("PRECONDITION_ENV");
+    return Object.freeze({ path, dev: info.dev, ino: info.ino });
+  } catch {
     fail("PRECONDITION_ENV");
   }
-  return join(env.RUNNER_TEMP, "fluyo-ios-runtime-bootstrap", `${env.GITHUB_RUN_ID}-1`);
+}
+
+function validateRunnerTempBinding(binding, failureCode, dependencies = {}) {
+  try {
+    const fs = rootOperations(dependencies);
+    const info = fs.lstat(binding.path, { bigint: true });
+    if (
+      !info.isDirectory() ||
+      info.isSymbolicLink() ||
+      fs.realpath(binding.path) !== binding.path ||
+      info.dev !== binding.dev ||
+      info.ino !== binding.ino
+    )
+      fail(failureCode);
+    return binding;
+  } catch {
+    fail(failureCode);
+  }
+}
+
+function validateOwnedRootBinding(binding, failureCode, dependencies = {}) {
+  try {
+    if (!binding || typeof binding !== "object" || !Object.isFrozen(binding)) fail(failureCode);
+    const fs = rootOperations(dependencies);
+    const parent = dirname(binding.path);
+    const parentInfo = fs.lstat(parent, { bigint: true });
+    const info = fs.lstat(binding.path, { bigint: true });
+    if (
+      !parentInfo.isDirectory() ||
+      parentInfo.isSymbolicLink() ||
+      fs.realpath(parent) !== parent ||
+      parentInfo.dev !== binding.parentDev ||
+      !info.isDirectory() ||
+      info.isSymbolicLink() ||
+      fs.realpath(binding.path) !== binding.path ||
+      info.dev !== binding.dev ||
+      info.ino !== binding.ino ||
+      info.dev !== binding.parentDev
+    )
+      fail(failureCode);
+    return binding;
+  } catch {
+    fail(failureCode);
+  }
+}
+
+function createOwnedRoot(parentBinding, name, maximumBytes, dependencies = {}) {
+  const fs = rootOperations(dependencies);
+  const path = join(parentBinding.path, name);
+  validateRunnerTempBinding(parentBinding, "PRECONDITION_ENV", dependencies);
+  try {
+    if (fs.exists(path)) fail("PRECONDITION_ENV");
+    fs.mkdir(path, { recursive: false, mode: 0o700 });
+    const info = fs.lstat(path, { bigint: true });
+    if (
+      !info.isDirectory() ||
+      info.isSymbolicLink() ||
+      fs.realpath(path) !== path ||
+      info.dev !== parentBinding.dev
+    )
+      fail("PRECONDITION_ENV");
+    return Object.freeze({
+      path,
+      dev: info.dev,
+      ino: info.ino,
+      parentDev: parentBinding.dev,
+      maximumBytes,
+    });
+  } catch {
+    fail("PRECONDITION_ENV");
+  }
 }
 
 function baseReceipt(env, sourceCommit) {
@@ -1625,21 +1720,36 @@ function elapsedMs(started) {
   return Math.max(0, Math.floor(performance.now() - started));
 }
 
+function monotonicNow(dependencies = {}, failureCode = "PRECONDITION_ENV") {
+  try {
+    const injected = dependencies.now;
+    if (injected !== undefined && typeof injected !== "function") fail(failureCode);
+    const value = injected === undefined ? performance.now() : injected();
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) fail(failureCode);
+    return value;
+  } catch {
+    fail(failureCode);
+  }
+}
+
 function ensurePhaseBudget(started, phaseMs, failureCode) {
   if (elapsedMs(started) + phaseMs + CLEANUP_FINAL_RESERVE_MS > TOTAL_TRANSACTION_TIMEOUT_MS) {
     fail(failureCode);
   }
 }
 
-export function scanOwnedRoot(root, maximumBytes, dependencies = {}) {
-  const started = (dependencies.now ?? performance.now)();
+export function scanOwnedRoot(binding, maximumBytes, dependencies = {}) {
+  const failureCode = dependencies.failureCode ?? "MINIMUM_EVIDENCE_MONITOR";
+  validateOwnedRootBinding(binding, failureCode, dependencies);
+  const root = binding.path;
+  const started = monotonicNow(dependencies, "MINIMUM_EVIDENCE_MONITOR");
   const readDirectory = dependencies.readdir ?? readdirSync;
   const lstat = dependencies.lstat ?? lstatSync;
   let entries = 0;
   let bytes = 0n;
   const pending = [root];
   while (pending.length > 0) {
-    if ((dependencies.now ?? performance.now)() - started > MAX_SCAN_DURATION_MS) {
+    if (monotonicNow(dependencies, "MINIMUM_EVIDENCE_MONITOR") - started > MAX_SCAN_DURATION_MS) {
       fail("MINIMUM_EVIDENCE_MONITOR");
     }
     const current = pending.pop();
@@ -2186,6 +2296,18 @@ export async function runGatedPhase(
       : role === "MINIMUM"
         ? "MINIMUM_EVIDENCE_INTERRUPTED"
         : "ACQUIRE_INTERRUPTED";
+  const monitorFailure =
+    role === "MINIMUM"
+      ? "MINIMUM_EVIDENCE_MONITOR"
+      : role === "CLEANUP"
+        ? "CLEANUP_STORAGE_IDENTITY"
+        : "ACQUIRE_DISK_MONITOR";
+  const rootIdentityFailure =
+    role === "MINIMUM"
+      ? "MINIMUM_EVIDENCE_MONITOR"
+      : role === "CLEANUP"
+        ? "CLEANUP_STORAGE_IDENTITY"
+        : "ACQUIRE_STORAGE_IDENTITY";
   const mapOperationalFailure = (error) => {
     const code = error instanceof BootstrapFailure ? error.code : null;
     if (role === "CLEANUP") {
@@ -2206,6 +2328,8 @@ export async function runGatedPhase(
   const wrapperIdentityTokens = [`${CHILD_TITLE_PREFIX}${role.toLowerCase()}`];
   if (role === "CLEANUP") wrapperArgs.push(cleanupRuntime);
   verifyControllerSource(controllerSource);
+  for (const owned of ownedRoots)
+    validateOwnedRootBinding(owned.binding, rootIdentityFailure, dependencies.rootFs);
   plainClosedEnvironment(
     internalEnvironment,
     INTERNAL_ENV_KEYS.filter((key) => key !== "FLUYO_INTERNAL_RELEASE_SHA256"),
@@ -2320,7 +2444,7 @@ export async function runGatedPhase(
     }
     operationalFailure = exitFailure;
   }
-  const monitorStartedAt = (dependencies.now ?? performance.now)();
+  const monitorStartedAt = monotonicNow(dependencies, monitorFailure);
   try {
     sampleHeldFilesystem(binding, freeBefore, observations, dependencies.fs, onRoleSample);
   } catch (error) {
@@ -2376,21 +2500,19 @@ export async function runGatedPhase(
   const interval = setInterval(() => {
     try {
       if (isCancelled()) fail(interruptedFailure);
-      const now = (dependencies.now ?? performance.now)();
+      const now = monotonicNow(dependencies, monitorFailure);
       if (now - lastTick > DISK_MONITOR_MAX_GAP_MS || ++ticks > DISK_MONITOR_MAX_TICKS)
-        fail(
-          role === "MINIMUM"
-            ? "MINIMUM_EVIDENCE_MONITOR"
-            : role === "CLEANUP"
-              ? "CLEANUP_STORAGE_IDENTITY"
-              : "ACQUIRE_DISK_MONITOR",
-        );
+        fail(monitorFailure);
       lastTick = now;
       sampleHeldFilesystem(binding, freeBefore, observations, dependencies.fs, onRoleSample);
       let combined = 0n;
       for (const owned of ownedRoots) {
-        if (!existsSync(owned.root)) continue;
-        combined += scanOwnedRoot(owned.root, owned.maximumBytes, dependencies.scan).bytes;
+        validateOwnedRootBinding(owned.binding, rootIdentityFailure, dependencies.rootFs);
+        combined += scanOwnedRoot(owned.binding, owned.maximumBytes, {
+          ...dependencies.scan,
+          failureCode: rootIdentityFailure,
+          ...dependencies.rootFs,
+        }).bytes;
       }
       if (combined > BigInt(MAX_COMBINED_OWNED_ROOT_BYTES)) fail("MINIMUM_EVIDENCE_ROOT_LIMIT");
     } catch (error) {
@@ -2437,14 +2559,12 @@ function transactionReceipt(receipt, values) {
   });
 }
 
-function removeOwnedRoot(path) {
-  if (!existsSync(path)) return;
-  const info = lstatSync(path);
-  if (!info.isDirectory() || info.isSymbolicLink()) {
-    throw new BootstrapFailure("CLEANUP_RAW_RESIDUE");
-  }
-  rmSync(path, { recursive: true, force: false });
-  if (existsSync(path)) throw new BootstrapFailure("CLEANUP_RAW_RESIDUE");
+function removeOwnedRoot(binding, dependencies = {}) {
+  if (!binding) return;
+  const fs = rootOperations(dependencies);
+  validateOwnedRootBinding(binding, "CLEANUP_RAW_RESIDUE", dependencies);
+  fs.remove(binding.path, { recursive: true, force: false });
+  if (fs.exists(binding.path)) throw new BootstrapFailure("CLEANUP_RAW_RESIDUE");
 }
 
 export function releaseTransactionOwnership(
@@ -2462,7 +2582,6 @@ export function releaseTransactionOwnership(
 }
 
 export async function runTransaction(repositoryRoot, env = process.env, dependencies = {}) {
-  const started = (dependencies.now ?? performance.now)();
   const signalTarget = dependencies.signalTarget ?? process;
   const cancellation = { requested: false, phase: "PRECONDITION" };
   let transactionPhase = "PRECONDITION";
@@ -2489,7 +2608,13 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       ? env.FLUYO_SOURCE_SHA
       : "0".repeat(40);
     let receipt = baseReceipt(env, source);
+    let started = null;
     let binding;
+    let runnerTempBinding;
+    let bootstrapRootBinding;
+    let minimumRootBinding;
+    let bootstrapRoot = null;
+    let minimumRoot = null;
     let internalEnvironment;
     let primaryFailureCode = "NONE";
     let cleanupFailureCode = "NONE";
@@ -2513,14 +2638,10 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       if (!cleanupSampleRecorded) cleanupSampleRecorded = true;
     };
     const observations = { minimumFree: null, maximumDelta: 0n, samples: 0 };
-    const bootstrapRoot = attemptRoot(env);
-    const minimumRoot = join(
-      env.RUNNER_TEMP ?? "",
-      `fluyo-ios-minimum-${env.GITHUB_RUN_ID ?? "0"}-1`,
-    );
     const capture = { bytes: 0 };
     let childEnv;
     try {
+      started = monotonicNow(dependencies, "PRECONDITION_ENV");
       checkCancellation();
       assertCatalogTuple();
       preconditionStage = "RUNNER";
@@ -2554,10 +2675,31 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       });
       verifyControllerSource(controllerSource);
       preconditionStage = "ROOTS";
+      if (!/^\d{1,20}$/u.test(env.GITHUB_RUN_ID ?? "") || env.GITHUB_RUN_ATTEMPT !== "1")
+        fail("PRECONDITION_ENV");
+      runnerTempBinding = validateRunnerTemp(env, dependencies.rootFs);
+      const legacyRoot = join(runnerTempBinding.path, "fluyo-ios-runtime-bootstrap");
+      bootstrapRoot = join(
+        runnerTempBinding.path,
+        `fluyo-ios-runtime-bootstrap-${env.GITHUB_RUN_ID}-1`,
+      );
+      minimumRoot = join(runnerTempBinding.path, `fluyo-ios-minimum-${env.GITHUB_RUN_ID}-1`);
+      const rootFs = rootOperations(dependencies.rootFs);
+      if (rootFs.exists(legacyRoot) || rootFs.exists(bootstrapRoot) || rootFs.exists(minimumRoot))
+        fail("PRECONDITION_ENV");
+      bootstrapRootBinding = createOwnedRoot(
+        runnerTempBinding,
+        `fluyo-ios-runtime-bootstrap-${env.GITHUB_RUN_ID}-1`,
+        MAX_ATTEMPT_ROOT_BYTES,
+        dependencies.rootFs,
+      );
+      minimumRootBinding = createOwnedRoot(
+        runnerTempBinding,
+        `fluyo-ios-minimum-${env.GITHUB_RUN_ID}-1`,
+        MAX_MINIMUM_WORK_ROOT_BYTES,
+        dependencies.rootFs,
+      );
       childEnv = closedChildEnvironment(env, bootstrapRoot);
-      if (existsSync(bootstrapRoot) || existsSync(minimumRoot)) fail("PRECONDITION_ENV");
-      mkdirSync(bootstrapRoot, { recursive: false, mode: 0o700 });
-      mkdirSync(minimumRoot, { recursive: false, mode: 0o700 });
       const runTool = dependencies.runTool ?? runCaptured;
       checkCancellation();
       preconditionStage = "XCODE";
@@ -2665,7 +2807,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
           binding,
           freeBefore,
           observations,
-          ownedRoots: [{ root: bootstrapRoot, maximumBytes: MAX_ATTEMPT_ROOT_BYTES }],
+          ownedRoots: [{ binding: bootstrapRootBinding, maximumBytes: MAX_ATTEMPT_ROOT_BYTES }],
           capture,
           onRoleSample: (value) => {
             freeAfterAcquire = value;
@@ -2759,8 +2901,8 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
           freeBefore,
           observations,
           ownedRoots: [
-            { root: bootstrapRoot, maximumBytes: MAX_ATTEMPT_ROOT_BYTES },
-            { root: minimumRoot, maximumBytes: MAX_MINIMUM_WORK_ROOT_BYTES },
+            { binding: bootstrapRootBinding, maximumBytes: MAX_ATTEMPT_ROOT_BYTES },
+            { binding: minimumRootBinding, maximumBytes: MAX_MINIMUM_WORK_ROOT_BYTES },
           ],
           capture,
           onRoleSample: (value) => {
@@ -2878,8 +3020,8 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
               freeBefore,
               observations,
               ownedRoots: [
-                { root: bootstrapRoot, maximumBytes: MAX_ATTEMPT_ROOT_BYTES },
-                { root: minimumRoot, maximumBytes: MAX_MINIMUM_WORK_ROOT_BYTES },
+                { binding: bootstrapRootBinding, maximumBytes: MAX_ATTEMPT_ROOT_BYTES },
+                { binding: minimumRootBinding, maximumBytes: MAX_MINIMUM_WORK_ROOT_BYTES },
               ],
               capture,
               onRoleSample: recordCleanupSample,
@@ -2934,8 +3076,10 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
             dependencies.fs,
             recordCleanupSample,
           );
-        removeOwnedRoot(bootstrapRoot);
-        removeOwnedRoot(minimumRoot);
+        removeOwnedRoot(minimumRootBinding, dependencies.rootFs);
+        minimumRootBinding = null;
+        removeOwnedRoot(bootstrapRootBinding, dependencies.rootFs);
+        bootstrapRootBinding = null;
       } catch (error) {
         if (
           error instanceof BootstrapFailure &&
@@ -2952,8 +3096,16 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       }
     } else {
       try {
-        removeOwnedRoot(bootstrapRoot);
-        removeOwnedRoot(minimumRoot);
+        removeOwnedRoot(minimumRootBinding, dependencies.rootFs);
+        minimumRootBinding = null;
+        removeOwnedRoot(bootstrapRootBinding, dependencies.rootFs);
+        bootstrapRootBinding = null;
+        const rootFs = rootOperations(dependencies.rootFs);
+        if (
+          (minimumRoot && rootFs.exists(minimumRoot)) ||
+          (bootstrapRoot && rootFs.exists(bootstrapRoot))
+        )
+          throw new BootstrapFailure("CLEANUP_RAW_RESIDUE");
       } catch {
         cleanupResult = "FAILED";
         cleanupFailureCode = "CLEANUP_RAW_RESIDUE";
@@ -2985,7 +3137,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       downloadResult,
       minimumEvidenceResult,
       cleanupResult,
-      durationMs: elapsedMs(started),
+      durationMs: started == null ? 0 : elapsedMs(started),
       freeBytesBefore: freeBefore == null ? null : bigintToSafeNumber(freeBefore),
       freeBytesAfterAcquire: freeAfterAcquire == null ? null : bigintToSafeNumber(freeAfterAcquire),
       freeBytesAfterMinimumEvidence:
@@ -3002,7 +3154,9 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       runtimeIdentifier: runtime?.identifier ?? null,
       runtimeVersion: runtime?.version ?? null,
       runtimeBuild: runtime?.build ?? null,
-      rawLogRetained: existsSync(bootstrapRoot) || existsSync(minimumRoot),
+      rawLogRetained:
+        (bootstrapRoot != null && rootOperations(dependencies.rootFs).exists(bootstrapRoot)) ||
+        (minimumRoot != null && rootOperations(dependencies.rootFs).exists(minimumRoot)),
       runtimeRetained:
         invocationCount === 1 &&
         (postCleanupExactRuntimeCount === null || postCleanupExactRuntimeCount > 0),
@@ -3074,6 +3228,12 @@ export const testing = Object.freeze({
   runPsVerifier,
   sanitizePrimaryFailure,
   sanitizeCleanupFailure,
+  monotonicNow,
+  validateRunnerTemp,
+  validateRunnerTempBinding,
+  createOwnedRoot,
+  validateOwnedRootBinding,
+  removeOwnedRoot,
   validateReceiptPhaseEvidence,
 });
 

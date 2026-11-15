@@ -35,7 +35,7 @@ const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
 const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
 const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "8536cceb435bb5dcafb9e62727fc36d1b4f29bc850bcf2266e0ff381127db73b";
+const currentTenManifestSha = "1b4a26e855b396462ff98ea6314fdfd0f37ce03719b8b50e8950f009253635fb";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -128,6 +128,44 @@ const oracleRepairBaseTree = Object.freeze({
   "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
     mode: "100644",
     blob: "a13d394954304f7fb06e9cc6d19c7a17f04380d0",
+  }),
+});
+const clockRootRepairBase = "a1e43d4f0494a23019f4712d3bb292bd9af83296";
+const clockRootRepairBaseTreeId = "0fed24af5507eca32477280aa9775ee3dc21c065";
+const clockRootRepairBaseSubject = "test(ci): make iOS bootstrap fixtures portable";
+const clockRootRepairPaths = repairPaths;
+const clockRootRepairBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "cbd96fccbe0b717274cfc189a0322672d9a49a65",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d3adcee7a2697ef731880b9bd4406d1ed7cbafa6",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "9f2001104594ac0a4445698e77b7414db83b7b51",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "c0afad491a8fd4e090e4237fe65b1151b4349905",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "dbc2dd366cf9a9716fce0680616d9c0824d10e73",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "2b5db4e05d4d1d95dd50ab218b589c45b9ef4c31",
   }),
 });
 const repairBaseTree = Object.freeze({
@@ -366,6 +404,11 @@ const expectedOracleRepairTracked = (path: string) => {
   const base = oracleRepairBaseTree[path as keyof typeof oracleRepairBaseTree] ?? topologyFailure();
   return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
 };
+const expectedClockRootRepairTracked = (path: string) => {
+  const base =
+    clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
 const exactType1 = (
   entry: StatusEntry,
   expected: ReturnType<typeof expectedTracked>,
@@ -553,6 +596,49 @@ const verifyOracleRepairPostcommitObject = (oid: string): void => {
     runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", oracleRepairBase, oid]),
   );
 };
+const assertClockRootRepairDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${clockRootRepairBase}`) topologyFailure();
+};
+const assertClockRootRepairRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (
+    JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(clockRootRepairPaths)
+  )
+    topologyFailure();
+  for (const path of clockRootRepairPaths) {
+    const expected = expectedClockRootRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyClockRootRepairPostcommitObject = (oid: string): void => {
+  assertClockRootRepairDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertClockRootRepairRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", clockRootRepairBase, oid]),
+  );
+};
 const verifyCurrentPostcommitObject = (oid: string): void => {
   const commit = decodeStatus(runBoundedGit(["cat-file", "commit", oid]));
   const boundary = commit.indexOf("\n\n");
@@ -565,6 +651,8 @@ const verifyCurrentPostcommitObject = (oid: string): void => {
   if (parents[0] === `parent ${repairBase}`) verifyRepairPostcommitObject(oid);
   else if (parents[0] === `parent ${recordsBase}`) verifyRecordsPostcommitObject(oid);
   else if (parents[0] === `parent ${oracleRepairBase}`) verifyOracleRepairPostcommitObject(oid);
+  else if (parents[0] === `parent ${clockRootRepairBase}`)
+    verifyClockRootRepairPostcommitObject(oid);
   else topologyFailure();
 };
 const classifyStatusSnapshot = (
@@ -641,6 +729,23 @@ const classifyStatusSnapshot = (
     );
     const staged = entries.every((entry) =>
       exactType1(entry, expectedOracleRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === clockRootRepairBase) {
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(clockRootRepairPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedClockRootRepairTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedClockRootRepairTracked(entry.path), "M."),
     );
     if (unstaged === staged) topologyFailure();
     return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
@@ -729,6 +834,31 @@ const oracleRepairStatusRecords = (xy: ".M" | "M."): string[] =>
 const oracleRepairRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
   const rows = oracleRepairPaths.flatMap((path) => {
     const expected = expectedOracleRepairTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const clockRootRepairStatusRecords = (xy: ".M" | "M."): string[] =>
+  clockRootRepairPaths.map((path) => {
+    const expected = expectedClockRootRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const clockRootRepairRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = clockRootRepairPaths.flatMap((path) => {
+    const expected = expectedClockRootRepairTracked(path);
     return [
       `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
       path,
@@ -1906,7 +2036,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     if (live.entries.length === 0) {
       expect(livePhase).toBe("POSTCOMMIT");
     } else {
-      expect(live.oid).toBe(oracleRepairBase);
+      expect([oracleRepairBase, clockRootRepairBase]).toContain(live.oid);
       const liveXy = [...new Set(live.entries.map((entry) => entry.xy))];
       expect(liveXy).toHaveLength(1);
       expect(livePhase).toBe(liveXy[0] === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED");
@@ -2106,6 +2236,146 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ];
     for (const mutate of mutations)
       expect(() => assertOracleRepairRawDiff(oracleRepairRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("43 binds immutable a1 clock-root-repair base and exact-eight tree", () => {
+    expect(clockRootRepairBase).toBe("a1e43d4f0494a23019f4712d3bb292bd9af83296");
+    const commit = git(["cat-file", "commit", clockRootRepairBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      `parent ${oracleRepairBase}`,
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${clockRootRepairBaseTreeId}`,
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(clockRootRepairBaseSubject);
+    expect(Object.keys(clockRootRepairBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+    for (const path of phasePaths) {
+      const expected = clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree];
+      expect(git(["rev-parse", `${clockRootRepairBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", clockRootRepairBase, "--", path]).split(/\s+/u)[0]).toBe(
+        expected.mode,
+      );
+    }
+  });
+
+  it("44 classifies exact six-path clock-root repair unstaged and staged", () => {
+    expect(clockRootRepairPaths).toEqual(repairPaths);
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      const snapshot = parseStatusSnapshot(
+        statusSnapshotBytes(clockRootRepairBase, clockRootRepairStatusRecords(xy)),
+      );
+      expect(classifyStatusSnapshot(snapshot)).toBe(expected);
+    }
+  });
+
+  it("45 rejects mixed, status, identity, extra, production, or auth-temp drift", () => {
+    const mixed = clockRootRepairStatusRecords(".M");
+    mixed[0] = clockRootRepairStatusRecords("M.")[0]!;
+    const baseRows = clockRootRepairStatusRecords(".M");
+    const expected = expectedClockRootRepairTracked(clockRootRepairPaths[0]!);
+    const wrongStatuses = ["A.", "C.", "D.", "R.", "T.", "U."] as const;
+    const statusMutations = wrongStatuses.map((xy) => [
+      [
+        "1",
+        xy,
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.baseObject,
+        expected.baseObject,
+        clockRootRepairPaths[0],
+      ].join(" "),
+      ...baseRows.slice(1),
+    ]);
+    const productionRows = [".github/workflows/ios.yml", "scripts/ios-ci.sh"].map((path) => {
+      const production = clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree];
+      return [
+        ...baseRows,
+        [
+          "1",
+          ".M",
+          "N...",
+          production.mode,
+          production.mode,
+          production.mode,
+          production.blob,
+          production.blob,
+          path,
+        ].join(" "),
+      ];
+    });
+    const exactConcurrent = "? .tmp-auth-readiness-approval-Ab12z9/";
+    for (const xy of [".M", "M."] as const) {
+      expect(
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(clockRootRepairBase, [
+              ...clockRootRepairStatusRecords(xy),
+              exactConcurrent,
+            ]),
+          ),
+        ),
+      ).toBe(xy === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED");
+    }
+    const invalidRows = [
+      mixed,
+      [...baseRows, baseRows[0]!],
+      [...baseRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...baseRows, "? .tmp-auth-readiness-approval-Ab12z9.bak/"],
+      [...baseRows, "? nested/.tmp-auth-readiness-approval-Ab12z9/"],
+      [...baseRows, "? unexpected.txt"],
+      ...productionRows,
+      ...statusMutations,
+    ];
+    for (const rows of invalidRows)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(clockRootRepairBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    expect(() =>
+      classifyStatusSnapshot(
+        parseStatusSnapshot(statusSnapshotBytes(clockRootRepairBase, [exactConcurrent])),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("46 requires one direct a1 child with exact six-path raw diff", () => {
+    expect(() =>
+      assertClockRootRepairDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() => assertClockRootRepairRawDiff(clockRootRepairRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"4".repeat(40)}\nparent ${oracleRepairBase}\nauthor a\n\nmessage\n`,
+      `tree ${"4".repeat(40)}\nparent ${clockRootRepairBase}\nparent ${oracleRepairBase}\nauthor a\n\nmessage\n`,
+    ])
+      expect(() => assertClockRootRepairDirectChildCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("47 rejects clock-root-repair mode, base blob, candidate blob, path, or row drift", () => {
+    const mutations = [
+      (rows: string[]) => [rows[0]!.replace(/^:100644/u, ":100755"), ...rows.slice(1)],
+      (rows: string[]) => [rows[0]!.replace(/[0-9a-f]{40}/u, "0".repeat(40)), ...rows.slice(1)],
+      (rows: string[]) => {
+        const parts = rows[0]!.split(" ");
+        parts[3] = "1".repeat(40);
+        return [parts.join(" "), ...rows.slice(1)];
+      },
+      (rows: string[]) => [rows[0]!, "unexpected.txt", ...rows.slice(2)],
+      (rows: string[]) => [rows[0]!.replace(/ M$/u, " A"), ...rows.slice(1)],
+    ];
+    for (const mutate of mutations)
+      expect(() => assertClockRootRepairRawDiff(clockRootRepairRawDiff(mutate))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
   });

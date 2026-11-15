@@ -100,7 +100,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "64acf8d9b930b7d8a4780c1e766937819668b98e2a01b7e6dbbe497d937871e2",
+  "91485c4ba0830da497e4d9992dd5afd4764dabab9b00085dc51221ac12969139",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -183,13 +183,9 @@ async function withRunTransactionWindowsOracle(action) {
       mkdirSync(directory, { recursive: true, mode: ORACLE_DIRECTORY_MODE });
     }
     const bootstrapParent = resolve(runnerTemp, "fluyo-ios-runtime-bootstrap");
-    mkdirSync(bootstrapParent, { recursive: false, mode: ORACLE_DIRECTORY_MODE });
-    const bootstrapParentInfo = lstatSync(bootstrapParent, { bigint: true });
-    assert.equal(bootstrapParentInfo.isDirectory(), true);
-    assert.equal(bootstrapParentInfo.isSymbolicLink(), false);
-    assert.equal(realpathSync.native(bootstrapParent), bootstrapParent);
-    const bootstrapLeaf = resolve(bootstrapParent, "9401-1");
+    const bootstrapLeaf = resolve(runnerTemp, "fluyo-ios-runtime-bootstrap-9401-1");
     const minimumLeaf = resolve(runnerTemp, "fluyo-ios-minimum-9401-1");
+    assert.equal(existsSync(bootstrapParent), false);
     assert.equal(existsSync(bootstrapLeaf), false);
     assert.equal(existsSync(minimumLeaf), false);
 
@@ -281,14 +277,11 @@ async function withRunTransactionWindowsOracle(action) {
         controller,
         bootstrapLeaf,
         bootstrapParent,
-        bootstrapParentIdentity: Object.freeze({
-          dev: bootstrapParentInfo.dev,
-          ino: bootstrapParentInfo.ino,
-        }),
         developerDirectory,
         environment,
         fixtureControllerPath,
         fixtureRoot,
+        minimumLeaf,
         receiptPath: oracleReceiptPath,
         repositoryRoot,
         runnerTemp,
@@ -296,12 +289,7 @@ async function withRunTransactionWindowsOracle(action) {
         storageRoot,
       }),
     );
-    const finalBootstrapParentInfo = lstatSync(bootstrapParent, { bigint: true });
-    assert.equal(finalBootstrapParentInfo.isDirectory(), true);
-    assert.equal(finalBootstrapParentInfo.isSymbolicLink(), false);
-    assert.equal(realpathSync.native(bootstrapParent), bootstrapParent);
-    assert.equal(finalBootstrapParentInfo.dev, bootstrapParentInfo.dev);
-    assert.equal(finalBootstrapParentInfo.ino, bootstrapParentInfo.ino);
+    assert.equal(existsSync(bootstrapParent), false);
     assert.equal(existsSync(bootstrapLeaf), false);
     assert.equal(existsSync(minimumLeaf), false);
     if (existsSync(oracleReceiptPath)) {
@@ -4089,3 +4077,428 @@ const v115Cases = [
   ],
 ];
 for (const [name, action] of v115Cases) test(`v1.1.15: ${name}`, action);
+
+const v117Cases = [
+  [
+    "default monotonic clock preserves the native receiver",
+    () => assert.equal(Number.isFinite(testing.monotonicNow()), true),
+  ],
+  [
+    "injected monotonic clock returns the exact value once",
+    () => {
+      let calls = 0;
+      assert.equal(testing.monotonicNow({ now: () => (++calls, 42.5) }), 42.5);
+      assert.equal(calls, 1);
+    },
+  ],
+  [
+    "monotonic clock rejects a nonfunction injection with the fixed code",
+    () =>
+      throwsCode(
+        () => testing.monotonicNow({ now: 1 }, "ACQUIRE_DISK_MONITOR"),
+        "ACQUIRE_DISK_MONITOR",
+      ),
+  ],
+  [
+    "monotonic clock discards a private thrown cause",
+    () => {
+      let error;
+      try {
+        testing.monotonicNow(
+          {
+            get now() {
+              throw new Error("private-clock-detail");
+            },
+          },
+          "PRECONDITION_ENV",
+        );
+      } catch (caught) {
+        error = caught;
+      }
+      assert.equal(error?.code, "PRECONDITION_ENV");
+      assert.equal(String(error).includes("private-clock-detail"), false);
+    },
+  ],
+  [
+    "monotonic clock rejects every nonfinite or negative result",
+    () => {
+      for (const value of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1])
+        throwsCode(() => testing.monotonicNow({ now: () => value }), "PRECONDITION_ENV");
+    },
+  ],
+  [
+    "five repaired clock sites use only closed failure codes",
+    () => {
+      assert.equal((controllerSource.match(/monotonicNow\(/gu) ?? []).length, 6);
+      assert.equal(controllerSource.includes("(dependencies.now ?? performance.now)()"), false);
+      assert.equal(
+        (controllerSource.match(/monotonicNow\(dependencies, "MINIMUM_EVIDENCE_MONITOR"\)/gu) ?? [])
+          .length,
+        2,
+      );
+      assert.match(
+        controllerSource,
+        /const monitorStartedAt = monotonicNow\(dependencies, monitorFailure\)/u,
+      );
+      assert.match(controllerSource, /const now = monotonicNow\(dependencies, monitorFailure\)/u);
+      assert.match(controllerSource, /started = monotonicNow\(dependencies, "PRECONDITION_ENV"\)/u);
+    },
+  ],
+  [
+    "canonical runner temp captures an immutable bigint identity",
+    () => {
+      const created = mkdtempSync(resolve(tmpdir(), "fluyo-runner-temp-"));
+      const canonical = realpathSync.native(created);
+      try {
+        const binding = testing.validateRunnerTemp(
+          { RUNNER_TEMP: canonical },
+          { safePath: /^.+$/u },
+        );
+        assert.equal(binding.path, canonical);
+        assert.equal(typeof binding.dev, "bigint");
+        assert.equal(typeof binding.ino, "bigint");
+        assert.equal(Object.isFrozen(binding), true);
+      } finally {
+        rmSync(canonical, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "runner temp rejects relative control noncanonical link and nondirectory forms",
+    () => {
+      for (const value of ["relative", "C:\\private\0root", "C:\\private\nroot"])
+        throwsCode(() => testing.validateRunnerTemp({ RUNNER_TEMP: value }), "PRECONDITION_ENV");
+      const path = sep === "\\" ? "C:\\Temp\\fluyo" : "/tmp/fluyo";
+      const directory = (overrides = {}) => ({
+        dev: 1n,
+        ino: 2n,
+        isDirectory: () => true,
+        isSymbolicLink: () => false,
+        ...overrides,
+      });
+      throwsCode(
+        () =>
+          testing.validateRunnerTemp(
+            { RUNNER_TEMP: path },
+            { lstat: () => directory(), realpath: () => `${path}-alias` },
+          ),
+        "PRECONDITION_ENV",
+      );
+      throwsCode(
+        () =>
+          testing.validateRunnerTemp(
+            { RUNNER_TEMP: path },
+            { lstat: () => directory({ isSymbolicLink: () => true }), realpath: () => path },
+          ),
+        "PRECONDITION_ENV",
+      );
+      throwsCode(
+        () =>
+          testing.validateRunnerTemp(
+            { RUNNER_TEMP: path },
+            { lstat: () => directory({ isDirectory: () => false }), realpath: () => path },
+          ),
+        "PRECONDITION_ENV",
+      );
+    },
+  ],
+  [
+    "owned roots are exact direct siblings and never create the legacy parent",
+    () => {
+      const runnerTemp = realpathSync.native(mkdtempSync(resolve(tmpdir(), "fluyo-owned-roots-")));
+      try {
+        const parent = testing.validateRunnerTemp(
+          { RUNNER_TEMP: runnerTemp },
+          { safePath: /^.+$/u },
+        );
+        const bootstrap = testing.createOwnedRoot(parent, "fluyo-ios-runtime-bootstrap-9401-1", 1);
+        const minimum = testing.createOwnedRoot(parent, "fluyo-ios-minimum-9401-1", 1);
+        assert.equal(bootstrap.path, resolve(runnerTemp, "fluyo-ios-runtime-bootstrap-9401-1"));
+        assert.equal(minimum.path, resolve(runnerTemp, "fluyo-ios-minimum-9401-1"));
+        assert.equal(existsSync(resolve(runnerTemp, "fluyo-ios-runtime-bootstrap")), false);
+        testing.removeOwnedRoot(minimum);
+        testing.removeOwnedRoot(bootstrap);
+      } finally {
+        rmSync(runnerTemp, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "preexisting owned leaf is rejected without mutation",
+    () => {
+      const runnerTemp = realpathSync.native(
+        mkdtempSync(resolve(tmpdir(), "fluyo-preexisting-root-")),
+      );
+      const leaf = resolve(runnerTemp, "fluyo-ios-runtime-bootstrap-9401-1");
+      mkdirSync(leaf, { recursive: false, mode: 0o700 });
+      try {
+        const parent = testing.validateRunnerTemp(
+          { RUNNER_TEMP: runnerTemp },
+          { safePath: /^.+$/u },
+        );
+        const before = lstatSync(leaf, { bigint: true });
+        throwsCode(
+          () => testing.createOwnedRoot(parent, "fluyo-ios-runtime-bootstrap-9401-1", 1),
+          "PRECONDITION_ENV",
+        );
+        const after = lstatSync(leaf, { bigint: true });
+        assert.equal(after.dev, before.dev);
+        assert.equal(after.ino, before.ino);
+      } finally {
+        rmSync(runnerTemp, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "created owned leaf is mode 0700 nonsymlink and same-device",
+    () => {
+      const runnerTemp = realpathSync.native(mkdtempSync(resolve(tmpdir(), "fluyo-created-root-")));
+      try {
+        const parent = testing.validateRunnerTemp(
+          { RUNNER_TEMP: runnerTemp },
+          { safePath: /^.+$/u },
+        );
+        let mkdirOptions;
+        const binding = testing.createOwnedRoot(parent, "fluyo-ios-runtime-bootstrap-9401-1", 1, {
+          mkdir: (path, options) => {
+            mkdirOptions = options;
+            mkdirSync(path, options);
+          },
+        });
+        const info = lstatSync(binding.path, { bigint: true });
+        assert.deepEqual(mkdirOptions, { recursive: false, mode: 0o700 });
+        assert.equal(info.isSymbolicLink(), false);
+        assert.equal(info.dev, parent.dev);
+        testing.removeOwnedRoot(binding);
+      } finally {
+        rmSync(runnerTemp, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "created owned leaf rejects an injected different device",
+    () => {
+      const runnerTemp = realpathSync.native(mkdtempSync(resolve(tmpdir(), "fluyo-device-root-")));
+      const parent = testing.validateRunnerTemp({ RUNNER_TEMP: runnerTemp }, { safePath: /^.+$/u });
+      const leaf = resolve(runnerTemp, "fluyo-ios-runtime-bootstrap-9401-1");
+      try {
+        throwsCode(
+          () =>
+            testing.createOwnedRoot(parent, "fluyo-ios-runtime-bootstrap-9401-1", 1, {
+              lstat: (path, options) => {
+                const info = lstatSync(path, options);
+                return path === leaf ? { ...info, dev: info.dev + 1n } : info;
+              },
+            }),
+          "PRECONDITION_ENV",
+        );
+        assert.equal(existsSync(leaf), true);
+      } finally {
+        rmSync(runnerTemp, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "identity swap before scan rejects without traversal",
+    () => {
+      const runnerTemp = realpathSync.native(mkdtempSync(resolve(tmpdir(), "fluyo-scan-swap-")));
+      try {
+        const parent = testing.validateRunnerTemp(
+          { RUNNER_TEMP: runnerTemp },
+          { safePath: /^.+$/u },
+        );
+        const binding = testing.createOwnedRoot(parent, "fluyo-ios-runtime-bootstrap-9401-1", 1);
+        let traversed = false;
+        throwsCode(
+          () =>
+            scanOwnedRoot(binding, 1, {
+              lstat: (path, options) => {
+                const info = lstatSync(path, options);
+                return path === binding.path ? { ...info, ino: info.ino + 1n } : info;
+              },
+              realpath: realpathSync.native,
+              readdir: () => ((traversed = true), []),
+              now: () => 0,
+              failureCode: "ACQUIRE_STORAGE_IDENTITY",
+            }),
+          "ACQUIRE_STORAGE_IDENTITY",
+        );
+        assert.equal(traversed, false);
+      } finally {
+        rmSync(runnerTemp, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "identity swap before cleanup rejects without deletion",
+    () => {
+      const runnerTemp = realpathSync.native(mkdtempSync(resolve(tmpdir(), "fluyo-cleanup-swap-")));
+      try {
+        const parent = testing.validateRunnerTemp(
+          { RUNNER_TEMP: runnerTemp },
+          { safePath: /^.+$/u },
+        );
+        const binding = testing.createOwnedRoot(parent, "fluyo-ios-runtime-bootstrap-9401-1", 1);
+        let removed = false;
+        throwsCode(
+          () =>
+            testing.removeOwnedRoot(binding, {
+              lstat: (path, options) => {
+                const info = lstatSync(path, options);
+                return path === binding.path ? { ...info, ino: info.ino + 1n } : info;
+              },
+              realpath: realpathSync.native,
+              remove: () => {
+                removed = true;
+              },
+            }),
+          "CLEANUP_RAW_RESIDUE",
+        );
+        assert.equal(removed, false);
+        assert.equal(existsSync(binding.path), true);
+      } finally {
+        rmSync(runnerTemp, { recursive: true, force: false });
+      }
+    },
+  ],
+  [
+    "partial second-root creation failure cleans only the first and writes a truthful receipt",
+    async () =>
+      withRunTransactionWindowsOracle(
+        async ({ controller, environment, minimumLeaf, repositoryRoot }) => {
+          const callbacks = { runTool: 0, spawn: 0 };
+          await assert.rejects(
+            controller.runTransaction(repositoryRoot, environment, {
+              arch: "arm64",
+              parseHead: () => ORACLE_SOURCE_COMMIT,
+              platform: "darwin",
+              probeParent: async () => ({
+                pgid: 9401,
+                pid: 9401,
+                ppid: 1,
+                startTime: "Fri Nov 14 12:34:56 2026",
+                title: PARENT_TITLE,
+              }),
+              rootFs: {
+                mkdir: (path, options) => {
+                  if (path.endsWith("fluyo-ios-minimum-9401-1"))
+                    throw new Error("private-second-create");
+                  mkdirSync(path, options);
+                },
+              },
+              runTool: async () => ((callbacks.runTool += 1), assert.fail("unexpected tool")),
+              signalTarget: new EventEmitter(),
+              spawn: () => ((callbacks.spawn += 1), assert.fail("unexpected spawn")),
+            }),
+            (error) => error?.code === "PRECONDITION_ENV",
+          );
+          assert.deepEqual(callbacks, { runTool: 0, spawn: 0 });
+          const receipt = controller.validateReceiptFile(repositoryRoot);
+          assert.equal(receipt.state, "PRECONDITION_REJECTED");
+          assert.equal(receipt.downloadInvocationCount, 0);
+          assert.equal(receipt.cleanupResult, "NOT_REQUIRED");
+          assert.equal(receipt.rawLogRetained, false);
+          assert.equal(existsSync(minimumLeaf), false);
+        },
+      ),
+  ],
+  [
+    "ordinary post-root precondition leaves both siblings and legacy parent absent",
+    async () =>
+      withRunTransactionWindowsOracle(
+        async ({
+          bootstrapLeaf,
+          bootstrapParent,
+          controller,
+          environment,
+          minimumLeaf,
+          repositoryRoot,
+        }) => {
+          await assert.rejects(
+            controller.runTransaction(repositoryRoot, environment, {
+              arch: "arm64",
+              parseHead: () => ORACLE_SOURCE_COMMIT,
+              platform: "darwin",
+              probeParent: async () => ({
+                pgid: 9401,
+                pid: 9401,
+                ppid: 1,
+                startTime: "Fri Nov 14 12:34:56 2026",
+                title: PARENT_TITLE,
+              }),
+              runTool: async () => {
+                throw new controller.BootstrapFailure("PRECONDITION_XCODE");
+              },
+              signalTarget: new EventEmitter(),
+            }),
+            (error) => error?.code === "PRECONDITION_XCODE",
+          );
+          assert.equal(existsSync(bootstrapLeaf), false);
+          assert.equal(existsSync(minimumLeaf), false);
+          assert.equal(existsSync(bootstrapParent), false);
+          assert.equal(controller.validateReceiptFile(repositoryRoot).rawLogRetained, false);
+        },
+      ),
+  ],
+  [
+    "clock precondition writes a canonical callback-free invocation-zero receipt",
+    async () =>
+      withRunTransactionWindowsOracle(async ({ controller, environment, repositoryRoot }) => {
+        const callbacks = { parseHead: 0, probeParent: 0, runTool: 0, spawn: 0 };
+        await assert.rejects(
+          controller.runTransaction(repositoryRoot, environment, {
+            now: () => {
+              throw new Error("private-clock-detail");
+            },
+            parseHead: () => ((callbacks.parseHead += 1), ORACLE_SOURCE_COMMIT),
+            probeParent: async () => (
+              (callbacks.probeParent += 1),
+              assert.fail("unexpected parent")
+            ),
+            runTool: async () => ((callbacks.runTool += 1), assert.fail("unexpected tool")),
+            signalTarget: new EventEmitter(),
+            spawn: () => ((callbacks.spawn += 1), assert.fail("unexpected spawn")),
+          }),
+          (error) => error?.code === "PRECONDITION_ENV",
+        );
+        assert.deepEqual(callbacks, { parseHead: 0, probeParent: 0, runTool: 0, spawn: 0 });
+        const receipt = controller.validateReceiptFile(repositoryRoot);
+        assert.equal(receipt.state, "PRECONDITION_REJECTED");
+        assert.equal(receipt.primaryFailureCode, "PRECONDITION_ENV");
+        assert.equal(receipt.downloadInvocationCount, 0);
+        assert.equal(JSON.stringify(receipt).includes("private-clock-detail"), false);
+      }),
+  ],
+  [
+    "runner-root precondition writes a canonical callback-free invocation-zero receipt",
+    async () =>
+      withRunTransactionWindowsOracle(async ({ controller, environment, repositoryRoot }) => {
+        const callbacks = { runTool: 0, spawn: 0 };
+        const invalidEnvironment = Object.freeze({ ...environment, RUNNER_TEMP: "relative" });
+        await assert.rejects(
+          controller.runTransaction(repositoryRoot, invalidEnvironment, {
+            arch: "arm64",
+            parseHead: () => ORACLE_SOURCE_COMMIT,
+            platform: "darwin",
+            probeParent: async () => ({
+              pgid: 9401,
+              pid: 9401,
+              ppid: 1,
+              startTime: "Fri Nov 14 12:34:56 2026",
+              title: PARENT_TITLE,
+            }),
+            runTool: async () => ((callbacks.runTool += 1), assert.fail("unexpected tool")),
+            signalTarget: new EventEmitter(),
+            spawn: () => ((callbacks.spawn += 1), assert.fail("unexpected spawn")),
+          }),
+          (error) => error?.code === "PRECONDITION_ENV",
+        );
+        assert.deepEqual(callbacks, { runTool: 0, spawn: 0 });
+        const receipt = controller.validateReceiptFile(repositoryRoot);
+        assert.equal(receipt.state, "PRECONDITION_REJECTED");
+        assert.equal(receipt.downloadInvocationCount, 0);
+        assert.equal(receipt.cleanupResult, "NOT_REQUIRED");
+      }),
+  ],
+];
+for (const [name, action] of v117Cases) test(`v1.1.17: ${name}`, action);

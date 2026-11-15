@@ -973,4 +973,69 @@ describe("iOS unsigned foundation structure", () => {
     expect(handoff).toContain("469 relevant cases");
     expect(handoff).toContain("364 = 314 controller + 50 newly applicable structure cases");
   });
+
+  it("binds the monotonic default receiver and closes injected clock failures", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    const start = controller.indexOf("function monotonicNow");
+    const end = controller.indexOf("function ensurePhaseBudget", start);
+    const helper = controller.slice(start, end);
+    expect(helper).toContain("performance.now()");
+    expect(helper).toContain('typeof injected !== "function"');
+    expect(helper).toContain("Number.isFinite(value)");
+    expect(helper).toContain("value < 0");
+    expect(helper).not.toContain("performance.now)()");
+  });
+
+  it("uses exactly five repaired clock call sites with closed phase codes", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller.match(/monotonicNow\(/gu)).toHaveLength(6);
+    expect(
+      controller.match(/monotonicNow\(dependencies, "MINIMUM_EVIDENCE_MONITOR"\)/gu),
+    ).toHaveLength(2);
+    expect(controller).toContain("monotonicNow(dependencies, monitorFailure)");
+    expect(controller).toContain('started = monotonicNow(dependencies, "PRECONDITION_ENV")');
+    expect(controller).not.toContain("(dependencies.now ?? performance.now)()");
+  });
+
+  it("creates exact direct sibling roots without recursion or a legacy parent", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain("`fluyo-ios-runtime-bootstrap-${env.GITHUB_RUN_ID}-1`");
+    expect(controller).toContain("`fluyo-ios-minimum-${env.GITHUB_RUN_ID}-1`");
+    expect(controller).toContain('join(runnerTempBinding.path, "fluyo-ios-runtime-bootstrap")');
+    expect(controller).toContain("fs.mkdir(path, { recursive: false, mode: 0o700 })");
+    expect(controller).not.toContain('join(env.RUNNER_TEMP, "fluyo-ios-runtime-bootstrap",');
+  });
+
+  it("binds runner temp and owned roots to canonical nonsymlink same-device identities", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain("function validateRunnerTemp");
+    expect(controller).toContain("realpath(path) !== path");
+    expect(controller).toContain("info.dev !== parentBinding.dev");
+    expect(controller).toContain("dev: info.dev");
+    expect(controller).toContain("ino: info.ino");
+    expect(controller).toContain("parentDev: parentBinding.dev");
+  });
+
+  it("revalidates immutable owned-root bindings before scan and reverse cleanup", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller).toContain("validateOwnedRootBinding(binding, failureCode, dependencies)");
+    expect(controller).toContain("validateOwnedRootBinding(owned.binding, rootIdentityFailure");
+    const minimum = controller.indexOf("removeOwnedRoot(minimumRootBinding");
+    const bootstrap = controller.indexOf("removeOwnedRoot(bootstrapRootBinding", minimum);
+    expect(minimum).toBeGreaterThanOrEqual(0);
+    expect(minimum).toBeLessThan(bootstrap);
+    expect(controller).toContain('validateOwnedRootBinding(binding, "CLEANUP_RAW_RESIDUE"');
+  });
+
+  it("writes truthful invocation-zero receipts without broadening acquisition authority", () => {
+    const controller = read("scripts/ios-runtime-bootstrap.mjs");
+    expect(controller.indexOf("let receipt = baseReceipt")).toBeLessThan(
+      controller.indexOf('started = monotonicNow(dependencies, "PRECONDITION_ENV")'),
+    );
+    expect(controller).toContain('downloadResult = "NOT_ATTEMPTED"');
+    expect(controller).toContain('minimumEvidenceResult = "NOT_RUN"');
+    expect(controller).toContain('cleanupResult = "NOT_REQUIRED"');
+    expect(controller).toContain("XCODE_ARGS");
+    expect(controller).toContain("downloadInvocationCount: invocationCount");
+  });
 });

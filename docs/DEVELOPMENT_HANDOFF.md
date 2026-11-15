@@ -3168,3 +3168,32 @@ Current development evidence reports structure plus activation plus readiness **
 This evidence is repository-only and does not establish acquisition, live controller execution, simulator installation, protected minimum-iOS recovery, or any production/runtime claim. PR #94 remains draft/HOLD; no acquisition, runtime action, stage, commit, or push is authorized or recorded by this entry, and all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
 
 The fresh next gate is Elana's exact-candidate **COMMIT-ONLY** review, and it may start only after this append's new full hash and exact candidate pins are refreshed and all applicable exact-byte rebinds pass. Any byte drift resets those gates.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.17 minimum-lane repair record
+
+The repair base is exact commit `a1e43d4f0494a23019f4712d3bb292bd9af83296`, tree `0fed24af5507eca32477280aa9775ee3dc21c065`, subject `test(ci): make iOS bootstrap fixtures portable`. PR #94's protected rollup contained **14** terminal results: **12 success**, **1 minimum-iOS failure**, and **1 skipped**. Minimum job `132743943026` first reported fixed `ACQUIRE_PROCESS_IDENTITY`, then `CLEANUP_RECEIPT_INVALID`; it produced no receipt and no minimum artifact. Current-iOS, Windows, portable, and every other protected gate passed. This record makes no protected-recovery claim.
+
+Source review identifies five unbound `(dependencies.now ?? performance.now)()` extractions, which violate the Node.js 19-or-later receiver requirement. The transaction sampled time before establishing its receipt state. A subsequent direct-root production defect also left the nested parent absent. These are source-proven failure facts, not evidence that the protected minimum lane recovered.
+
+The approved repair remains an exact six-path repository/test scope only: this handoff, the shared iOS structure test, activation guard, readiness guard, controller, and controller test. It does not change the workflow or `scripts/ios-ci.sh` and grants no acquisition, simulator, production, or runtime authority.
+
+Stable source facts before this append are:
+
+- Controller: **114,337 bytes**; SHA-256 `91485c4ba0830da497e4d9992dd5afd4764dabab9b00085dc51221ac12969139`; Git blob prefix `29e7d92bb88c75f261054f8e20155b18f6348a63`.
+- Controller test: **141,960 bytes**; SHA-256 `0eaf40d4ae4cb62233f39516f65b6404899815a3e69ac692488790f9b10dcd6b`; Git blob prefix `c0442379d30599d69ebde0ab2f30adbfa1c93b53`.
+- Shared structure test: **54,746 bytes**; SHA-256 `29c27f7bcb62e6ae97251b1b40c2968b23ccff9b8215208e1e93b659f448896e`; Git blob prefix `02f274964ace424365132940b2f11cdd1f67902a`.
+- Activation guard: **94,574 bytes**; SHA-256 `5894e8d64288560065a431525679a5eeaa6b50d59f7e6b681f1e44998ffec339`; Git blob prefix `dcea881d56d9d1c93bbd84c938877d0d141c6008`.
+
+Current development evidence is controller **338/338 PASS**, shared structure **68/68 PASS**, and activation **99/100 PASS**. The sole expected activation failure is live topology case 34 while this handoff and the readiness guard remain incomplete. Prettier and Node syntax checks PASS.
+
+The required final targets remain pending and are not claimed as executed by this entry: controller **338/338**, shared structure **68/68**, activation **100/100**, readiness **8/8**, focused **514/514**, phase-specific required ledger **394**, shared **655/655**, audit-policy unit **526/526**, portable **273/273**, and isolated readiness **150/150**. Valentina must mechanically refresh the handoff and readiness pins after this append before those gates can be evaluated.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, protected recovery, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.17 source-fact supersession
+
+The preceding v1.1.17 source-fact record remains preserved as historical evidence. Final lint identified one missing contract assertion in the already-required partial-second-create case: `minimumLeaf` was destructured but unused. The controller test now asserts the required absence; the case count remains unchanged, controller evidence remains **338/338 PASS**, and lint passes.
+
+This entry supersedes only the controller-test source fact: `scripts/ios-runtime-bootstrap.test.mjs` is now **142,016 bytes**, SHA-256 `fd470f24392fc64a5475a42badffa7711946c51447f86426915ea222738654a7`, Git blob `94af350afb70d43131c167479edd1689d58c4ce2`. The controller, shared structure test, and activation-guard source facts in the preceding record remain unchanged.
+
+This repository/test correction makes no protected-recovery, acquisition, simulator, production, or runtime claim. PR #94 remains draft/HOLD; no stage, commit, push, ready, or merge is authorized or recorded by this entry, and all existing prohibitions remain unchanged.
