@@ -3124,3 +3124,31 @@ The current exact eight-row candidate identity before this append-only records c
 Development evidence is **473/473 focused PASS**, with phase-specific required ledger **368**, readiness **150/150 PASS**, shared **634/634 PASS**, and static and diff checks PASS. Recommended Option A remains limited to the exact prerequisite CI scope recorded above. No acquisition, runtime action, simulator installation, stage, commit, or push is authorized or recorded by this entry. PR #94 remains draft/HOLD; all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
 
 The next gate is Elana's exact-candidate **COMMIT-ONLY** review, and it may start only after this handoff's new full hash and the exact candidate manifest are re-pinned and all applicable exact-byte rebinds pass. Any byte drift resets those gates.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.4 postcommit records repair
+
+Exact commit `22dede4b31071aad68c607eabf3aec0a46544fe3` has parent `b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5`, tree `8dab199f420d3d06ef76035495d166aa227d8c0b`, and subject `fix(ci): bind iOS bootstrap parent identity`. It changes exactly the reviewed six-path parent-identity repair and leaves the workflow and `scripts/ios-ci.sh` unchanged. Elana's candidate gate was **1,286/1,286 PASS-COMMIT-ONLY** before that exact commit.
+
+The mandatory clean-tree shared run on the exact commit completed **633/634 PASS**. Its sole failure was the activation guard's stale live-state expectation: the clean exact commit was correctly classified as `POSTCOMMIT`, while case 26 still required `PRECOMMIT_UNSTAGED`. No controller, runtime, acquisition, workflow, minimum-evidence, or cleanup failure was observed by that repository-only gate.
+
+V1.1.15.4 is a three-record repair only: this append-only handoff entry, the activation guard, and the readiness pins. The activation guard binds the full exact commit through Git objects, permits only those exact three paths in a single unstaged or staged records phase, rejects every other status or path including untracked authorization-temporary roots, and requires any later postcommit state to be one direct child changing exactly those three modes and blobs. The original `b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5` six-path repair fixtures remain unchanged.
+
+Development evidence remains nonlive and count-preserving for the implementation: **318/318 controller cases**, **62/62 shared structure cases**, **90/90 activation cases**, and **8/8 readiness cases** are required, for **478 relevant cases**. The phase-specific required ledger remains **368 = 318 controller + 50 newly applicable structure cases**. No acquisition, live controller execution, simulator installation, push, ready, or merge is authorized or recorded by this entry. PR #94 remains draft/HOLD, and all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.4 specialist gate record
+
+The current exact three-row records candidate before this append-only correction contains **3 rows**, **361,866 source bytes**, and **388 manifest bytes**, with SHA-256 `a6894a81aee0006c4f697321058ce4c3af31c3ba231cfb47521df552d75515f8`. Its enclosing exact eight-row candidate contains **8 rows**, **669,480 source bytes**, and **914 manifest bytes**, with SHA-256 `54639291237223c8f31d2f01e179efd17f497c96372147631a26b420894070ae`.
+
+Current exact-byte gates report Catalina **54/54 PASS**, Natalia **60/60 PASS**, Renata **38/38 PASS** plus **737/737 executions PASS**, and Julieta **36/36 PASS**. Activation plus readiness is **98/98 PASS**, shared is **639/639 PASS**, and static and diff checks PASS.
+
+No acquisition, runtime action, simulator installation, stage, commit, or push is authorized or recorded by this entry. PR #94 remains draft/HOLD; all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+The fresh next gate is Elana's exact-candidate **COMMIT-ONLY** review, and it may start only after this append's new full hash and the exact three-row and eight-row pins are refreshed and all applicable exact-byte rebinds pass. Any byte drift resets those gates.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.5 amend-only topology correction
+
+Local commit `18bd6b055065bd703ec3c8746666951315a8684d` is unpushed, predates this amendment, and is superseded as candidate evidence. Its identity is informational only and is not protected-CI, merge, or runtime authority. The pre-amend clean-tree shared run was honestly **638/639 PASS** and activation was **89/90 PASS**; the sole failure was case 34's stale clean-tree expectation after the exact three-path records commit. All other synthetic checks, static checks, and diff integrity passed.
+
+V1.1.15.5 changes no classifier, controller, workflow, `scripts/ios-ci.sh`, minimum-evidence, acquisition, cleanup, or receipt behavior. Case 34 now proves the exact three-path unstaged state with a frozen synthetic `.M` snapshot, takes exactly one live clean snapshot, requires that live snapshot to contain no status entries, and classifies it as `POSTCOMMIT` through the existing exact direct-child records verifier. No fresh **90/90** activation or **639/639** shared claim is made by this entry before those gates execute on the final bytes.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, amend, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.

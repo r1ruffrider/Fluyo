@@ -31,8 +31,11 @@ const merge = "7a5b345846eb29928dacb8f01b96796c01182dc2";
 const d70 = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
 const phaseBase = "a2485dc12c231dd482799834d5aca2966a6db494";
 const repairBase = "b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5";
+const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
+const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
+const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "d88f63576b3536ad0c2ca6e2e1294d0cb008f5b7ac921eaaa15ce3fd5ee2ad9e";
+const currentTenManifestSha = "f44c39832c0e1998af6ef14a61e1db3827ed6ecb3a4769410b5365770201b2fa";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -79,6 +82,11 @@ const phaseAddedPaths = [
 const repairPaths = phasePaths.filter(
   (path) => ![".github/workflows/ios.yml", "scripts/ios-ci.sh"].includes(path),
 );
+const recordsRepairPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+].sort(compareUtf8);
 const repairBaseTree = Object.freeze({
   ".github/workflows/ios.yml": Object.freeze({
     mode: "100644",
@@ -111,6 +119,40 @@ const repairBaseTree = Object.freeze({
   "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
     mode: "100644",
     blob: "103d685ebecfbc118c2f0d1b0c48a5c23eb8a4dc",
+  }),
+});
+const recordsBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "14355b6d469a9e351c40aa9ea8a4ab440b1c76cb",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d3adcee7a2697ef731880b9bd4406d1ed7cbafa6",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d92686dd24b2b1200b3f8366001a8e41919eb0a3",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "69a321c7b7c26126ae33b177ccaa5dbf2afe1a7a",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "dbc2dd366cf9a9716fce0680616d9c0824d10e73",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "a13d394954304f7fb06e9cc6d19c7a17f04380d0",
   }),
 });
 const statusArguments = Object.freeze([
@@ -270,6 +312,11 @@ const expectedTracked = (path: string) => {
 };
 const expectedRepairTracked = (path: string) => {
   const base = repairBaseTree[path as keyof typeof repairBaseTree] ?? topologyFailure();
+  const candidate = recordsBaseTree[path as keyof typeof recordsBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: candidate.blob };
+};
+const expectedRecordsRepairTracked = (path: string) => {
+  const base = recordsBaseTree[path as keyof typeof recordsBaseTree] ?? topologyFailure();
   return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
 };
 const exactType1 = (
@@ -373,9 +420,67 @@ const verifyRepairPostcommitObject = (oid: string): void => {
       topologyFailure();
   }
 };
+const assertRecordsDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${recordsBase}`) topologyFailure();
+};
+const verifyRecordsPostcommitObject = (oid: string): void => {
+  assertRecordsDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  const diff = runBoundedGit([
+    "diff-tree",
+    "--no-commit-id",
+    "--raw",
+    "-z",
+    "-r",
+    recordsBase,
+    oid,
+  ]);
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(recordsRepairPaths))
+    topologyFailure();
+  for (const path of recordsRepairPaths) {
+    const expected = expectedRecordsRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyCurrentPostcommitObject = (oid: string): void => {
+  const commit = decodeStatus(runBoundedGit(["cat-file", "commit", oid]));
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1) topologyFailure();
+  if (parents[0] === `parent ${repairBase}`) verifyRepairPostcommitObject(oid);
+  else if (parents[0] === `parent ${recordsBase}`) verifyRecordsPostcommitObject(oid);
+  else topologyFailure();
+};
 const classifyStatusSnapshot = (
   snapshot: StatusSnapshot,
-  verifyPostcommit: (oid: string) => void = verifyRepairPostcommitObject,
+  verifyPostcommit: (oid: string) => void = verifyCurrentPostcommitObject,
 ): "PRECOMMIT_UNSTAGED" | "PRECOMMIT_STAGED" | "POSTCOMMIT" => {
   const concurrent = snapshot.entries.filter(
     (entry) => entry.kind === "?" && concurrentApprovalRoot.test(entry.path),
@@ -412,7 +517,29 @@ const classifyStatusSnapshot = (
     if (unstaged === staged) topologyFailure();
     return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
   }
-  if (entries.length !== 0) topologyFailure();
+  if (snapshot.oid === recordsBase) {
+    const recordEntries = [...snapshot.entries].sort((left, right) =>
+      compareUtf8(left.path, right.path),
+    );
+    if (recordEntries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (
+      JSON.stringify(recordEntries.map((entry) => entry.path)) !==
+      JSON.stringify(recordsRepairPaths)
+    )
+      topologyFailure();
+    const unstaged = recordEntries.every((entry) =>
+      exactType1(entry, expectedRecordsRepairTracked(entry.path), ".M"),
+    );
+    const staged = recordEntries.every((entry) =>
+      exactType1(entry, expectedRecordsRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.entries.length !== 0) topologyFailure();
   verifyPostcommit(snapshot.oid);
   return "POSTCOMMIT";
 };
@@ -451,6 +578,21 @@ const stagedStatusRecords = (): string[] => [
 const repairStatusRecords = (xy: ".M" | "M."): string[] =>
   repairPaths.map((path) => {
     const expected = expectedRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const recordsRepairStatusRecords = (xy: ".M" | "M."): string[] =>
+  recordsRepairPaths.map((path) => {
+    const expected = expectedRecordsRepairTracked(path);
     return [
       "1",
       xy,
@@ -748,9 +890,10 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
 
   it("07 preserves the historical six-path candidate and closes the current eight-path phase", () => {
     expect(sortedLines(["diff", "--name-only", `${d70}...${phaseBase}`])).toEqual(sixPaths);
-    expect(["PRECOMMIT_UNSTAGED", "PRECOMMIT_STAGED", "POSTCOMMIT"]).toContain(
-      classifyStatusSnapshot(captureStatusSnapshot()),
+    const phaseSnapshot = parseStatusSnapshot(
+      statusSnapshotBytes(phaseBase, unstagedStatusRecords()),
     );
+    expect(classifyStatusSnapshot(phaseSnapshot)).toBe("PRECOMMIT_UNSTAGED");
     const positive = ".tmp-auth-readiness-approval-abc123/";
     expect(concurrentApprovalRoot.test(positive)).toBe(true);
     for (const negative of [
@@ -1503,11 +1646,13 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     }
   });
 
-  it("26 classifies the exact live six-path repair as precommit unstaged", () => {
+  it("26 classifies the exact committed six-path repair as postcommit", () => {
     expect(repairPaths).toHaveLength(6);
     expect(repairPaths).not.toContain(".github/workflows/ios.yml");
     expect(repairPaths).not.toContain("scripts/ios-ci.sh");
-    expect(classifyStatusSnapshot(captureStatusSnapshot())).toBe("PRECOMMIT_UNSTAGED");
+    expect(classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(recordsBase, [])))).toBe(
+      "POSTCOMMIT",
+    );
   });
 
   it("27 classifies the exact six-path staged repair", () => {
@@ -1593,5 +1738,98 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         ),
       ),
     ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("33 binds the immutable 22dede repair commit and exact-eight tree", () => {
+    expect(recordsBase).toBe("22dede4b31071aad68c607eabf3aec0a46544fe3");
+    const commit = git(["cat-file", "commit", recordsBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      `parent ${repairBase}`,
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${recordsBaseTreeId}`,
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(recordsBaseSubject);
+    expect(Object.keys(recordsBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+    for (const path of phasePaths) {
+      const expected = recordsBaseTree[path as keyof typeof recordsBaseTree];
+      expect(git(["rev-parse", `${recordsBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", recordsBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
+    }
+  });
+
+  it("34 classifies the exact three-path records repair before and after commit", () => {
+    expect(recordsRepairPaths).toEqual([
+      "docs/DEVELOPMENT_HANDOFF.md",
+      "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts",
+      "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+    ]);
+    const precommit = parseStatusSnapshot(
+      statusSnapshotBytes(recordsBase, recordsRepairStatusRecords(".M")),
+    );
+    expect(classifyStatusSnapshot(precommit)).toBe("PRECOMMIT_UNSTAGED");
+    const live = captureStatusSnapshot();
+    expect(live.entries).toEqual([]);
+    expect(classifyStatusSnapshot(live)).toBe("POSTCOMMIT");
+  });
+
+  it("35 classifies only the exact three-path records repair as staged", () => {
+    const snapshot = parseStatusSnapshot(
+      statusSnapshotBytes(recordsBase, recordsRepairStatusRecords("M.")),
+    );
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_STAGED");
+  });
+
+  it("36 keeps the original 22dede state postcommit and requires one direct records child", () => {
+    expect(classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(recordsBase, [])))).toBe(
+      "POSTCOMMIT",
+    );
+    expect(() =>
+      assertRecordsDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${recordsBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertRecordsDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${repairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("37 rejects mixed, unknown, added, deleted, renamed, duplicate, extra, or untracked records", () => {
+    const mixed = recordsRepairStatusRecords(".M");
+    mixed[0] = recordsRepairStatusRecords("M.")[0]!;
+    const expected = expectedRecordsRepairTracked(recordsRepairPaths[0]!);
+    const wrongStatuses = ["A.", "C.", "D.", "R.", "T.", "U."] as const;
+    const malformed = wrongStatuses.map((xy) =>
+      [
+        "1",
+        xy,
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.baseObject,
+        expected.candidateObject,
+        recordsRepairPaths[0],
+      ].join(" "),
+    );
+    const invalidRows = [
+      mixed,
+      [...recordsRepairStatusRecords(".M"), recordsRepairStatusRecords(".M")[0]!],
+      [...recordsRepairStatusRecords(".M"), "? .tmp-auth-readiness-approval-Ab12z9/"],
+      [...recordsRepairStatusRecords(".M"), "? unexpected.txt"],
+      ...malformed.map((row) => [row, ...recordsRepairStatusRecords(".M").slice(1)]),
+    ];
+    for (const rows of invalidRows)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(recordsBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    for (const row of ["2 R. N... unsafe", "u UU N... unsafe", "! ignored", "x unknown"])
+      expect(() => parseStatusSnapshot(statusSnapshotBytes(recordsBase, [row]))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
   });
 });
