@@ -3471,3 +3471,23 @@ The v1.5 diagnostic remains unexecuted. PR #94 remains draft/HOLD. No protected 
 The v1.5 contract PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.5 binds receipt diagnosticMode PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5.
 
 This true-EOF append explicitly supersedes line 3457's use of the architecture label as the serialized mode. It changes no functional behavior, code, schema, authority, or evidence count. The v1.5 diagnostic remains unexecuted; PR #94 remains draft/HOLD; and no protected execution, recovery, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.5 protected-run record
+
+Protected run `43797213642`, attempt **1**, executed on exact head `5817425e97e036c0855c8c00b7defbfa46bf5bdc`. The minimum job is `133068638703`. Artifact `14194787766` has a name containing the exact head and expires **2026-11-23**.
+
+The extracted `receipt.json` is **1,441 bytes** with SHA-256 `73e93216d2e63baaf5b1fc79baed58b6e4ae23a422b694ed61025d3afa2300c8`. The uploaded artifact ZIP/log is **858 bytes** with ZIP SHA-256 `c638f99fa4aee1824540feaa683c73c0f8d5d447bd636b3eca47d7a595ff70e8`; this ZIP identity is distinct from the receipt identity.
+
+The schema **2** receipt binds diagnostic mode `PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5`, Xcode **16.2** build `16C5032a`, `PRECONDITION_REJECTED` with `READY`, cleanup `NONE` / `NOT_REQUIRED`, invocation count **0**, download `NOT_ATTEMPTED`, minimum `NOT_RUN`, runtime and disk evidence null or zero, and retained and fallback flags false. Invocation count **0** does not mean zero precondition subprocesses.
+
+The protected rollup is **12 success / 1 intentional diagnostic failure / 1 aggregate skipped**. CI is **9/9 PASS**, both auth workflows are **2/2 PASS**, and current iOS PASS.
+
+The diagnostic objective is achieved: held `/usr/bin/xcrun` identity validation and contained `simctl` discovery passed. This evidence establishes no acquisition, installed iOS 17.5 runtime, minimum-iOS execution, recovery, protected-green phase, or merge claim. PR #94 remains draft/HOLD, and the next activation contract is separately gated.
+
+Minimum job 133068638703 ran 2026-11-16T03:16:47Z–03:16:57Z; its failing diagnostic step ran 03:16:50Z–03:16:54Z, and artifact 14194787766 was created at 03:16:55Z.
+
+Exact-head outcome gates are Catalina 16/16 PASS, Natalia 24/24 PASS, and Renata 26/26 PASS.
+
+## 2026-11-16 — PR #94 v1.5 receipt-code wording supersession
+
+This true-EOF correction supersedes the earlier clause saying the receipt records `PRECONDITION_REJECTED` “with `READY`”. The exact corrected wording is: records state `PRECONDITION_REJECTED` with primary failure code `PRECONDITION_XCODE_DIAGNOSTIC_READY`.
