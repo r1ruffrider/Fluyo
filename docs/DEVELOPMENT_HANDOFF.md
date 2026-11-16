@@ -3491,3 +3491,11 @@ Exact-head outcome gates are Catalina 16/16 PASS, Natalia 24/24 PASS, and Renata
 ## 2026-11-16 — PR #94 v1.5 receipt-code wording supersession
 
 This true-EOF correction supersedes the earlier clause saying the receipt records `PRECONDITION_REJECTED` “with `READY`”. The exact corrected wording is: records state `PRECONDITION_REJECTED` with primary failure code `PRECONDITION_XCODE_DIAGNOSTIC_READY`.
+
+## 2026-11-16 — PR #94 v1.5 records-topology repair
+
+The frozen architecture is `PR94-V1.5-RECORDS-TOPOLOGY-v1`. On exact records commit `8982998958e0edb8c49d30c7c053efb88e1b88fb`, tree `3d43d750`, direct parent `5817425e`, and subject `docs(ci): record xcrun diagnostic outcome`, the shared postcommit suite passed **692/695**. The exactly three failures are mechanical records topology only: the activation current ten-path manifest, activation explicit direct-child topology, and readiness suffix pin. The records suite passed **108/108**. No functional or runtime defect was found.
+
+The repair scope is exactly `docs/DEVELOPMENT_HANDOFF.md`, the activation test, and the readiness test. The future repair commit must be a direct child with exact subject `test(ci): bind xcrun diagnostic records topology`. Exact current source pins and the final manifest remain pending Valentina's mechanical frozen-byte handoff and will not be inferred here.
+
+PR #94 remains draft/HOLD. This record makes no protected recovery, acquisition, runtime, ready, or merge claim and authorizes no stage, commit, push, protected execution, or external action.

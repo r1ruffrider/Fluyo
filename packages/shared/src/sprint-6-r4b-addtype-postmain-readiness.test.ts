@@ -11,8 +11,12 @@ const decisionPath = "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md";
 const canonicalRecordHeading = "## Canonical readiness record";
 const historicalHandoffBytes = 249_789;
 const historicalHandoffSha256 = "78788e3bf3b0a54ef3bccb4b0aec804ad3db406976dfede4963bf1d2c083889f";
-const ios17SuffixBytes = 74_468;
-const ios17SuffixSha256 = "09dd8ee8e6bfd3adaa3982e26c609a5889b02e58c6baf1b7b5d07a79e9bff9ac";
+const recordsHandoffBytes = 326_419;
+const recordsHandoffSha256 = "4d6d0be8a0122dbbd045256e224e92c6419e88b81e666bf9b02bd8c4e9e6abe3";
+const recordsIos17SuffixBytes = 76_630;
+const recordsIos17SuffixSha256 = "475c727415ecd4b253d5bb6b52e700f34997b99684f08a94ff6aff6ddff43a92";
+const ios17SuffixBytes = 77_774;
+const ios17SuffixSha256 = "d8e142d00d31fe1763351bf6fa9a824edd129f1b7111851946f95177b880b942";
 const ios17Heading = "## 2026-11-14 — Recommended Option A iOS 17.5 prerequisite CI repair";
 
 const sha256 = (bytes: Buffer | string): string => createHash("sha256").update(bytes).digest("hex");
@@ -124,8 +128,14 @@ describe("R4B Add-Type post-main readiness", () => {
 
     const prefix = handoff.subarray(0, historicalHandoffBytes);
     const suffix = handoff.subarray(historicalHandoffBytes);
+    const recordsHandoff = handoff.subarray(0, recordsHandoffBytes);
+    const recordsSuffix = recordsHandoff.subarray(historicalHandoffBytes);
     expect(prefix.byteLength).toBe(historicalHandoffBytes);
     expect(sha256(prefix)).toBe(historicalHandoffSha256);
+    expect(recordsHandoff.byteLength).toBe(recordsHandoffBytes);
+    expect(sha256(recordsHandoff)).toBe(recordsHandoffSha256);
+    expect(recordsSuffix.byteLength).toBe(recordsIos17SuffixBytes);
+    expect(sha256(recordsSuffix)).toBe(recordsIos17SuffixSha256);
     expect(suffix.byteLength).toBe(ios17SuffixBytes);
     expect(sha256(suffix)).toBe(ios17SuffixSha256);
     expect(isExactIos17Handoff(handoff)).toBe(true);

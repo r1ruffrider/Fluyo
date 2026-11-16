@@ -35,7 +35,8 @@ const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
 const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
 const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "84d6fde7bd427bc441777b094f2ec107a87264f628aa5a24287ec969617c2552";
+const recordsTenManifestSha = "4f621d3616098cab8402cd2308fd84614fbf4ee5056d47d03b55ad4750596e2a";
+const currentTenManifestSha = "04ee956380e0094919752cceaddba24b289207cd13fcef87b10566acc965a8de";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -237,6 +238,60 @@ const simctlShortLivedBaseTree = Object.freeze({
   "scripts/summarize-ios-test-failures.test.mjs": Object.freeze({
     mode: "100644",
     blob: "f3e9097fd34a950a61aff23e566d9d061cc0d458",
+  }),
+});
+const xcrunRecordsSource = "5817425e97e036c0855c8c00b7defbfa46bf5bdc";
+const xcrunRecordsSourceParent = "d2ba16c09392289b66a7ba26f47ba2468b2e64ec";
+const xcrunRecordsSourceTreeId = "37883fc0cdb3d04051128d503479d8dbe7ec0644";
+const xcrunRecordsSourceSubject = "fix(ci): invoke the documented xcrun shim";
+const xcrunRecordsCommit = "8982998958e0edb8c49d30c7c053efb88e1b88fb";
+const xcrunRecordsTreeId = "3d43d7504e01692ada8119934468f0679055af98";
+const xcrunRecordsSubject = "docs(ci): record xcrun diagnostic outcome";
+const xcrunRecordsFutureSubject = "test(ci): bind xcrun diagnostic records topology";
+const xcrunRecordsPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+].sort(compareUtf8);
+const xcrunRecordsSourceTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "b5fa4aacc69932f95878200a4980663455a2f2c5",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "e9230387656c1e05bee015030ea9de65ee8553c1",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "11ef5530fa1a419c58ffd80828818ede957c39d6",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "25d75cf7a50ca11901097c681d750b8bab3b49b9",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "0b84abbd35ebc8e3ca28ec672ca513b288fec94b",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d1b4458a562226781f6625117fee5e6b3781b0fa",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "99db9ab58b1507515c540af5ca720605e66ef7c8",
+  }),
+});
+const xcrunRecordsTree = Object.freeze({
+  ...xcrunRecordsSourceTree,
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "84ee1fa9fffae4161a2135fb70398eaaf0a010e9",
   }),
 });
 const repairBaseTree = Object.freeze({
@@ -483,6 +538,10 @@ const expectedClockRootRepairTracked = (path: string) => {
 const expectedSimctlShortLivedTracked = (path: string) => {
   const base =
     simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedXcrunRecordsTracked = (path: string) => {
+  const base = xcrunRecordsTree[path as keyof typeof xcrunRecordsTree] ?? topologyFailure();
   return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
 };
 const exactType1 = (
@@ -758,6 +817,106 @@ const verifySimctlShortLivedPostcommitObject = (oid: string): void => {
     runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", simctlShortLivedBase, oid]),
   );
 };
+const commitHeaders = (
+  commitBytes: Buffer,
+): { parents: string[]; tree: string; subject: string } => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const headers = commit.slice(0, boundary).split("\n");
+  const parents = headers.filter((line) => line.startsWith("parent "));
+  const trees = headers.filter((line) => line.startsWith("tree "));
+  if (trees.length !== 1) topologyFailure();
+  return {
+    parents,
+    tree: trees[0]!.slice("tree ".length),
+    subject: commit.slice(boundary + 2).split("\n")[0] ?? "",
+  };
+};
+const assertXcrunSourceObject = (): void => {
+  const metadata = commitHeaders(runBoundedGit(["cat-file", "commit", xcrunRecordsSource]));
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${xcrunRecordsSourceParent}`]) ||
+    metadata.tree !== xcrunRecordsSourceTreeId ||
+    metadata.subject !== xcrunRecordsSourceSubject
+  )
+    topologyFailure();
+  if (
+    JSON.stringify(Object.keys(xcrunRecordsSourceTree).sort(compareUtf8)) !==
+    JSON.stringify(phasePaths)
+  )
+    topologyFailure();
+  for (const path of phasePaths) {
+    const expected = xcrunRecordsSourceTree[path as keyof typeof xcrunRecordsSourceTree];
+    if (
+      git(["rev-parse", `${xcrunRecordsSource}:${path}`]) !== expected.blob ||
+      git(["ls-tree", xcrunRecordsSource, "--", path]).split(/\s+/u)[0] !== expected.mode
+    )
+      topologyFailure();
+  }
+};
+const verifyXcrunRecordsCommitObject = (oid: string): void => {
+  if (oid !== xcrunRecordsCommit) topologyFailure();
+  const metadata = commitHeaders(runBoundedGit(["cat-file", "commit", oid]));
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${xcrunRecordsSource}`]) ||
+    metadata.tree !== xcrunRecordsTreeId ||
+    metadata.subject !== xcrunRecordsSubject
+  )
+    topologyFailure();
+  const diff = runBoundedGit([
+    "diff-tree",
+    "--no-commit-id",
+    "--raw",
+    "-z",
+    "-r",
+    xcrunRecordsSource,
+    oid,
+  ]);
+  const expected = Buffer.from(
+    `:100644 100644 ${xcrunRecordsSourceTree["docs/DEVELOPMENT_HANDOFF.md"].blob} ${xcrunRecordsTree["docs/DEVELOPMENT_HANDOFF.md"].blob} M\0docs/DEVELOPMENT_HANDOFF.md\0`,
+  );
+  if (!diff.equals(expected)) topologyFailure();
+};
+const assertXcrunRecordsFutureCommit = (commitBytes: Buffer): void => {
+  const metadata = commitHeaders(commitBytes);
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${xcrunRecordsCommit}`]) ||
+    metadata.subject !== xcrunRecordsFutureSubject
+  )
+    topologyFailure();
+};
+const assertXcrunRecordsFutureRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(xcrunRecordsPaths))
+    topologyFailure();
+  for (const path of xcrunRecordsPaths) {
+    const expected = expectedXcrunRecordsTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyXcrunRecordsFutureObject = (oid: string): void => {
+  assertXcrunRecordsFutureCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertXcrunRecordsFutureRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", xcrunRecordsCommit, oid]),
+  );
+};
 const verifyCurrentPostcommitObject = (oid: string): void => {
   const commit = decodeStatus(runBoundedGit(["cat-file", "commit", oid]));
   const boundary = commit.indexOf("\n\n");
@@ -774,6 +933,8 @@ const verifyCurrentPostcommitObject = (oid: string): void => {
     verifyClockRootRepairPostcommitObject(oid);
   else if (parents[0] === `parent ${simctlShortLivedBase}`)
     verifySimctlShortLivedPostcommitObject(oid);
+  else if (parents[0] === `parent ${xcrunRecordsSource}`) verifyXcrunRecordsCommitObject(oid);
+  else if (parents[0] === `parent ${xcrunRecordsCommit}`) verifyXcrunRecordsFutureObject(oid);
   else topologyFailure();
 };
 const classifyStatusSnapshot = (
@@ -886,6 +1047,24 @@ const classifyStatusSnapshot = (
     );
     const staged = entries.every((entry) =>
       exactType1(entry, expectedSimctlShortLivedTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === xcrunRecordsCommit) {
+    if (concurrent.length !== 0) topologyFailure();
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(xcrunRecordsPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedXcrunRecordsTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedXcrunRecordsTracked(entry.path), "M."),
     );
     if (unstaged === staged) topologyFailure();
     return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
@@ -1024,6 +1203,31 @@ const simctlShortLivedStatusRecords = (xy: ".M" | "M."): string[] =>
 const simctlShortLivedRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
   const rows = simctlShortLivedPaths.flatMap((path) => {
     const expected = expectedSimctlShortLivedTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const xcrunRecordsStatusRecords = (xy: ".M" | "M."): string[] =>
+  xcrunRecordsPaths.map((path) => {
+    const expected = expectedXcrunRecordsTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const xcrunRecordsRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = xcrunRecordsPaths.flatMap((path) => {
+    const expected = expectedXcrunRecordsTracked(path);
     return [
       `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
       path,
@@ -1258,6 +1462,17 @@ const canonicalManifest = (paths: string[]) => {
     paths
       .map((path) => {
         const value = bytes(path);
+        return `${path}\0${value.length}\0${sha(value)}\0${blob(value)}\n`;
+      })
+      .join(""),
+  );
+  return { rows: paths.length, bytes: value.length, sha256: sha(value) };
+};
+const canonicalManifestAt = (commit: string, paths: string[]) => {
+  const value = Buffer.from(
+    paths
+      .map((path) => {
+        const value = gitBytes(commit, path);
         return `${path}\0${value.length}\0${sha(value)}\0${blob(value)}\n`;
       })
       .join(""),
@@ -1574,6 +1789,12 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       bytes: 1753,
       sha256: manifestSha,
     });
+    expect(canonicalManifestAt(xcrunRecordsCommit, tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: recordsTenManifestSha,
+    });
+    expect(recordsTenManifestSha).not.toBe(manifestSha);
     expect(canonicalManifest(tenPaths)).toEqual({
       rows: 10,
       bytes: 1753,
@@ -2201,7 +2422,12 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     if (live.entries.length === 0) {
       expect(livePhase).toBe("POSTCOMMIT");
     } else {
-      expect([oracleRepairBase, clockRootRepairBase, simctlShortLivedBase]).toContain(live.oid);
+      expect([
+        oracleRepairBase,
+        clockRootRepairBase,
+        simctlShortLivedBase,
+        xcrunRecordsCommit,
+      ]).toContain(live.oid);
       const liveXy = [...new Set(live.entries.map((entry) => entry.xy))];
       expect(liveXy).toHaveLength(1);
       expect(livePhase).toBe(liveXy[0] === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED");
@@ -2448,6 +2674,16 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         expected.mode,
       );
     }
+    expect(() => assertXcrunSourceObject()).not.toThrow();
+    expect(() => verifyXcrunRecordsCommitObject(xcrunRecordsCommit)).not.toThrow();
+    expect(xcrunRecordsSourceTree["docs/DEVELOPMENT_HANDOFF.md"]).toEqual({
+      mode: "100644",
+      blob: "b5fa4aacc69932f95878200a4980663455a2f2c5",
+    });
+    expect(xcrunRecordsTree["docs/DEVELOPMENT_HANDOFF.md"]).toEqual({
+      mode: "100644",
+      blob: "84ee1fa9fffae4161a2135fb70398eaaf0a010e9",
+    });
   });
 
   it("44 classifies exact nine-path dual-diagnostic repair unstaged and staged", () => {
@@ -2492,6 +2728,22 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       );
       expect(classifyStatusSnapshot(snapshot)).toBe(expected);
     }
+    expect(xcrunRecordsPaths).toEqual(recordsRepairPaths);
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      expect(
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(xcrunRecordsCommit, xcrunRecordsStatusRecords(xy)),
+          ),
+        ),
+      ).toBe(expected);
+    }
+    expect(
+      classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(xcrunRecordsCommit, []))),
+    ).toBe("POSTCOMMIT");
   });
 
   it("45 rejects mixed, status, identity, extra, production, or auth-temp drift", () => {
@@ -2607,6 +2859,55 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
           parseStatusSnapshot(statusSnapshotBytes(simctlShortLivedBase, rows)),
         ),
       ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    const xcrunRows = xcrunRecordsStatusRecords(".M");
+    const xcrunMixed = [...xcrunRows];
+    xcrunMixed[0] = xcrunRecordsStatusRecords("M.")[0]!;
+    const xcrunExpected = expectedXcrunRecordsTracked(xcrunRecordsPaths[0]!);
+    const xcrunWrongStatus = [
+      "1",
+      "A.",
+      "N...",
+      xcrunExpected.mode,
+      xcrunExpected.mode,
+      xcrunExpected.mode,
+      xcrunExpected.baseObject,
+      xcrunExpected.baseObject,
+      xcrunRecordsPaths[0],
+    ].join(" ");
+    const xcrunInvalid = [
+      xcrunMixed,
+      [...xcrunRows, xcrunRows[0]!],
+      [...xcrunRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...xcrunRows, "? unexpected.txt"],
+      [xcrunWrongStatus, ...xcrunRows.slice(1)],
+      ...phasePaths
+        .filter((path) => !xcrunRecordsPaths.includes(path))
+        .map((path) => {
+          const base = xcrunRecordsTree[path as keyof typeof xcrunRecordsTree];
+          return [
+            ...xcrunRows,
+            ["1", ".M", "N...", base.mode, base.mode, base.mode, base.blob, base.blob, path].join(
+              " ",
+            ),
+          ];
+        }),
+    ];
+    for (const rows of xcrunInvalid)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(xcrunRecordsCommit, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    for (const xy of [".M", "M."] as const)
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(xcrunRecordsCommit, [
+              ...xcrunRecordsStatusRecords(xy),
+              exactConcurrent,
+            ]),
+          ),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
   });
 
   it("46 requires one direct 607 child with exact nine-path raw diff", () => {
@@ -2639,6 +2940,23 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       expect(() => assertSimctlShortLivedDirectChildCommit(Buffer.from(commit))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
+
+    expect(() =>
+      assertXcrunRecordsFutureCommit(
+        Buffer.from(
+          `tree ${"6".repeat(40)}\nparent ${xcrunRecordsCommit}\nauthor a\n\n${xcrunRecordsFutureSubject}\n`,
+        ),
+      ),
+    ).not.toThrow();
+    expect(() => assertXcrunRecordsFutureRawDiff(xcrunRecordsRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"6".repeat(40)}\nparent ${xcrunRecordsSource}\nauthor a\n\n${xcrunRecordsFutureSubject}\n`,
+      `tree ${"6".repeat(40)}\nparent ${xcrunRecordsCommit}\nparent ${xcrunRecordsSource}\nauthor a\n\n${xcrunRecordsFutureSubject}\n`,
+      `tree ${"6".repeat(40)}\nparent ${xcrunRecordsCommit}\nauthor a\n\nwrong subject\n`,
+    ])
+      expect(() => assertXcrunRecordsFutureCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
   });
 
   it("47 rejects diagnostic-repair mode, base blob, candidate blob, path, or row drift", () => {
@@ -2659,6 +2977,10 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       );
     for (const mutate of mutations)
       expect(() => assertSimctlShortLivedRawDiff(simctlShortLivedRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    for (const mutate of mutations)
+      expect(() => assertXcrunRecordsFutureRawDiff(xcrunRecordsRawDiff(mutate))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
   });
