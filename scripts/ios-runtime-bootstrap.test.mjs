@@ -70,6 +70,7 @@ import {
   XCODEBUILD,
   XCODE_DEVELOPER_DIR,
   XCODE_ARGS,
+  XCRUN,
   BootstrapFailure,
   assertCatalogTuple,
   assertProcessGroupAbsent,
@@ -104,7 +105,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "f07d3ba75a73f725cdb91c5a95e75dd873ada708f3f7fd0480e78ff5974b3d92",
+  "4186b07230826224bb29fa1b80abdce5d52968d65dae4492440459388d8fceb8",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -4525,7 +4526,17 @@ const v117Cases = [
 for (const [name, action] of v117Cases) test(`v1.1.17: ${name}`, action);
 
 const diagnosticObservedCodes = new Set([
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
   "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
@@ -5031,7 +5042,17 @@ assert.equal(simctlShortLivedCases.length, 19);
 const diagnosticCodes = [
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
   "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
@@ -5053,7 +5074,7 @@ const diagnosticCodes = [
 const diagnosticCases = [
   [
     "mode is exact",
-    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3"),
+    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4"),
   ],
   [
     "probe set is exact",
@@ -5099,10 +5120,14 @@ const diagnosticCases = [
         },
       ),
   ],
-  ...diagnosticCodes.map((code) => [
-    `receipt validates closed row ${code}`,
-    () => assert.equal(validateReceipt(diagnosticReceipt(code)).primaryFailureCode, code),
-  ]),
+  ...diagnosticCodes
+    .filter(
+      (code) => !code.startsWith("PRECONDITION_SIMCTL_FIND_EXECUTABLE_") || code.endsWith("_LSTAT"),
+    )
+    .map((code) => [
+      `receipt validates closed row ${code}`,
+      () => assert.equal(validateReceipt(diagnosticReceipt(code)).primaryFailureCode, code),
+    ]),
   [
     "diagnostic receipt rejects invocation one",
     () =>
@@ -5321,7 +5346,7 @@ const diagnosticCases = [
       ),
   ],
   [
-    "v1.3 rejects executable identity before spawn and closes the held descriptor once",
+    "v1.4 rejects executable type before spawn without opening or spawning",
     async () => {
       let closeCalls = 0;
       let spawnCalls = 0;
@@ -5342,14 +5367,14 @@ const diagnosticCases = [
             },
           },
         ),
-        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
       );
-      assert.equal(closeCalls, 1);
+      assert.equal(closeCalls, 0);
       assert.equal(spawnCalls, 0);
     },
   ],
   [
-    "v1.3 executable drift outranks a synchronous spawn category",
+    "v1.4 postsettlement executable drift outranks a synchronous spawn category",
     async () => {
       let lstatCalls = 0;
       let closeCalls = 0;
@@ -5372,7 +5397,7 @@ const diagnosticCases = [
             },
           },
         ),
-        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
       );
       assert.equal(lstatCalls, 3);
       assert.equal(closeCalls, 1);
@@ -5463,7 +5488,7 @@ const diagnosticCases = [
       child.stdout.end(`${SIMCTL_FIND_TEST_PATH}\n`);
       closeFakeChild(child);
       assert.equal((await promise).stdout, `${SIMCTL_FIND_TEST_PATH}\n`);
-      assert.deepEqual(calls, { close: 1, fstat: 4, lstat: 3, realpath: 3 });
+      assert.deepEqual(calls, { close: 1, fstat: 3, lstat: 3, realpath: 3 });
     },
   ],
   [
@@ -5497,19 +5522,440 @@ const diagnosticCases = [
     },
   ],
   [
-    "v1.2 removes the retired generic code from receipt authority",
+    "v1.4 maps raw or malformed bigint lstat only to LSTAT before spawn",
+    async () => {
+      for (const lstatSimctlExecutable of [
+        () => {
+          throw new Error("private-lstat");
+        },
+        () => ({ ...simctlExecutableInfo(), dev: 41 }),
+      ]) {
+        let spawnCalls = 0;
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              lstatSimctlExecutable,
+              spawn: () => {
+                spawnCalls += 1;
+                assert.fail("unexpected spawn");
+              },
+            },
+          ),
+          (error) =>
+            error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT" &&
+            !error.message.includes("private"),
+        );
+        assert.equal(spawnCalls, 0);
+      }
+    },
+  ],
+  [
+    "v1.4 maps named nonregular or symlink identity only to TYPE before spawn",
+    async () => {
+      for (const mutation of [{ isFile: () => false }, { isSymbolicLink: () => true }]) {
+        let spawnCalls = 0;
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              lstatSimctlExecutable: () => ({ ...simctlExecutableInfo(), ...mutation }),
+              spawn: () => {
+                spawnCalls += 1;
+                assert.fail("unexpected spawn");
+              },
+            },
+          ),
+          (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+        );
+        assert.equal(spawnCalls, 0);
+      }
+    },
+  ],
+  [
+    "v1.4 maps named owner drift only to OWNER before spawn",
+    async () => {
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            lstatSimctlExecutable: () => ({ ...simctlExecutableInfo(), uid: 501n }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+      );
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 maps named mode drift only to MODE before spawn",
+    async () => {
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            lstatSimctlExecutable: () => ({ ...simctlExecutableInfo(), mode: 0o100755n | 0o20n }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+      );
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 maps named nonpositive size only to SIZE before spawn",
+    async () => {
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            lstatSimctlExecutable: () => ({ ...simctlExecutableInfo(), size: 0n }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+      );
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 maps realpath throw or alias only to REALPATH before spawn",
+    async () => {
+      for (const realpathSimctlExecutable of [
+        () => {
+          throw new Error("private-realpath");
+        },
+        () => `${XCRUN}-alias`,
+      ]) {
+        let spawnCalls = 0;
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              realpathSimctlExecutable,
+              spawn: () => {
+                spawnCalls += 1;
+                assert.fail("unexpected spawn");
+              },
+            },
+          ),
+          (error) =>
+            error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH" &&
+            !error.message.includes("private"),
+        );
+        assert.equal(spawnCalls, 0);
+      }
+    },
+  ],
+  [
+    "v1.4 maps nofollow open failure only to OPEN before spawn",
+    async () => {
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            openSimctlExecutable: () => {
+              throw new Error("private-open");
+            },
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN" &&
+          !error.message.includes("private"),
+      );
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 maps malformed or nonregular held identity only to FSTAT before spawn",
+    async () => {
+      for (const fstatSimctlExecutable of [
+        () => {
+          throw new Error("private-fstat");
+        },
+        () => ({ ...simctlExecutableInfo(), ino: 73 }),
+        () => ({ ...simctlExecutableInfo(), isFile: () => false }),
+      ]) {
+        let closeCalls = 0;
+        let spawnCalls = 0;
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              closeSimctlExecutable: () => {
+                closeCalls += 1;
+              },
+              fstatSimctlExecutable,
+              spawn: () => {
+                spawnCalls += 1;
+                assert.fail("unexpected spawn");
+              },
+            },
+          ),
+          (error) =>
+            error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT" &&
+            !error.message.includes("private"),
+        );
+        assert.equal(closeCalls, 1);
+        assert.equal(spawnCalls, 0);
+      }
+    },
+  ],
+  [
+    "v1.4 preserves held owner mode and size classifications before spawn",
+    async () => {
+      for (const [mutation, expected] of [
+        [{ uid: 501n }, "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER"],
+        [{ mode: 0o100700n }, "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE"],
+        [{ size: 0n }, "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE"],
+      ]) {
+        let spawnCalls = 0;
+        await assert.rejects(
+          runSimctlFindTest(
+            { cwd: "/", env: {} },
+            {
+              fstatSimctlExecutable: () => ({ ...simctlExecutableInfo(), ...mutation }),
+              spawn: () => {
+                spawnCalls += 1;
+                assert.fail("unexpected spawn");
+              },
+            },
+          ),
+          (error) => error?.code === expected,
+        );
+        assert.equal(spawnCalls, 0);
+      }
+    },
+  ],
+  [
+    "v1.4 rejects initial named-held tuple mismatch as PRESPAWN_DRIFT before spawn",
+    async () => {
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            fstatSimctlExecutable: () => ({ ...simctlExecutableInfo(), ino: 74n }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+      );
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 immediate prespawn drift proves spawn callback count zero",
+    async () => {
+      let lstatCalls = 0;
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            lstatSimctlExecutable: () => ({
+              ...simctlExecutableInfo(),
+              ino: ++lstatCalls === 2 ? 74n : 73n,
+            }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+      );
+      assert.equal(lstatCalls, 2);
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 postsettlement drift outranks an otherwise successful attempt",
+    async () => {
+      const child = fakeChild(9533);
+      let lstatCalls = 0;
+      const promise = runSimctlFindTest(
+        { cwd: "/", env: {} },
+        {
+          lstatSimctlExecutable: () => ({
+            ...simctlExecutableInfo(),
+            ino: ++lstatCalls === 3 ? 74n : 73n,
+          }),
+          spawn: () => child,
+          probeSimctlIdentity: async () => simctlFindIdentity(child.pid),
+          kill: noSignalKill([]),
+          realpath: (value) => value,
+        },
+      );
+      child.emit("spawn");
+      child.stdout.end(`${SIMCTL_FIND_TEST_PATH}\n`);
+      closeFakeChild(child);
+      await assert.rejects(
+        promise,
+        (error) => error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+      );
+      assert.equal(lstatCalls, 3);
+    },
+  ],
+  [
+    "v1.4 postsettlement drift outranks an asynchronous pre-spawn category",
+    async () => {
+      const child = fakeChild(9534);
+      let lstatCalls = 0;
+      const promise = runSimctlFindTest(
+        { cwd: "/", env: {} },
+        {
+          lstatSimctlExecutable: () => ({
+            ...simctlExecutableInfo(),
+            ino: ++lstatCalls === 3 ? 74n : 73n,
+          }),
+          spawn: () => child,
+          kill: noSignalKill([]),
+        },
+      );
+      child.emit("error", Object.assign(new Error("private-spawn"), { code: "EACCES" }));
+      closeFakeChild(child, null, null);
+      await assert.rejects(
+        promise,
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT" &&
+          !error.message.includes("private"),
+      );
+      assert.equal(lstatCalls, 3);
+    },
+  ],
+  [
+    "v1.4 close failure is classified only after spawn with no identity failure",
+    async () => {
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            closeSimctlExecutable: () => {
+              throw new Error("private-close");
+            },
+            spawn: () => {
+              spawnCalls += 1;
+              throw Object.assign(new Error("private-spawn"), { code: "ENOENT" });
+            },
+          },
+        ),
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE" &&
+          !error.message.includes("private"),
+      );
+      assert.equal(spawnCalls, 1);
+    },
+  ],
+  [
+    "v1.4 prespawn identity failure survives descriptor close failure",
+    async () => {
+      let lstatCalls = 0;
+      let spawnCalls = 0;
+      await assert.rejects(
+        runSimctlFindTest(
+          { cwd: "/", env: {} },
+          {
+            closeSimctlExecutable: () => {
+              throw new Error("private-close");
+            },
+            lstatSimctlExecutable: () => ({
+              ...simctlExecutableInfo(),
+              ino: ++lstatCalls === 2 ? 74n : 73n,
+            }),
+            spawn: () => {
+              spawnCalls += 1;
+              assert.fail("unexpected spawn");
+            },
+          },
+        ),
+        (error) =>
+          error?.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT" &&
+          !error.message.includes("private"),
+      );
+      assert.equal(spawnCalls, 0);
+    },
+  ],
+  [
+    "v1.4 live-child HOLD outranks postidentity and close failures without signaling",
+    async () => {
+      const child = fakeChild(9535);
+      let closeCalls = 0;
+      const signals = [];
+      const promise = runSimctlFindTest(
+        { cwd: "/", env: {} },
+        {
+          closeSimctlExecutable: () => {
+            closeCalls += 1;
+            throw new Error("private-close");
+          },
+          spawn: () => child,
+          kill: noSignalKill(signals),
+          setTimeout: (callback, milliseconds) => {
+            const timer = setTimeout(() => {}, 60_000);
+            timer.unref?.();
+            if (milliseconds === CHILD_CLOSE_WAIT_MS) queueMicrotask(callback);
+            return timer;
+          },
+        },
+      );
+      child.emit("error", Object.assign(new Error("private-spawn"), { code: "EACCES" }));
+      await assert.rejects(
+        promise,
+        (error) =>
+          error?.code === "PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD" &&
+          !error.message.includes("private"),
+      );
+      assert.equal(closeCalls, 1);
+      assert.deepEqual(signals, []);
+    },
+  ],
+  [
+    "v1.4 removes retired generic codes from receipt authority",
     () => {
       assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_SIMCTL_FIND_PROBE"), false);
-      throwsCode(
-        () =>
-          validateReceipt(
-            diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PROBE", {
-              observedVersion: EXPECTED_XCODE_VERSION,
-              observedBuild: EXPECTED_XCODE_BUILD,
-            }),
-          ),
-        "RECEIPT_INVALID",
+      assert.equal(
+        testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY"),
+        false,
       );
+      for (const code of [
+        "PRECONDITION_SIMCTL_FIND_PROBE",
+        "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+      ]) {
+        throwsCode(
+          () =>
+            validateReceipt(
+              diagnosticReceipt(code, {
+                observedVersion: EXPECTED_XCODE_VERSION,
+                observedBuild: EXPECTED_XCODE_BUILD,
+              }),
+            ),
+          "RECEIPT_INVALID",
+        );
+      }
     },
   ],
   ...simctlShortLivedCases,
@@ -5736,5 +6182,5 @@ const diagnosticCases = [
       ),
   ],
 ];
-assert.equal(diagnosticCases.length, 74);
-for (const [name, action] of diagnosticCases) test(`diagnostic v1.3: ${name}`, action);
+assert.equal(diagnosticCases.length, 90);
+for (const [name, action] of diagnosticCases) test(`diagnostic v1.4: ${name}`, action);

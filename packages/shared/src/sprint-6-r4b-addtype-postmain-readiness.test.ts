@@ -11,8 +11,8 @@ const decisionPath = "docs/2026-11-11_r4b_addtype_bootstrap_decision_v1.md";
 const canonicalRecordHeading = "## Canonical readiness record";
 const historicalHandoffBytes = 249_789;
 const historicalHandoffSha256 = "78788e3bf3b0a54ef3bccb4b0aec804ad3db406976dfede4963bf1d2c083889f";
-const ios17SuffixBytes = 66_628;
-const ios17SuffixSha256 = "b74ca6b78d659ded2c5b9ea1471a9302b59768b3cbe4e799a3986ddffb0ebee7";
+const ios17SuffixBytes = 71_259;
+const ios17SuffixSha256 = "adc904c789978c4e924d5dab299c3698ea2b1b2b194d6fc7440fe93c87cb6f91";
 const ios17Heading = "## 2026-11-14 — Recommended Option A iOS 17.5 prerequisite CI repair";
 
 const sha256 = (bytes: Buffer | string): string => createHash("sha256").update(bytes).digest("hex");

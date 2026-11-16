@@ -3405,3 +3405,45 @@ Exact repaired source identities are:
 - Shared structure test: **80,884 bytes**; SHA-256 `b2867d64e06e8c6d2cf8f1ab1e98c9b28b93547e827fd9acd198ecef23b8e87a`; Git blob `64b92e92847efa448b3fa79f5926f823c0c71e2f`.
 
 The existing bounded repository/test authority is unchanged; no broader authority is created. PR #94 remains draft/HOLD. The repair has no protected execution or recovery evidence and makes no acquisition, live diagnostic, simulator installation, production, runtime-success, retry, stage, commit, push, ready, or merge claim. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.4 record
+
+Protected evidence from exact head `1c1464ea0d5807313802d269f82facef84f523d7`, run `43772642056`, artifact `14185291221`, remains historical diagnosis only. Its `receipt.json` is **1,449 bytes** with SHA-256 `10b92b3e820aed560a7563e44be3c49a605018b85d626b8e9e3ab23d27bf8775` and records `PRECONDITION_REJECTED` / `PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY`, invocation count **0**, no acquisition or runtime action, and cleanup `NONE` / `NOT_REQUIRED`. Current iOS succeeded, minimum iOS failed, and the aggregate skipped; the overall protected rollup is **12 success / 1 failure / 1 skipped**. The executable-identity subtype is not provable from that receipt, and no recovery is claimed.
+
+Catalina's `PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.4` architecture gate is **64/64 PASS**, and Natalia's security and privacy gate is **64/64 PASS**. Schema **2** adds no fields and exposes no raw identity. The exact closed executable-identity codes are:
+
+1. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT`
+2. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE`
+3. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER`
+4. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE`
+5. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE`
+6. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH`
+7. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN`
+8. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT`
+9. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT`
+10. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT`
+11. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE`
+
+The repository/test-only scope remains the same exact six paths: this handoff, the shared structure test, activation guard, readiness guard, controller, and controller test. Functional development evidence is controller **428/428 PASS**, shared structure **108/108 PASS**, and format, syntax, and diff integrity PASS.
+
+Current frozen source facts before this append are:
+
+- Controller: **142,239 bytes**; SHA-256 `bd5644f8a46b1dcd43fc9e3d60f006cc925bd037e3b0c1c2aa5cc2d34bebb58b`; Git blob `42121be695f8ef4d40238f787a74f7efbd30d027`.
+- Controller test: **195,954 bytes**; SHA-256 `156ba96f7881f67e92fc11d9b73083545735aa8a304c14b3cd88308c1de01f76`; Git blob `462892e57f45359abfac992ef590518212921e8c`.
+- Shared structure test: **88,985 bytes**; SHA-256 `ab8abbf2b8ee8c8073dcbee0ba3874babb77151594b51513e290b30fc1690b9e`; Git blob `1e73fc64a3fdce7088b5c981e21ecbfc5ad202c5`.
+
+The v1.4 diagnostic remains unexecuted. At most one no-retry protected diagnostic execution may occur only after future mechanical pins and all applicable gates pass. PR #94 remains draft/HOLD. No protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.4 architecture-label supersession
+
+Catalina amended close precedence to Natalia as: **HOLD > first identity-stage failure > CLOSE (only when spawn was invoked and no earlier identity failure exists) > prior nonidentity result**. No close behavior change is required.
+
+The sole label correction is that an initial named-to-held tuple mismatch is now `PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT`. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT` remains reserved for an `fstat` throw, malformed result, or invalid type. This correction changes no closed code, code cardinality, schema, authority, or execution boundary.
+
+Current formatter-stable source identities are:
+
+- Controller: **142,254 bytes**; SHA-256 `4186b07230826224bb29fa1b80abdce5d52968d65dae4492440459388d8fceb8`; Git blob `86c3ea50da2335d0f8fba0cd3ba860e93ef241b1`.
+- Controller test: **195,972 bytes**; SHA-256 `e2458513c474be77d4169e1bd5d5689eb520c3a8572a65ada4a78080907c8983`; Git blob `b25c6e21553cfdb17ec81c42f198671bda90e164`.
+- Shared structure test: **88,994 bytes**; SHA-256 `b36271e35ce8dc045ef0396b5c4a40919143fc012be770b311056c250b03b07a`; Git blob `7a898bccb29910cef2434c536659cafd37363bbd`.
+
+Functional counts remain controller **428/428 PASS** and shared structure **108/108 PASS**; format, syntax, and diff integrity PASS. The v1.4 diagnostic remains unexecuted. PR #94 remains draft/HOLD, and no protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh the downstream pins after this append freezes.

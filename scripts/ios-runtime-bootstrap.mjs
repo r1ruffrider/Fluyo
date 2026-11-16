@@ -26,7 +26,7 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_ID = "ios_17_5_runtime_bootstrap_v1";
-export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_3";
+export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4";
 export const EXPECTED_XCODE_VERSION = "16.2";
 export const EXPECTED_XCODE_BUILD = "16C5032a";
 export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";
@@ -159,7 +159,17 @@ const PRIMARY_FAILURE_CODES = new Set([
   "PRECONDITION_SOURCE",
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
   "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
@@ -238,7 +248,17 @@ const XCODE_PROBE_FAILURE_CODES = new Set(["PRECONDITION_XCODE_VERSION_PROBE"]);
 const XCODE_DIAGNOSTIC_FAILURE_CODES = new Set([
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
   "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
   "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
@@ -939,21 +959,52 @@ function simctlFindSpawnFailure(error) {
   return SIMCTL_FIND_SPAWN_FAILURE[code] ?? "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER";
 }
 
-function simctlExecutableTuple(info) {
+const SIMCTL_EXECUTABLE_FAILURE_CODES = new Set([
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
+]);
+
+function simctlExecutableTuple(info, source) {
+  const malformed = source === "LSTAT" ? "LSTAT" : "FSTAT";
   if (
-    !info?.isFile?.() ||
-    info.isSymbolicLink?.() === true ||
+    info == null ||
+    typeof info.isFile !== "function" ||
+    typeof info.isSymbolicLink !== "function" ||
     typeof info.dev !== "bigint" ||
     typeof info.ino !== "bigint" ||
     typeof info.size !== "bigint" ||
     typeof info.uid !== "bigint" ||
-    typeof info.mode !== "bigint" ||
-    info.size <= 0n ||
-    info.uid !== 0n ||
-    (info.mode & 0o7777n) !== 0o755n
+    typeof info.mode !== "bigint"
   ) {
-    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+    fail(`PRECONDITION_SIMCTL_FIND_EXECUTABLE_${malformed}`);
   }
+  let regular;
+  let symbolic;
+  try {
+    regular = info.isFile();
+    symbolic = info.isSymbolicLink();
+  } catch {
+    fail(`PRECONDITION_SIMCTL_FIND_EXECUTABLE_${malformed}`);
+  }
+  if (!regular || symbolic) {
+    fail(
+      source === "LSTAT"
+        ? "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE"
+        : "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+    );
+  }
+  if (info.uid !== 0n) fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER");
+  if ((info.mode & 0o7777n) !== 0o755n) fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE");
+  if (info.size <= 0n) fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE");
   return Object.freeze({
     dev: info.dev,
     ino: info.ino,
@@ -967,55 +1018,83 @@ function sameSimctlExecutableTuple(left, right) {
   return ["dev", "ino", "size", "uid", "mode"].every((key) => left[key] === right[key]);
 }
 
-function verifySimctlExecutable(binding, dependencies = {}) {
+function namedSimctlExecutable(dependencies = {}) {
   const lstat = dependencies.lstatSimctlExecutable ?? lstatSync;
-  const fstat = dependencies.fstatSimctlExecutable ?? fstatSync;
   const realpath = dependencies.realpathSimctlExecutable ?? realpathSync.native;
+  let named;
   try {
-    const named = simctlExecutableTuple(lstat(XCRUN, { bigint: true }));
-    const held = simctlExecutableTuple(fstat(binding.fd, { bigint: true }));
+    named = simctlExecutableTuple(lstat(XCRUN, { bigint: true }), "LSTAT");
+  } catch (error) {
+    if (error instanceof BootstrapFailure && SIMCTL_EXECUTABLE_FAILURE_CODES.has(error.code))
+      throw error;
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT");
+  }
+  let canonical;
+  try {
+    canonical = realpath(XCRUN);
+  } catch {
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH");
+  }
+  if (canonical !== XCRUN) fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH");
+  return named;
+}
+
+function heldSimctlExecutable(fd, dependencies = {}) {
+  const fstat = dependencies.fstatSimctlExecutable ?? fstatSync;
+  try {
+    return simctlExecutableTuple(fstat(fd, { bigint: true }), "FSTAT");
+  } catch (error) {
+    if (error instanceof BootstrapFailure && SIMCTL_EXECUTABLE_FAILURE_CODES.has(error.code))
+      throw error;
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT");
+  }
+}
+
+function verifySimctlExecutable(binding, failureCode, dependencies = {}) {
+  try {
+    const named = namedSimctlExecutable(dependencies);
+    const held = heldSimctlExecutable(binding.fd, dependencies);
     if (
-      realpath(XCRUN) !== XCRUN ||
       !sameSimctlExecutableTuple(named, binding.identity) ||
       !sameSimctlExecutableTuple(held, binding.identity)
-    ) {
-      fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
-    }
-  } catch (error) {
-    if (
-      error instanceof BootstrapFailure &&
-      error.code === "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY"
-    ) {
-      throw error;
-    }
-    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+    )
+      fail(failureCode);
+  } catch {
+    fail(failureCode);
   }
 }
 
 function openSimctlExecutable(dependencies = {}) {
   const open = dependencies.openSimctlExecutable ?? openSync;
   const close = dependencies.closeSimctlExecutable ?? closeSync;
+  const named = namedSimctlExecutable(dependencies);
   let fd = null;
+  let failure = null;
   try {
-    fd = open(XCRUN, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-    const binding = Object.freeze({
-      fd,
-      identity: simctlExecutableTuple(
-        (dependencies.fstatSimctlExecutable ?? fstatSync)(fd, { bigint: true }),
-      ),
-    });
-    verifySimctlExecutable(binding, dependencies);
-    return binding;
-  } catch {
-    if (fd !== null) {
+    try {
+      fd = open(XCRUN, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    } catch {
+      fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN");
+    }
+    const held = heldSimctlExecutable(fd, dependencies);
+    if (!sameSimctlExecutableTuple(named, held))
+      fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT");
+    return Object.freeze({ fd, identity: held });
+  } catch (error) {
+    failure =
+      error instanceof BootstrapFailure && SIMCTL_EXECUTABLE_FAILURE_CODES.has(error.code)
+        ? error
+        : new BootstrapFailure("PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT");
+  } finally {
+    if (failure !== null && fd !== null) {
       try {
         close(fd);
       } catch {
-        // The closed failure code intentionally carries no local filesystem detail.
+        // Preserve the first closed identity-stage failure without local detail.
       }
     }
-    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
   }
+  throw failure;
 }
 
 function assertUnverifiedGroupAbsent(pid, dependencies = {}) {
@@ -1118,10 +1197,11 @@ function validatedSimctlFindOutput(stdoutChunks, stderrChunks, dependencies = {}
   return Object.freeze({ stdout: `${canonical}\n`, stderr: "" });
 }
 
-async function runSimctlFindAttempt(options, dependencies = {}) {
+async function runSimctlFindAttempt(options, attemptEvidence, dependencies = {}) {
   const spawnProcess = dependencies.spawn ?? spawn;
   let child;
   try {
+    attemptEvidence.spawnInvoked = true;
     child = spawnProcess(XCRUN, ["--find", "simctl"], {
       ...options,
       shell: false,
@@ -1359,13 +1439,25 @@ async function runSimctlFindAttempt(options, dependencies = {}) {
 async function runSimctlFindV2(options, dependencies = {}) {
   const close = dependencies.closeSimctlExecutable ?? closeSync;
   const binding = openSimctlExecutable(dependencies);
+  const attemptEvidence = { spawnInvoked: false };
   let result;
   let failure = null;
   let closeFailure = false;
+  let identityFailure = false;
   try {
-    verifySimctlExecutable(binding, dependencies);
     try {
-      result = await runSimctlFindAttempt(options, dependencies);
+      verifySimctlExecutable(
+        binding,
+        "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+        dependencies,
+      );
+    } catch (error) {
+      failure = error;
+      identityFailure = true;
+    }
+    try {
+      if (failure === null)
+        result = await runSimctlFindAttempt(options, attemptEvidence, dependencies);
     } catch (error) {
       failure = error;
     }
@@ -1377,9 +1469,16 @@ async function runSimctlFindV2(options, dependencies = {}) {
       ].includes(failure.code)
     )) {
       try {
-        verifySimctlExecutable(binding, dependencies);
+        if (attemptEvidence.spawnInvoked) {
+          verifySimctlExecutable(
+            binding,
+            "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+            dependencies,
+          );
+        }
       } catch (error) {
         failure = error;
+        identityFailure = true;
       }
     }
   } finally {
@@ -1398,7 +1497,8 @@ async function runSimctlFindV2(options, dependencies = {}) {
   ) {
     throw failure;
   }
-  if (closeFailure) fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY");
+  if (closeFailure && attemptEvidence.spawnInvoked && !identityFailure)
+    fail("PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE");
   if (failure) throw failure;
   return result;
 }
@@ -1772,7 +1872,17 @@ function validateReceiptPhaseEvidence(receipt) {
 function validateDiagnosticReceipt(receipt) {
   const observed = [receipt.observedVersion, receipt.observedBuild];
   const expectsObserved = [
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
+    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
     "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
     "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
     "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
