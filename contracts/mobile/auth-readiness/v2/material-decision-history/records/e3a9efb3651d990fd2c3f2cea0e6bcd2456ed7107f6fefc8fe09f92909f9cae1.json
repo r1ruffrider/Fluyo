@@ -1,0 +1,126 @@
+{
+  "actor": "Marlon",
+  "authority": {
+    "grantedBy": "Marlon",
+    "kind": "direct_material_owner_authority",
+    "referenceRecordDigests": []
+  },
+  "eventType": "MATERIAL_DECISION_SELECTION",
+  "ledgerId": "fluyo-native-auth-material-decisions-v2",
+  "payload": {
+    "entries": [
+      {
+        "decisionId": "AUTH-SDK-IOS",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "0b07f38a7cd0370df30b43edaf2897ea1cda0c3fc2f9aa6d6195b58b27d75301",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-SDK-ANDROID",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "47d35bd9b203a6bb6a8c0c02b422ce0e881a751e65041d0a1885e766edf77941",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-METHODS",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "283cc1902297a7ee3774fd0e16116235d30d90b35b2c8dde65b9a5c47403c2db",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-SIGNOUT-SCOPE",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "101070df8ca27cfb4d9d752b7e3a4ce2f82b472c591e48ff18b45d4341f425f6",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-CALLBACK-DOMAINS",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      },
+      {
+        "decisionId": "AUTH-AASA",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      },
+      {
+        "decisionId": "AUTH-ASSETLINKS",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      },
+      {
+        "decisionId": "AUTH-SUPABASE-ALLOWLIST",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      },
+      {
+        "decisionId": "AUTH-STORAGE-IOS",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "ba08ff50b8ad7cb1dc28ea6542f4a1fe9e4e4be85a5a423a7e4de026021a92a1",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-STORAGE-ANDROID",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "c323189dad8d11fa6c75da53b7ac5c8f1c63b233e4368efcc7529d0e5cb5a36b",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-NONPROD-CUSTODY",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      },
+      {
+        "decisionId": "AUTH-RECOVERY-DELIVERY",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      },
+      {
+        "decisionId": "AUTH-REVOCATION",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "aa6b823ccd447b3e4297542dba71651dc2966ab0ea969263ad08ff35baefc491",
+        "selectionState": "OWNER_SELECTED_EVIDENCE_PENDING"
+      },
+      {
+        "decisionId": "AUTH-ACCOUNT-DELETION",
+        "decisionManifestSha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf",
+        "decisionValueSha256": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+        "selectionState": "DEFERRED_OPEN"
+      }
+    ],
+    "selectionChoiceCode": "APPROVE_RECOMMENDED_BUNDLE",
+    "selectionChoiceLabel": "Approve recommended bundle",
+    "selectionRecordedDate": "2026-10-30",
+    "selectionSource": "Marlon directly selected “Approve recommended bundle” in Codex on 2026-10-30 against the merged decision brief"
+  },
+  "previousRecordDigest": "f9db948e9d41cc8959fc9b4c3d4ef2c67814832eb513c4592388a2a984e6dc71",
+  "provenance": {
+    "integrityScope": "canonical_record_bytes_and_declared_subject_bytes",
+    "nonRepudiationLimitation": "repository_records_prove_integrity_and_declared_authority_after_recording_not_cryptographic_human_nonrepudiation",
+    "recordedBy": "Adriana",
+    "recordingMethod": "repository_governance_record",
+    "sourceCommit": "80563fee339a07bd2ab9706b8186ed772a3b9a1a"
+  },
+  "recordedAtUtc": "2026-10-30T10:34:59.988Z",
+  "schemaVersion": "2.0.0",
+  "sequence": 2,
+  "subject": {
+    "bundleSha256": "038390acbd66e8e2a387c8badf12f6bf0c1692ab7b124927872e3fae71135162",
+    "files": [
+      {
+        "path": "contracts/mobile/auth-readiness/v2/decision-values/cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf.json",
+        "sha256": "cf87faa8ac8c8a3cec1cd4ff62864cd4ad7af771b4e5734b0c6ca5b4d75c0ebf"
+      },
+      {
+        "path": "docs/NATIVE_AUTH_DECISION_BRIEF_2026-10-29.md",
+        "sha256": "e7d55724bddefb384d9e60134dae4beb4c194eb6908c45fc9c09dc8852e36c17"
+      }
+    ]
+  }
+}
