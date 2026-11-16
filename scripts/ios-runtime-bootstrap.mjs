@@ -26,12 +26,12 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_ID = "ios_17_5_runtime_bootstrap_v1";
-export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4";
+export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5";
 export const EXPECTED_XCODE_VERSION = "16.2";
 export const EXPECTED_XCODE_BUILD = "16C5032a";
 export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";
 export const XCODEBUILD = `${XCODE_DEVELOPER_DIR}/usr/bin/xcodebuild`;
-export const XCRUN = `${XCODE_DEVELOPER_DIR}/usr/bin/xcrun`;
+export const XCRUN = "/usr/bin/xcrun";
 export const PS = "/bin/ps";
 export const XCODE_ARGS = Object.freeze([
   "-downloadPlatform",

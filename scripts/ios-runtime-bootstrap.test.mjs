@@ -105,7 +105,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "4186b07230826224bb29fa1b80abdce5d52968d65dae4492440459388d8fceb8",
+  "dbbd8a0064a5b19c4f22e224806360079985a650b66a7c63352b8da7cdd01d2b",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -4630,13 +4630,9 @@ const simctlFindIdentity = (pid) =>
     pid,
     pgid: pid,
     ppid: 1,
-    executable: "/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/xcrun",
+    executable: "/usr/bin/xcrun",
     startToken: "Fri Nov 14 12:34:56 2026",
-    commandTokens: Object.freeze([
-      "/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/xcrun",
-      "--find",
-      "simctl",
-    ]),
+    commandTokens: Object.freeze(["/usr/bin/xcrun", "--find", "simctl"]),
   });
 
 const closeFakeChild = (child, code = 0, signal = null) => {
@@ -4662,10 +4658,19 @@ const simctlShortLivedCases = [
     async () => {
       const child = fakeChild(9501);
       const signals = [];
+      const childEnv = Object.freeze({ DEVELOPER_DIR: XCODE_DEVELOPER_DIR });
       const promise = runSimctlFindTest(
-        { cwd: "/", env: {} },
+        { cwd: "/", env: childEnv },
         {
-          spawn: () => child,
+          spawn: (command, args, options) => {
+            assert.equal(command, "/usr/bin/xcrun");
+            assert.deepEqual(args, ["--find", "simctl"]);
+            assert.equal(options.cwd, "/");
+            assert.equal(options.env, childEnv);
+            assert.equal(options.shell, false);
+            assert.equal(options.detached, true);
+            return child;
+          },
           probeSimctlIdentity: async () => simctlFindIdentity(child.pid),
           kill: noSignalKill(signals),
           realpath: (value) => value,
@@ -5074,7 +5079,7 @@ const diagnosticCodes = [
 const diagnosticCases = [
   [
     "mode is exact",
-    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4"),
+    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5"),
   ],
   [
     "probe set is exact",
@@ -5318,14 +5323,28 @@ const diagnosticCases = [
       ),
   ],
   [
-    "v1.3 simctl profile binds exact executable and argv",
+    "v1.5 simctl profile binds the system xcrun and pinned developer directory",
     () => {
-      assert.match(controllerSource, /const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";/u);
+      const start = controllerSource.indexOf('const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";');
+      const end = controllerSource.indexOf("export async function probeProcessIdentity", start);
+      const simctlFindSource = controllerSource.slice(start, end);
+      assert.match(simctlFindSource, /const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";/u);
+      assert.match(controllerSource, /export const XCRUN = "\/usr\/bin\/xcrun";/u);
       assert.match(
         controllerSource,
+        /export const XCODE_DEVELOPER_DIR = "\/Applications\/Xcode_16\.2\.app\/Contents\/Developer";/u,
+      );
+      assert.match(
+        simctlFindSource,
         /const SIMCTL_FIND_TOKENS = Object\.freeze\(\[XCRUN, "--find", "simctl"\]\);/u,
       );
-      assert.doesNotMatch(controllerSource, /diagnosticCode: "PRECONDITION_SIMCTL_FIND/u);
+      assert.equal(controllerSource.includes("XCODE_DEVELOPER_DIR}/usr/bin/xcrun"), false);
+      assert.doesNotMatch(
+        simctlFindSource,
+        /process\.env\.PATH|options\.env\.PATH\s*=|xcode-select|sudo|fallback/u,
+      );
+      assert.match(simctlFindSource, /shell: false,\s*detached: true/u);
+      assert.doesNotMatch(simctlFindSource, /diagnosticCode: "PRECONDITION_SIMCTL_FIND/u);
     },
   ],
   [
@@ -6183,4 +6202,4 @@ const diagnosticCases = [
   ],
 ];
 assert.equal(diagnosticCases.length, 90);
-for (const [name, action] of diagnosticCases) test(`diagnostic v1.4: ${name}`, action);
+for (const [name, action] of diagnosticCases) test(`diagnostic v1.5: ${name}`, action);

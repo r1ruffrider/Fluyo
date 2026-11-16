@@ -35,7 +35,7 @@ const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
 const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
 const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
-const currentTenManifestSha = "d30681df46622c03749bd70fef141a2678245ccb96e1184e7deefa4de0ff8968";
+const currentTenManifestSha = "84d6fde7bd427bc441777b094f2ec107a87264f628aa5a24287ec969617c2552";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -186,9 +186,9 @@ const clockRootRepairBaseTree = Object.freeze({
     blob: "37c9d1d47db696e0633bd06ccf0028dad2ff6eda",
   }),
 });
-const simctlShortLivedBase = "1c1464ea0d5807313802d269f82facef84f523d7";
-const simctlShortLivedBaseTreeId = "e5a70e2f4aac5a5a9f90c90ee8e743fbdc8d1382";
-const simctlShortLivedBaseSubject = "test(ci): classify simctl spawn failure";
+const simctlShortLivedBase = "d2ba16c09392289b66a7ba26f47ba2468b2e64ec";
+const simctlShortLivedBaseTreeId = "1ef312f3d4462fb1e817825600a6f9fecc58fb9f";
+const simctlShortLivedBaseSubject = "test(ci): classify xcrun identity failure";
 const simctlShortLivedPaths = [
   "docs/DEVELOPMENT_HANDOFF.md",
   "packages/shared/src/ios-foundation-structure.test.ts",
@@ -204,19 +204,19 @@ const simctlShortLivedBaseTree = Object.freeze({
   }),
   "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
     mode: "100644",
-    blob: "abccedb4a0f9df7670ce9b6a5e27d000abacd965",
+    blob: "b3766611df6087cf9b0b3a418f84fa75a15e6969",
   }),
   "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
     mode: "100644",
-    blob: "64b92e92847efa448b3fa79f5926f823c0c71e2f",
+    blob: "7a898bccb29910cef2434c536659cafd37363bbd",
   }),
   "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
     mode: "100644",
-    blob: "a8b58e7c2f8860bab93d88ebdf3986ddba08b09e",
+    blob: "325221945f30f8dd6e225611b467d7bee3d1327f",
   }),
   "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
     mode: "100644",
-    blob: "e6065dc86e177ca45cd088b7e8531fe30733650f",
+    blob: "674a38a22638ac1643aa862f3057dc2b7077f978",
   }),
   "scripts/ios-ci.sh": Object.freeze({
     mode: "100755",
@@ -224,11 +224,11 @@ const simctlShortLivedBaseTree = Object.freeze({
   }),
   "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
     mode: "100644",
-    blob: "3ba34cff3d7c82ef812fea08ed732a2056072ae3",
+    blob: "86c3ea50da2335d0f8fba0cd3ba860e93ef241b1",
   }),
   "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
     mode: "100644",
-    blob: "525f1019e7b9a61c925ccb13fc805596f994f500",
+    blob: "b25c6e21553cfdb17ec81c42f198671bda90e164",
   }),
   "scripts/summarize-ios-test-failures.mjs": Object.freeze({
     mode: "100644",
@@ -2428,12 +2428,12 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         expected.mode,
       );
     }
-    expect(simctlShortLivedBase).toBe("1c1464ea0d5807313802d269f82facef84f523d7");
+    expect(simctlShortLivedBase).toBe("d2ba16c09392289b66a7ba26f47ba2468b2e64ec");
     const currentCommit = git(["cat-file", "commit", simctlShortLivedBase]);
     const [currentHeaders, ...currentMessageParts] = currentCommit.split("\n\n");
     const currentHeaderLines = currentHeaders?.split("\n") ?? [];
     expect(currentHeaderLines.filter((line) => line.startsWith("parent "))).toEqual([
-      "parent a721ff8df68f621b3eb4afcddd168ab52567f38f",
+      "parent 1c1464ea0d5807313802d269f82facef84f523d7",
     ]);
     expect(currentHeaderLines.filter((line) => line.startsWith("tree "))).toEqual([
       `tree ${simctlShortLivedBaseTreeId}`,

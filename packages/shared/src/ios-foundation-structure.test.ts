@@ -1047,7 +1047,7 @@ describe("iOS unsigned foundation structure", () => {
 
   it("binds the exact diagnostic mode and schema-v2 ordered evidence fields", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4"');
+    expect(controller).toContain('"PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5"');
     expect(controller).toContain("receipt.schemaVersion !== 2");
     expect(controller).toMatch(
       /"diagnosticMode",\s*"expectedVersion",\s*"expectedBuild",\s*"observedVersion",\s*"observedBuild"/u,
@@ -1173,8 +1173,8 @@ describe("iOS unsigned foundation structure", () => {
     const workflow = read(".github/workflows/ios.yml");
     const iosCi = read("scripts/ios-ci.sh");
     expect(workflow).toContain("node scripts/ios-runtime-bootstrap.mjs run");
-    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4");
-    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_4");
+    expect(workflow).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5");
+    expect(iosCi).not.toContain("PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5");
     expect(iosCi).toContain("FLUYO_IOS_EVIDENCE_LEG");
   });
 
@@ -1334,14 +1334,24 @@ describe("iOS unsigned foundation structure", () => {
     expect(receipt).toContain("EXPECTED_XCODE_BUILD");
   });
 
-  it("binds simctl discovery to the pinned Xcode xcrun and one held nofollow descriptor", () => {
+  it("binds simctl discovery to the system xcrun and one held nofollow descriptor", () => {
     const controller = read("scripts/ios-runtime-bootstrap.mjs");
-    expect(controller).toContain("export const XCRUN = `${XCODE_DEVELOPER_DIR}/usr/bin/xcrun`");
-    expect(controller).toContain('spawnProcess(XCRUN, ["--find", "simctl"]');
-    expect(controller).toContain("fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW");
-    expect(controller).toContain("info.uid !== 0n");
-    expect(controller).toContain("(info.mode & 0o7777n) !== 0o755n");
-    expect(controller).toContain("info.size <= 0n");
+    const start = controller.indexOf('const SIMCTL_FIND_PROFILE = "SIMCTL_FIND_V2";');
+    const end = controller.indexOf("export async function probeProcessIdentity", start);
+    const simctlFind = controller.slice(start, end);
+    expect(controller).toContain('export const XCRUN = "/usr/bin/xcrun"');
+    expect(controller).toContain(
+      'export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer"',
+    );
+    expect(controller).not.toContain("XCODE_DEVELOPER_DIR}/usr/bin/xcrun");
+    expect(simctlFind).not.toMatch(
+      /process\.env\.PATH|options\.env\.PATH\s*=|xcode-select|sudo|fallback/u,
+    );
+    expect(simctlFind).toContain('spawnProcess(XCRUN, ["--find", "simctl"]');
+    expect(simctlFind).toContain("fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW");
+    expect(simctlFind).toContain("info.uid !== 0n");
+    expect(simctlFind).toContain("(info.mode & 0o7777n) !== 0o755n");
+    expect(simctlFind).toContain("info.size <= 0n");
   });
 
   it("revalidates the held xcrun identity before spawn and after settlement then closes once", () => {

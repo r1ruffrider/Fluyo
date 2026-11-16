@@ -3447,3 +3447,27 @@ Current formatter-stable source identities are:
 - Shared structure test: **88,994 bytes**; SHA-256 `b36271e35ce8dc045ef0396b5c4a40919143fc012be770b311056c250b03b07a`; Git blob `7a898bccb29910cef2434c536659cafd37363bbd`.
 
 Functional counts remain controller **428/428 PASS** and shared structure **108/108 PASS**; format, syntax, and diff integrity PASS. The v1.4 diagnostic remains unexecuted. PR #94 remains draft/HOLD, and no protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh the downstream pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN documented-interface diagnostic v1.5 record
+
+Official-source provenance is bounded to Apple's documented interface. Technical Note TN2339, published in 2014 and updated in 2017, documents `xcrun` as the `/usr/bin` shim. Apple's current Configuring command-line tools settings documentation and Xcode command-line reference, observed **2026-11-16**, corroborate `xcrun` and `DEVELOPER_DIR`; TN3147 provides an example. This record makes no claim that a bundle-local executable is missing or forbidden.
+
+Protected v1.4 evidence from exact head `d2ba16c09392289b66a7ba26f47ba2468b2e64ec`, run `43784914905`, artifact `14189594106`, remains historical diagnosis only. Its receipt is **1,446 bytes** with SHA-256 `3ad052f522cfa4b57d65546026bb28547792ba267a51eb0fefab062d2b8afb71`, records `PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT`, and has invocation count **0** with no acquisition or runtime action. The cause within that LSTAT stage remains unknown; no `ENOENT` conclusion or recovery claim is made.
+
+The v1.5 repository/test contract binds exact executable path `/usr/bin/xcrun`, keeps `DEVELOPER_DIR` pinned, and uses mode `PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.5`. Catalina's architecture gate is **52/52 PASS**, Natalia's security and privacy gate is **52/52 PASS**, and Gabriela's provenance gate is **8/8 PASS**.
+
+The scope remains exactly six paths: this handoff, the shared structure test, activation guard, readiness guard, controller, and controller test. Functional development evidence is controller **428/428 PASS** and shared structure **108/108 PASS**.
+
+Current frozen source identities before this append are:
+
+- Controller: **142,232 bytes**; SHA-256 `dbbd8a0064a5b19c4f22e224806360079985a650b66a7c63352b8da7cdd01d2b`; Git blob `d1b4458a562226781f6625117fee5e6b3781b0fa`.
+- Controller test: **197,127 bytes**; SHA-256 `c89c3bb101ca9d1db479fa645d81e4f9cd69d92fdb8315422178b26b0fa56b2f`; Git blob `99db9ab58b1507515c540af5ca720605e66ef7c8`.
+- Shared structure test: **89,528 bytes**; SHA-256 `b016da0ab08c3b7e3ad8f1323a29f40dd2fed4008c6d5b5f6f808e6add89aaac`; Git blob `e9230387656c1e05bee015030ea9de65ee8553c1`.
+
+The v1.5 diagnostic remains unexecuted. PR #94 remains draft/HOLD. No protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.5 serialized-mode supersession
+
+The v1.5 contract PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.5 binds receipt diagnosticMode PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5.
+
+This true-EOF append explicitly supersedes line 3457's use of the architecture label as the serialized mode. It changes no functional behavior, code, schema, authority, or evidence count. The v1.5 diagnostic remains unexecuted; PR #94 remains draft/HOLD; and no protected execution, recovery, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded.
