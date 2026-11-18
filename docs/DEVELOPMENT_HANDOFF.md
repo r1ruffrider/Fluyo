@@ -3499,3 +3499,78 @@ The frozen architecture is `PR94-V1.5-RECORDS-TOPOLOGY-v1`. On exact records com
 The repair scope is exactly `docs/DEVELOPMENT_HANDOFF.md`, the activation test, and the readiness test. The future repair commit must be a direct child with exact subject `test(ci): bind xcrun diagnostic records topology`. Exact current source pins and the final manifest remain pending Valentina's mechanical frozen-byte handoff and will not be inferred here.
 
 PR #94 remains draft/HOLD. This record makes no protected recovery, acquisition, runtime, ready, or merge claim and authorizes no stage, commit, push, protected execution, or external action.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1 — authorized design; execution pending
+
+- Packet ID: `PR94-IOS17-RUNTIME-ACTIVATION-v1`.
+- Authority: existing bounded Option A; exactly one Apple/Xcode-managed no-retry iOS 17.5 arm64 runtime acquisition after all repository gates; no broader network/runtime/production authority.
+- Base: commit `71b8ef0ebe5c1ce3a3305606715f1cbee128c11d`, tree `d423980bfb098b798df15f90522eafa4b9f5208b`.
+- Scope: exactly six mode-`100644` paths; workflow `3b1dc703dca499a5f365f4059ca0f40efdca63b4` and ios-ci `0b84abbd35ebc8e3ca28ec672ca513b288fec94b` are unchanged protected inputs.
+- Behavior: removes diagnostic READY/mode authority; preserves pinned Xcode `/usr/bin/xcrun` identity boundary; enables exactly one `/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/xcodebuild -downloadPlatform iOS -buildVersion 17.5 -architectureVariant arm64`; preserves finite disk/time/output bounds, strict runtime verification, cleanup, receipt privacy, and fail-closed HOLD semantics.
+- Receipt rule: schema `2`; `diagnosticMode` is always null; invocation-`0` observed tuple is null; invocation-`1` observed tuple is exactly `16.2` / `16C5032a`.
+- Candidate exact-six: rows `6`, source bytes `898780`, manifest bytes `749`, SHA-256 `50ae3efda136bacc846318c52485102208770305caa980914359a8a166e0ff2f`.
+- Candidate exact-eight: rows `8`, source bytes `922667`, manifest bytes `940`, SHA-256 `1557b3f28751bc81655f7535d40be34f20f697bb289aae3d15ffcc63bcfe78a0`.
+- Counts: controller `428`; structure `108`; activation `100`; readiness `8`; focused `644`; ledger `524`; audit `616`; portable `273`; installed-tree `1`; shared `695`; API `381`; web `834`; full `2800`.
+- Status: `PRECONDITION_HOLD_NO_GET` remains for every action except the one gated Apple/Xcode acquisition above; PR stays draft/HOLD until protected minimum, current, and aggregate are green and receipt/cleanup evidence passes independent audit.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1 — reviewedCandidate manifest supersession
+
+The earlier recorded reviewedCandidate exact-six SHA-256 `50ae3efda136bacc846318c52485102208770305caa980914359a8a166e0ff2f` and exact-eight SHA-256 `1557b3f28751bc81655f7535d40be34f20f697bb289aae3d15ffcc63bcfe78a0` are retired as non-authoritative. A later count-stable activation-pin correction changed the reviewed bytes, and the earlier recorded manifest byte counts **749** and **940** were noncanonical; the canonical manifest byte counts are **731** and **916**.
+
+The immediately-pre-supersession authoritative external reviewedCandidate manifests are exact-six rows **6**, source bytes **900,730**, manifest bytes **731**, SHA-256 `37b416baa1e79170569253eb3992e029530878a46ef69fbf14019cc67ffc6477`; and exact-eight rows **8**, source bytes **924,617**, manifest bytes **916**, SHA-256 `ce25e60c02199ab67274ded21505fee2908bcb360526550fdf3c8fa0f005f6c4`. The corrected activation identity is **128,336 bytes**, SHA-256 `dc4a9558284b09a8bf847bc190d37a1728405afbf09643b903ac7cec9d6ce004`, Git blob `d99a762869c4268d3ea2bccee41738fb30813d91`.
+
+These are external reviewedCandidate bindings, not a handoff self-hash. Final exact-six and exact-eight manifests must be mechanically re-pinned after this append. No other content, authority, runtime, stage, commit, or push is changed or authorized by this supersession.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1.0.1 runtime-privacy supersession
+
+PR94-IOS17-RUNTIME-ACTIVATION-v1.0.1-RUNTIME-PRIVACY supersedes the earlier phrase “no runtime identifier retained after cleanup” with the stronger exact rule: no receipt ever serializes runtimeIdentifier; normalized version/build are retained iff postAcquireExactRuntimeCount is exactly one; runtimeRetained independently reports unproved or positive postcleanup cardinality. This changes no runtime cleanup authority, schema version, acquisition authority, command, retry, or protected input.
+
+Exact current functional identities/evidence: controller **139,295 bytes**, SHA-256 `e63655a7380b2c7e180efe873f374f091801b278c6103b2f944f8aa728b520a9`, Git blob prefix `2f26b909`; controller test **202,352 bytes**, SHA-256 `51fd6bc035efd68c16b3e45f9b1da298c8df5c21cab4666373eac7ca8e110df7`, Git blob prefix `17bcd7c3`; shared structure test **91,410 bytes**, SHA-256 `2dda0b9805e89da33ad7f52b963f0959583c5ab40589b55e14eea48d0e677342`, Git blob prefix `ed061ea1`; activation pre-repin **128,336 bytes**, SHA-256 prefix `5b644609`, Git blob prefix `8ad6f6c4`. Current evidence is controller **428/428 PASS**, structure **108/108 PASS**, Prettier **PASS**, and Node syntax **PASS**. These are current functional and pre-repin identities only; final manifests are not inferred by this append.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1.0.1 receipt-construction correction
+
+`PR94-IOS17-RUNTIME-ACTIVATION-v1.0.1-RUNTIME-PRIVACY` requires every receipt to serialize `runtimeIdentifier: null`. It retains normalized runtime evidence only when `postAcquireExactRuntimeCount === 1`, using the exact construction literals `runtimeVersion: postAcquireExactRuntimeCount === 1 ? "17.5" : null` and `runtimeBuild: postAcquireExactRuntimeCount === 1 ? "21F79" : null`.
+
+This corrects the rejected optional-runtime construction that derived those fields from `runtime?.version` and `runtime?.build`. That derivation was not truthful for the closed `POST_RUNTIME_IDENTITY` and `POST_RUNTIME_STORAGE_VOLUME` failure paths: one exact iOS 17.5 / `21F79` row can already be counted while `validatePostInventory` throws before assigning its returned row to the internal `runtime` deletion-authority object. The corrected receipt therefore records the already normalized version/build evidence from the exact count while continuing to redact the runtime identifier. The internal identifier remains memory-only cleanup authority and is never serialized.
+
+This correction changes no schema version, field order, acquisition command, invocation cardinality, retry policy, network authority, runtime cleanup authority, HOLD precedence, protected workflow, `ios-ci.sh`, dependency, timeout, disk ceiling, or production boundary. Counts remain controller **428**, structure **108**, activation **100**, readiness **8**, focused **644**, ledger **524**, audit **616**, portable **273**, installed-tree **1**, shared **695**, API **381**, web **834**, and full **2800**.
+
+Final controller, controller-test, structure, activation, readiness, handoff, exact-six, and exact-eight identities remain pending the frozen-byte mechanical pin pass and must not be inferred by this append. PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
+
+## 2026-11-18 — PR94 activation v1.0.1 canonical-manifest grammar supersession
+
+This true-EOF append preserves the prior records as historical evidence and supersedes only their canonical-manifest labels. The previously recorded exact-six / exact-eight manifest byte counts **749 / 940** and **731 / 916**, together with every digest derived from either incomplete grammar, are retired as non-authoritative. The **731 / 916** form omitted the Git blob identity field. The **749 / 940** form is not produced by the repository’s authoritative canonicalizer. Neither form may be used for candidate, commit, receipt, readiness, or merge claims.
+
+The authoritative canonical row grammar is exactly `${path}\0${byteCount}\0${sha256}\0${gitBlobSha1}\n`: UTF-8 repo-relative path; byte `0x00`; unsigned unpadded decimal file-byte count; byte `0x00`; lowercase full 64-hex SHA-256 of the file bytes; byte `0x00`; lowercase full 40-hex Git blob SHA-1 computed over `blob ${byteCount}\0` followed by the same file bytes; and byte `0x0a`. Rows contain no BOM or CR. Paths are ordered by unsigned UTF-8 byte order. This grammar is defined by `docs/2026-11-13_r4b_addtype_contract_self_test_activation_v1.md`, implemented by `canonicalManifest` / `canonicalManifestAt` in `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`, and enforced by the held-manifest implementation in `scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-executor-v1.mjs`.
+
+The immediate-pre-append authoritative external exact-six order is `docs/DEVELOPMENT_HANDOFF.md`; `packages/shared/src/ios-foundation-structure.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts`; `scripts/ios-runtime-bootstrap.mjs`; `scripts/ios-runtime-bootstrap.test.mjs`. It is rows **6**, source bytes **907,428**, manifest bytes **977**, SHA-256 `b5d66d6e406f697d392c9b715d8d22d40a84842d5a1f103528224378441b69ca`.
+
+The immediate-pre-append authoritative external exact-eight order is `.github/workflows/ios.yml`; `docs/DEVELOPMENT_HANDOFF.md`; `packages/shared/src/ios-foundation-structure.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts`; `scripts/ios-ci.sh`; `scripts/ios-runtime-bootstrap.mjs`; `scripts/ios-runtime-bootstrap.test.mjs`. It is rows **8**, source bytes **931,315**, manifest bytes **1,244**, SHA-256 `5a4481d3aabe8f54f894666e2891683a0b0daee80bcd4972e3d2e7af6518c49b`.
+
+These values bind the bytes immediately before this append and are not a self-hash of the resulting handoff. Final post-append and post-pin exact-six and exact-eight identities remain pending, must be recomputed externally with the same four-field grammar after all mechanical handoff, activation, and readiness pins stabilize, and must not be embedded into a covered member.
+
+This supersession changes no activation behavior, receipt schema, runtime privacy rule, acquisition command, invocation cardinality, retry policy, network authority, cleanup authority, HOLD precedence, timeout, disk ceiling, protected workflow, `ios-ci.sh`, dependency, test count, or production boundary. PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
+
+## 2026-11-18 — PR94 activation v1.0.1 final pre-commit candidate evidence
+
+This true-EOF candidate-evidence record preserves all prior history and is not a handoff self-hash. The worktreeConfig Option A repair completed successfully with abbreviated identity prefixes common `d20653ad…`, main `bc6c44e1…`, and backup `a56903f1…`; no residue or locks remain.
+
+The final case07g fixture-reuse repair preserves the default **5 seconds**, case43 uses **30 seconds**, and the focused suite is **644/644 PASS**. Exactly one full session, `74180`, ran with no retry: audit **616** + portable **273** + installed-tree **1** + shared **695** + API **381** + web **834** = **2800/2800 PASS**.
+
+Format, lint, typecheck, Node syntax, Bash syntax, Git porcelain, and diff are **PASS**. Shared and API builds are **PASS**. Web compile, typecheck, and static generation succeeded, but the local command exited **1** solely because of the CI-suppressed agent security nudge on pinned Next.js **16.4.2**. The protected Build remains authoritative; a separate dependency upgrade is outside this candidate.
+
+The immediate-pre-append external four-field exact-six binding is rows **6**, source bytes **910,957**, manifest bytes **977**, SHA-256 `0e6747a28f2499a918eb1a2fb5917d9ec42183718e6d0e0887a11901b944938b`. The immediate-pre-append external four-field exact-eight binding is rows **8**, source bytes **934,844**, manifest bytes **1,244**, SHA-256 `566f8360bd111ad1c7aa675d847f9fbbe62ffda4e67212af6fec993c8c2704a2`. These values bind the bytes immediately before this append and are not a self-hash. Final post-append and post-pin exact-six and exact-eight identities remain pending, must be recomputed externally, and must not be inferred by this record.
+
+PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
+
+## 2026-11-18 — PR94 holistic activation-test timeout policy
+
+This true-EOF records-only entry preserves all prior history, is not a handoff self-hash, and supersedes the prior final-candidate readiness only to the extent that Elana found the case38 timeout.
+
+The exact holistic activation-test timeout policy is: case09 changes from **20 seconds** to **30 seconds**; cases11, 25, 33, and 44 add **30-second** timeouts; cases10, 38, and 43 remain **30 seconds**; case23 remains **90 seconds**; and case07g remains at the default **5 seconds**. There is no body, assertion, helper, constant, count, runtime, or authority change.
+
+The recorded gates are policy **8/8 PASS**, activation **100/100 PASS**, readiness **8/8 PASS**, focused **644/644 PASS**, Prettier **PASS**, and diff **PASS**. The activation functional identity is **128,385 bytes**, SHA-256 `d46efb441ea49f4e75daae08d3852821e143704833b994d2c2be897ad20ecffc`, Git blob `df47bae80d2c9a3250acd21cf91a96d82cf7f398`.
+
+The immediate-pre-append external four-field exact-six binding is rows **6**, source bytes **912,987**, manifest bytes **977**, SHA-256 `31a70e60684445205f655cf75f43ee853b9b0e921f01f184184352118623fda4`. The immediate-pre-append external four-field exact-eight binding is rows **8**, source bytes **936,874**, manifest bytes **1,244**, SHA-256 `04f0010a2bfc5e0d9a9c22d0af7d86958d876164a0616d3fed82e43f5491e389`. These values bind the bytes immediately before this append and are not a self-hash. Final post-append and post-pin exact-six and exact-eight identities remain pending, must be recomputed externally, and must not be inferred by this record.
+
+PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.

@@ -36,7 +36,6 @@ import {
   DISK_MONITOR_INTERVAL_MS,
   DISK_MONITOR_MAX_GAP_MS,
   DISK_MONITOR_MAX_TICKS,
-  DIAGNOSTIC_MODE,
   EXPECTED_XCODE_BUILD,
   EXPECTED_XCODE_VERSION,
   FINALIZATION_TIMEOUT_MS,
@@ -105,7 +104,7 @@ const controllerSourceBytes = readFileSync(controllerPath);
 const controllerSourceSha256 = createHash("sha256").update(controllerSourceBytes).digest("hex");
 assert.equal(
   controllerSourceSha256,
-  "dbbd8a0064a5b19c4f22e224806360079985a650b66a7c63352b8da7cdd01d2b",
+  "bf169f5ec22cd57f6b69ceba090125a5f8ca9bf55e6c02698401d119444a3fdc",
 );
 const ORACLE_SOURCE_INVALID = "IOS_RUNTIME_ORACLE_SOURCE_INVALID";
 const ORACLE_IMPORT_QUERY = /^[0-9a-f]{32}$/u;
@@ -999,8 +998,8 @@ const receiptCases = [
     () => assert.equal(testingReceipt().artifactTupleSha256, CATALOG_TUPLE_SHA256),
   ],
   [
-    "receipt permits observed runtime identifier",
-    () => assert.match(testingReceipt().runtimeIdentifier, /^com\.apple\.CoreSimulator/u),
+    "receipt always redacts the observed runtime identifier",
+    () => assert.equal(testingReceipt().runtimeIdentifier, null),
   ],
   [
     "receipt rejects arbitrary runtime identifier",
@@ -2063,7 +2062,7 @@ const v11113ReceiptCases = [
       ),
   ],
   [
-    "partial runtime triple rejects",
+    "partial normalized runtime version and build pair rejects",
     () =>
       throwsCode(() => validateReceipt(testingReceipt({ runtimeBuild: null })), "RECEIPT_INVALID"),
   ],
@@ -2639,8 +2638,8 @@ const postIdentityReceipt = () =>
     minimumEvidenceResult: "NOT_RUN",
     cleanupResult: "SUCCEEDED",
     runtimeIdentifier: null,
-    runtimeVersion: null,
-    runtimeBuild: null,
+    runtimeVersion: "17.5",
+    runtimeBuild: "21F79",
     freeBytesAfterMinimumEvidence: null,
     preExactRuntimeCount: 0,
     postAcquireExactRuntimeCount: 1,
@@ -2738,7 +2737,7 @@ const v11121ReceiptCases = [
       ),
   ],
   [
-    "post-runtime identity may record cardinality before selecting a runtime",
+    "post-runtime identity records normalized version and build without an identifier",
     () => assert.equal(validateReceipt(postIdentityReceipt()).postAcquireExactRuntimeCount, 1),
   ],
   [
@@ -3607,6 +3606,31 @@ const v1142Cases = [
       ]) {
         assert.equal(validateReceipt(cleanupDiskReceipt(code)).cleanupFailureCode, code);
       }
+      const postRuntimeCleanupFailure = cleanupDiskReceipt("CLEANUP_PROCESS_IDENTITY", {
+        primaryFailureCode: "POST_RUNTIME_IDENTITY",
+        minimumEvidenceResult: "NOT_RUN",
+        freeBytesAfterMinimumEvidence: null,
+      });
+      assert.deepEqual(
+        [
+          validateReceipt(postRuntimeCleanupFailure).postAcquireExactRuntimeCount,
+          validateReceipt(postRuntimeCleanupFailure).postCleanupExactRuntimeCount,
+          validateReceipt(postRuntimeCleanupFailure).runtimeRetained,
+          validateReceipt(postRuntimeCleanupFailure).runtimeIdentifier,
+          validateReceipt(postRuntimeCleanupFailure).runtimeVersion,
+          validateReceipt(postRuntimeCleanupFailure).runtimeBuild,
+        ],
+        [1, null, true, null, "17.5", "21F79"],
+      );
+      throwsCode(
+        () =>
+          validateReceipt({
+            ...postRuntimeCleanupFailure,
+            runtimeVersion: null,
+            runtimeBuild: null,
+          }),
+        "RECEIPT_INVALID",
+      );
     },
   ],
   [
@@ -3966,16 +3990,16 @@ const v115Cases = [
           };
           await assert.rejects(
             controller.runTransaction(repositoryRoot, environment, dependencies),
-            (error) => error?.code === "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+            (error) => error?.code === "PRECONDITION_SOURCE",
           );
-          assert.deepEqual(counters, { final: 0, runTool: 2, spawn: 0 });
+          assert.deepEqual(counters, { final: 1, runTool: 3, spawn: 0 });
           const receipt = controller.validateReceiptFile(repositoryRoot);
-          assert.equal(receipt.primaryFailureCode, "PRECONDITION_XCODE_DIAGNOSTIC_READY");
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_SOURCE");
           assert.equal(receipt.downloadInvocationCount, 0);
-          assert.equal(receipt.preExactRuntimeCount, null);
-          assert.equal(receipt.freeBytesBefore, null);
-          assert.equal(receipt.minimumFreeBytesObserved, null);
-          assert.equal(receipt.diskMonitorSampleCount, 0);
+          assert.equal(receipt.preExactRuntimeCount, 0);
+          assert.equal(receipt.freeBytesBefore, Number(MIN_FREE_BEFORE_BYTES));
+          assert.equal(receipt.minimumFreeBytesObserved, Number(MIN_FREE_BEFORE_BYTES));
+          assert.equal(receipt.diskMonitorSampleCount, 1);
           assert.equal(receipt.freeBytesAfterAcquire, null);
           assert.equal(receipt.freeBytesAfterMinimumEvidence, null);
           assert.equal(receipt.freeBytesAfterCleanup, null);
@@ -4525,41 +4549,32 @@ const v117Cases = [
 ];
 for (const [name, action] of v117Cases) test(`v1.1.17: ${name}`, action);
 
-const diagnosticObservedCodes = new Set([
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
-  "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
-  "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
-  "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
-  "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
-  "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
-  "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
-  "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
-  "PRECONDITION_SIMCTL_FIND_INVALID_PID",
-  "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
-  "PRECONDITION_SIMCTL_FIND_TIMEOUT",
-  "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
-  "PRECONDITION_SIMCTL_FIND_EXIT",
-  "PRECONDITION_SIMCTL_FIND_UTF8",
-  "PRECONDITION_SIMCTL_FIND_PATH",
-  "PRECONDITION_SIMCTL_FIND_INTERNAL",
-  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
-]);
-const diagnosticReceipt = (primaryFailureCode, overrides = {}) =>
+const activationPreconditionEvidence = (primaryFailureCode) => {
+  if (primaryFailureCode === "PRECONDITION_RUNTIME_ALREADY_PRESENT")
+    return { preExactRuntimeCount: 1 };
+  if (primaryFailureCode === "PRECONDITION_STORAGE_ANCHOR") return { preExactRuntimeCount: 0 };
+  if (primaryFailureCode === "PRECONDITION_DISK")
+    return {
+      preExactRuntimeCount: 0,
+      freeBytesBefore: 0,
+      minimumFreeBytesObserved: 0,
+      diskMonitorSampleCount: 1,
+    };
+  if (primaryFailureCode === "PRECONDITION_INSUFFICIENT_TIME")
+    return {
+      preExactRuntimeCount: 0,
+      freeBytesBefore: Number(MIN_FREE_BEFORE_BYTES),
+      minimumFreeBytesObserved: Number(MIN_FREE_BEFORE_BYTES),
+      diskMonitorSampleCount: 1,
+    };
+  return {};
+};
+
+const activationPreconditionReceipt = (primaryFailureCode, overrides = {}) =>
   testingReceipt({
-    diagnosticMode: DIAGNOSTIC_MODE,
-    observedVersion: diagnosticObservedCodes.has(primaryFailureCode)
-      ? EXPECTED_XCODE_VERSION
-      : null,
-    observedBuild: diagnosticObservedCodes.has(primaryFailureCode) ? EXPECTED_XCODE_BUILD : null,
+    diagnosticMode: null,
+    observedVersion: null,
+    observedBuild: null,
     state: "PRECONDITION_REJECTED",
     primaryFailureCode,
     cleanupFailureCode: "NONE",
@@ -4582,6 +4597,7 @@ const diagnosticReceipt = (primaryFailureCode, overrides = {}) =>
     postCleanupExactRuntimeCount: null,
     rawLogRetained: false,
     runtimeRetained: false,
+    ...activationPreconditionEvidence(primaryFailureCode),
     ...overrides,
   });
 
@@ -5044,7 +5060,10 @@ const simctlShortLivedCases = [
 ];
 assert.equal(simctlShortLivedCases.length, 19);
 
-const diagnosticCodes = [
+const normalPreconditionCodes = [
+  "PRECONDITION_RUN_ATTEMPT",
+  "PRECONDITION_RUNNER",
+  "PRECONDITION_SOURCE",
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
   "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
@@ -5073,14 +5092,19 @@ const diagnosticCodes = [
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_XCODE_VERSION_INTERNAL",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
-  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+  "PRECONDITION_ENV",
+  "PRECONDITION_PROVENANCE",
+  "PRECONDITION_DISK",
+  "PRECONDITION_RUNTIME_ALREADY_PRESENT",
+  "PRECONDITION_RUNTIME_INVENTORY",
+  "PRECONDITION_STORAGE_ANCHOR",
+  "PRECONDITION_PARENT_IDENTITY",
+  "PRECONDITION_INSUFFICIENT_TIME",
+  "PRECONDITION_INTERRUPTED",
 ];
 
-const diagnosticCases = [
-  [
-    "mode is exact",
-    () => assert.equal(DIAGNOSTIC_MODE, "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5"),
-  ],
+const activationCases = [
+  ["receipt has no diagnostic mode", () => assert.equal(testingReceipt().diagnosticMode, null)],
   [
     "probe set is exact",
     () =>
@@ -5090,8 +5114,8 @@ const diagnosticCases = [
       ),
   ],
   [
-    "diagnostic set is exact and ordered",
-    () => assert.deepEqual([...testing.XCODE_DIAGNOSTIC_FAILURE_CODES], diagnosticCodes),
+    "normal precondition set is exact and ordered",
+    () => assert.deepEqual([...testing.NORMAL_PRECONDITION_FAILURE_CODES], normalPreconditionCodes),
   ],
   [
     "receipt schema v2 fields are ordered",
@@ -5109,7 +5133,7 @@ const diagnosticCases = [
     () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("PRECONDITION_XCODE"), false),
   ],
   [
-    "diagnostic stage fallbacks are exact",
+    "precondition stage fallbacks are exact",
     () =>
       assert.deepEqual(
         Object.fromEntries(
@@ -5125,20 +5149,23 @@ const diagnosticCases = [
         },
       ),
   ],
-  ...diagnosticCodes
-    .filter(
-      (code) => !code.startsWith("PRECONDITION_SIMCTL_FIND_EXECUTABLE_") || code.endsWith("_LSTAT"),
-    )
-    .map((code) => [
-      `receipt validates closed row ${code}`,
-      () => assert.equal(validateReceipt(diagnosticReceipt(code)).primaryFailureCode, code),
-    ]),
+  [
+    "all normal preconditions validate as invocation-zero rows",
+    () => {
+      for (const code of normalPreconditionCodes)
+        assert.equal(validateReceipt(activationPreconditionReceipt(code)).primaryFailureCode, code);
+    },
+  ],
   [
     "diagnostic receipt rejects invocation one",
     () =>
       throwsCode(
         () =>
-          validateReceipt(diagnosticReceipt(diagnosticCodes[0], { downloadInvocationCount: 1 })),
+          validateReceipt(
+            activationPreconditionReceipt(normalPreconditionCodes[0], {
+              downloadInvocationCount: 1,
+            }),
+          ),
         "RECEIPT_INVALID",
       ),
   ],
@@ -5147,7 +5174,11 @@ const diagnosticCases = [
     () =>
       throwsCode(
         () =>
-          validateReceipt(diagnosticReceipt(diagnosticCodes[0], { cleanupResult: "SUCCEEDED" })),
+          validateReceipt(
+            activationPreconditionReceipt(normalPreconditionCodes[0], {
+              cleanupResult: "SUCCEEDED",
+            }),
+          ),
         "RECEIPT_INVALID",
       ),
   ],
@@ -5157,7 +5188,7 @@ const diagnosticCases = [
       throwsCode(
         () =>
           validateReceipt(
-            diagnosticReceipt(diagnosticCodes[0], {
+            activationPreconditionReceipt(normalPreconditionCodes[0], {
               runtimeIdentifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
               runtimeVersion: "17.5",
               runtimeBuild: "21F79",
@@ -5170,7 +5201,10 @@ const diagnosticCases = [
     "diagnostic receipt rejects disk evidence",
     () =>
       throwsCode(
-        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { freeBytesBefore: 0 })),
+        () =>
+          validateReceipt(
+            activationPreconditionReceipt(normalPreconditionCodes[0], { freeBytesBefore: 0 }),
+          ),
         "RECEIPT_INVALID",
       ),
   ],
@@ -5178,7 +5212,10 @@ const diagnosticCases = [
     "diagnostic receipt rejects retained raw output",
     () =>
       throwsCode(
-        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { rawLogRetained: true })),
+        () =>
+          validateReceipt(
+            activationPreconditionReceipt(normalPreconditionCodes[0], { rawLogRetained: true }),
+          ),
         "RECEIPT_INVALID",
       ),
   ],
@@ -5186,11 +5223,17 @@ const diagnosticCases = [
     "diagnostic receipt rejects wrong expected tuple",
     () => {
       throwsCode(
-        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { expectedVersion: "16.3" })),
+        () =>
+          validateReceipt(
+            activationPreconditionReceipt(normalPreconditionCodes[0], { expectedVersion: "16.3" }),
+          ),
         "RECEIPT_INVALID",
       );
       throwsCode(
-        () => validateReceipt(diagnosticReceipt(diagnosticCodes[0], { expectedBuild: "other" })),
+        () =>
+          validateReceipt(
+            activationPreconditionReceipt(normalPreconditionCodes[0], { expectedBuild: "other" }),
+          ),
         "RECEIPT_INVALID",
       );
     },
@@ -5201,7 +5244,10 @@ const diagnosticCases = [
       throwsCode(
         () =>
           validateReceipt(
-            diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PATH", { observedVersion: "16.3" }),
+            activationPreconditionReceipt("PRECONDITION_SIMCTL_FIND_PATH", {
+              observedVersion: EXPECTED_XCODE_VERSION,
+              observedBuild: EXPECTED_XCODE_BUILD,
+            }),
           ),
         "RECEIPT_INVALID",
       ),
@@ -5212,51 +5258,51 @@ const diagnosticCases = [
       throwsCode(
         () =>
           validateReceipt(
-            diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PATH", { observedBuild: null }),
-          ),
-        "RECEIPT_INVALID",
-      ),
-  ],
-  [
-    "normal receipt rejects diagnostic failure code",
-    () =>
-      throwsCode(
-        () =>
-          validateReceipt(
-            testingReceipt({
-              state: "PRECONDITION_REJECTED",
-              primaryFailureCode: "PRECONDITION_XCODE_VERSION_PROBE",
-              downloadInvocationCount: 0,
-              downloadResult: "NOT_ATTEMPTED",
-              minimumEvidenceResult: "NOT_RUN",
-              cleanupResult: "NOT_REQUIRED",
-              observedVersion: null,
-              observedBuild: null,
-              runtimeIdentifier: null,
-              runtimeVersion: null,
-              runtimeBuild: null,
-              freeBytesBefore: null,
-              freeBytesAfterAcquire: null,
-              freeBytesAfterMinimumEvidence: null,
-              freeBytesAfterCleanup: null,
-              minimumFreeBytesObserved: null,
-              acquireDiskDeltaBytes: 0,
-              diskMonitorSampleCount: 0,
-              preExactRuntimeCount: null,
-              postAcquireExactRuntimeCount: null,
-              postCleanupExactRuntimeCount: null,
+            activationPreconditionReceipt("PRECONDITION_SIMCTL_FIND_PATH", {
+              observedVersion: EXPECTED_XCODE_VERSION,
             }),
           ),
         "RECEIPT_INVALID",
       ),
   ],
   [
-    "normal precondition keeps observations null",
+    "receipt rejects legacy diagnostic state",
     () =>
-      assert.equal(
-        validateReceipt(diagnosticReceipt("PRECONDITION_ENV", { diagnosticMode: null }))
-          .diagnosticMode,
-        null,
+      throwsCode(
+        () =>
+          validateReceipt(
+            activationPreconditionReceipt("PRECONDITION_XCODE_VERSION_PROBE", {
+              state: "DIAGNOSTIC_REJECTED",
+            }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects non-null diagnostic mode",
+    () =>
+      throwsCode(
+        () =>
+          validateReceipt(
+            activationPreconditionReceipt("PRECONDITION_ENV", { diagnosticMode: "legacy" }),
+          ),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects retired READY authority",
+    () =>
+      throwsCode(
+        () => validateReceipt(activationPreconditionReceipt("PRECONDITION_XCODE_DIAGNOSTIC_READY")),
+        "RECEIPT_INVALID",
+      ),
+  ],
+  [
+    "receipt rejects arbitrary precondition authority",
+    () =>
+      throwsCode(
+        () => validateReceipt(activationPreconditionReceipt("PRECONDITION_ARBITRARY")),
+        "RECEIPT_INVALID",
       ),
   ],
   [
@@ -5967,7 +6013,7 @@ const diagnosticCases = [
         throwsCode(
           () =>
             validateReceipt(
-              diagnosticReceipt(code, {
+              activationPreconditionReceipt(code, {
                 observedVersion: EXPECTED_XCODE_VERSION,
                 observedBuild: EXPECTED_XCODE_BUILD,
               }),
@@ -6047,7 +6093,7 @@ const diagnosticCases = [
       }),
   ],
   [
-    "raw simctl-stage failure keeps exact observed tuple",
+    "raw simctl-stage failure keeps observations null",
     async () =>
       withRunTransactionWindowsOracle(async ({ controller, environment, repositoryRoot }) => {
         let call = 0;
@@ -6064,12 +6110,12 @@ const diagnosticCases = [
           (error) => error?.code === "PRECONDITION_SIMCTL_FIND_INTERNAL",
         );
         const receipt = controller.validateReceiptFile(repositoryRoot);
-        assert.equal(receipt.observedVersion, EXPECTED_XCODE_VERSION);
-        assert.equal(receipt.observedBuild, EXPECTED_XCODE_BUILD);
+        assert.equal(receipt.observedVersion, null);
+        assert.equal(receipt.observedBuild, null);
       }),
   ],
   [
-    "ready receipt stops before runtime inventory and acquisition",
+    "successful probes continue to runtime inventory",
     async () =>
       withRunTransactionWindowsOracle(
         async ({ controller, environment, repositoryRoot, simctlPath }) => {
@@ -6080,37 +6126,40 @@ const diagnosticCases = [
               environment,
               diagnosticTransactionDependencies(async () => {
                 call += 1;
-                return call === 1
-                  ? { stdout: "Xcode 16.2\nBuild version 16C5032a\n", stderr: "" }
-                  : { stdout: `${simctlPath}\n`, stderr: "" };
+                if (call === 1)
+                  return { stdout: "Xcode 16.2\nBuild version 16C5032a\n", stderr: "" };
+                if (call === 2) return { stdout: `${simctlPath}\n`, stderr: "" };
+                return { stdout: "not-json\n", stderr: "" };
               }),
             ),
-            (error) => error?.code === "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+            (error) => error?.code === "PRECONDITION_RUNTIME_INVENTORY",
           );
-          assert.equal(call, 2);
+          assert.equal(call, 3);
           const receipt = controller.validateReceiptFile(repositoryRoot);
           assert.equal(receipt.downloadInvocationCount, 0);
-          assert.equal(receipt.primaryFailureCode, "PRECONDITION_XCODE_DIAGNOSTIC_READY");
+          assert.equal(receipt.primaryFailureCode, "PRECONDITION_RUNTIME_INVENTORY");
         },
       ),
   ],
   [
     "diagnostic receipt never serializes raw output or paths",
     () => {
-      const serialized = JSON.stringify(diagnosticReceipt("PRECONDITION_SIMCTL_FIND_PATH"));
+      const serialized = JSON.stringify(
+        activationPreconditionReceipt("PRECONDITION_SIMCTL_FIND_PATH"),
+      );
       assert.equal(serialized.includes("stdout"), false);
       assert.equal(serialized.includes("stderr"), false);
       assert.equal(serialized.includes("/Applications/"), false);
     },
   ],
   [
-    "diagnostic receipt accepts only the closed clean and cleanup-failure rows",
+    "precondition receipt accepts only closed clean and truthful cleanup-failure rows",
     () => {
-      for (const code of diagnosticCodes) {
-        assert.equal(validateReceipt(diagnosticReceipt(code)).primaryFailureCode, code);
+      for (const code of normalPreconditionCodes) {
+        assert.equal(validateReceipt(activationPreconditionReceipt(code)).primaryFailureCode, code);
         assert.equal(
           validateReceipt(
-            diagnosticReceipt(code, {
+            activationPreconditionReceipt(code, {
               state: "CLEANUP_FAILED",
               cleanupFailureCode: "CLEANUP_RAW_RESIDUE",
               cleanupResult: "FAILED",
@@ -6122,9 +6171,7 @@ const diagnosticCases = [
       }
       for (const overrides of [
         { state: "ACQUIRE_FAILED_CLEAN" },
-        { cleanupFailureCode: "CLEANUP_RESIDUE" },
         { cleanupResult: "SUCCEEDED" },
-        { rawLogRetained: false },
         { downloadInvocationCount: 1 },
         { runtimeIdentifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5" },
         { freeBytesBefore: 0 },
@@ -6133,7 +6180,7 @@ const diagnosticCases = [
         throwsCode(
           () =>
             validateReceipt(
-              diagnosticReceipt(diagnosticCodes[0], {
+              activationPreconditionReceipt(normalPreconditionCodes[0], {
                 state: "CLEANUP_FAILED",
                 cleanupFailureCode: "CLEANUP_RAW_RESIDUE",
                 cleanupResult: "FAILED",
@@ -6200,6 +6247,175 @@ const diagnosticCases = [
         },
       ),
   ],
+  [
+    "runtime inventory follows the pinned Xcode and simctl probes",
+    () =>
+      assert.match(
+        controllerSource,
+        /parseXcodeVersion\(xcode\.stdout\)[\s\S]*runSimctlFindV2[\s\S]*preconditionStage = "RUNTIME_INVENTORY"/u,
+      ),
+  ],
+  [
+    "storage and disk checks precede acquisition",
+    () =>
+      assert.match(
+        controllerSource,
+        /preconditionStage = "STORAGE_ANCHOR"[\s\S]*preconditionStage = "DISK"[\s\S]*role: "ACQUIRE"/u,
+      ),
+  ],
+  [
+    "acquisition invokes the exact pinned executable and arguments",
+    () => {
+      assert.equal(XCODEBUILD, `${XCODE_DEVELOPER_DIR}/usr/bin/xcodebuild`);
+      assert.deepEqual(XCODE_ARGS, [
+        "-downloadPlatform",
+        "iOS",
+        "-buildVersion",
+        "17.5",
+        "-architectureVariant",
+        "arm64",
+      ]);
+    },
+  ],
+  [
+    "acquisition count is set synchronously before release",
+    () =>
+      assert.match(
+        controllerSource,
+        /beforeRelease: \(\) => \{\s*invocationCount = 1;\s*transactionPhase = "ACQUIRE";/u,
+      ),
+  ],
+  [
+    "only the ACQUIRE role selects xcodebuild",
+    () => {
+      assert.equal((controllerSource.match(/\[XCODEBUILD, XCODE_ARGS\]/gu) ?? []).length, 1);
+      assert.equal((controllerSource.match(/role: "ACQUIRE"/gu) ?? []).length, 1);
+    },
+  ],
+  [
+    "acquisition environment remains closed and pinned",
+    () =>
+      assert.match(
+        controllerSource,
+        /const acquireTargetEnvironment = Object\.freeze\(\{\s*DEVELOPER_DIR: XCODE_DEVELOPER_DIR,\s*HOME: childEnv\.HOME,\s*PATH: "\/usr\/bin:\/bin:\/usr\/sbin:\/sbin",\s*TMPDIR: bootstrapRoot/u,
+      ),
+  ],
+  [
+    "acquisition has no shell retry cache proxy credential or fallback authority",
+    () => {
+      const acquisitionSection = controllerSource.match(
+        /const acquireTargetEnvironment = Object\.freeze\([\s\S]*?await runGatedPhase\([\s\S]*?dependencies,\s*\);/u,
+      )?.[0];
+      assert.ok(acquisitionSection);
+      assert.equal(acquisitionSection.includes("-downloadPlatform"), false);
+      assert.equal(acquisitionSection.includes("shell"), false);
+      for (const forbidden of ["http_proxy", "https_proxy", "credential", "downloadURL"])
+        assert.equal(acquisitionSection.includes(forbidden), false);
+    },
+  ],
+  [
+    "acquisition floor failures remain exact",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("ACQUIRE_DISK_FLOOR"), true),
+  ],
+  [
+    "acquisition delta failures remain exact",
+    () => assert.equal(testing.PRIMARY_FAILURE_CODES.has("ACQUIRE_DISK_LIMIT"), true),
+  ],
+  [
+    "success receipt proves one introduced runtime and cleanup to zero",
+    () => {
+      const receipt = validateReceipt(testingReceipt());
+      assert.deepEqual(
+        [
+          receipt.preExactRuntimeCount,
+          receipt.postAcquireExactRuntimeCount,
+          receipt.postCleanupExactRuntimeCount,
+        ],
+        [0, 1, 0],
+      );
+    },
+  ],
+  [
+    "success receipt binds the exact runtime tuple",
+    () => {
+      const receipt = validateReceipt(testingReceipt());
+      assert.deepEqual(
+        [
+          receipt.runtimeIdentifier,
+          receipt.runtimeVersion,
+          receipt.runtimeBuild,
+          receipt.requestedArchitectureVariant,
+        ],
+        [null, "17.5", "21F79", "arm64"],
+      );
+    },
+  ],
+  [
+    "minimum evidence uses the exact ios-ci identity and environment",
+    () =>
+      assert.match(
+        controllerSource,
+        /FLUYO_IOS_EVIDENCE_LEG: "minimum"[\s\S]*FLUYO_IOS_RUNTIME_VERSION: "17\.5"[\s\S]*FLUYO_IOS_RUNTIME_BUILD: "21F79"/u,
+      ),
+  ],
+  [
+    "successful operational row is fully awaited and cleaned",
+    () => {
+      const receipt = validateReceipt(testingReceipt());
+      assert.equal(receipt.state, "TRANSACTION_SUCCEEDED_CLEANED");
+      assert.deepEqual(
+        [receipt.downloadResult, receipt.minimumEvidenceResult, receipt.cleanupResult],
+        ["SUCCEEDED", "SUCCEEDED", "SUCCEEDED"],
+      );
+    },
+  ],
+  [
+    "minimum failure retains successful acquisition and cleanup",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "TEST_FAILED_CLEAN",
+            primaryFailureCode: "MINIMUM_EVIDENCE_EXIT",
+            minimumEvidenceResult: "FAILED",
+          }),
+        ).state,
+        "TEST_FAILED_CLEAN",
+      ),
+  ],
+  [
+    "finalization interruption preserves a clean operational row",
+    () =>
+      assert.equal(
+        validateReceipt(
+          testingReceipt({
+            state: "FINALIZATION_FAILED_CLEAN",
+            primaryFailureCode: "FINALIZATION_INTERRUPTED",
+          }),
+        ).state,
+        "FINALIZATION_FAILED_CLEAN",
+      ),
+  ],
+  [
+    "canonical receipt retains no raw output runtime or fallback",
+    () => {
+      const receipt = validateReceipt(testingReceipt());
+      assert.equal(receipt.rawLogRetained, false);
+      assert.equal(receipt.runtimeRetained, false);
+      assert.equal(receipt.runtimeIdentifier, null);
+      assert.equal(receipt.fallbackUsed, false);
+      const serialized = JSON.stringify(receipt);
+      for (const forbidden of [
+        "stdout",
+        "stderr",
+        "credential",
+        "cookie",
+        "proxy",
+        "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+      ])
+        assert.equal(serialized.includes(forbidden), false);
+    },
+  ],
 ];
-assert.equal(diagnosticCases.length, 90);
-for (const [name, action] of diagnosticCases) test(`diagnostic v1.5: ${name}`, action);
+assert.equal(activationCases.length, 90);
+for (const [name, action] of activationCases) test(`activation v1: ${name}`, action);

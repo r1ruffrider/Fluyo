@@ -26,7 +26,6 @@ import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const POLICY_ID = "ios_17_5_runtime_bootstrap_v1";
-export const DIAGNOSTIC_MODE = "PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5";
 export const EXPECTED_XCODE_VERSION = "16.2";
 export const EXPECTED_XCODE_BUILD = "16C5032a";
 export const XCODE_DEVELOPER_DIR = "/Applications/Xcode_16.2.app/Contents/Developer";
@@ -185,7 +184,6 @@ const PRIMARY_FAILURE_CODES = new Set([
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_XCODE_VERSION_INTERNAL",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
-  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
   "PRECONDITION_ENV",
   "PRECONDITION_PROVENANCE",
   "PRECONDITION_DISK",
@@ -245,7 +243,10 @@ const CLEANUP_FAILURE_CODES = new Set([
 ]);
 const FORBIDDEN_ENV_NAME = /(?:proxy|credential|token|cookie|password|secret|authorization)/iu;
 const XCODE_PROBE_FAILURE_CODES = new Set(["PRECONDITION_XCODE_VERSION_PROBE"]);
-const XCODE_DIAGNOSTIC_FAILURE_CODES = new Set([
+const NORMAL_PRECONDITION_FAILURE_CODES = new Set([
+  "PRECONDITION_RUN_ATTEMPT",
+  "PRECONDITION_RUNNER",
+  "PRECONDITION_SOURCE",
   "PRECONDITION_XCODE_VERSION_PROBE",
   "PRECONDITION_XCODE_VERSION_PARSE",
   "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
@@ -274,7 +275,15 @@ const XCODE_DIAGNOSTIC_FAILURE_CODES = new Set([
   "PRECONDITION_SIMCTL_FIND_PATH",
   "PRECONDITION_XCODE_VERSION_INTERNAL",
   "PRECONDITION_SIMCTL_FIND_INTERNAL",
-  "PRECONDITION_XCODE_DIAGNOSTIC_READY",
+  "PRECONDITION_ENV",
+  "PRECONDITION_PROVENANCE",
+  "PRECONDITION_DISK",
+  "PRECONDITION_RUNTIME_ALREADY_PRESENT",
+  "PRECONDITION_RUNTIME_INVENTORY",
+  "PRECONDITION_STORAGE_ANCHOR",
+  "PRECONDITION_PARENT_IDENTITY",
+  "PRECONDITION_INSUFFICIENT_TIME",
+  "PRECONDITION_INTERRUPTED",
 ]);
 const PRECONDITION_STAGE_VALUES = Object.freeze([
   "INITIAL",
@@ -1640,9 +1649,10 @@ function validateReceiptPhaseEvidence(receipt) {
     receipt.freeBytesAfterCleanup,
     receipt.minimumFreeBytesObserved,
   ];
-  const runtimeTriple = [receipt.runtimeIdentifier, receipt.runtimeVersion, receipt.runtimeBuild];
-  const hasRuntime = runtimeTriple.every((value) => value !== null);
-  const hasNoRuntime = runtimeTriple.every((value) => value === null);
+  if (receipt.runtimeIdentifier !== null) fail("RECEIPT_INVALID");
+  const runtimeVersionBuild = [receipt.runtimeVersion, receipt.runtimeBuild];
+  const hasRuntime = runtimeVersionBuild.every((value) => value !== null);
+  const hasNoRuntime = runtimeVersionBuild.every((value) => value === null);
   if (!hasRuntime && !hasNoRuntime) fail("RECEIPT_INVALID");
   if (receipt.downloadInvocationCount === 1 && receipt.preExactRuntimeCount !== 0)
     fail("RECEIPT_INVALID");
@@ -1652,7 +1662,7 @@ function validateReceiptPhaseEvidence(receipt) {
     receipt.postCleanupExactRuntimeCount !== 0
   )
     fail("RECEIPT_INVALID");
-  if (hasRuntime && receipt.postAcquireExactRuntimeCount !== 1) fail("RECEIPT_INVALID");
+  if (hasRuntime !== (receipt.postAcquireExactRuntimeCount === 1)) fail("RECEIPT_INVALID");
   const nullDiskEvidence = () =>
     diskSlots.every((value) => value === null) &&
     receipt.acquireDiskDeltaBytes === 0 &&
@@ -1869,76 +1879,6 @@ function validateReceiptPhaseEvidence(receipt) {
   return true;
 }
 
-function validateDiagnosticReceipt(receipt) {
-  const observed = [receipt.observedVersion, receipt.observedBuild];
-  const expectsObserved = [
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT",
-    "PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE",
-    "PRECONDITION_SIMCTL_FIND_SPAWN_ENOENT",
-    "PRECONDITION_SIMCTL_FIND_SPAWN_EACCES",
-    "PRECONDITION_SIMCTL_FIND_SPAWN_EMFILE",
-    "PRECONDITION_SIMCTL_FIND_SPAWN_ENFILE",
-    "PRECONDITION_SIMCTL_FIND_SPAWN_EAGAIN",
-    "PRECONDITION_SIMCTL_FIND_SPAWN_OTHER",
-    "PRECONDITION_SIMCTL_FIND_INVALID_PID",
-    "PRECONDITION_SIMCTL_FIND_IDENTITY_AFTER_SETTLEMENT",
-    "PRECONDITION_SIMCTL_FIND_TIMEOUT",
-    "PRECONDITION_SIMCTL_FIND_OUTPUT_LIMIT",
-    "PRECONDITION_SIMCTL_FIND_EXIT",
-    "PRECONDITION_SIMCTL_FIND_UTF8",
-    "PRECONDITION_SIMCTL_FIND_PATH",
-    "PRECONDITION_SIMCTL_FIND_INTERNAL",
-    "PRECONDITION_XCODE_DIAGNOSTIC_READY",
-  ].includes(receipt.primaryFailureCode);
-  const cleanRow =
-    receipt.state === "PRECONDITION_REJECTED" &&
-    receipt.cleanupFailureCode === "NONE" &&
-    receipt.cleanupResult === "NOT_REQUIRED" &&
-    receipt.rawLogRetained === false;
-  const cleanupFailureRow =
-    receipt.state === "CLEANUP_FAILED" &&
-    receipt.cleanupFailureCode === "CLEANUP_RAW_RESIDUE" &&
-    receipt.cleanupResult === "FAILED" &&
-    receipt.rawLogRetained === true;
-  if (
-    receipt.diagnosticMode !== DIAGNOSTIC_MODE ||
-    !XCODE_DIAGNOSTIC_FAILURE_CODES.has(receipt.primaryFailureCode) ||
-    (!cleanRow && !cleanupFailureRow) ||
-    receipt.downloadInvocationCount !== 0 ||
-    receipt.downloadResult !== "NOT_ATTEMPTED" ||
-    receipt.minimumEvidenceResult !== "NOT_RUN" ||
-    receipt.runtimeIdentifier !== null ||
-    receipt.runtimeVersion !== null ||
-    receipt.runtimeBuild !== null ||
-    receipt.freeBytesBefore !== null ||
-    receipt.freeBytesAfterAcquire !== null ||
-    receipt.freeBytesAfterMinimumEvidence !== null ||
-    receipt.freeBytesAfterCleanup !== null ||
-    receipt.minimumFreeBytesObserved !== null ||
-    receipt.acquireDiskDeltaBytes !== 0 ||
-    receipt.diskMonitorSampleCount !== 0 ||
-    receipt.preExactRuntimeCount !== null ||
-    receipt.postAcquireExactRuntimeCount !== null ||
-    receipt.postCleanupExactRuntimeCount !== null ||
-    receipt.runtimeRetained !== false ||
-    (expectsObserved &&
-      (observed[0] !== EXPECTED_XCODE_VERSION || observed[1] !== EXPECTED_XCODE_BUILD)) ||
-    (!expectsObserved && !observed.every((value) => value === null))
-  ) {
-    fail("RECEIPT_INVALID");
-  }
-  return Object.freeze({ ...receipt });
-}
-
 export function validateReceipt(receipt) {
   if (!exactKeys(receipt, RECEIPT_FIELDS)) fail("RECEIPT_INVALID");
   if (
@@ -1952,7 +1892,7 @@ export function validateReceipt(receipt) {
     receipt.runnerImageVersion.length > 32 ||
     receipt.runnerArch !== "ARM64" ||
     receipt.hostArch !== "arm64" ||
-    ![null, DIAGNOSTIC_MODE].includes(receipt.diagnosticMode) ||
+    receipt.diagnosticMode !== null ||
     receipt.expectedVersion !== EXPECTED_XCODE_VERSION ||
     receipt.expectedBuild !== EXPECTED_XCODE_BUILD ||
     ![null, EXPECTED_XCODE_VERSION].includes(receipt.observedVersion) ||
@@ -1985,9 +1925,7 @@ export function validateReceipt(receipt) {
   ]) {
     safeNumber(receipt[key]);
   }
-  if (receipt.diagnosticMode === DIAGNOSTIC_MODE) return validateDiagnosticReceipt(receipt);
   if (
-    XCODE_DIAGNOSTIC_FAILURE_CODES.has(receipt.primaryFailureCode) ||
     (receipt.downloadInvocationCount === 0 &&
       (receipt.observedVersion !== null || receipt.observedBuild !== null)) ||
     (receipt.downloadInvocationCount === 1 &&
@@ -1996,6 +1934,11 @@ export function validateReceipt(receipt) {
   ) {
     fail("RECEIPT_INVALID");
   }
+  if (
+    receipt.downloadInvocationCount === 0 &&
+    !NORMAL_PRECONDITION_FAILURE_CODES.has(receipt.primaryFailureCode)
+  )
+    fail("RECEIPT_INVALID");
   const nullableFreeFields = [
     "freeBytesBefore",
     "freeBytesAfterAcquire",
@@ -2016,22 +1959,22 @@ export function validateReceipt(receipt) {
     )
       fail("RECEIPT_INVALID");
   }
-  if (
-    receipt.runtimeIdentifier !== null &&
-    (!RUNTIME_IDENTIFIER.test(receipt.runtimeIdentifier) || receipt.runtimeIdentifier.length > 128)
-  ) {
-    fail("RECEIPT_INVALID");
-  }
+  if (receipt.runtimeIdentifier !== null) fail("RECEIPT_INVALID");
   if (
     ![null, "17.5"].includes(receipt.runtimeVersion) ||
     ![null, "21F79"].includes(receipt.runtimeBuild)
   ) {
     fail("RECEIPT_INVALID");
   }
-  const runtimeTriple = [receipt.runtimeIdentifier, receipt.runtimeVersion, receipt.runtimeBuild];
+  const runtimeVersionBuild = [receipt.runtimeVersion, receipt.runtimeBuild];
   if (
-    !runtimeTriple.every((value) => value === null) &&
-    runtimeTriple.some((value) => value === null)
+    !runtimeVersionBuild.every((value) => value === null) &&
+    runtimeVersionBuild.some((value) => value === null)
+  )
+    fail("RECEIPT_INVALID");
+  if (
+    runtimeVersionBuild.every((value) => value !== null) !==
+    (receipt.postAcquireExactRuntimeCount === 1)
   )
     fail("RECEIPT_INVALID");
   if (
@@ -2155,7 +2098,7 @@ export function validateReceipt(receipt) {
       receipt.preExactRuntimeCount >= 1 &&
       receipt.postAcquireExactRuntimeCount === null &&
       receipt.postCleanupExactRuntimeCount === null &&
-      runtimeTriple.every((value) => value === null)
+      runtimeVersionBuild.every((value) => value === null)
     )
   )
     fail("RECEIPT_INVALID");
@@ -2166,7 +2109,7 @@ export function validateReceipt(receipt) {
       [null, 0].includes(receipt.preExactRuntimeCount) &&
       receipt.postAcquireExactRuntimeCount === null &&
       receipt.postCleanupExactRuntimeCount === null &&
-      runtimeTriple.every((value) => value === null)
+      runtimeVersionBuild.every((value) => value === null)
     )
   )
     fail("RECEIPT_INVALID");
@@ -2184,8 +2127,7 @@ export function validateReceipt(receipt) {
     )
   )
     fail("RECEIPT_INVALID");
-  if (runtimeTriple[0] !== null && receipt.postAcquireExactRuntimeCount !== 1)
-    fail("RECEIPT_INVALID");
+  if (receipt.runtimeIdentifier !== null) fail("RECEIPT_INVALID");
   const observedRuntimeRetained =
     receipt.downloadInvocationCount === 1 &&
     (receipt.postCleanupExactRuntimeCount === null || receipt.postCleanupExactRuntimeCount > 0);
@@ -2259,7 +2201,7 @@ export function testingReceipt(overrides = {}) {
     artifactBuild: "21F79",
     artifactFileSizeBytes: Number(CATALOG_PAYLOAD_BYTES),
     catalogObservationDate: "2026-11-14",
-    runtimeIdentifier: "com.apple.CoreSimulator.SimRuntime.iOS-17-5",
+    runtimeIdentifier: null,
     runtimeVersion: "17.5",
     runtimeBuild: "21F79",
     requestedArchitectureVariant: "arm64",
@@ -3381,9 +3323,6 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
     let downloadResult = "NOT_ATTEMPTED";
     let minimumEvidenceResult = "NOT_RUN";
     let cleanupResult = "NOT_REQUIRED";
-    let diagnosticMode = null;
-    let observedVersion = null;
-    let observedBuild = null;
     let invocationCount = 0;
     let preconditionStage = "INITIAL";
     let runtime;
@@ -3465,7 +3404,6 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       childEnv = closedChildEnvironment(env, bootstrapRoot);
       const runTool = dependencies.runTool ?? runCaptured;
       checkCancellation();
-      diagnosticMode = DIAGNOSTIC_MODE;
       preconditionStage = "XCODE_VERSION_PROBE";
       const xcode = await runTool(
         XCODEBUILD,
@@ -3489,9 +3427,7 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       );
       checkCancellation();
       preconditionStage = "XCODE_VERSION_PARSE";
-      const parsedXcode = parseXcodeVersion(xcode.stdout);
-      observedVersion = parsedXcode.version;
-      observedBuild = parsedXcode.build;
+      parseXcodeVersion(xcode.stdout);
       preconditionStage = "SIMCTL_FIND_V2";
       const simctl =
         runTool === runCaptured
@@ -3523,7 +3459,6 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
         fail("PRECONDITION_SIMCTL_FIND_PATH");
       }
       if (!within(simctlPath, XCODE_DEVELOPER_DIR)) fail("PRECONDITION_SIMCTL_FIND_PATH");
-      fail("PRECONDITION_XCODE_DIAGNOSTIC_READY");
       preconditionStage = "RUNTIME_INVENTORY";
       const beforeResult = await runTool(
         XCRUN,
@@ -3908,9 +3843,9 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
     else state = "TRANSACTION_SUCCEEDED_CLEANED";
     if (state === "PRECONDITION_REJECTED") cleanupResult = "NOT_REQUIRED";
     const finalReceipt = transactionReceipt(receipt, {
-      diagnosticMode,
-      observedVersion,
-      observedBuild,
+      diagnosticMode: null,
+      observedVersion: invocationCount === 1 ? EXPECTED_XCODE_VERSION : null,
+      observedBuild: invocationCount === 1 ? EXPECTED_XCODE_BUILD : null,
       state,
       primaryFailureCode,
       cleanupFailureCode,
@@ -3932,9 +3867,9 @@ export async function runTransaction(repositoryRoot, env = process.env, dependen
       preExactRuntimeCount,
       postAcquireExactRuntimeCount,
       postCleanupExactRuntimeCount,
-      runtimeIdentifier: runtime?.identifier ?? null,
-      runtimeVersion: runtime?.version ?? null,
-      runtimeBuild: runtime?.build ?? null,
+      runtimeIdentifier: null,
+      runtimeVersion: postAcquireExactRuntimeCount === 1 ? "17.5" : null,
+      runtimeBuild: postAcquireExactRuntimeCount === 1 ? "21F79" : null,
       rawLogRetained:
         (bootstrapRoot != null && rootOperations(dependencies.rootFs).exists(bootstrapRoot)) ||
         (minimumRoot != null && rootOperations(dependencies.rootFs).exists(minimumRoot)),
@@ -3991,7 +3926,7 @@ export const testing = Object.freeze({
   RECEIPT_FIELDS,
   PRIMARY_FAILURE_CODES,
   XCODE_PROBE_FAILURE_CODES,
-  XCODE_DIAGNOSTIC_FAILURE_CODES,
+  NORMAL_PRECONDITION_FAILURE_CODES,
   PRECONDITION_STAGE_VALUES,
   PRECONDITION_STAGE_FAILURE,
   CLEANUP_FAILURE_CODES,

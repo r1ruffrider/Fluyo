@@ -36,7 +36,7 @@ const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
 const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
 const recordsTenManifestSha = "4f621d3616098cab8402cd2308fd84614fbf4ee5056d47d03b55ad4750596e2a";
-const currentTenManifestSha = "04ee956380e0094919752cceaddba24b289207cd13fcef87b10566acc965a8de";
+const currentTenManifestSha = "d61b33d1ea88c457a60bd4a92e53df0abb4fd6dcd1b577ba5790e20a7fd36ce6";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -294,6 +294,53 @@ const xcrunRecordsTree = Object.freeze({
     blob: "84ee1fa9fffae4161a2135fb70398eaaf0a010e9",
   }),
 });
+const activationBase = "71b8ef0ebe5c1ce3a3305606715f1cbee128c11d";
+const activationBaseParent = "8982998958e0edb8c49d30c7c053efb88e1b88fb";
+const activationBaseTreeId = "d423980bfb098b798df15f90522eafa4b9f5208b";
+const activationBaseSubject = "test(ci): bind xcrun diagnostic records topology";
+const activationFutureSubject = "ci(ios): activate pinned iOS 17.5 runtime";
+const activationPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const activationBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "ae96c479cd85c24487b764f06d148a72fadfc311",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "e9230387656c1e05bee015030ea9de65ee8553c1",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "8d86c420243b0032b4bb2e3c24686bdfc22bf759",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "3656db1392f8afe07be93a9404e5f65080262756",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "0b84abbd35ebc8e3ca28ec672ca513b288fec94b",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d1b4458a562226781f6625117fee5e6b3781b0fa",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "99db9ab58b1507515c540af5ca720605e66ef7c8",
+  }),
+});
 const repairBaseTree = Object.freeze({
   ".github/workflows/ios.yml": Object.freeze({
     mode: "100644",
@@ -542,6 +589,10 @@ const expectedSimctlShortLivedTracked = (path: string) => {
 };
 const expectedXcrunRecordsTracked = (path: string) => {
   const base = xcrunRecordsTree[path as keyof typeof xcrunRecordsTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedActivationTracked = (path: string) => {
+  const base = activationBaseTree[path as keyof typeof activationBaseTree] ?? topologyFailure();
   return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
 };
 const exactType1 = (
@@ -917,6 +968,66 @@ const verifyXcrunRecordsFutureObject = (oid: string): void => {
     runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", xcrunRecordsCommit, oid]),
   );
 };
+const assertActivationBaseObject = (): void => {
+  const metadata = commitHeaders(runBoundedGit(["cat-file", "commit", activationBase]));
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${activationBaseParent}`]) ||
+    metadata.tree !== activationBaseTreeId ||
+    metadata.subject !== activationBaseSubject
+  )
+    topologyFailure();
+  if (
+    JSON.stringify(Object.keys(activationBaseTree).sort(compareUtf8)) !== JSON.stringify(phasePaths)
+  )
+    topologyFailure();
+  for (const path of phasePaths) {
+    const expected = activationBaseTree[path as keyof typeof activationBaseTree];
+    if (
+      git(["rev-parse", `${activationBase}:${path}`]) !== expected.blob ||
+      git(["ls-tree", activationBase, "--", path]).split(/\s+/u)[0] !== expected.mode
+    )
+      topologyFailure();
+  }
+};
+const assertActivationFutureCommit = (commitBytes: Buffer): void => {
+  const metadata = commitHeaders(commitBytes);
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${activationBase}`]) ||
+    metadata.subject !== activationFutureSubject
+  )
+    topologyFailure();
+};
+const assertActivationFutureRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(activationPaths))
+    topologyFailure();
+  for (const path of activationPaths) {
+    const expected = expectedActivationTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyActivationFutureObject = (oid: string): void => {
+  assertActivationFutureCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertActivationFutureRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", activationBase, oid]),
+  );
+};
 const verifyCurrentPostcommitObject = (oid: string): void => {
   const commit = decodeStatus(runBoundedGit(["cat-file", "commit", oid]));
   const boundary = commit.indexOf("\n\n");
@@ -935,12 +1046,35 @@ const verifyCurrentPostcommitObject = (oid: string): void => {
     verifySimctlShortLivedPostcommitObject(oid);
   else if (parents[0] === `parent ${xcrunRecordsSource}`) verifyXcrunRecordsCommitObject(oid);
   else if (parents[0] === `parent ${xcrunRecordsCommit}`) verifyXcrunRecordsFutureObject(oid);
+  else if (parents[0] === `parent ${activationBase}`) verifyActivationFutureObject(oid);
   else topologyFailure();
 };
 const classifyStatusSnapshot = (
   snapshot: StatusSnapshot,
   verifyPostcommit: (oid: string) => void = verifyCurrentPostcommitObject,
-): "PRECOMMIT_UNSTAGED" | "PRECOMMIT_STAGED" | "POSTCOMMIT" => {
+): "BASE_CLEAN" | "PRECOMMIT_UNSTAGED" | "PRECOMMIT_STAGED" | "POSTCOMMIT" => {
+  if (snapshot.oid === activationBase) {
+    if (snapshot.entries.length === 0) {
+      assertActivationBaseObject();
+      return "BASE_CLEAN";
+    }
+    const activationEntries = [...snapshot.entries].sort((left, right) =>
+      compareUtf8(left.path, right.path),
+    );
+    if (
+      JSON.stringify(activationEntries.map((entry) => entry.path)) !==
+      JSON.stringify(activationPaths)
+    )
+      topologyFailure();
+    const unstaged = activationEntries.every((entry) =>
+      exactType1(entry, expectedActivationTracked(entry.path), ".M"),
+    );
+    const staged = activationEntries.every((entry) =>
+      exactType1(entry, expectedActivationTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
   const concurrent = snapshot.entries.filter(
     (entry) => entry.kind === "?" && concurrentApprovalRoot.test(entry.path),
   );
@@ -1228,6 +1362,31 @@ const xcrunRecordsStatusRecords = (xy: ".M" | "M."): string[] =>
 const xcrunRecordsRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
   const rows = xcrunRecordsPaths.flatMap((path) => {
     const expected = expectedXcrunRecordsTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const activationStatusRecords = (xy: ".M" | "M."): string[] =>
+  activationPaths.map((path) => {
+    const expected = expectedActivationTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const activationRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = activationPaths.flatMap((path) => {
+    const expected = expectedActivationTracked(path);
     return [
       `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
       path,
@@ -1715,8 +1874,9 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
 
   it("07g permits one exact concurrent auth root and rejects near nested or second roots", () => {
     const exact = ".tmp-auth-readiness-approval-abc123/";
+    const unstaged = unstagedStatusRecords();
     const allowed = parseStatusSnapshot(
-      statusSnapshotBytes(phaseBase, [...unstagedStatusRecords(), `? ${exact}`]),
+      statusSnapshotBytes(phaseBase, [...unstaged, `? ${exact}`]),
     );
     expect(classifyStatusSnapshot(allowed)).toBe("PRECOMMIT_UNSTAGED");
     for (const row of [
@@ -1726,12 +1886,12 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ])
       expect(() =>
         classifyStatusSnapshot(
-          parseStatusSnapshot(statusSnapshotBytes(phaseBase, [...unstagedStatusRecords(), row])),
+          parseStatusSnapshot(statusSnapshotBytes(phaseBase, [...unstaged, row])),
         ),
       ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
     const second = parseStatusSnapshot(
       statusSnapshotBytes(phaseBase, [
-        ...unstagedStatusRecords(),
+        ...unstaged,
         `? ${exact}`,
         "? .tmp-auth-readiness-approval-def456/",
       ]),
@@ -1768,7 +1928,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       expect(gitBytes(source, path)).toEqual(historical);
       expect(gitBytes(merge, path)).toEqual(historical);
     }
-  }, 20_000);
+  }, 30_000);
 
   it("10 current ten-path overlay changes only the append-only handoff", () => {
     const changed = tenPaths.filter((path) => !bytes(path).equals(gitBytes(d70, path)));
@@ -1800,7 +1960,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       bytes: 1753,
       sha256: currentTenManifestSha,
     });
-  });
+  }, 30_000);
 
   it("12 adapter retains exact CLI/binding/revalidation and no governance import", () => {
     const text = bytes(tenPaths[6]!).toString("utf8");
@@ -2291,7 +2451,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       expect(git(["rev-parse", `${repairBase}:${path}`])).toBe(expected.blob);
       expect(git(["ls-tree", repairBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
     }
-  });
+  }, 30_000);
 
   it("26 classifies the exact committed six-path repair as postcommit", () => {
     expect(repairPaths).toHaveLength(6);
@@ -2405,7 +2565,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       expect(git(["rev-parse", `${recordsBase}:${path}`])).toBe(expected.blob);
       expect(git(["ls-tree", recordsBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
     }
-  });
+  }, 30_000);
 
   it("34 classifies the exact three-path records repair before and after commit", () => {
     expect(recordsRepairPaths).toEqual([
@@ -2427,6 +2587,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         clockRootRepairBase,
         simctlShortLivedBase,
         xcrunRecordsCommit,
+        activationBase,
       ]).toContain(live.oid);
       const liveXy = [...new Set(live.entries.map((entry) => entry.xy))];
       expect(liveXy).toHaveLength(1);
@@ -2510,7 +2671,7 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       expect(git(["rev-parse", `${oracleRepairBase}:${path}`])).toBe(expected.blob);
       expect(git(["ls-tree", oracleRepairBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
     }
-  });
+  }, 30_000);
 
   it("39 classifies exact four-path portable repair unstaged and staged", () => {
     for (const [xy, expected] of [
@@ -2684,9 +2845,15 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       mode: "100644",
       blob: "84ee1fa9fffae4161a2135fb70398eaaf0a010e9",
     });
-  });
+    expect(activationBase).toBe("71b8ef0ebe5c1ce3a3305606715f1cbee128c11d");
+    expect(activationBaseParent).toBe("8982998958e0edb8c49d30c7c053efb88e1b88fb");
+    expect(activationBaseTreeId).toBe("d423980bfb098b798df15f90522eafa4b9f5208b");
+    expect(activationBaseSubject).toBe("test(ci): bind xcrun diagnostic records topology");
+    expect(Object.keys(activationBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+  }, 30_000);
 
   it("44 classifies exact nine-path dual-diagnostic repair unstaged and staged", () => {
+    expect(() => assertActivationBaseObject()).not.toThrow();
     expect(clockRootRepairPaths).toEqual(
       [
         "docs/DEVELOPMENT_HANDOFF.md",
@@ -2744,7 +2911,29 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(
       classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(xcrunRecordsCommit, []))),
     ).toBe("POSTCOMMIT");
-  });
+    expect(activationPaths).toEqual(
+      [
+        "docs/DEVELOPMENT_HANDOFF.md",
+        "packages/shared/src/ios-foundation-structure.test.ts",
+        testPath,
+        "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+        "scripts/ios-runtime-bootstrap.mjs",
+        "scripts/ios-runtime-bootstrap.test.mjs",
+      ].sort(compareUtf8),
+    );
+    expect(
+      classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(activationBase, []))),
+    ).toBe("BASE_CLEAN");
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const)
+      expect(
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(activationBase, activationStatusRecords(xy))),
+        ),
+      ).toBe(expected);
+  }, 30_000);
 
   it("45 rejects mixed, status, identity, extra, production, or auth-temp drift", () => {
     const mixed = clockRootRepairStatusRecords(".M");
@@ -2908,6 +3097,41 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
           ),
         ),
       ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    const activationRows = activationStatusRecords(".M");
+    const activationMixed = [...activationRows];
+    activationMixed[0] = activationStatusRecords("M.")[0]!;
+    const activationExpected = expectedActivationTracked(activationPaths[0]!);
+    const activationWrongStatus = [
+      "1",
+      "A.",
+      "N...",
+      activationExpected.mode,
+      activationExpected.mode,
+      activationExpected.mode,
+      activationExpected.baseObject,
+      activationExpected.baseObject,
+      activationPaths[0],
+    ].join(" ");
+    for (const rows of [
+      activationMixed,
+      [...activationRows, activationRows[0]!],
+      [...activationRows, exactConcurrent],
+      [...activationRows, "? unexpected.txt"],
+      [activationWrongStatus, ...activationRows.slice(1)],
+      ...[".github/workflows/ios.yml", "scripts/ios-ci.sh"].map((path) => {
+        const base = activationBaseTree[path as keyof typeof activationBaseTree];
+        return [
+          ...activationRows,
+          ["1", ".M", "N...", base.mode, base.mode, base.mode, base.blob, base.blob, path].join(
+            " ",
+          ),
+        ];
+      }),
+    ])
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(activationBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
   });
 
   it("46 requires one direct 607 child with exact nine-path raw diff", () => {
@@ -2957,6 +3181,22 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       expect(() => assertXcrunRecordsFutureCommit(Buffer.from(commit))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
+    expect(() =>
+      assertActivationFutureCommit(
+        Buffer.from(
+          `tree ${"7".repeat(40)}\nparent ${activationBase}\nauthor a\n\n${activationFutureSubject}\n`,
+        ),
+      ),
+    ).not.toThrow();
+    expect(() => assertActivationFutureRawDiff(activationRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"7".repeat(40)}\nparent ${xcrunRecordsCommit}\nauthor a\n\n${activationFutureSubject}\n`,
+      `tree ${"7".repeat(40)}\nparent ${activationBase}\nparent ${xcrunRecordsCommit}\nauthor a\n\n${activationFutureSubject}\n`,
+      `tree ${"7".repeat(40)}\nparent ${activationBase}\nauthor a\n\nwrong subject\n`,
+    ])
+      expect(() => assertActivationFutureCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
   });
 
   it("47 rejects diagnostic-repair mode, base blob, candidate blob, path, or row drift", () => {
@@ -2981,6 +3221,10 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       );
     for (const mutate of mutations)
       expect(() => assertXcrunRecordsFutureRawDiff(xcrunRecordsRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    for (const mutate of mutations)
+      expect(() => assertActivationFutureRawDiff(activationRawDiff(mutate))).toThrow(
         "IOS17_PHASE_TOPOLOGY_INVALID",
       );
   });

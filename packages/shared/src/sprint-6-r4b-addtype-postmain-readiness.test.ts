@@ -15,8 +15,8 @@ const recordsHandoffBytes = 326_419;
 const recordsHandoffSha256 = "4d6d0be8a0122dbbd045256e224e92c6419e88b81e666bf9b02bd8c4e9e6abe3";
 const recordsIos17SuffixBytes = 76_630;
 const recordsIos17SuffixSha256 = "475c727415ecd4b253d5bb6b52e700f34997b99684f08a94ff6aff6ddff43a92";
-const ios17SuffixBytes = 77_774;
-const ios17SuffixSha256 = "d8e142d00d31fe1763351bf6fa9a824edd129f1b7111851946f95177b880b942";
+const ios17SuffixBytes = 92_011;
+const ios17SuffixSha256 = "f609c9b47a8ab36753b71e749d4ab4a590386eb664d9aae5a2b980a9c1ee3037";
 const ios17Heading = "## 2026-11-14 — Recommended Option A iOS 17.5 prerequisite CI repair";
 
 const sha256 = (bytes: Buffer | string): string => createHash("sha256").update(bytes).digest("hex");
