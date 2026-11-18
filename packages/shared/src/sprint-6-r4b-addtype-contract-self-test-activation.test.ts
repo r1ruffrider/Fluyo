@@ -29,7 +29,14 @@ const d660 = "d6607300e52219c5d534e70c17e00e2e717e505b";
 const source = "7220bef062a93142f5bcde07de89199355eb5837";
 const merge = "7a5b345846eb29928dacb8f01b96796c01182dc2";
 const d70 = "d70d8d9f3510b8b4a83f18478dc79dece39094d6";
+const phaseBase = "a2485dc12c231dd482799834d5aca2966a6db494";
+const repairBase = "b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5";
+const recordsBase = "22dede4b31071aad68c607eabf3aec0a46544fe3";
+const recordsBaseTreeId = "8dab199f420d3d06ef76035495d166aa227d8c0b";
+const recordsBaseSubject = "fix(ci): bind iOS bootstrap parent identity";
 const manifestSha = "15b3ff5f2158b0eb7839591a0aad3373491afff45b2e7dc6a4eda2e3f607ea2b";
+const recordsTenManifestSha = "4f621d3616098cab8402cd2308fd84614fbf4ee5056d47d03b55ad4750596e2a";
+const currentTenManifestSha = "d61b33d1ea88c457a60bd4a92e53df0abb4fd6dcd1b577ba5790e20a7fd36ce6";
 const packetPath =
   "scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-activation-v1.json";
 const planPath = "docs/2026-10-31_sprint-6-learning-experience-build-plan_v1.md";
@@ -54,6 +61,367 @@ const tenPaths = [
   "scripts/r4b-evidence/root-only-closure-verifier-bytes-receipt-v1.mjs",
   "scripts/r4b-evidence/roslyn-verifier-authenticode.cs",
 ].sort(compareUtf8);
+const phasePaths = [
+  ".github/workflows/ios.yml",
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-ci.sh",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const phaseModifiedPaths = phasePaths.filter(
+  (path) =>
+    path !== "scripts/ios-runtime-bootstrap.mjs" &&
+    path !== "scripts/ios-runtime-bootstrap.test.mjs",
+);
+const phaseAddedPaths = [
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const repairPaths = phasePaths.filter(
+  (path) => ![".github/workflows/ios.yml", "scripts/ios-ci.sh"].includes(path),
+);
+const recordsRepairPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+].sort(compareUtf8);
+const oracleRepairBase = "02b28be6d7a6bc5fe60ee1e73caa579ff33874a0";
+const oracleRepairBaseTreeId = "6418b87563d090a8913626e86b1fcdf042a23ada";
+const oracleRepairBaseSubject = "test(ci): bind iOS bootstrap postcommit topology";
+const oracleRepairPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const oracleRepairBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "43057431f4fa54e418c70da90627994a99ed62c9",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d3adcee7a2697ef731880b9bd4406d1ed7cbafa6",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "fbc3d45624d2fcac11269e35fa2bf7a54da4c535",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d4438a84a0bcd0ddec2e555314e2cc7b7a9fc7e4",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "dbc2dd366cf9a9716fce0680616d9c0824d10e73",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "a13d394954304f7fb06e9cc6d19c7a17f04380d0",
+  }),
+});
+const clockRootRepairBase = "607f95b3dc7d0e2ba452745f52d673b5004f2d69";
+const clockRootRepairBaseTreeId = "f143bd01371b949627594f8cab75dec8192d6973";
+const clockRootRepairBaseSubject = "test(ci): localize iOS bootstrap Xcode precondition";
+const clockRootRepairPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-ci.sh",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+  "scripts/summarize-ios-test-failures.mjs",
+  "scripts/summarize-ios-test-failures.test.mjs",
+].sort(compareUtf8);
+const clockRootRepairBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "9622500aab85794b22f413742fd9af2875c2155e",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "bfd701ad2958393e46cd51d63a180e0d865d850a",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "df79044e8fcb2412ab7b412375d0e0d63d379df4",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "b381977c2d80561582fdb2228eaf89c15c24c9f0",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d712c4c0bcc0087225df406e602b9bae3dd70425",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "912e5c717301590a7e73daac4fa38a80a453eccf",
+  }),
+  "scripts/summarize-ios-test-failures.mjs": Object.freeze({
+    mode: "100644",
+    blob: "3e9cc90d901db5f76b98365c23cc799538f7390a",
+  }),
+  "scripts/summarize-ios-test-failures.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "37c9d1d47db696e0633bd06ccf0028dad2ff6eda",
+  }),
+});
+const simctlShortLivedBase = "d2ba16c09392289b66a7ba26f47ba2468b2e64ec";
+const simctlShortLivedBaseTreeId = "1ef312f3d4462fb1e817825600a6f9fecc58fb9f";
+const simctlShortLivedBaseSubject = "test(ci): classify xcrun identity failure";
+const simctlShortLivedPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const simctlShortLivedBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "b3766611df6087cf9b0b3a418f84fa75a15e6969",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "7a898bccb29910cef2434c536659cafd37363bbd",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "325221945f30f8dd6e225611b467d7bee3d1327f",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "674a38a22638ac1643aa862f3057dc2b7077f978",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "0b84abbd35ebc8e3ca28ec672ca513b288fec94b",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "86c3ea50da2335d0f8fba0cd3ba860e93ef241b1",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "b25c6e21553cfdb17ec81c42f198671bda90e164",
+  }),
+  "scripts/summarize-ios-test-failures.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d516dbe6b10629e5e5684226d5522339cd35f756",
+  }),
+  "scripts/summarize-ios-test-failures.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "f3e9097fd34a950a61aff23e566d9d061cc0d458",
+  }),
+});
+const xcrunRecordsSource = "5817425e97e036c0855c8c00b7defbfa46bf5bdc";
+const xcrunRecordsSourceParent = "d2ba16c09392289b66a7ba26f47ba2468b2e64ec";
+const xcrunRecordsSourceTreeId = "37883fc0cdb3d04051128d503479d8dbe7ec0644";
+const xcrunRecordsSourceSubject = "fix(ci): invoke the documented xcrun shim";
+const xcrunRecordsCommit = "8982998958e0edb8c49d30c7c053efb88e1b88fb";
+const xcrunRecordsTreeId = "3d43d7504e01692ada8119934468f0679055af98";
+const xcrunRecordsSubject = "docs(ci): record xcrun diagnostic outcome";
+const xcrunRecordsFutureSubject = "test(ci): bind xcrun diagnostic records topology";
+const xcrunRecordsPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+].sort(compareUtf8);
+const xcrunRecordsSourceTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "b5fa4aacc69932f95878200a4980663455a2f2c5",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "e9230387656c1e05bee015030ea9de65ee8553c1",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "11ef5530fa1a419c58ffd80828818ede957c39d6",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "25d75cf7a50ca11901097c681d750b8bab3b49b9",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "0b84abbd35ebc8e3ca28ec672ca513b288fec94b",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d1b4458a562226781f6625117fee5e6b3781b0fa",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "99db9ab58b1507515c540af5ca720605e66ef7c8",
+  }),
+});
+const xcrunRecordsTree = Object.freeze({
+  ...xcrunRecordsSourceTree,
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "84ee1fa9fffae4161a2135fb70398eaaf0a010e9",
+  }),
+});
+const activationBase = "71b8ef0ebe5c1ce3a3305606715f1cbee128c11d";
+const activationBaseParent = "8982998958e0edb8c49d30c7c053efb88e1b88fb";
+const activationBaseTreeId = "d423980bfb098b798df15f90522eafa4b9f5208b";
+const activationBaseSubject = "test(ci): bind xcrun diagnostic records topology";
+const activationFutureSubject = "ci(ios): activate pinned iOS 17.5 runtime";
+const activationPaths = [
+  "docs/DEVELOPMENT_HANDOFF.md",
+  "packages/shared/src/ios-foundation-structure.test.ts",
+  testPath,
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+  "scripts/ios-runtime-bootstrap.mjs",
+  "scripts/ios-runtime-bootstrap.test.mjs",
+].sort(compareUtf8);
+const activationBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "ae96c479cd85c24487b764f06d148a72fadfc311",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "e9230387656c1e05bee015030ea9de65ee8553c1",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "8d86c420243b0032b4bb2e3c24686bdfc22bf759",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "3656db1392f8afe07be93a9404e5f65080262756",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "0b84abbd35ebc8e3ca28ec672ca513b288fec94b",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "d1b4458a562226781f6625117fee5e6b3781b0fa",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "99db9ab58b1507515c540af5ca720605e66ef7c8",
+  }),
+});
+const repairBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "b387c3975acdb2070598c97904783e92d0e0cf31",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "5ba0842184b3303cd1b756d1c8e59281a7b6c7a0",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "9da45b36bcf3fea1ae305907a9852428ae29c0b5",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "938fd06ee609e9b12a4e9c5179890bea39696eb1",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "eb848f7eadd188e75799f631a5ca9a24763c06ad",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "103d685ebecfbc118c2f0d1b0c48a5c23eb8a4dc",
+  }),
+});
+const recordsBaseTree = Object.freeze({
+  ".github/workflows/ios.yml": Object.freeze({
+    mode: "100644",
+    blob: "3b1dc703dca499a5f365f4059ca0f40efdca63b4",
+  }),
+  "docs/DEVELOPMENT_HANDOFF.md": Object.freeze({
+    mode: "100644",
+    blob: "14355b6d469a9e351c40aa9ea8a4ab440b1c76cb",
+  }),
+  "packages/shared/src/ios-foundation-structure.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d3adcee7a2697ef731880b9bd4406d1ed7cbafa6",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "d92686dd24b2b1200b3f8366001a8e41919eb0a3",
+  }),
+  "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts": Object.freeze({
+    mode: "100644",
+    blob: "69a321c7b7c26126ae33b177ccaa5dbf2afe1a7a",
+  }),
+  "scripts/ios-ci.sh": Object.freeze({
+    mode: "100755",
+    blob: "49fa4b91fde699af34cf3d218cc82026b0d57746",
+  }),
+  "scripts/ios-runtime-bootstrap.mjs": Object.freeze({
+    mode: "100644",
+    blob: "dbc2dd366cf9a9716fce0680616d9c0824d10e73",
+  }),
+  "scripts/ios-runtime-bootstrap.test.mjs": Object.freeze({
+    mode: "100644",
+    blob: "a13d394954304f7fb06e9cc6d19c7a17f04380d0",
+  }),
+});
+const statusArguments = Object.freeze([
+  "status",
+  "--porcelain=v2",
+  "-z",
+  "--branch",
+  "--no-ahead-behind",
+  "--untracked-files=normal",
+  "--ignore-submodules=none",
+]);
+const statusTimeoutMs = 5_000;
+const statusOutputCap = 1_048_576;
+const zeroObjectId = "0".repeat(40);
+const concurrentApprovalRoot = /^\.tmp-auth-readiness-approval-[A-Za-z0-9]{6}\/$/u;
 
 function compareUtf8(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left), Buffer.from(right));
@@ -71,6 +439,960 @@ const gitBytes = (commit: string, path: string): Buffer =>
 const lines = (args: string[]): string[] => {
   const output = git(args);
   return output === "" ? [] : output.split(/\r?\n/u).filter(Boolean);
+};
+const sortedLines = (args: string[]): string[] => lines(args).sort(compareUtf8);
+type StatusEntry = Readonly<{
+  kind: "1" | "?";
+  path: string;
+  xy: string | null;
+  sub: string | null;
+  headMode: string | null;
+  indexMode: string | null;
+  worktreeMode: string | null;
+  headObject: string | null;
+  indexObject: string | null;
+}>;
+type StatusSnapshot = Readonly<{
+  oid: string;
+  head: string;
+  entries: readonly StatusEntry[];
+}>;
+type StatusRunner = typeof spawnSync;
+const topologyFailure = (): never => {
+  throw new Error("IOS17_PHASE_TOPOLOGY_INVALID");
+};
+const decodeStatus = (value: Buffer): string => {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(value);
+    if (text !== text.normalize("NFC")) topologyFailure();
+    return text;
+  } catch {
+    return topologyFailure();
+  }
+};
+const safeStatusPath = (path: string): boolean =>
+  path !== "" &&
+  path === path.normalize("NFC") &&
+  !path.startsWith("/") &&
+  !path.includes("\\") &&
+  !/[\x00-\x1f\x7f]/u.test(path) &&
+  !path.split("/").some((segment) => segment === "" || segment === "." || segment === "..");
+const parseStatusSnapshot = (value: Buffer): StatusSnapshot => {
+  if (value.length === 0 || value.length > statusOutputCap || value.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(value).split("\0");
+  if (records.pop() !== "" || records.length < 2) topologyFailure();
+  const oidMatch = /^# branch\.oid ([0-9a-f]{40})$/u.exec(records[0] ?? "") ?? topologyFailure();
+  const headMatch =
+    /^# branch\.head (\(detached\)|[A-Za-z0-9._/-]+)$/u.exec(records[1] ?? "") ?? topologyFailure();
+  if (headMatch[1]!.includes("..")) topologyFailure();
+  const entries: StatusEntry[] = [];
+  const paths = new Set<string>();
+  for (const record of records.slice(2)) {
+    let entry: StatusEntry | null = null;
+    if (record.startsWith("1 ")) {
+      const match =
+        /^1 ([.MADRCUT?!]{2}) (N\.\.\.) ([0-7]{6}) ([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) (.+)$/u.exec(
+          record,
+        ) ?? topologyFailure();
+      entry = Object.freeze({
+        kind: "1",
+        xy: match[1]!,
+        sub: match[2]!,
+        headMode: match[3]!,
+        indexMode: match[4]!,
+        worktreeMode: match[5]!,
+        headObject: match[6]!,
+        indexObject: match[7]!,
+        path: match[8]!,
+      });
+    } else if (record.startsWith("? ")) {
+      entry = Object.freeze({
+        kind: "?",
+        xy: null,
+        sub: null,
+        headMode: null,
+        indexMode: null,
+        worktreeMode: null,
+        headObject: null,
+        indexObject: null,
+        path: record.slice(2),
+      });
+    } else topologyFailure();
+    const checkedEntry = entry ?? topologyFailure();
+    if (
+      (!safeStatusPath(checkedEntry.path) && !concurrentApprovalRoot.test(checkedEntry.path)) ||
+      paths.has(checkedEntry.path)
+    )
+      topologyFailure();
+    paths.add(checkedEntry.path);
+    entries.push(checkedEntry);
+  }
+  return Object.freeze({
+    oid: oidMatch[1]!,
+    head: headMatch[1]!,
+    entries: Object.freeze(entries),
+  });
+};
+const runBoundedGit = (args: readonly string[], runner: StatusRunner = spawnSync): Buffer => {
+  const result = runner("git", [...args], {
+    cwd: root,
+    shell: false,
+    timeout: statusTimeoutMs,
+    maxBuffer: statusOutputCap,
+    encoding: "buffer",
+    windowsHide: true,
+  });
+  const stdout = Buffer.isBuffer(result.stdout) ? result.stdout : Buffer.alloc(0);
+  const stderr = Buffer.isBuffer(result.stderr) ? result.stderr : Buffer.alloc(0);
+  if (
+    result.error ||
+    result.status !== 0 ||
+    result.signal !== null ||
+    stderr.length !== 0 ||
+    stdout.length + stderr.length > statusOutputCap
+  )
+    topologyFailure();
+  return stdout;
+};
+const captureStatusSnapshot = (runner: StatusRunner = spawnSync): StatusSnapshot =>
+  parseStatusSnapshot(runBoundedGit(statusArguments, runner));
+const expectedTracked = (path: string) => {
+  const mode = path === "scripts/ios-ci.sh" ? "100755" : "100644";
+  return {
+    mode,
+    baseObject: git(["rev-parse", `${phaseBase}:${path}`]),
+    candidateObject: blob(bytes(path)),
+  };
+};
+const expectedRepairTracked = (path: string) => {
+  const base = repairBaseTree[path as keyof typeof repairBaseTree] ?? topologyFailure();
+  const candidate = recordsBaseTree[path as keyof typeof recordsBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: candidate.blob };
+};
+const expectedRecordsRepairTracked = (path: string) => {
+  const base = recordsBaseTree[path as keyof typeof recordsBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedOracleRepairTracked = (path: string) => {
+  const base = oracleRepairBaseTree[path as keyof typeof oracleRepairBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedClockRootRepairTracked = (path: string) => {
+  const base =
+    clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedSimctlShortLivedTracked = (path: string) => {
+  const base =
+    simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedXcrunRecordsTracked = (path: string) => {
+  const base = xcrunRecordsTree[path as keyof typeof xcrunRecordsTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const expectedActivationTracked = (path: string) => {
+  const base = activationBaseTree[path as keyof typeof activationBaseTree] ?? topologyFailure();
+  return { mode: base.mode, baseObject: base.blob, candidateObject: blob(bytes(path)) };
+};
+const exactType1 = (
+  entry: StatusEntry,
+  expected: ReturnType<typeof expectedTracked>,
+  xy: ".M" | "M.",
+): boolean =>
+  entry.kind === "1" &&
+  entry.xy === xy &&
+  entry.sub === "N..." &&
+  entry.headMode === expected.mode &&
+  entry.indexMode === expected.mode &&
+  entry.worktreeMode === expected.mode &&
+  entry.headObject === expected.baseObject &&
+  entry.indexObject === (xy === ".M" ? expected.baseObject : expected.candidateObject);
+const exactAdded = (entry: StatusEntry): boolean =>
+  entry.kind === "1" &&
+  entry.xy === "A." &&
+  entry.sub === "N..." &&
+  entry.headMode === "000000" &&
+  entry.indexMode === "100644" &&
+  entry.worktreeMode === "100644" &&
+  entry.headObject === zeroObjectId &&
+  entry.indexObject === blob(bytes(entry.path));
+const assertDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${phaseBase}`) topologyFailure();
+};
+const verifyPostcommitObject = (oid: string): void => {
+  assertDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  const diff = runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", phaseBase, oid]);
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) ([AM])$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[5]}\0${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(phasePaths))
+    topologyFailure();
+  for (const path of phaseModifiedPaths) {
+    const expected = expectedTracked(path);
+    if (
+      observed.get(path) !==
+      `M\0${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+  for (const path of phaseAddedPaths)
+    if (
+      observed.get(path) !== ["A", "000000", "100644", zeroObjectId, blob(bytes(path))].join("\0")
+    )
+      topologyFailure();
+};
+const assertRepairDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${repairBase}`) topologyFailure();
+};
+const verifyRepairPostcommitObject = (oid: string): void => {
+  assertRepairDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  const diff = runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", repairBase, oid]);
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(repairPaths))
+    topologyFailure();
+  for (const path of repairPaths) {
+    const expected = expectedRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const assertRecordsDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${recordsBase}`) topologyFailure();
+};
+const verifyRecordsPostcommitObject = (oid: string): void => {
+  assertRecordsDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  const diff = runBoundedGit([
+    "diff-tree",
+    "--no-commit-id",
+    "--raw",
+    "-z",
+    "-r",
+    recordsBase,
+    oid,
+  ]);
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(recordsRepairPaths))
+    topologyFailure();
+  for (const path of recordsRepairPaths) {
+    const expected = expectedRecordsRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const assertOracleRepairDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${oracleRepairBase}`) topologyFailure();
+};
+const assertOracleRepairRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(oracleRepairPaths))
+    topologyFailure();
+  for (const path of oracleRepairPaths) {
+    const expected = expectedOracleRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyOracleRepairPostcommitObject = (oid: string): void => {
+  assertOracleRepairDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertOracleRepairRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", oracleRepairBase, oid]),
+  );
+};
+const assertClockRootRepairDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${clockRootRepairBase}`) topologyFailure();
+};
+const assertClockRootRepairRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (
+    JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(clockRootRepairPaths)
+  )
+    topologyFailure();
+  for (const path of clockRootRepairPaths) {
+    const expected = expectedClockRootRepairTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyClockRootRepairPostcommitObject = (oid: string): void => {
+  assertClockRootRepairDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertClockRootRepairRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", clockRootRepairBase, oid]),
+  );
+};
+const assertSimctlShortLivedDirectChildCommit = (commitBytes: Buffer): void => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1 || parents[0] !== `parent ${simctlShortLivedBase}`) topologyFailure();
+};
+const assertSimctlShortLivedRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (
+    JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(simctlShortLivedPaths)
+  )
+    topologyFailure();
+  for (const path of simctlShortLivedPaths) {
+    const expected = expectedSimctlShortLivedTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifySimctlShortLivedPostcommitObject = (oid: string): void => {
+  assertSimctlShortLivedDirectChildCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertSimctlShortLivedRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", simctlShortLivedBase, oid]),
+  );
+};
+const commitHeaders = (
+  commitBytes: Buffer,
+): { parents: string[]; tree: string; subject: string } => {
+  const commit = decodeStatus(commitBytes);
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const headers = commit.slice(0, boundary).split("\n");
+  const parents = headers.filter((line) => line.startsWith("parent "));
+  const trees = headers.filter((line) => line.startsWith("tree "));
+  if (trees.length !== 1) topologyFailure();
+  return {
+    parents,
+    tree: trees[0]!.slice("tree ".length),
+    subject: commit.slice(boundary + 2).split("\n")[0] ?? "",
+  };
+};
+const assertXcrunSourceObject = (): void => {
+  const metadata = commitHeaders(runBoundedGit(["cat-file", "commit", xcrunRecordsSource]));
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${xcrunRecordsSourceParent}`]) ||
+    metadata.tree !== xcrunRecordsSourceTreeId ||
+    metadata.subject !== xcrunRecordsSourceSubject
+  )
+    topologyFailure();
+  if (
+    JSON.stringify(Object.keys(xcrunRecordsSourceTree).sort(compareUtf8)) !==
+    JSON.stringify(phasePaths)
+  )
+    topologyFailure();
+  for (const path of phasePaths) {
+    const expected = xcrunRecordsSourceTree[path as keyof typeof xcrunRecordsSourceTree];
+    if (
+      git(["rev-parse", `${xcrunRecordsSource}:${path}`]) !== expected.blob ||
+      git(["ls-tree", xcrunRecordsSource, "--", path]).split(/\s+/u)[0] !== expected.mode
+    )
+      topologyFailure();
+  }
+};
+const verifyXcrunRecordsCommitObject = (oid: string): void => {
+  if (oid !== xcrunRecordsCommit) topologyFailure();
+  const metadata = commitHeaders(runBoundedGit(["cat-file", "commit", oid]));
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${xcrunRecordsSource}`]) ||
+    metadata.tree !== xcrunRecordsTreeId ||
+    metadata.subject !== xcrunRecordsSubject
+  )
+    topologyFailure();
+  const diff = runBoundedGit([
+    "diff-tree",
+    "--no-commit-id",
+    "--raw",
+    "-z",
+    "-r",
+    xcrunRecordsSource,
+    oid,
+  ]);
+  const expected = Buffer.from(
+    `:100644 100644 ${xcrunRecordsSourceTree["docs/DEVELOPMENT_HANDOFF.md"].blob} ${xcrunRecordsTree["docs/DEVELOPMENT_HANDOFF.md"].blob} M\0docs/DEVELOPMENT_HANDOFF.md\0`,
+  );
+  if (!diff.equals(expected)) topologyFailure();
+};
+const assertXcrunRecordsFutureCommit = (commitBytes: Buffer): void => {
+  const metadata = commitHeaders(commitBytes);
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${xcrunRecordsCommit}`]) ||
+    metadata.subject !== xcrunRecordsFutureSubject
+  )
+    topologyFailure();
+};
+const assertXcrunRecordsFutureRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(xcrunRecordsPaths))
+    topologyFailure();
+  for (const path of xcrunRecordsPaths) {
+    const expected = expectedXcrunRecordsTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyXcrunRecordsFutureObject = (oid: string): void => {
+  assertXcrunRecordsFutureCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertXcrunRecordsFutureRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", xcrunRecordsCommit, oid]),
+  );
+};
+const assertActivationBaseObject = (): void => {
+  const metadata = commitHeaders(runBoundedGit(["cat-file", "commit", activationBase]));
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${activationBaseParent}`]) ||
+    metadata.tree !== activationBaseTreeId ||
+    metadata.subject !== activationBaseSubject
+  )
+    topologyFailure();
+  if (
+    JSON.stringify(Object.keys(activationBaseTree).sort(compareUtf8)) !== JSON.stringify(phasePaths)
+  )
+    topologyFailure();
+  for (const path of phasePaths) {
+    const expected = activationBaseTree[path as keyof typeof activationBaseTree];
+    if (
+      git(["rev-parse", `${activationBase}:${path}`]) !== expected.blob ||
+      git(["ls-tree", activationBase, "--", path]).split(/\s+/u)[0] !== expected.mode
+    )
+      topologyFailure();
+  }
+};
+const assertActivationFutureCommit = (commitBytes: Buffer): void => {
+  const metadata = commitHeaders(commitBytes);
+  if (
+    JSON.stringify(metadata.parents) !== JSON.stringify([`parent ${activationBase}`]) ||
+    metadata.subject !== activationFutureSubject
+  )
+    topologyFailure();
+};
+const assertActivationFutureRawDiff = (diff: Buffer): void => {
+  if (diff.length === 0 || diff.at(-1) !== 0) topologyFailure();
+  const records = decodeStatus(diff).split("\0");
+  if (records.pop() !== "") topologyFailure();
+  const observed = new Map<string, string>();
+  for (let index = 0; index < records.length; index += 2) {
+    const metadata = records[index] ?? "";
+    const path = records[index + 1] ?? "";
+    const match =
+      /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}) ([0-9a-f]{40}) M$/u.exec(metadata) ??
+      topologyFailure();
+    if (!safeStatusPath(path) || observed.has(path)) topologyFailure();
+    observed.set(path, `${match[1]}\0${match[2]}\0${match[3]}\0${match[4]}`);
+  }
+  if (JSON.stringify([...observed.keys()].sort(compareUtf8)) !== JSON.stringify(activationPaths))
+    topologyFailure();
+  for (const path of activationPaths) {
+    const expected = expectedActivationTracked(path);
+    if (
+      observed.get(path) !==
+      `${expected.mode}\0${expected.mode}\0${expected.baseObject}\0${expected.candidateObject}`
+    )
+      topologyFailure();
+  }
+};
+const verifyActivationFutureObject = (oid: string): void => {
+  assertActivationFutureCommit(runBoundedGit(["cat-file", "commit", oid]));
+  assertActivationFutureRawDiff(
+    runBoundedGit(["diff-tree", "--no-commit-id", "--raw", "-z", "-r", activationBase, oid]),
+  );
+};
+const verifyCurrentPostcommitObject = (oid: string): void => {
+  const commit = decodeStatus(runBoundedGit(["cat-file", "commit", oid]));
+  const boundary = commit.indexOf("\n\n");
+  if (boundary < 0) topologyFailure();
+  const parents = commit
+    .slice(0, boundary)
+    .split("\n")
+    .filter((line) => line.startsWith("parent "));
+  if (parents.length !== 1) topologyFailure();
+  if (parents[0] === `parent ${repairBase}`) verifyRepairPostcommitObject(oid);
+  else if (parents[0] === `parent ${recordsBase}`) verifyRecordsPostcommitObject(oid);
+  else if (parents[0] === `parent ${oracleRepairBase}`) verifyOracleRepairPostcommitObject(oid);
+  else if (parents[0] === `parent ${clockRootRepairBase}`)
+    verifyClockRootRepairPostcommitObject(oid);
+  else if (parents[0] === `parent ${simctlShortLivedBase}`)
+    verifySimctlShortLivedPostcommitObject(oid);
+  else if (parents[0] === `parent ${xcrunRecordsSource}`) verifyXcrunRecordsCommitObject(oid);
+  else if (parents[0] === `parent ${xcrunRecordsCommit}`) verifyXcrunRecordsFutureObject(oid);
+  else if (parents[0] === `parent ${activationBase}`) verifyActivationFutureObject(oid);
+  else topologyFailure();
+};
+const classifyStatusSnapshot = (
+  snapshot: StatusSnapshot,
+  verifyPostcommit: (oid: string) => void = verifyCurrentPostcommitObject,
+): "BASE_CLEAN" | "PRECOMMIT_UNSTAGED" | "PRECOMMIT_STAGED" | "POSTCOMMIT" => {
+  if (snapshot.oid === activationBase) {
+    if (snapshot.entries.length === 0) {
+      assertActivationBaseObject();
+      return "BASE_CLEAN";
+    }
+    const activationEntries = [...snapshot.entries].sort((left, right) =>
+      compareUtf8(left.path, right.path),
+    );
+    if (
+      JSON.stringify(activationEntries.map((entry) => entry.path)) !==
+      JSON.stringify(activationPaths)
+    )
+      topologyFailure();
+    const unstaged = activationEntries.every((entry) =>
+      exactType1(entry, expectedActivationTracked(entry.path), ".M"),
+    );
+    const staged = activationEntries.every((entry) =>
+      exactType1(entry, expectedActivationTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  const concurrent = snapshot.entries.filter(
+    (entry) => entry.kind === "?" && concurrentApprovalRoot.test(entry.path),
+  );
+  if (concurrent.length > 1) topologyFailure();
+  const entries = snapshot.entries
+    .filter((entry) => !concurrentApprovalRoot.test(entry.path))
+    .sort((left, right) => compareUtf8(left.path, right.path));
+  if (snapshot.oid === phaseBase) {
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(phasePaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      phaseModifiedPaths.includes(entry.path)
+        ? exactType1(entry, expectedTracked(entry.path), ".M")
+        : phaseAddedPaths.includes(entry.path) && entry.kind === "?",
+    );
+    const staged = entries.every((entry) =>
+      phaseModifiedPaths.includes(entry.path)
+        ? exactType1(entry, expectedTracked(entry.path), "M.")
+        : phaseAddedPaths.includes(entry.path) && exactAdded(entry),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === repairBase) {
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(repairPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedRepairTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === recordsBase) {
+    const recordEntries = [...snapshot.entries].sort((left, right) =>
+      compareUtf8(left.path, right.path),
+    );
+    if (recordEntries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (
+      JSON.stringify(recordEntries.map((entry) => entry.path)) !==
+      JSON.stringify(recordsRepairPaths)
+    )
+      topologyFailure();
+    const unstaged = recordEntries.every((entry) =>
+      exactType1(entry, expectedRecordsRepairTracked(entry.path), ".M"),
+    );
+    const staged = recordEntries.every((entry) =>
+      exactType1(entry, expectedRecordsRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === oracleRepairBase) {
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(oracleRepairPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedOracleRepairTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedOracleRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === clockRootRepairBase) {
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(clockRootRepairPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedClockRootRepairTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedClockRootRepairTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === simctlShortLivedBase) {
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (
+      JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(simctlShortLivedPaths)
+    )
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedSimctlShortLivedTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedSimctlShortLivedTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.oid === xcrunRecordsCommit) {
+    if (concurrent.length !== 0) topologyFailure();
+    if (snapshot.entries.length === 0) {
+      verifyPostcommit(snapshot.oid);
+      return "POSTCOMMIT";
+    }
+    if (entries.length === 0) topologyFailure();
+    if (JSON.stringify(entries.map((entry) => entry.path)) !== JSON.stringify(xcrunRecordsPaths))
+      topologyFailure();
+    const unstaged = entries.every((entry) =>
+      exactType1(entry, expectedXcrunRecordsTracked(entry.path), ".M"),
+    );
+    const staged = entries.every((entry) =>
+      exactType1(entry, expectedXcrunRecordsTracked(entry.path), "M."),
+    );
+    if (unstaged === staged) topologyFailure();
+    return unstaged ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED";
+  }
+  if (snapshot.entries.length !== 0) topologyFailure();
+  verifyPostcommit(snapshot.oid);
+  return "POSTCOMMIT";
+};
+const statusType1Record = (path: string, xy: ".M" | "M."): string => {
+  const expected = expectedTracked(path);
+  return [
+    "1",
+    xy,
+    "N...",
+    expected.mode,
+    expected.mode,
+    expected.mode,
+    expected.baseObject,
+    xy === ".M" ? expected.baseObject : expected.candidateObject,
+    path,
+  ].join(" ");
+};
+const statusAddedRecord = (path: string): string =>
+  ["1", "A.", "N...", "000000", "100644", "100644", zeroObjectId, blob(bytes(path)), path].join(
+    " ",
+  );
+const statusSnapshotBytes = (
+  oid: string,
+  records: readonly string[],
+  head = "codex/ios175-runtime-bootstrap-prereq",
+): Buffer =>
+  Buffer.from([`# branch.oid ${oid}`, `# branch.head ${head}`, ...records, ""].join("\0"));
+const unstagedStatusRecords = (): string[] => [
+  ...phaseModifiedPaths.map((path) => statusType1Record(path, ".M")),
+  ...phaseAddedPaths.map((path) => `? ${path}`),
+];
+const stagedStatusRecords = (): string[] => [
+  ...phaseModifiedPaths.map((path) => statusType1Record(path, "M.")),
+  ...phaseAddedPaths.map(statusAddedRecord),
+];
+const repairStatusRecords = (xy: ".M" | "M."): string[] =>
+  repairPaths.map((path) => {
+    const expected = expectedRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const recordsRepairStatusRecords = (xy: ".M" | "M."): string[] =>
+  recordsRepairPaths.map((path) => {
+    const expected = expectedRecordsRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const oracleRepairStatusRecords = (xy: ".M" | "M."): string[] =>
+  oracleRepairPaths.map((path) => {
+    const expected = expectedOracleRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const oracleRepairRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = oracleRepairPaths.flatMap((path) => {
+    const expected = expectedOracleRepairTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const clockRootRepairStatusRecords = (xy: ".M" | "M."): string[] =>
+  clockRootRepairPaths.map((path) => {
+    const expected = expectedClockRootRepairTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const clockRootRepairRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = clockRootRepairPaths.flatMap((path) => {
+    const expected = expectedClockRootRepairTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const simctlShortLivedStatusRecords = (xy: ".M" | "M."): string[] =>
+  simctlShortLivedPaths.map((path) => {
+    const expected = expectedSimctlShortLivedTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const simctlShortLivedRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = simctlShortLivedPaths.flatMap((path) => {
+    const expected = expectedSimctlShortLivedTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const xcrunRecordsStatusRecords = (xy: ".M" | "M."): string[] =>
+  xcrunRecordsPaths.map((path) => {
+    const expected = expectedXcrunRecordsTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const xcrunRecordsRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = xcrunRecordsPaths.flatMap((path) => {
+    const expected = expectedXcrunRecordsTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
+};
+const activationStatusRecords = (xy: ".M" | "M."): string[] =>
+  activationPaths.map((path) => {
+    const expected = expectedActivationTracked(path);
+    return [
+      "1",
+      xy,
+      "N...",
+      expected.mode,
+      expected.mode,
+      expected.mode,
+      expected.baseObject,
+      xy === ".M" ? expected.baseObject : expected.candidateObject,
+      path,
+    ].join(" ");
+  });
+const activationRawDiff = (mutate: (rows: string[]) => string[] = (rows) => rows): Buffer => {
+  const rows = activationPaths.flatMap((path) => {
+    const expected = expectedActivationTracked(path);
+    return [
+      `:${expected.mode} ${expected.mode} ${expected.baseObject} ${expected.candidateObject} M`,
+      path,
+    ];
+  });
+  return Buffer.from([...mutate(rows), ""].join("\0"));
 };
 const ancestor = (left: string, right: string): boolean => {
   try {
@@ -305,6 +1627,17 @@ const canonicalManifest = (paths: string[]) => {
   );
   return { rows: paths.length, bytes: value.length, sha256: sha(value) };
 };
+const canonicalManifestAt = (commit: string, paths: string[]) => {
+  const value = Buffer.from(
+    paths
+      .map((path) => {
+        const value = gitBytes(commit, path);
+        return `${path}\0${value.length}\0${sha(value)}\0${blob(value)}\n`;
+      })
+      .join(""),
+  );
+  return { rows: paths.length, bytes: value.length, sha256: sha(value) };
+};
 describe("R4B Add-Type outer activation v1.1.2", () => {
   it("01 packet is canonical NFC UTF-8 pretty JSON", () => {
     const value = bytes(packetPath);
@@ -355,27 +1688,14 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(packet().historicalDesignProvenance.readinessMergeCommit).toBe(d70);
   });
 
-  it("07 candidate union is exactly six paths", () => {
-    const concurrentRowPattern = /^\.tmp-auth-readiness-approval-[A-Za-z0-9]{6}\/$/u;
-    const partitionUntracked = (rows: string[]) => {
-      if (new Set(rows).size !== rows.length) throw new Error("duplicate untracked row");
-      const concurrent = rows.filter((row) => concurrentRowPattern.test(row));
-      if (concurrent.length > 1) throw new Error("multiple concurrent approval roots");
-      return {
-        candidate: rows.filter((row) => !concurrentRowPattern.test(row)),
-        concurrent,
-      };
-    };
-    const committed = lines(["diff", "--name-only", `${d70}...HEAD`]);
-    const cached = lines(["diff", "--cached", "--name-only"]);
-    const unstaged = lines(["diff", "--name-only"]);
-    const untracked = lines(["ls-files", "--others", "--exclude-standard"]);
-    const partitioned = partitionUntracked(untracked);
-    const union = [...committed, ...cached, ...unstaged, ...partitioned.candidate];
-    expect([...new Set(union)].sort(compareUtf8)).toEqual(sixPaths);
+  it("07 preserves the historical six-path candidate and closes the current eight-path phase", () => {
+    expect(sortedLines(["diff", "--name-only", `${d70}...${phaseBase}`])).toEqual(sixPaths);
+    const phaseSnapshot = parseStatusSnapshot(
+      statusSnapshotBytes(phaseBase, unstagedStatusRecords()),
+    );
+    expect(classifyStatusSnapshot(phaseSnapshot)).toBe("PRECOMMIT_UNSTAGED");
     const positive = ".tmp-auth-readiness-approval-abc123/";
-    expect(concurrentRowPattern.test(positive)).toBe(true);
-    expect(partitionUntracked([positive])).toEqual({ candidate: [], concurrent: [positive] });
+    expect(concurrentApprovalRoot.test(positive)).toBe(true);
     for (const negative of [
       ".tmp-auth-readiness-approval-abc123",
       ".tmp-auth-readiness-approval-abc12/",
@@ -388,22 +1708,8 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
       ".security-tmp/",
       "unexpected.txt",
     ]) {
-      expect(concurrentRowPattern.test(negative)).toBe(false);
-      expect(partitionUntracked([negative])).toEqual({ candidate: [negative], concurrent: [] });
+      expect(concurrentApprovalRoot.test(negative)).toBe(false);
     }
-    expect(() => partitionUntracked([positive, positive])).toThrow("duplicate untracked row");
-    expect(() => partitionUntracked([positive, ".tmp-auth-readiness-approval-def456/"])).toThrow(
-      "multiple concurrent approval roots",
-    );
-    expect(
-      new Set([
-        ...[positive],
-        ...[positive],
-        ...[positive],
-        ...partitionUntracked([positive]).candidate,
-      ]),
-    ).toEqual(new Set([positive]));
-    expect(partitioned.concurrent.length).toBeLessThanOrEqual(1);
     const activationSource = bytes(testPath).toString("utf8");
     expect(
       activationSource.match(
@@ -423,7 +1729,9 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     ).toHaveLength(1);
     expect(producerSource.match(/\.tmp-auth-readiness-approval-/gu)).toHaveLength(1);
     const concurrencyContractSource = activationSource.slice(
-      activationSource.indexOf('it("07 candidate union is exactly six paths"'),
+      activationSource.indexOf(
+        'it("07 preserves the historical six-path candidate and closes the current eight-path phase"',
+      ),
       activationSource.indexOf('it("08 keeps exact ordered ten-path manifest"'),
     );
     expect(concurrencyContractSource).not.toMatch(/\blstat(?:Sync)?\b/u);
@@ -438,6 +1746,175 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
         ),
       ),
     ).toBe(false);
+    expect(activationSource).not.toContain(
+      ["sprint-6-r4b-addtype-postmain-readiness.test", "?lifecycle-helper-v1"].join(""),
+    );
+    expect(activationSource).not.toContain(
+      ["docs/2026-11-14_r4b_windows_python_", "reviewed_local_binding_v2.md"].join(""),
+    );
+    expect(activationSource).not.toContain(blob(bytes(testPath)));
+  });
+
+  it("07a captures one bounded porcelain-v2 snapshot with exact invocation", () => {
+    const output = statusSnapshotBytes(phaseBase, unstagedStatusRecords());
+    let calls = 0;
+    const runner = ((executable: string, args: string[], options: Record<string, unknown>) => {
+      calls += 1;
+      expect(executable).toBe("git");
+      expect(args).toEqual(statusArguments);
+      expect(options).toMatchObject({
+        cwd: root,
+        shell: false,
+        timeout: statusTimeoutMs,
+        maxBuffer: statusOutputCap,
+        encoding: "buffer",
+        windowsHide: true,
+      });
+      return {
+        pid: 1,
+        output: [null, output, Buffer.alloc(0)],
+        stdout: output,
+        stderr: Buffer.alloc(0),
+        status: 0,
+        signal: null,
+      };
+    }) as unknown as StatusRunner;
+    const snapshot = captureStatusSnapshot(runner);
+    expect(calls).toBe(1);
+    expect(snapshot.oid).toBe(phaseBase);
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_UNSTAGED");
+    const noisy = (() => ({
+      pid: 1,
+      output: [null, output, Buffer.from("private")],
+      stdout: output,
+      stderr: Buffer.from("private"),
+      status: 0,
+      signal: null,
+    })) as unknown as StatusRunner;
+    expect(() => captureStatusSnapshot(noisy)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    const oversized = (() => ({
+      pid: 1,
+      output: [null, Buffer.alloc(statusOutputCap + 1), Buffer.alloc(0)],
+      stdout: Buffer.alloc(statusOutputCap + 1),
+      stderr: Buffer.alloc(0),
+      status: 0,
+      signal: null,
+    })) as unknown as StatusRunner;
+    expect(() => captureStatusSnapshot(oversized)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07b accepts only the exact fully staged eight-path snapshot", () => {
+    const snapshot = parseStatusSnapshot(statusSnapshotBytes(phaseBase, stagedStatusRecords()));
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_STAGED");
+  });
+
+  it("07c binds postcommit classification to the captured oid and one direct parent", () => {
+    const oid = "1".repeat(40);
+    const snapshot = parseStatusSnapshot(statusSnapshotBytes(oid, [], "(detached)"));
+    let observed = "";
+    expect(
+      classifyStatusSnapshot(snapshot, (captured) => {
+        observed = captured;
+      }),
+    ).toBe("POSTCOMMIT");
+    expect(observed).toBe(oid);
+    const commit = Buffer.from(
+      `tree ${"2".repeat(40)}\nparent ${phaseBase}\nauthor a\n\nmessage\n`,
+    );
+    expect(() => assertDirectChildCommit(commit)).not.toThrow();
+    expect(() =>
+      assertDirectChildCommit(
+        Buffer.from(
+          `tree ${"2".repeat(40)}\nparent ${phaseBase}\nparent ${"3".repeat(40)}\nauthor a\n\nmessage\n`,
+        ),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07d rejects noncanonical framing encoding normalization and branch headers", () => {
+    const valid = statusSnapshotBytes(phaseBase, unstagedStatusRecords());
+    const invalidUtf8 = Buffer.concat([valid.subarray(0, -1), Buffer.from([0xff, 0])]);
+    const decomposed = statusSnapshotBytes(phaseBase, ["? cafe\u0301"]);
+    const missingTerminator = valid.subarray(0, -1);
+    const extraHeader = Buffer.from(
+      [`# branch.oid ${phaseBase}`, "# branch.head main", "# branch.upstream origin/main", ""].join(
+        "\0",
+      ),
+    );
+    for (const candidate of [invalidUtf8, decomposed, missingTerminator, extraHeader])
+      expect(() => parseStatusSnapshot(candidate)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07e rejects rename unmerged ignored and unknown record types", () => {
+    for (const record of [
+      `2 R. N... 100644 100644 100644 ${"1".repeat(40)} ${"2".repeat(40)} R100 new\0old`,
+      `u UU N... 100644 100644 100644 100644 ${"1".repeat(40)} ${"2".repeat(40)} ${"3".repeat(40)} file`,
+      "! ignored",
+      "x unknown",
+    ])
+      expect(() => parseStatusSnapshot(statusSnapshotBytes(phaseBase, [record]))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("07f rejects duplicate unsafe and non-NFC paths", () => {
+    const record = `? ${phaseAddedPaths[0]}`;
+    for (const records of [
+      [record, record],
+      ["? ../escape"],
+      ["? /absolute"],
+      ["? parent\\child"],
+      ["? nested//child"],
+      ["? cafe\u0301"],
+    ])
+      expect(() => parseStatusSnapshot(statusSnapshotBytes(phaseBase, records))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("07g permits one exact concurrent auth root and rejects near nested or second roots", () => {
+    const exact = ".tmp-auth-readiness-approval-abc123/";
+    const unstaged = unstagedStatusRecords();
+    const allowed = parseStatusSnapshot(
+      statusSnapshotBytes(phaseBase, [...unstaged, `? ${exact}`]),
+    );
+    expect(classifyStatusSnapshot(allowed)).toBe("PRECOMMIT_UNSTAGED");
+    for (const row of [
+      "? .tmp-auth-readiness-approval-abc12/",
+      "? .tmp-auth-readiness-approval-abc123/file",
+      "? parent/.tmp-auth-readiness-approval-abc123/",
+    ])
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(phaseBase, [...unstaged, row])),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    const second = parseStatusSnapshot(
+      statusSnapshotBytes(phaseBase, [
+        ...unstaged,
+        `? ${exact}`,
+        "? .tmp-auth-readiness-approval-def456/",
+      ]),
+    );
+    expect(() => classifyStatusSnapshot(second)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("07h rejects mixed status mode object and path-set drift", () => {
+    const unstaged = unstagedStatusRecords();
+    const mixed = [...unstaged];
+    mixed[0] = statusType1Record(phaseModifiedPaths[0]!, "M.");
+    const wrongMode = [...unstaged];
+    wrongMode[0] = wrongMode[0]!.replace("100644 100644 100644", "100755 100755 100755");
+    const wrongObject = [...unstaged];
+    wrongObject[0] = wrongObject[0]!.replace(
+      expectedTracked(phaseModifiedPaths[0]!).baseObject,
+      zeroObjectId,
+    );
+    const extra = [...unstaged, "? unexpected.txt"];
+    for (const records of [mixed, wrongMode, wrongObject, extra]) {
+      const snapshot = parseStatusSnapshot(statusSnapshotBytes(phaseBase, records));
+      expect(() => classifyStatusSnapshot(snapshot)).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    }
   });
 
   it("08 locks ten runtime paths and excludes packet", () => {
@@ -445,20 +1922,45 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     expect(tenPaths).not.toContain(packetPath);
   });
 
-  it("09 current ten-path bytes equal d70 objects", () => {
-    for (const path of tenPaths) expect(bytes(path)).toEqual(gitBytes(d70, path));
-  }, 20_000);
-
-  it("10 ten-path bytes equal reviewed source and design merge", () => {
+  it("09 historical ten-path Git objects remain immutable", () => {
     for (const path of tenPaths) {
-      expect(bytes(path)).toEqual(gitBytes(source, path));
-      expect(bytes(path)).toEqual(gitBytes(merge, path));
+      const historical = gitBytes(d70, path);
+      expect(gitBytes(source, path)).toEqual(historical);
+      expect(gitBytes(merge, path)).toEqual(historical);
     }
   }, 30_000);
 
-  it("11 recomputes exact ten-path manifest", () => {
-    expect(canonicalManifest(tenPaths)).toEqual({ rows: 10, bytes: 1753, sha256: manifestSha });
-  });
+  it("10 current ten-path overlay changes only the append-only handoff", () => {
+    const changed = tenPaths.filter((path) => !bytes(path).equals(gitBytes(d70, path)));
+    expect(changed).toEqual(["docs/DEVELOPMENT_HANDOFF.md"]);
+  }, 30_000);
+
+  it("11 recomputes historical and exact current ten-path manifests", () => {
+    const historical = Buffer.from(
+      tenPaths
+        .map((path) => {
+          const value = gitBytes(d70, path);
+          return `${path}\0${value.length}\0${sha(value)}\0${blob(value)}\n`;
+        })
+        .join(""),
+    );
+    expect({ rows: tenPaths.length, bytes: historical.length, sha256: sha(historical) }).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: manifestSha,
+    });
+    expect(canonicalManifestAt(xcrunRecordsCommit, tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: recordsTenManifestSha,
+    });
+    expect(recordsTenManifestSha).not.toBe(manifestSha);
+    expect(canonicalManifest(tenPaths)).toEqual({
+      rows: 10,
+      bytes: 1753,
+      sha256: currentTenManifestSha,
+    });
+  }, 30_000);
 
   it("12 adapter retains exact CLI/binding/revalidation and no governance import", () => {
     const text = bytes(tenPaths[6]!).toString("utf8");
@@ -468,6 +1970,16 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     );
     expect(text).toContain("manifest.revalidate();");
     expect(text).not.toContain(packetPath);
+    const executorText = bytes(executorPath).toString("utf8");
+    expect(executorText).toContain(manifestSha);
+    expect(executorText).not.toContain(currentTenManifestSha);
+    const addTypeSources = tenPaths
+      .filter((path) => path.startsWith("scripts/"))
+      .map((path) => bytes(path).toString("utf8"))
+      .join("\n");
+    expect(addTypeSources).not.toMatch(
+      /ios-runtime-bootstrap|iOS 17\.5|Xcode_16\.2|downloadPlatform/u,
+    );
   });
 
   it("13 locks transaction hash, modes, counts, caps and timeout", () => {
@@ -916,5 +2428,804 @@ describe("R4B Add-Type outer activation v1.1.2", () => {
     }
     expect(canonicalManifest([...sixPaths].reverse()).sha256).not.toBe(computed.sha256);
     expect(canonicalManifest(sixPaths.slice(1)).sha256).not.toBe(computed.sha256);
+  });
+
+  it("25 binds the repair base and immutable exact-eight tree", () => {
+    expect(repairBase).toBe("b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5");
+    const commit = git(["cat-file", "commit", repairBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      "parent a2485dc12c231dd482799834d5aca2966a6db494",
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      "tree 8e7ee267b8bd93ca05cfe07e9bff05c8f66c70fb",
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(
+      "ci(ios): bootstrap pinned iOS 17.5 runtime",
+    );
+    expect(typeof verifyPostcommitObject).toBe("function");
+    expect(Object.keys(repairBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+    for (const path of phasePaths) {
+      const expected = repairBaseTree[path as keyof typeof repairBaseTree];
+      expect(git(["rev-parse", `${repairBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", repairBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
+    }
+  }, 30_000);
+
+  it("26 classifies the exact committed six-path repair as postcommit", () => {
+    expect(repairPaths).toHaveLength(6);
+    expect(repairPaths).not.toContain(".github/workflows/ios.yml");
+    expect(repairPaths).not.toContain("scripts/ios-ci.sh");
+    expect(classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(recordsBase, [])))).toBe(
+      "POSTCOMMIT",
+    );
+  });
+
+  it("27 classifies the exact six-path staged repair", () => {
+    const snapshot = parseStatusSnapshot(
+      statusSnapshotBytes(repairBase, repairStatusRecords("M.")),
+    );
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_STAGED");
+  });
+
+  it("28 rejects mixed staged and unstaged repair state", () => {
+    const records = repairStatusRecords(".M");
+    records[0] = repairStatusRecords("M.")[0]!;
+    expect(() =>
+      classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(repairBase, records))),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("29 rejects immutable workflow or ios-ci drift in the repair", () => {
+    for (const path of [".github/workflows/ios.yml", "scripts/ios-ci.sh"]) {
+      const expected = repairBaseTree[path as keyof typeof repairBaseTree];
+      const row = [
+        "1",
+        ".M",
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.blob,
+        expected.blob,
+        path,
+      ].join(" ");
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(repairBase, [...repairStatusRecords(".M"), row])),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    }
+  });
+
+  it("30 permits one exact auth temp root but rejects near matches", () => {
+    const exact = parseStatusSnapshot(
+      statusSnapshotBytes(repairBase, [
+        ...repairStatusRecords(".M"),
+        "? .tmp-auth-readiness-approval-Ab12z9/",
+      ]),
+    );
+    expect(classifyStatusSnapshot(exact)).toBe("PRECOMMIT_UNSTAGED");
+    for (const path of [
+      ".tmp-auth-readiness-approval-Ab12z9.bak/",
+      ".tmp-auth-readiness-approval-Ab12z/",
+      "parent/.tmp-auth-readiness-approval-Ab12z9/",
+    ]) {
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(repairBase, [...repairStatusRecords(".M"), `? ${path}`]),
+          ),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    }
+  });
+
+  it("31 rejects every extra repair path", () => {
+    expect(() =>
+      classifyStatusSnapshot(
+        parseStatusSnapshot(
+          statusSnapshotBytes(repairBase, [...repairStatusRecords(".M"), "? unexpected.txt"]),
+        ),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("32 requires one direct repair child of b320", () => {
+    expect(() =>
+      assertRepairDirectChildCommit(
+        Buffer.from(`tree ${"2".repeat(40)}\nparent ${repairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertRepairDirectChildCommit(
+        Buffer.from(
+          `tree ${"2".repeat(40)}\nparent ${repairBase}\nparent ${"3".repeat(40)}\nauthor a\n\nmessage\n`,
+        ),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("33 binds the immutable 22dede repair commit and exact-eight tree", () => {
+    expect(recordsBase).toBe("22dede4b31071aad68c607eabf3aec0a46544fe3");
+    const commit = git(["cat-file", "commit", recordsBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      `parent ${repairBase}`,
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${recordsBaseTreeId}`,
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(recordsBaseSubject);
+    expect(Object.keys(recordsBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+    for (const path of phasePaths) {
+      const expected = recordsBaseTree[path as keyof typeof recordsBaseTree];
+      expect(git(["rev-parse", `${recordsBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", recordsBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
+    }
+  }, 30_000);
+
+  it("34 classifies the exact three-path records repair before and after commit", () => {
+    expect(recordsRepairPaths).toEqual([
+      "docs/DEVELOPMENT_HANDOFF.md",
+      "packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts",
+      "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+    ]);
+    const precommit = parseStatusSnapshot(
+      statusSnapshotBytes(recordsBase, recordsRepairStatusRecords(".M")),
+    );
+    expect(classifyStatusSnapshot(precommit)).toBe("PRECOMMIT_UNSTAGED");
+    const live = captureStatusSnapshot();
+    const livePhase = classifyStatusSnapshot(live);
+    if (live.entries.length === 0) {
+      expect(livePhase).toBe("POSTCOMMIT");
+    } else {
+      expect([
+        oracleRepairBase,
+        clockRootRepairBase,
+        simctlShortLivedBase,
+        xcrunRecordsCommit,
+        activationBase,
+      ]).toContain(live.oid);
+      const liveXy = [...new Set(live.entries.map((entry) => entry.xy))];
+      expect(liveXy).toHaveLength(1);
+      expect(livePhase).toBe(liveXy[0] === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED");
+    }
+  });
+
+  it("35 classifies only the exact three-path records repair as staged", () => {
+    const snapshot = parseStatusSnapshot(
+      statusSnapshotBytes(recordsBase, recordsRepairStatusRecords("M.")),
+    );
+    expect(classifyStatusSnapshot(snapshot)).toBe("PRECOMMIT_STAGED");
+  });
+
+  it("36 keeps the original 22dede state postcommit and requires one direct records child", () => {
+    expect(classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(recordsBase, [])))).toBe(
+      "POSTCOMMIT",
+    );
+    expect(() =>
+      assertRecordsDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${recordsBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertRecordsDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${repairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("37 rejects mixed, unknown, added, deleted, renamed, duplicate, extra, or untracked records", () => {
+    const mixed = recordsRepairStatusRecords(".M");
+    mixed[0] = recordsRepairStatusRecords("M.")[0]!;
+    const expected = expectedRecordsRepairTracked(recordsRepairPaths[0]!);
+    const wrongStatuses = ["A.", "C.", "D.", "R.", "T.", "U."] as const;
+    const malformed = wrongStatuses.map((xy) =>
+      [
+        "1",
+        xy,
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.baseObject,
+        expected.candidateObject,
+        recordsRepairPaths[0],
+      ].join(" "),
+    );
+    const invalidRows = [
+      mixed,
+      [...recordsRepairStatusRecords(".M"), recordsRepairStatusRecords(".M")[0]!],
+      [...recordsRepairStatusRecords(".M"), "? .tmp-auth-readiness-approval-Ab12z9/"],
+      [...recordsRepairStatusRecords(".M"), "? unexpected.txt"],
+      ...malformed.map((row) => [row, ...recordsRepairStatusRecords(".M").slice(1)]),
+    ];
+    for (const rows of invalidRows)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(recordsBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    for (const row of ["2 R. N... unsafe", "u UU N... unsafe", "! ignored", "x unknown"])
+      expect(() => parseStatusSnapshot(statusSnapshotBytes(recordsBase, [row]))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("38 binds immutable 02b portable-repair base and exact-eight tree", () => {
+    expect(oracleRepairBase).toBe("02b28be6d7a6bc5fe60ee1e73caa579ff33874a0");
+    const commit = git(["cat-file", "commit", oracleRepairBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      `parent ${recordsBase}`,
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${oracleRepairBaseTreeId}`,
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(oracleRepairBaseSubject);
+    expect(Object.keys(oracleRepairBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+    for (const path of phasePaths) {
+      const expected = oracleRepairBaseTree[path as keyof typeof oracleRepairBaseTree];
+      expect(git(["rev-parse", `${oracleRepairBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", oracleRepairBase, "--", path]).split(/\s+/u)[0]).toBe(expected.mode);
+    }
+  }, 30_000);
+
+  it("39 classifies exact four-path portable repair unstaged and staged", () => {
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      const snapshot = parseStatusSnapshot(
+        statusSnapshotBytes(oracleRepairBase, oracleRepairStatusRecords(xy)),
+      );
+      expect(classifyStatusSnapshot(snapshot)).toBe(expected);
+    }
+  });
+
+  it("40 rejects mixed, extra, untracked, or production portable-repair drift", () => {
+    const mixed = oracleRepairStatusRecords(".M");
+    mixed[0] = oracleRepairStatusRecords("M.")[0]!;
+    const baseRows = oracleRepairStatusRecords(".M");
+    const expected = expectedOracleRepairTracked(oracleRepairPaths[0]!);
+    const wrongStatuses = ["A.", "C.", "D.", "R.", "T.", "U."] as const;
+    const statusMutations = wrongStatuses.map((xy) => [
+      [
+        "1",
+        xy,
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.baseObject,
+        expected.baseObject,
+        oracleRepairPaths[0],
+      ].join(" "),
+      ...baseRows.slice(1),
+    ]);
+    const productionRows = [
+      ".github/workflows/ios.yml",
+      "packages/shared/src/ios-foundation-structure.test.ts",
+      "scripts/ios-ci.sh",
+      "scripts/ios-runtime-bootstrap.mjs",
+    ].map((path) => {
+      const production = oracleRepairBaseTree[path as keyof typeof oracleRepairBaseTree];
+      return [
+        ...baseRows,
+        [
+          "1",
+          ".M",
+          "N...",
+          production.mode,
+          production.mode,
+          production.mode,
+          production.blob,
+          production.blob,
+          path,
+        ].join(" "),
+      ];
+    });
+    const exactConcurrent = "? .tmp-auth-readiness-approval-Ab12z9/";
+    for (const xy of [".M", "M."] as const) {
+      const accepted = parseStatusSnapshot(
+        statusSnapshotBytes(oracleRepairBase, [...oracleRepairStatusRecords(xy), exactConcurrent]),
+      );
+      expect(classifyStatusSnapshot(accepted)).toBe(
+        xy === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED",
+      );
+    }
+    const invalidRows = [
+      mixed,
+      [...baseRows, baseRows[0]!],
+      [...baseRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...baseRows, "? .tmp-auth-readiness-approval-Ab12z9.bak/"],
+      [...baseRows, "? nested/.tmp-auth-readiness-approval-Ab12z9/"],
+      [...baseRows, "? unexpected.txt"],
+      ...productionRows,
+      ...statusMutations,
+    ];
+    for (const rows of invalidRows)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(oracleRepairBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    expect(() =>
+      classifyStatusSnapshot(
+        parseStatusSnapshot(statusSnapshotBytes(oracleRepairBase, [exactConcurrent])),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("41 requires one direct 02b child with exact four-path raw diff", () => {
+    expect(() =>
+      assertOracleRepairDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${oracleRepairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() => assertOracleRepairRawDiff(oracleRepairRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"4".repeat(40)}\nparent ${recordsBase}\nauthor a\n\nmessage\n`,
+      `tree ${"4".repeat(40)}\nparent ${oracleRepairBase}\nparent ${recordsBase}\nauthor a\n\nmessage\n`,
+    ])
+      expect(() => assertOracleRepairDirectChildCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("42 rejects portable-repair mode, base blob, candidate blob, path, or row drift", () => {
+    const mutations = [
+      (rows: string[]) => [rows[0]!.replace(/^:100644/u, ":100755"), ...rows.slice(1)],
+      (rows: string[]) => [rows[0]!.replace(/[0-9a-f]{40}/u, "0".repeat(40)), ...rows.slice(1)],
+      (rows: string[]) => {
+        const parts = rows[0]!.split(" ");
+        parts[3] = "1".repeat(40);
+        return [parts.join(" "), ...rows.slice(1)];
+      },
+      (rows: string[]) => [rows[0]!, "unexpected.txt", ...rows.slice(2)],
+      (rows: string[]) => [rows[0]!.replace(/ M$/u, " A"), ...rows.slice(1)],
+    ];
+    for (const mutate of mutations)
+      expect(() => assertOracleRepairRawDiff(oracleRepairRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("43 binds immutable 607 dual-diagnostic base and exact-ten tree", () => {
+    expect(clockRootRepairBase).toBe("607f95b3dc7d0e2ba452745f52d673b5004f2d69");
+    const commit = git(["cat-file", "commit", clockRootRepairBase]);
+    const [headers, ...messageParts] = commit.split("\n\n");
+    const headerLines = headers?.split("\n") ?? [];
+    expect(headerLines.filter((line) => line.startsWith("parent "))).toEqual([
+      "parent ea651344e5fee88e73ded66ecf9c1c770afa5d34",
+    ]);
+    expect(headerLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${clockRootRepairBaseTreeId}`,
+    ]);
+    expect(messageParts.join("\n\n").split("\n")[0]).toBe(clockRootRepairBaseSubject);
+    const expectedTreePaths = [".github/workflows/ios.yml", ...clockRootRepairPaths].sort(
+      compareUtf8,
+    );
+    expect(Object.keys(clockRootRepairBaseTree).sort(compareUtf8)).toEqual(expectedTreePaths);
+    for (const path of expectedTreePaths) {
+      const expected = clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree];
+      expect(git(["rev-parse", `${clockRootRepairBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", clockRootRepairBase, "--", path]).split(/\s+/u)[0]).toBe(
+        expected.mode,
+      );
+    }
+    expect(simctlShortLivedBase).toBe("d2ba16c09392289b66a7ba26f47ba2468b2e64ec");
+    const currentCommit = git(["cat-file", "commit", simctlShortLivedBase]);
+    const [currentHeaders, ...currentMessageParts] = currentCommit.split("\n\n");
+    const currentHeaderLines = currentHeaders?.split("\n") ?? [];
+    expect(currentHeaderLines.filter((line) => line.startsWith("parent "))).toEqual([
+      "parent 1c1464ea0d5807313802d269f82facef84f523d7",
+    ]);
+    expect(currentHeaderLines.filter((line) => line.startsWith("tree "))).toEqual([
+      `tree ${simctlShortLivedBaseTreeId}`,
+    ]);
+    expect(currentMessageParts.join("\n\n").split("\n")[0]).toBe(simctlShortLivedBaseSubject);
+    const currentTreePaths = Object.keys(simctlShortLivedBaseTree).sort(compareUtf8);
+    expect(currentTreePaths).toEqual(Object.keys(clockRootRepairBaseTree).sort(compareUtf8));
+    for (const path of currentTreePaths) {
+      const expected = simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree];
+      expect(git(["rev-parse", `${simctlShortLivedBase}:${path}`])).toBe(expected.blob);
+      expect(git(["ls-tree", simctlShortLivedBase, "--", path]).split(/\s+/u)[0]).toBe(
+        expected.mode,
+      );
+    }
+    expect(() => assertXcrunSourceObject()).not.toThrow();
+    expect(() => verifyXcrunRecordsCommitObject(xcrunRecordsCommit)).not.toThrow();
+    expect(xcrunRecordsSourceTree["docs/DEVELOPMENT_HANDOFF.md"]).toEqual({
+      mode: "100644",
+      blob: "b5fa4aacc69932f95878200a4980663455a2f2c5",
+    });
+    expect(xcrunRecordsTree["docs/DEVELOPMENT_HANDOFF.md"]).toEqual({
+      mode: "100644",
+      blob: "84ee1fa9fffae4161a2135fb70398eaaf0a010e9",
+    });
+    expect(activationBase).toBe("71b8ef0ebe5c1ce3a3305606715f1cbee128c11d");
+    expect(activationBaseParent).toBe("8982998958e0edb8c49d30c7c053efb88e1b88fb");
+    expect(activationBaseTreeId).toBe("d423980bfb098b798df15f90522eafa4b9f5208b");
+    expect(activationBaseSubject).toBe("test(ci): bind xcrun diagnostic records topology");
+    expect(Object.keys(activationBaseTree).sort(compareUtf8)).toEqual(phasePaths);
+  }, 30_000);
+
+  it("44 classifies exact nine-path dual-diagnostic repair unstaged and staged", () => {
+    expect(() => assertActivationBaseObject()).not.toThrow();
+    expect(clockRootRepairPaths).toEqual(
+      [
+        "docs/DEVELOPMENT_HANDOFF.md",
+        "packages/shared/src/ios-foundation-structure.test.ts",
+        testPath,
+        "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+        "scripts/ios-ci.sh",
+        "scripts/ios-runtime-bootstrap.mjs",
+        "scripts/ios-runtime-bootstrap.test.mjs",
+        "scripts/summarize-ios-test-failures.mjs",
+        "scripts/summarize-ios-test-failures.test.mjs",
+      ].sort(compareUtf8),
+    );
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      const snapshot = parseStatusSnapshot(
+        statusSnapshotBytes(clockRootRepairBase, clockRootRepairStatusRecords(xy)),
+      );
+      expect(classifyStatusSnapshot(snapshot)).toBe(expected);
+    }
+    expect(simctlShortLivedPaths).toEqual(
+      [
+        "docs/DEVELOPMENT_HANDOFF.md",
+        "packages/shared/src/ios-foundation-structure.test.ts",
+        testPath,
+        "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+        "scripts/ios-runtime-bootstrap.mjs",
+        "scripts/ios-runtime-bootstrap.test.mjs",
+      ].sort(compareUtf8),
+    );
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      const snapshot = parseStatusSnapshot(
+        statusSnapshotBytes(simctlShortLivedBase, simctlShortLivedStatusRecords(xy)),
+      );
+      expect(classifyStatusSnapshot(snapshot)).toBe(expected);
+    }
+    expect(xcrunRecordsPaths).toEqual(recordsRepairPaths);
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const) {
+      expect(
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(xcrunRecordsCommit, xcrunRecordsStatusRecords(xy)),
+          ),
+        ),
+      ).toBe(expected);
+    }
+    expect(
+      classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(xcrunRecordsCommit, []))),
+    ).toBe("POSTCOMMIT");
+    expect(activationPaths).toEqual(
+      [
+        "docs/DEVELOPMENT_HANDOFF.md",
+        "packages/shared/src/ios-foundation-structure.test.ts",
+        testPath,
+        "packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts",
+        "scripts/ios-runtime-bootstrap.mjs",
+        "scripts/ios-runtime-bootstrap.test.mjs",
+      ].sort(compareUtf8),
+    );
+    expect(
+      classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(activationBase, []))),
+    ).toBe("BASE_CLEAN");
+    for (const [xy, expected] of [
+      [".M", "PRECOMMIT_UNSTAGED"],
+      ["M.", "PRECOMMIT_STAGED"],
+    ] as const)
+      expect(
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(activationBase, activationStatusRecords(xy))),
+        ),
+      ).toBe(expected);
+  }, 30_000);
+
+  it("45 rejects mixed, status, identity, extra, production, or auth-temp drift", () => {
+    const mixed = clockRootRepairStatusRecords(".M");
+    mixed[0] = clockRootRepairStatusRecords("M.")[0]!;
+    const baseRows = clockRootRepairStatusRecords(".M");
+    const expected = expectedClockRootRepairTracked(clockRootRepairPaths[0]!);
+    const wrongStatuses = ["A.", "C.", "D.", "R.", "T.", "U."] as const;
+    const statusMutations = wrongStatuses.map((xy) => [
+      [
+        "1",
+        xy,
+        "N...",
+        expected.mode,
+        expected.mode,
+        expected.mode,
+        expected.baseObject,
+        expected.baseObject,
+        clockRootRepairPaths[0],
+      ].join(" "),
+      ...baseRows.slice(1),
+    ]);
+    const productionRows = [".github/workflows/ios.yml"].map((path) => {
+      const production = clockRootRepairBaseTree[path as keyof typeof clockRootRepairBaseTree];
+      return [
+        ...baseRows,
+        [
+          "1",
+          ".M",
+          "N...",
+          production.mode,
+          production.mode,
+          production.mode,
+          production.blob,
+          production.blob,
+          path,
+        ].join(" "),
+      ];
+    });
+    const exactConcurrent = "? .tmp-auth-readiness-approval-Ab12z9/";
+    for (const xy of [".M", "M."] as const) {
+      expect(
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(clockRootRepairBase, [
+              ...clockRootRepairStatusRecords(xy),
+              exactConcurrent,
+            ]),
+          ),
+        ),
+      ).toBe(xy === ".M" ? "PRECOMMIT_UNSTAGED" : "PRECOMMIT_STAGED");
+    }
+    const invalidRows = [
+      mixed,
+      [...baseRows, baseRows[0]!],
+      [...baseRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...baseRows, "? .tmp-auth-readiness-approval-Ab12z9.bak/"],
+      [...baseRows, "? nested/.tmp-auth-readiness-approval-Ab12z9/"],
+      [...baseRows, "? unexpected.txt"],
+      ...productionRows,
+      ...statusMutations,
+    ];
+    for (const rows of invalidRows)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(clockRootRepairBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    expect(() =>
+      classifyStatusSnapshot(
+        parseStatusSnapshot(statusSnapshotBytes(clockRootRepairBase, [exactConcurrent])),
+      ),
+    ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    const shortRows = simctlShortLivedStatusRecords(".M");
+    const shortMixed = [...shortRows];
+    shortMixed[0] = simctlShortLivedStatusRecords("M.")[0]!;
+    const shortExpected = expectedSimctlShortLivedTracked(simctlShortLivedPaths[0]!);
+    const shortWrongStatus = [
+      "1",
+      "A.",
+      "N...",
+      shortExpected.mode,
+      shortExpected.mode,
+      shortExpected.mode,
+      shortExpected.baseObject,
+      shortExpected.baseObject,
+      simctlShortLivedPaths[0],
+    ].join(" ");
+    const preservedPaths = [
+      ".github/workflows/ios.yml",
+      "scripts/ios-ci.sh",
+      "scripts/summarize-ios-test-failures.mjs",
+      "scripts/summarize-ios-test-failures.test.mjs",
+    ];
+    const shortInvalid = [
+      shortMixed,
+      [...shortRows, shortRows[0]!],
+      [...shortRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...shortRows, "? unexpected.txt"],
+      [shortWrongStatus, ...shortRows.slice(1)],
+      ...preservedPaths.map((path) => {
+        const base = simctlShortLivedBaseTree[path as keyof typeof simctlShortLivedBaseTree];
+        return [
+          ...shortRows,
+          ["1", ".M", "N...", base.mode, base.mode, base.mode, base.blob, base.blob, path].join(
+            " ",
+          ),
+        ];
+      }),
+    ];
+    for (const rows of shortInvalid)
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(statusSnapshotBytes(simctlShortLivedBase, rows)),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    const xcrunRows = xcrunRecordsStatusRecords(".M");
+    const xcrunMixed = [...xcrunRows];
+    xcrunMixed[0] = xcrunRecordsStatusRecords("M.")[0]!;
+    const xcrunExpected = expectedXcrunRecordsTracked(xcrunRecordsPaths[0]!);
+    const xcrunWrongStatus = [
+      "1",
+      "A.",
+      "N...",
+      xcrunExpected.mode,
+      xcrunExpected.mode,
+      xcrunExpected.mode,
+      xcrunExpected.baseObject,
+      xcrunExpected.baseObject,
+      xcrunRecordsPaths[0],
+    ].join(" ");
+    const xcrunInvalid = [
+      xcrunMixed,
+      [...xcrunRows, xcrunRows[0]!],
+      [...xcrunRows, exactConcurrent, "? .tmp-auth-readiness-approval-Cd34x8/"],
+      [...xcrunRows, "? unexpected.txt"],
+      [xcrunWrongStatus, ...xcrunRows.slice(1)],
+      ...phasePaths
+        .filter((path) => !xcrunRecordsPaths.includes(path))
+        .map((path) => {
+          const base = xcrunRecordsTree[path as keyof typeof xcrunRecordsTree];
+          return [
+            ...xcrunRows,
+            ["1", ".M", "N...", base.mode, base.mode, base.mode, base.blob, base.blob, path].join(
+              " ",
+            ),
+          ];
+        }),
+    ];
+    for (const rows of xcrunInvalid)
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(xcrunRecordsCommit, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+    for (const xy of [".M", "M."] as const)
+      expect(() =>
+        classifyStatusSnapshot(
+          parseStatusSnapshot(
+            statusSnapshotBytes(xcrunRecordsCommit, [
+              ...xcrunRecordsStatusRecords(xy),
+              exactConcurrent,
+            ]),
+          ),
+        ),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+
+    const activationRows = activationStatusRecords(".M");
+    const activationMixed = [...activationRows];
+    activationMixed[0] = activationStatusRecords("M.")[0]!;
+    const activationExpected = expectedActivationTracked(activationPaths[0]!);
+    const activationWrongStatus = [
+      "1",
+      "A.",
+      "N...",
+      activationExpected.mode,
+      activationExpected.mode,
+      activationExpected.mode,
+      activationExpected.baseObject,
+      activationExpected.baseObject,
+      activationPaths[0],
+    ].join(" ");
+    for (const rows of [
+      activationMixed,
+      [...activationRows, activationRows[0]!],
+      [...activationRows, exactConcurrent],
+      [...activationRows, "? unexpected.txt"],
+      [activationWrongStatus, ...activationRows.slice(1)],
+      ...[".github/workflows/ios.yml", "scripts/ios-ci.sh"].map((path) => {
+        const base = activationBaseTree[path as keyof typeof activationBaseTree];
+        return [
+          ...activationRows,
+          ["1", ".M", "N...", base.mode, base.mode, base.mode, base.blob, base.blob, path].join(
+            " ",
+          ),
+        ];
+      }),
+    ])
+      expect(() =>
+        classifyStatusSnapshot(parseStatusSnapshot(statusSnapshotBytes(activationBase, rows))),
+      ).toThrow("IOS17_PHASE_TOPOLOGY_INVALID");
+  });
+
+  it("46 requires one direct 607 child with exact nine-path raw diff", () => {
+    expect(() =>
+      assertClockRootRepairDirectChildCommit(
+        Buffer.from(`tree ${"4".repeat(40)}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`),
+      ),
+    ).not.toThrow();
+    expect(() => assertClockRootRepairRawDiff(clockRootRepairRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"4".repeat(40)}\nparent ${oracleRepairBase}\nauthor a\n\nmessage\n`,
+      `tree ${"4".repeat(40)}\nparent ${clockRootRepairBase}\nparent ${oracleRepairBase}\nauthor a\n\nmessage\n`,
+    ])
+      expect(() => assertClockRootRepairDirectChildCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+
+    expect(() =>
+      assertSimctlShortLivedDirectChildCommit(
+        Buffer.from(
+          `tree ${"5".repeat(40)}\nparent ${simctlShortLivedBase}\nauthor a\n\nmessage\n`,
+        ),
+      ),
+    ).not.toThrow();
+    expect(() => assertSimctlShortLivedRawDiff(simctlShortLivedRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"5".repeat(40)}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`,
+      `tree ${"5".repeat(40)}\nparent ${simctlShortLivedBase}\nparent ${clockRootRepairBase}\nauthor a\n\nmessage\n`,
+    ])
+      expect(() => assertSimctlShortLivedDirectChildCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+
+    expect(() =>
+      assertXcrunRecordsFutureCommit(
+        Buffer.from(
+          `tree ${"6".repeat(40)}\nparent ${xcrunRecordsCommit}\nauthor a\n\n${xcrunRecordsFutureSubject}\n`,
+        ),
+      ),
+    ).not.toThrow();
+    expect(() => assertXcrunRecordsFutureRawDiff(xcrunRecordsRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"6".repeat(40)}\nparent ${xcrunRecordsSource}\nauthor a\n\n${xcrunRecordsFutureSubject}\n`,
+      `tree ${"6".repeat(40)}\nparent ${xcrunRecordsCommit}\nparent ${xcrunRecordsSource}\nauthor a\n\n${xcrunRecordsFutureSubject}\n`,
+      `tree ${"6".repeat(40)}\nparent ${xcrunRecordsCommit}\nauthor a\n\nwrong subject\n`,
+    ])
+      expect(() => assertXcrunRecordsFutureCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    expect(() =>
+      assertActivationFutureCommit(
+        Buffer.from(
+          `tree ${"7".repeat(40)}\nparent ${activationBase}\nauthor a\n\n${activationFutureSubject}\n`,
+        ),
+      ),
+    ).not.toThrow();
+    expect(() => assertActivationFutureRawDiff(activationRawDiff())).not.toThrow();
+    for (const commit of [
+      `tree ${"7".repeat(40)}\nparent ${xcrunRecordsCommit}\nauthor a\n\n${activationFutureSubject}\n`,
+      `tree ${"7".repeat(40)}\nparent ${activationBase}\nparent ${xcrunRecordsCommit}\nauthor a\n\n${activationFutureSubject}\n`,
+      `tree ${"7".repeat(40)}\nparent ${activationBase}\nauthor a\n\nwrong subject\n`,
+    ])
+      expect(() => assertActivationFutureCommit(Buffer.from(commit))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+  });
+
+  it("47 rejects diagnostic-repair mode, base blob, candidate blob, path, or row drift", () => {
+    const mutations = [
+      (rows: string[]) => [rows[0]!.replace(/^:100644/u, ":100755"), ...rows.slice(1)],
+      (rows: string[]) => [rows[0]!.replace(/[0-9a-f]{40}/u, "0".repeat(40)), ...rows.slice(1)],
+      (rows: string[]) => {
+        const parts = rows[0]!.split(" ");
+        parts[3] = "1".repeat(40);
+        return [parts.join(" "), ...rows.slice(1)];
+      },
+      (rows: string[]) => [rows[0]!, "unexpected.txt", ...rows.slice(2)],
+      (rows: string[]) => [rows[0]!.replace(/ M$/u, " A"), ...rows.slice(1)],
+    ];
+    for (const mutate of mutations)
+      expect(() => assertClockRootRepairRawDiff(clockRootRepairRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    for (const mutate of mutations)
+      expect(() => assertSimctlShortLivedRawDiff(simctlShortLivedRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    for (const mutate of mutations)
+      expect(() => assertXcrunRecordsFutureRawDiff(xcrunRecordsRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
+    for (const mutate of mutations)
+      expect(() => assertActivationFutureRawDiff(activationRawDiff(mutate))).toThrow(
+        "IOS17_PHASE_TOPOLOGY_INVALID",
+      );
   });
 });

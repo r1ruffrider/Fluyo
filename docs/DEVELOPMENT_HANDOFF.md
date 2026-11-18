@@ -3002,3 +3002,575 @@ The two-file pre-record, pre-pin snapshot is:
 - Focused test: 191918 bytes; SHA-256 `1f86ec949db4942b2206eb11fe453a082d40aad3ccd070793c216c1192ee6959`; blob `9729f79b86860ec77382dd187a446a0d6184d732`.
 
 These values are not the final reviewed manifest; final canonical identity remains external review evidence and is not embedded. Fresh protected Linux portable, Windows-native, and full pinned gates remain required. `E01` through `E08` remain **8 required-unattempted**; all false-authority and `PRECONDITION_HOLD_NO_GET` controls remain unchanged. No live execution, acquisition, stage, commit, or push is authorized or recorded.
+
+## 2026-11-14 — Recommended Option A iOS 17.5 prerequisite CI repair
+
+Marlon explicitly selected Recommended Option A for a separate prerequisite CI repair. This scoped approval covers only the minimum-iOS protected job on exact `macos-15` ARM64 with `/Applications/Xcode_16.2.app` build `16C5032a`, and exactly one no-retry Apple/Xcode-managed acquisition per distinct authorized `GITHUB_RUN_ATTEMPT=1` minimum job:
+
+```text
+xcodebuild -downloadPlatform iOS -buildVersion 17.5 -architectureVariant arm64
+```
+
+The source-bound Apple catalog tuple is 261 UTF-8 bytes with SHA-256 `27c0b7cd887423ccf4ac33c0378accc9b4e659adab748e6b0e66f009b8da0510`. It binds `com.apple.dmg.iPhoneSimulatorSDK17_5`, version `17.5`, simulator build `21F79`, and catalog file size `7,336,630,623` bytes. That hash is the metadata-tuple hash, not a downloaded-payload hash or signature. The CoreSimulator identifier remains post-install observed and must be validated before use.
+
+The v1.1.6 implementation is repository-only until independent gates pass. It uses one foreground controller to hold the unique CoreSimulator storage anchor through acquisition, exact minimum evidence, cleanup, and sanitized receipt finalization. The controller continuously enforces the held-filesystem disk floor/delta and two owned-root ceilings, launches only the exact pinned acquisition and minimum-evidence children, and keeps raw output, paths, PIDs, device identifiers, environment values, and credentials out of the receipt. The minimum script consumes exact runtime `17.5` / `21F79` and the controller-validated Node executable; the current-iOS leg remains unchanged.
+
+Implementation development evidence is nonlive only. The frozen inventory is **128 injected Node cases plus 8 shared structure cases**. Live Xcode acquisition, simulator installation, protected minimum/current evidence, cleanup, and receipt upload remain required downstream protected-run proofs and are not development-test passes.
+
+This approval does not authorize credentials, `sudo`, `curl` or a custom URL, a package manager, proxy use, cache/retry/fallback, direct payload execution, iOS 18 substitution, production, signing, store actions, spending, or unrelated runtime actions. PR #93 remains draft/HOLD until this prerequisite PR passes all specialist, Elana exact-head, protected CI, merge, and post-main gates, after which PR #93 must be refreshed and fully re-gated.
+
+## 2026-11-14 — iOS 17.5 prerequisite child-gate v1.1.10.2 handoff
+
+The prerequisite controller now places ACQUIRE, MINIMUM, and CLEANUP behind one source-bound child gate. Each wrapper validates the exact runner/source/parent tuple, the inherited held controller descriptor, the closed role environment, and the detached checkout before emitting `READY_V1`; the parent then captures the immutable wrapper process identity before releasing exactly 32 bytes. Unverified children receive no signal. An unverified wrapper that remains open after the bounded close wait enters `PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD`, emits only `IOS_RUNTIME_BOOTSTRAP_UNVERIFIED_CHILD_HOLD`, writes no receipt, claims no cleanup success, and awaits the protected workflow timeout.
+
+The security claim is limited to **gated accidental-invocation and source-mutation containment**. It is **not OS authorization against malicious same-user code**; same-user code could already invoke `xcodebuild`. Transaction cancellation is phase-bound and idempotent. Receipt finalization is synchronous, canonical, capped at 8,192 bytes, and uses closed primary/cleanup failure-state combinations. The controller source is opened once with `O_NOFOLLOW`, held through all wrappers and receipt finalization, and revalidated with positional reads without relying on shared file offsets.
+
+Development evidence remains nonlive: **182/182 controller cases**, **28/28 shared structure cases**, and **105/105 phase-guard cases** are required, for **287 relevant cases**. The phase-specific required ledger is **198 = 182 controller + 16 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push are not implementation-test passes and remain gated. All credentials, `sudo`, custom downloads, package managers, retries, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-14 — iOS 17.5 prerequisite child-gate v1.1.10.3 hardening
+
+V1.1.10.3 closes the remaining child-gate release, descriptor-identity, and controller-ownership defects without changing the authorized acquisition, minimum-evidence, or cleanup targets. Each wrapper now receives one unique 32-byte `node:crypto.randomBytes` release value only through the held release pipe. Only its SHA-256 enters the closed internal environment; the raw value never enters argv, logs, errors, or the receipt, and both parent and wrapper zero their buffers after release or abort.
+
+Before `READY_V1`, the wrapper requires fd3 and fd5 to be FIFOs and fd4 to be the same regular, nonsymlink controller source object identified by canonical path, device, inode, size, positional bytes, and pre/post descriptor checks. A same-content different inode, nonpipe descriptor, nonregular source, or source swap fails before any target or network action.
+
+Every non-HOLD return or throw now releases the held controller source exactly once and removes both transaction signal handlers exactly once through a true outer `finally`, including receipt validation, write, removal, rename, and terminal-error paths. Only `PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD` retains the workflow-owned process and descriptor state until the protected workflow kill; it still writes no receipt and makes no cleanup-success claim.
+
+Development evidence remains nonlive: **193/193 controller cases**, **31/31 shared structure cases**, and **105/105 phase-guard cases** are required, for **309 relevant cases**. The phase-specific required ledger is **212 = 193 controller + 19 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-14 — iOS 17.5 prerequisite lifecycle v1.1.11.3 hardening
+
+V1.1.11.3 closes the remaining release-boundary, termination, residue, phase-cancellation, and receipt-truthfulness defects without changing the authorized acquisition, minimum-evidence, or cleanup targets. A wrapper remains unreleased until its exact synchronous release boundary; pre-release failure retains the closed role-specific meaning, while released-child operational failure, verified termination failure, and verified process-group residue remain independent outcomes. A live or unprovable verified child enters a fixed nonreceipt HOLD and cannot be followed by cleanup or a cleanup-success claim. The obsolete owned-phase and cleanup-child helpers are absent.
+
+Runtime inventory counts are now nullable, bounded to 0 through 4,096, and copied only from observations. The selected runtime triple exists only for one uniquely introduced runtime. Retention reports the observed post-cleanup fact, including unknown post-cleanup inventory. Disk receipt slots are nullable, observed zero is valid, and the controller records each sample before applying the exact floor or delta threshold. The receipt adds `freeBytesAfterMinimumEvidence`; a nonzero sample count requires the initial and minimum observations, while zero samples require all five disk observations to remain null and the delta to remain zero.
+
+Development evidence remains nonlive: **232/232 controller cases**, **37/37 shared structure cases**, and **105/105 phase-guard cases** are required, for **354 relevant cases**. The phase-specific required ledger is **257 = 232 controller + 25 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-14 — iOS 17.5 prerequisite lifecycle v1.1.12.1 correction
+
+V1.1.12.1 preserves an existing precondition, acquisition, minimum-evidence, or cleanup failure when cancellation is observed during finalization. It separates the fixed `/bin/ps` verifier runner from the general captured-probe runner. Both use direct, no-shell, detached children with immediate settlement, exact tokens and environments, bounded output and time, identity-bound termination, awaited close, and process-group absence proof. A live or unprovable unverified child and a surviving verified child remain fixed nonreceipt HOLD outcomes; they do not claim cleanup or continue to another action.
+
+Every ACQUIRE, MINIMUM, and CLEANUP filesystem sample now writes its exact receipt slot synchronously before the floor or delta check. Receipt validation uses one closed phase-evidence validator for invocation count, runtime cardinalities, runtime selection, retention, reached and unreached disk slots, and code-specific thresholds. `PRECONDITION_RUNTIME_INVENTORY` identifies only first-inventory process, UTF-8, JSON, schema, or 4,096-row-cap failure before a successful count. `PRECONDITION_STORAGE_ANCHOR` begins only after a parsed exact-runtime count of zero and identifies canonical held-storage binding failure.
+
+Development evidence remains nonlive: **264/264 controller cases**, **46/46 shared structure cases**, and **105/105 phase-guard cases** are required, for **395 relevant cases**. The phase-specific required ledger is **298 = 264 controller + 34 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. Workflow and `scripts/ios-ci.sh` bytes remain identical to the v1.1.11.3 candidate. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-14 — iOS 17.5 prerequisite lifecycle v1.1.12.2 HOLD correction
+
+V1.1.12.2 closes the remaining verified-child termination boundary without changing the authorized acquisition, minimum-evidence, or cleanup targets. A live wrapper whose fresh process-identity re-probe errors or differs from the immutable capture enters `PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD` and receives no signal. If the wrapper closes during that re-probe, the captured process group must be proven absent before the close is accepted. Only an exact fresh identity may be signaled. A non-`ESRCH` signal failure, bounded KILL timeout, or surviving process group enters `PRECONDITION_VERIFIED_CHILD_RESIDUE_HOLD`.
+
+The gated-phase supervisor preserves those two internal HOLD classifications instead of converting them to a generic signal failure. One immutable HOLD settlement is raced against child close. HOLD wins immediately without waiting for an unbounded close, receipt, or cleanup; close-first awaits bounded termination and rechecks the latched HOLD before any source, group, or result processing. Controller ownership remains with the protected workflow until its existing timeout.
+
+Development evidence remains nonlive: **270/270 controller cases**, **49/49 shared structure cases**, and **105/105 phase-guard cases** are required, for **404 relevant cases**. The phase-specific required ledger is **307 = 270 controller + 37 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. Workflow and `scripts/ios-ci.sh` bytes remain identical to the v1.1.11.3 candidate. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-14 — iOS 17.5 prerequisite lifecycle v1.1.12.3 executable HOLD proof
+
+V1.1.12.3 changes no controller, workflow, or minimum-evidence implementation bytes. It replaces the prior source-shape assertion for the gated HOLD/close race with an injected executable fixture. The fixture releases a wrapper that never closes, forces its live termination-ownership re-probe to become unprovable, and proves prompt `PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD` settlement before close with zero signals, bounded monitor/listener state, and no downstream receipt or cleanup callback.
+
+Development evidence remains nonlive and count-stable: **270/270 controller cases**, **49/49 shared structure cases**, and **105/105 phase-guard cases** are required, for **404 relevant cases**. The phase-specific required ledger remains **307 = 270 controller + 37 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-14 — iOS 17.5 prerequisite lifecycle v1.1.13 correction
+
+V1.1.13 closes four remaining evidence-bound lifecycle defects without changing the authorized acquisition, minimum-evidence, or cleanup targets. The dedicated `/bin/ps` verifier and general captured runner attach child settlement before reading the spawned PID or streams. A synchronous spawn rejection maps only to its fixed phase code. An invalid spawned PID receives no signal: close or error maps to the fixed phase exit code after listener and timer cleanup, while no settlement within exactly 7,000 ms enters `PRECONDITION_UNVERIFIED_CHILD_RESIDUE_HOLD`. A gated pre-release residue HOLD is rethrown before gate teardown or role mapping and therefore cannot continue to receipt or cleanup.
+
+After the first runtime inventory parses with an exact-runtime count of zero, storage discovery, canonical validation, `O_NOFOLLOW` open, held binding, and the first unbounded sample form one atomic storage-anchor operation. A failed candidate descriptor closes exactly once, clears its binding, resets all disk evidence to null/zero, and reports only `PRECONDITION_STORAGE_ANCHOR`. Only a successful first sample can be compared to the preflight floor and retained for later phases.
+
+Cleanup disk observations now use the closed `CLEANUP_DISK_FLOOR` and `CLEANUP_DISK_LIMIT` codes. Receipt validation requires the cleanup slot and aggregate minimum or delta that justify the exact cleanup code, rejects low or over-limit evidence attributed to another phase, and permits a null cleanup slot only when a non-disk cleanup failure occurred before that sample. All other cleanup sample faults remain `CLEANUP_STORAGE_IDENTITY`.
+
+Development evidence remains nonlive: **284/284 controller cases**, **53/53 shared structure cases**, and **105/105 phase-guard cases** are required, for **422 relevant cases**. The phase-specific required ledger is **325 = 284 controller + 41 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. Workflow and `scripts/ios-ci.sh` bytes remain identical to the v1.1.11.3 candidate. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite lifecycle v1.1.14.2 correction
+
+V1.1.14.2 makes actual child-process close the only close authority without changing the authorized acquisition, minimum-evidence, or cleanup targets. Every successful spawn synchronously attaches one immutable lifecycle pair: settlement records the first error or actual close, while the independent close promise resolves only on the child `close` event. Exit or signal state alone never proves close. The same close promise is threaded through the dedicated `/bin/ps` verifier, captured subprocesses, verified termination, and gated roles. A pre-release wrapper without identity and close enters the unverified nonreceipt HOLD; a released or identity-captured wrapper without actual close enters the verified nonreceipt HOLD. Neither HOLD can continue to cleanup or receipt.
+
+Cleanup evidence now records whether the first successful cleanup filesystem sample occurred. Invocation-one cleanup failures that arise after sampling require a nonnull cleanup slot at or above the cleanup floor. The closed pre-sample failure set may retain a null cleanup slot, while invocation-zero raw residue remains truthful. Explicit receipt-invalid and unknown cleanup failures sanitize to residue before that first successful sample and to receipt-invalid afterward; known cleanup failures retain their exact code. Existing cleanup floor and delta rules are unchanged.
+
+Development evidence remains nonlive: **300/300 controller cases**, **58/58 shared structure cases**, **77/77 activation cases**, and **8/8 readiness cases** are required, for **443 relevant cases** and an exact focused total of **443/443 = 300 + 58 + 77 + 8**. The phase-specific required ledger is **346 = 300 controller + 46 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. Workflow and `scripts/ios-ci.sh` bytes remain identical to the v1.1.11.3 candidate. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite parent-identity v1.1.15 correction
+
+V1.1.15 corrects the protected-run pre-acquisition parent-identity failure without changing the authorized acquisition, minimum-evidence, or cleanup targets. Parent identity now uses the dedicated direct `/bin/ps` verifier and cannot recursively enter the general captured runner. `PRECONDITION_PARENT_IDENTITY` records a bounded parent-verifier failure, while `PRECONDITION_INSUFFICIENT_TIME` records the reached preflight time-budget boundary. A closed precondition-stage table sanitizes invocation-zero failures only to exact `PRECONDITION_*` codes; it never fabricates an acquisition failure. Invocation-one failure behavior is unchanged.
+
+The stage advances through runner, parent identity, controller source, owned roots, Xcode, first runtime inventory, storage anchor, disk, and time budget. It returns to source before the final pre-release controller-source verification, so a time-budget fallback cannot mask source drift. Invocation-zero receipts remain `PRECONDITION_REJECTED`, `NOT_ATTEMPTED`, `NOT_RUN`, and `NOT_REQUIRED` with no runtime retention or downstream callbacks. Parent-identity rejection has no fabricated runtime or disk evidence. Insufficient-time rejection records the already observed exact-runtime count and initial disk sample truthfully.
+
+Development evidence remains nonlive: **314/314 controller cases**, **62/62 shared structure cases**, **77/77 activation cases**, and **8/8 readiness cases** are required, for **461 relevant cases** and an exact focused total of **461/461 = 314 + 62 + 77 + 8**. The phase-specific required ledger is **364 = 314 controller + 50 newly applicable structure cases**. Live acquisition, Xcode execution, simulator installation, protected minimum/current evidence, cleanup, receipt upload, stage, commit, and push remain gated and are not development-test passes. Workflow and `scripts/ios-ci.sh` bytes remain unchanged. PR #94 remains draft/HOLD. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite parent-identity v1.1.15.1 repair topology
+
+V1.1.15.1 changes no controller, workflow, or minimum-evidence implementation behavior. It binds the bounded repair to exact base `b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5` and its immutable eight-path blob/mode table. The repair topology permits exactly six changed paths: the handoff, structure test, activation guard, readiness guard, controller, and controller test. Workflow and `scripts/ios-ci.sh` must remain byte-identical and absent from the repair diff.
+
+One bounded atomic porcelain-v2 snapshot classifies only exact unstaged, exact staged, or clean postcommit state. Unstaged and staged states require all six paths with exact base and candidate identities and reject mixed state, drift, duplicates, extra paths, or unsafe status records. A clean postcommit state must be one direct child of the exact repair base and change exactly those six blobs and modes. At most one exact `.tmp-auth-readiness-approval-<six alphanumeric>/` root is ignored; near matches, nested paths, siblings, and a second root remain failures.
+
+Development evidence remains nonlive: **314/314 controller cases**, **62/62 shared structure cases**, **85/85 activation cases**, and **8/8 readiness cases** are required, for **469 relevant cases** and an exact focused total of **469/469 = 314 + 62 + 85 + 8**. The phase-specific required ledger remains **364 = 314 controller + 50 newly applicable structure cases**. Live acquisition, protected CI rerun, simulator installation, stage, commit, push, ready, and merge remain gated. PR #94 remains draft/HOLD.
+
+## 2026-11-15 — iOS 17.5 prerequisite parent-identity v1.1.15.2 executable repair proof
+
+V1.1.15.2 preserves the exact six-path repair topology while making both previously structural failure claims executable. The production controller exposes one local, dependency-injected final-source validator used at exactly the two final source-validation sites; the initial and middle source validations remain direct. The precondition stage changes back to `SOURCE` before each final validation, so raw final-source failure records only `PRECONDITION_SOURCE` with the already reached runtime-count and disk observations and cannot start an acquisition, minimum-evidence, or cleanup child.
+
+The test-only Windows oracle copies the exact controller and `ios-ci.sh` bytes into one held, canonical temporary root, rewrites only the three cardinality-checked fixture tokens for the contained path grammar, developer directory, and host architecture, disables auto-main through module import, and injects every external boundary. It invokes no shell, real tool, subprocess, network, or live runtime action. Raw parent failure now proves a canonical invocation-zero `PRECONDITION_PARENT_IDENTITY` receipt with zero downstream callbacks. Raw final-source failure proves exactly three injected preflight tool observations, one final validator call, zero child spawns, truthful disk evidence, no private error text, and exact owned-leaf cleanup. The immutable repair base assertion also binds exact parent, tree, subject, modes, and blobs for `b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5`.
+
+Development evidence remains nonlive: **316/316 controller cases**, **62/62 shared structure cases**, **85/85 activation cases**, and **8/8 readiness cases** are required, for **471 relevant cases** and an exact focused total of **471/471 = 316 + 62 + 85 + 8**. The phase-specific required ledger is **366 = 316 controller + 50 newly applicable structure cases**. Live acquisition, protected CI rerun, simulator installation, stage, commit, push, ready, and merge remain gated. PR #94 remains draft/HOLD. Workflow and `scripts/ios-ci.sh` bytes remain unchanged. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite parent-identity v1.1.15.3 oracle hardening
+
+V1.1.15.3 changes no production controller, workflow, or minimum-evidence bytes. The test-only Windows oracle now binds the production controller as raw bytes to exact SHA-256 `64acf8d9b930b7d8a4780c1e766937819668b98e2a01b7e6dbbe497d937871e2`, decodes with fatal UTF-8, requires already-normalized NFC and an exact UTF-8 round trip, and re-reads the unchanged production bytes before and after each fixture action. Malformed UTF-8 and non-NFC fixture sources are rejected.
+
+Each transformed oracle module receives one test-local 16-byte cryptographic random query rendered as exactly 32 lowercase hexadecimal characters. The query is unique within the module, is used once only to isolate the import, and is absent from the sanitized receipt. The held temporary root remains the sole cleanup boundary on every success or failure. Both final source-validation sites are now mechanically bound to an immediately preceding `SOURCE` stage assignment; the final-source failure remains executable and callback-free.
+
+Development evidence remains nonlive: **318/318 controller cases**, **62/62 shared structure cases**, **85/85 activation cases**, and **8/8 readiness cases** are required, for **473 relevant cases** and an exact focused total of **473/473 = 318 + 62 + 85 + 8**. The phase-specific required ledger is **368 = 318 controller + 50 newly applicable structure cases**. Live acquisition, protected CI rerun, simulator installation, stage, commit, push, ready, and merge remain gated. PR #94 remains draft/HOLD. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.3 specialist gate record
+
+The current exact eight-row candidate identity before this append-only records correction is SHA-256 `8c04e6d67d7a9d59f066f51ae23f20b803392574f6df5ca2127142665b07407e`. Exact-byte specialist gates report Catalina **105/105 PASS**, Natalia **204/204 PASS**, Renata **42/42 PASS** plus **1,107/1,107 executions PASS** with zero residue and zero owned processes, Julieta **60/60 PASS**, and Gabriela **28/28 PASS**. Protected macOS execution remains downstream evidence and is not claimed by these development gates.
+
+Development evidence is **473/473 focused PASS**, with phase-specific required ledger **368**, readiness **150/150 PASS**, shared **634/634 PASS**, and static and diff checks PASS. Recommended Option A remains limited to the exact prerequisite CI scope recorded above. No acquisition, runtime action, simulator installation, stage, commit, or push is authorized or recorded by this entry. PR #94 remains draft/HOLD; all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+The next gate is Elana's exact-candidate **COMMIT-ONLY** review, and it may start only after this handoff's new full hash and the exact candidate manifest are re-pinned and all applicable exact-byte rebinds pass. Any byte drift resets those gates.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.4 postcommit records repair
+
+Exact commit `22dede4b31071aad68c607eabf3aec0a46544fe3` has parent `b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5`, tree `8dab199f420d3d06ef76035495d166aa227d8c0b`, and subject `fix(ci): bind iOS bootstrap parent identity`. It changes exactly the reviewed six-path parent-identity repair and leaves the workflow and `scripts/ios-ci.sh` unchanged. Elana's candidate gate was **1,286/1,286 PASS-COMMIT-ONLY** before that exact commit.
+
+The mandatory clean-tree shared run on the exact commit completed **633/634 PASS**. Its sole failure was the activation guard's stale live-state expectation: the clean exact commit was correctly classified as `POSTCOMMIT`, while case 26 still required `PRECOMMIT_UNSTAGED`. No controller, runtime, acquisition, workflow, minimum-evidence, or cleanup failure was observed by that repository-only gate.
+
+V1.1.15.4 is a three-record repair only: this append-only handoff entry, the activation guard, and the readiness pins. The activation guard binds the full exact commit through Git objects, permits only those exact three paths in a single unstaged or staged records phase, rejects every other status or path including untracked authorization-temporary roots, and requires any later postcommit state to be one direct child changing exactly those three modes and blobs. The original `b3203f0b96db5efca6d3cd16e6eb39d80a9cd3a5` six-path repair fixtures remain unchanged.
+
+Development evidence remains nonlive and count-preserving for the implementation: **318/318 controller cases**, **62/62 shared structure cases**, **90/90 activation cases**, and **8/8 readiness cases** are required, for **478 relevant cases**. The phase-specific required ledger remains **368 = 318 controller + 50 newly applicable structure cases**. No acquisition, live controller execution, simulator installation, push, ready, or merge is authorized or recorded by this entry. PR #94 remains draft/HOLD, and all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.4 specialist gate record
+
+The current exact three-row records candidate before this append-only correction contains **3 rows**, **361,866 source bytes**, and **388 manifest bytes**, with SHA-256 `a6894a81aee0006c4f697321058ce4c3af31c3ba231cfb47521df552d75515f8`. Its enclosing exact eight-row candidate contains **8 rows**, **669,480 source bytes**, and **914 manifest bytes**, with SHA-256 `54639291237223c8f31d2f01e179efd17f497c96372147631a26b420894070ae`.
+
+Current exact-byte gates report Catalina **54/54 PASS**, Natalia **60/60 PASS**, Renata **38/38 PASS** plus **737/737 executions PASS**, and Julieta **36/36 PASS**. Activation plus readiness is **98/98 PASS**, shared is **639/639 PASS**, and static and diff checks PASS.
+
+No acquisition, runtime action, simulator installation, stage, commit, or push is authorized or recorded by this entry. PR #94 remains draft/HOLD; all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+The fresh next gate is Elana's exact-candidate **COMMIT-ONLY** review, and it may start only after this append's new full hash and the exact three-row and eight-row pins are refreshed and all applicable exact-byte rebinds pass. Any byte drift resets those gates.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.15.5 amend-only topology correction
+
+Local commit `18bd6b055065bd703ec3c8746666951315a8684d` is unpushed, predates this amendment, and is superseded as candidate evidence. Its identity is informational only and is not protected-CI, merge, or runtime authority. The pre-amend clean-tree shared run was honestly **638/639 PASS** and activation was **89/90 PASS**; the sole failure was case 34's stale clean-tree expectation after the exact three-path records commit. All other synthetic checks, static checks, and diff integrity passed.
+
+V1.1.15.5 changes no classifier, controller, workflow, `scripts/ios-ci.sh`, minimum-evidence, acquisition, cleanup, or receipt behavior. Case 34 now proves the exact three-path unstaged state with a frozen synthetic `.M` snapshot, takes exactly one live clean snapshot, requires that live snapshot to contain no status entries, and classifies it as `POSTCOMMIT` through the existing exact direct-child records verifier. No fresh **90/90** activation or **639/639** shared claim is made by this entry before those gates execute on the final bytes.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, amend, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.16 portable oracle repair
+
+Protected CI on exact pushed head `02b28be6d7a6bc5fe60ee1e73caa579ff33874a0` completed the Ubuntu portable audit with **504/506 PASS**. The only two failures were the executable Windows-oracle cases for raw parent and final-source failure: both stopped with the fixed code `PRECONDITION_RUNNER` because the test-only transformed canonical-path regular expression required `\` separators while hosted Ubuntu paths use `/`. This is a test-fixture portability defect only; it does not establish any production, runtime, acquisition, simulator, cleanup, or receipt claim. The separate protected minimum-iOS failure remains pending independent diagnosis.
+
+V1.1.16 makes the oracle path pattern separator-aware while retaining a closed contained-path grammar and rejecting literal `.` and `..` segments, sibling or prefix paths, alternate separators, NUL and control characters, newlines, empty segments, and doubled separators. The four-path repair topology is bound to exact base `02b28be6d7a6bc5fe60ee1e73caa579ff33874a0`; the sole live snapshot is accepted only after the independent classifier proves either the exact dirty four-path state or a clean one-direct-child exact four-path postcommit state.
+
+Required development evidence is **320/320 controller cases**, **62/62 shared structure cases**, **95/95 activation cases**, and **8/8 readiness cases**, for **485 focused cases**. The phase-specific required ledger is **370**, the portable audit-policy unit target is **508/508**, and the full shared target is **644/644**. No acquisition, live controller execution, simulator installation, stage, commit, push, ready, or merge is authorized or recorded by this entry. PR #94 remains draft/HOLD, and all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.16 current evidence and transition
+
+Current development evidence reports structure plus activation plus readiness **165/165 PASS** and portable **273/273 PASS**. Renata's bounded recovery record reports that the first fixed 5-second timeout was superseded by an isolated **150/150 PASS** and one authorized full shared **644/644 PASS**. The final bounded state contained zero candidate processes, zero candidate residue, and zero candidate artifacts.
+
+This evidence is repository-only and does not establish acquisition, live controller execution, simulator installation, protected minimum-iOS recovery, or any production/runtime claim. PR #94 remains draft/HOLD; no acquisition, runtime action, stage, commit, or push is authorized or recorded by this entry, and all credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+The fresh next gate is Elana's exact-candidate **COMMIT-ONLY** review, and it may start only after this append's new full hash and exact candidate pins are refreshed and all applicable exact-byte rebinds pass. Any byte drift resets those gates.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.17 minimum-lane repair record
+
+The repair base is exact commit `a1e43d4f0494a23019f4712d3bb292bd9af83296`, tree `0fed24af5507eca32477280aa9775ee3dc21c065`, subject `test(ci): make iOS bootstrap fixtures portable`. PR #94's protected rollup contained **14** terminal results: **12 success**, **1 minimum-iOS failure**, and **1 skipped**. Minimum job `132743943026` first reported fixed `ACQUIRE_PROCESS_IDENTITY`, then `CLEANUP_RECEIPT_INVALID`; it produced no receipt and no minimum artifact. Current-iOS, Windows, portable, and every other protected gate passed. This record makes no protected-recovery claim.
+
+Source review identifies five unbound `(dependencies.now ?? performance.now)()` extractions, which violate the Node.js 19-or-later receiver requirement. The transaction sampled time before establishing its receipt state. A subsequent direct-root production defect also left the nested parent absent. These are source-proven failure facts, not evidence that the protected minimum lane recovered.
+
+The approved repair remains an exact six-path repository/test scope only: this handoff, the shared iOS structure test, activation guard, readiness guard, controller, and controller test. It does not change the workflow or `scripts/ios-ci.sh` and grants no acquisition, simulator, production, or runtime authority.
+
+Stable source facts before this append are:
+
+- Controller: **114,337 bytes**; SHA-256 `91485c4ba0830da497e4d9992dd5afd4764dabab9b00085dc51221ac12969139`; Git blob prefix `29e7d92bb88c75f261054f8e20155b18f6348a63`.
+- Controller test: **141,960 bytes**; SHA-256 `0eaf40d4ae4cb62233f39516f65b6404899815a3e69ac692488790f9b10dcd6b`; Git blob prefix `c0442379d30599d69ebde0ab2f30adbfa1c93b53`.
+- Shared structure test: **54,746 bytes**; SHA-256 `29c27f7bcb62e6ae97251b1b40c2968b23ccff9b8215208e1e93b659f448896e`; Git blob prefix `02f274964ace424365132940b2f11cdd1f67902a`.
+- Activation guard: **94,574 bytes**; SHA-256 `5894e8d64288560065a431525679a5eeaa6b50d59f7e6b681f1e44998ffec339`; Git blob prefix `dcea881d56d9d1c93bbd84c938877d0d141c6008`.
+
+Current development evidence is controller **338/338 PASS**, shared structure **68/68 PASS**, and activation **99/100 PASS**. The sole expected activation failure is live topology case 34 while this handoff and the readiness guard remain incomplete. Prettier and Node syntax checks PASS.
+
+The required final targets remain pending and are not claimed as executed by this entry: controller **338/338**, shared structure **68/68**, activation **100/100**, readiness **8/8**, focused **514/514**, phase-specific required ledger **394**, shared **655/655**, audit-policy unit **526/526**, portable **273/273**, and isolated readiness **150/150**. Valentina must mechanically refresh the handoff and readiness pins after this append before those gates can be evaluated.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, protected recovery, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, retry, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — iOS 17.5 prerequisite v1.1.17 source-fact supersession
+
+The preceding v1.1.17 source-fact record remains preserved as historical evidence. Final lint identified one missing contract assertion in the already-required partial-second-create case: `minimumLeaf` was destructured but unused. The controller test now asserts the required absence; the case count remains unchanged, controller evidence remains **338/338 PASS**, and lint passes.
+
+This entry supersedes only the controller-test source fact: `scripts/ios-runtime-bootstrap.test.mjs` is now **142,016 bytes**, SHA-256 `fd470f24392fc64a5475a42badffa7711946c51447f86426915ea222738654a7`, Git blob `94af350afb70d43131c167479edd1689d58c4ce2`. The controller, shared structure test, and activation-guard source facts in the preceding record remain unchanged.
+
+This repository/test correction makes no protected-recovery, acquisition, simulator, production, or runtime claim. PR #94 remains draft/HOLD; no stage, commit, push, ready, or merge is authorized or recorded by this entry, and all existing prohibitions remain unchanged.
+
+## 2026-11-15 — PR #94 Xcode precondition diagnostic v1.1 record
+
+The diagnostic repair base is exact commit `ea651344e5fee88e73ded66ecf9c1c770afa5d34`, tree `ffb2c3fa53efe88f235975d722946d71a869f1e0`, subject `fix(ci): bind iOS bootstrap clock and temp roots`. Its protected rollup contained **14** terminal results: **12 success**, **1 minimum-iOS failure**, and **1 aggregate skipped**. The sanitized minimum receipt was `PRECONDITION_REJECTED` with `PRECONDITION_XCODE`, invocation count **0**, no acquisition, and no runtime retention. Current-iOS, Windows, portable, and all other protected gates passed.
+
+That generic code did not prove the exact failing Xcode subcheck because it collapsed both the Xcode version probe/parse boundary and the `simctl` probe/path boundary. No protected recovery is claimed.
+
+The approved repository/test-only diagnostic mode is `PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_1`. It does not change the workflow or `scripts/ios-ci.sh` and grants no acquisition or runtime authority. Its receipt schema v2 keeps the expected Xcode version and build exact while the observed version and build remain nullable. It permits exactly seven closed primary codes:
+
+1. `PRECONDITION_XCODE_VERSION_PROBE`
+2. `PRECONDITION_XCODE_VERSION_PARSE`
+3. `PRECONDITION_SIMCTL_FIND_PROBE`
+4. `PRECONDITION_SIMCTL_FIND_PATH`
+5. `PRECONDITION_XCODE_VERSION_INTERNAL`
+6. `PRECONDITION_SIMCTL_FIND_INTERNAL`
+7. `PRECONDITION_XCODE_DIAGNOSTIC_READY`
+
+Child-residue HOLD outcomes retain precedence over diagnostic classification. `PRECONDITION_XCODE_DIAGNOSTIC_READY` stops before runtime inventory or acquisition. At most one protected diagnostic attempt may run later. Its success criterion is one closed sanitized receipt with one exact code; a green protected job is not required and is not claimed. The diagnostic authorizes no retry, acquisition, merge, or broader runtime action.
+
+Stable source facts before this append are:
+
+- Controller: **119,516 bytes**; SHA-256 `ee8245134facede4824f6a7ee3c44256c375ecd6ce741025d43dcb5bd345c149`; Git blob `df4f2c8070cb464271af332eb8551798c76b3412`.
+- Controller test: **156,773 bytes**; SHA-256 `604dee8e33a474ec9b24be51328fedc69a3d777666e66c6d58422c7774616c1f`; Git blob `3fb9590e0803ca0d3f4e164c259a1bdd85ea1c01`.
+- Shared structure test: **60,310 bytes**; SHA-256 `b4ae9e1722c6dccaf33dc057e6243c94589ece79cb154f3ad0b609bed93c5a51`; Git blob `ec16ffedbdc3a7a66d3be4e54bc105bd7061621e`.
+- Activation guard: **94,590 bytes**; SHA-256 `a672e7d4fa5b5eec25d69e0ea55d7c52ad95cffbe668cb08a0676039ddc13ce7`; Git blob `112be37063ec2cc40ae6ed2b5161dc14a19198f8`.
+
+Executed development evidence is controller **370/370 PASS** and shared structure **78/78 PASS**. Prettier for all four reviewed paths and diff integrity PASS. Activation **100/100** remains pending until the exact six-path handoff/readiness topology is complete.
+
+The required final targets remain pending and are not claimed as executed by this entry: controller **370/370**, shared structure **78/78**, activation **100/100**, readiness **8/8**, focused **556/556**, phase-specific required ledger **436**, shared **665/665**, audit-policy unit **558/558**, portable **273/273**, and full repository **2,712/2,712**.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, proxy, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged.
+
+## 2026-11-15 — PR #94 Xcode precondition diagnostic v1.1.1 supersession
+
+Final exact-byte review of the unexecuted diagnostic v1.1 found a cleanup-failure receipt-validator defect and an initial schema-name conflict. Catalina and Natalia converged before any diagnostic execution on the canonical short keys `expectedVersion`, `expectedBuild`, `observedVersion`, and `observedBuild`. This v1.1.1 record explicitly supersedes the unexecuted full-name requirement; all preceding v1.1 history remains preserved.
+
+The cleanup contract is a closed two-row table. It distinguishes the clean row from the exact failure row `CLEANUP_FAILED` / `CLEANUP_RAW_RESIDUE` / `FAILED` / `raw=true`, with `fallbackUsed=false`. The observed-version/build table is selected by the exact primary code. A child HOLD retains precedence and writes no receipt.
+
+The repair adds exactly two controller cases and leaves the shared-structure count unchanged. Executed development evidence is controller **372/372 PASS** and shared structure **78/78 PASS**; Prettier and diff integrity PASS. Activation **100/100** remains pending until the exact handoff/readiness pins are refreshed.
+
+Current frozen source facts before this append are:
+
+- Controller: **119,783 bytes**; SHA-256 `65136f954db6c64d6806bce1c37fc91f756c951a7cb87cc4bc8d8a3a7a100a1a`; Git blob `d712c4c0bcc0087225df406e602b9bae3dd70425`.
+- Controller test: **160,587 bytes**; SHA-256 `681f1c1a35832e8170f572c945bfa7a5ebdeceef7c7dea6cf6425df65d3cabef`; Git blob `912e5c717301590a7e73daac4fa38a80a453eccf`.
+- Shared structure test: **60,850 bytes**; SHA-256 `6b21265ef0ae98ffde2dc83e426e29e7b337faaae4a3ba6d850e1935c4bb3aae`; Git blob `bfd701ad2958393e46cd51d63a180e0d865d850a`.
+- Activation guard: **94,590 bytes**; SHA-256 `4a2fed88583b24cd0aaaef81f7920eac3913eb8a156c450635b4fba7e142455e`; Git blob `91b218c3235d9c2a4bafd094c6ac8f31a172ad43`.
+
+The required final targets remain pending and are not claimed as executed by this entry: controller **372/372**, shared structure **78/78**, activation **100/100**, readiness **8/8**, focused **558/558**, phase-specific required ledger **438**, shared **665/665**, audit-policy unit **560/560**, portable **273/273**, isolated readiness **150/150**, and full repository **2,714/2,714**.
+
+This repository/test correction makes no protected-recovery, acquisition, simulator, production, or runtime claim. PR #94 remains draft/HOLD; no diagnostic execution, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry, and all existing prohibitions remain unchanged.
+
+## 2026-11-15 — PR #94 dual iOS diagnostic v1 design and development record
+
+Catalina's `PR94-IOS-DUAL-DIAGNOSTIC-v1` design gate is **96/96 PASS**, and Natalia's corresponding security and privacy design gate is **96/96 PASS**. The planned commit subject is `test(ci): refine iOS failure localization`. The exact nine-path scope is closed to:
+
+1. `docs/DEVELOPMENT_HANDOFF.md`
+2. `packages/shared/src/ios-foundation-structure.test.ts`
+3. `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`
+4. `packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts`
+5. `scripts/ios-ci.sh`
+6. `scripts/ios-runtime-bootstrap.mjs`
+7. `scripts/ios-runtime-bootstrap.test.mjs`
+8. `scripts/summarize-ios-test-failures.mjs`
+9. `scripts/summarize-ios-test-failures.test.mjs`
+
+The workflow remains pinned. This repository/test-only diagnostic grants no acquisition or runtime authority, adds no retry authority, and leaves both minimum-iOS and current-iOS outcomes unresolved until protected evidence exists. PR #94 remains draft/HOLD.
+
+Current executed development evidence is controller **381/381 PASS**, shared structure **85/85 PASS**, and the direct sanitizer current-failure **23-row suite PASS**. Activation is **97/100**, not green: exactly two restricted-sandbox Git-clone fixtures and the live-status case remain outstanding, and authoritative outside-sandbox **100/100** is pending. No readiness or final handoff/manifest pin is invented or claimed by this record.
+
+Current frozen source facts before this append are:
+
+- Shared structure test: **65,482 bytes**; SHA-256 `bc5d448f12561f77812119292ebbc9ff12f6eb390ec3cb226e97a18118a8f905`; Git blob `47d4f304513bf1c26578d54487a4038f64122431`.
+- Activation guard: **95,849 bytes**; SHA-256 `433e46c6ea7b57e296f4b8d0da833fbd0999367c05f292183f3bd97b4d9b4f43`; Git blob `44ca9ae2a86cb50a4c67a4633dd32c0606aec8c6`.
+- iOS CI script: **17,695 bytes**; SHA-256 `8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c`; Git blob `0b84abbd35ebc8e3ca28ec672ca513b288fec94b`.
+- Controller: **126,052 bytes**; SHA-256 `71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e`; Git blob `fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b`.
+- Controller test: **162,291 bytes**; SHA-256 `128533346f837dd2541d3e984bff67feb4da5e3a8b717b3146b76768abe083eb`; Git blob `dd6014b9b27df5b42331cd1f4d06cb61e2e0af71`.
+- iOS failure summarizer: **20,597 bytes**; SHA-256 `0f74bbcdeec96d331a9a0cc33a8da1a7d134b3ec8fd41342304d2b629f401c79`; Git blob `0d4fe7a679e5d3a5c3881c41bc6862e4b943ba26`.
+- iOS failure summarizer test: **61,023 bytes**; SHA-256 `7a74f2d8df4cb0480fc37fa3217f0e18291fd0bd00a3d32e3104616d66c2ebb6`; Git blob `08c4d75325ff9cc4161d7d21ce77602b2442dbad`.
+
+No acquisition, live controller execution, simulator installation, protected recovery, runtime action, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, proxy, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged. Valentina must mechanically bind the readiness, handoff, and final manifest pins only after this append freezes.
+
+## 2026-11-15 — PR #94 dual iOS diagnostic v1.2 sanitizer recovery checkpoint
+
+Catalina's sanitizer-recovery freeze is **72/72 PASS**, and Natalia's corresponding security and privacy design gate is **72/72 PASS**. This bounded repository/test recovery changes only the iOS failure summarizer and its test, the shared structure test, the activation guard, the readiness guard, and this append-only handoff. The controller, controller test, `simctl` behavior, `scripts/ios-ci.sh`, and the workflow remain preserved.
+
+Functional development evidence only is the exact sanitizer **35/35 PASS**, shared structure **90/90 PASS**, and focused formatter, ESLint, and Node syntax PASS. This evidence makes no protected recovery, acquisition, simulator, production, or runtime-success claim. Activation **100/100**, readiness **8/8**, focused **579/579**, the phase-specific required ledger **459**, audit-policy unit **569/569**, shared **677/677**, portable **273/273**, and full repository **2,735/2,735** remain pending after the append's mechanical pins and final gates.
+
+Current frozen source facts before this append are:
+
+- Shared structure test: **69,370 bytes**; SHA-256 `b9a3fda060432df495115dc1bb0ee88deb668e4b13afe6f6ea0513eba9ab3dca`; Git blob `379a5d3376f6ac4331b415166727d8bbee919690`.
+- iOS failure summarizer: **36,268 bytes**; SHA-256 `48914ef84623bb627650c3748cc3351ff6bad5bc735088cf66538fcc8484897f`; Git blob `304a8306a7fab2165f03852c6cf31dce0623fb77`.
+- iOS failure summarizer test: **67,405 bytes**; SHA-256 `e9c1697e683cec350bbde0fb1e1f0f7affe2d43f9e0b48b01f7e8d6a3165255e`; Git blob `4600785f4703469cfdabc4020087ec53bc297b87`.
+- Controller: **126,052 bytes**; SHA-256 `71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e`; Git blob `fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b`.
+- Controller test: **162,291 bytes**; SHA-256 `128533346f837dd2541d3e984bff67feb4da5e3a8b717b3146b76768abe083eb`; Git blob `dd6014b9b27df5b42331cd1f4d06cb61e2e0af71`.
+- iOS CI script: **17,695 bytes**; SHA-256 `8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c`; Git blob `0b84abbd35ebc8e3ca28ec672ca513b288fec94b`.
+
+PR #94 remains draft/HOLD. No acquisition, live controller execution, simulator installation, protected recovery, runtime action, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All credential, `sudo`, custom-download, package-manager, proxy, fallback, production, signing, store, spend, and unrelated-runtime prohibitions remain unchanged. Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-15 — PR #94 dual iOS diagnostic v1.2 three-defect repair supersession
+
+This append preserves the preceding v1.2 checkpoint as historical evidence and supersedes its functional sanitizer count and three repaired source identities. The exact repairs cover the **12 code fields**, the earlier-zero nested summary, and provisional file-descriptor/quarantine tracking.
+
+Current functional evidence is sanitizer semantic **43/43 PASS**, comprising **30 classifier** plus **13 lifecycle/oracle** cases. The prior **35/35** count is superseded by eight required `fstat`/quarantine cases. Shared structure is **90/90 PASS**, and focused ESLint, Prettier, and Node syntax PASS.
+
+Current repaired source facts before this append are:
+
+- Shared structure test: **70,736 bytes**; SHA-256 `d984964245b49fb07135bd47bba6a82ced44c83c8c9302b7828fe94c1da14b7a`; Git blob `d80d6d536a458df9cc5a8818879ab484a30cb397`.
+- iOS failure summarizer: **39,102 bytes**; SHA-256 `5f1ea392c303a281a421bf685331d5fad68962dbce11ec59c08408644492ee36`; Git blob `d516dbe6b10629e5e5684226d5522339cd35f756`.
+- iOS failure summarizer test: **72,804 bytes**; SHA-256 `8f0116ff167f0681020f7c1f33abd09e462a882d11eb74bdd7948e0cb85c96cd`; Git blob `f3e9097fd34a950a61aff23e566d9d061cc0d458`.
+
+The controller remains **126,052 bytes**, SHA-256 `71b83aaf821a05093131087a9d30e2834437e96cebe6cf6dcd24515ffa2b298e`, Git blob `fad08d9b91f008b40a81ceddd58fe7c8cb3cd84b`; the controller test remains **162,291 bytes**, SHA-256 `128533346f837dd2541d3e984bff67feb4da5e3a8b717b3146b76768abe083eb`, Git blob `dd6014b9b27df5b42331cd1f4d06cb61e2e0af71`; and `scripts/ios-ci.sh` remains **17,695 bytes**, SHA-256 `8de79ce3d2715f68b23930d4e4b601dba232494e789338d25405a5b065248c0c`, Git blob `0b84abbd35ebc8e3ca28ec672ca513b288fec94b`. Controller behavior, its test, `simctl` behavior, the iOS CI script, and the workflow remain preserved.
+
+Audit TAP topology remains **569**. Focused **579/579**, the phase-specific required ledger **459**, shared **677/677**, portable **273/273**, and full repository **2,735/2,735** targets are unchanged because the semantic cases remain inside one top-level script. Activation, readiness, and the full gates remain pending.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the downstream pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL short-lived v1.2 functional freeze
+
+Protected execution on exact head `afd3f53145efb311396c1f20fed82129d1dad1d7` produced `receipt.json` at **1,441 bytes** with SHA-256 `64681d648f2f3ea0c4765486e3816bf523d70df4a49f2ef1b15ee20c42ef83a0`. The receipt records mode `PR94-IOS-SIMCTL-SHORT-LIVED-v1.2`, primary code `PRECONDITION_SIMCTL_FIND_INVALID_PID`, invocation count **0**, download `NOT_ATTEMPTED`, minimum `NOT_RUN`, no retention, and no fallback. This evidence diagnoses the precondition only; the repair remains unexecuted and no recovery is claimed.
+
+Catalina's architecture design gate is **52/52 PASS**, and Natalia's security and privacy design gate is **52/52 PASS**. Functional development evidence is controller **397/397 PASS**, shared structure **95/95 PASS**, activation topology subset **5/5 PASS**, and Prettier and Node syntax PASS.
+
+Current frozen source facts before this append are:
+
+- Controller: **130,684 bytes**; SHA-256 `44f809aaf5e8693464f5ac016a57fd7536286599b0430d64649a5662966ef189`; Git blob `72c6d99ad1f4eac6b7785e880919d9780dec5a8a`.
+- Controller test: **172,838 bytes**; SHA-256 `fa0794c123f8a6ad18ac19717babaae7616ef2e5c6133fda05580be5e26db87c`; Git blob `7c0c0e54bf6884abc4f1be868bf22e720e4b7727`.
+- Shared structure test: **75,468 bytes**; SHA-256 `fe15d1cc300647132c95be282c49ce1cdb8adac0cae8f5ed1233213f2650ff71`; Git blob `e1fde4451bd5bcded134f0b410f1e481a73247ae`.
+- Activation guard: **105,937 bytes**; SHA-256 `c2488558e0cc0b757a43d92bb3e4699e60373dd42c63ebd51f56de77bcd166fa`; Git blob `0b762a3e3822aa6f41715809a27e797c518b47b0`.
+
+Final activation **100/100**, readiness **8/8**, focused **600/600**, the phase-specific required ledger **480**, audit-policy unit **585/585**, shared **682/682**, and full repository **2,756/2,756** remain pending after the append's mechanical pins and final gates.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the downstream pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL short-lived v1.2 lifecycle-repair supersession
+
+This append preserves the preceding SIMCTL v1.2 record as historical evidence and supersedes its functional source facts and counts after Catalina's **18/18 PASS** count ruling. Three bounded lifecycle defects are corrected in repository/test bytes; the repair remains unexecuted in protected execution and no recovery is claimed.
+
+Functional development evidence is controller **400/400 PASS**, shared structure **95/95 PASS**, and Prettier, Node syntax, and diff integrity PASS.
+
+Current repaired source facts before this append are:
+
+- Controller: **131,609 bytes**; SHA-256 `0975fd028e63ef76e7c0ed844c9192687526279480e7271dd6c69d87fab622e1`; Git blob `dab0d1fdf323eaa1e68ed6f58efd02104d2ed2ae`.
+- Controller test: **175,245 bytes**; SHA-256 `f73eff66e1fe813ca74b20347a060d67e0c15d54d7a4c41b11342a33d0f63e6d`; Git blob `8da13b4ea6b885875c7d60a27c6ef8b82d30555c`.
+- Shared structure test: **75,936 bytes**; SHA-256 `046aac08dd96653212c5b68d71328bb2f3d3403ea87f531071f70c6204a4a2b5`; Git blob `d24e2e324a8b2a159407edff0c7b079119be92f8`.
+
+The exact final targets are activation **100/100**, readiness **8/8**, focused **603/603**, the phase-specific required ledger **483**, audit-policy unit **588/588**, portable **273/273**, shared **682/682**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,759/2,759**. Sanitizer semantic **43/43**, isolated readiness **150/150**, and static checks remain supporting requirements. Activation, readiness, the final manifest pins, and these final gates remain pending mechanical binding and execution.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL short-lived v1.2 lifecycle-race supersession
+
+This append preserves the preceding lifecycle-repair record as historical evidence. Catalina's HOLD race is corrected in repository/test bytes, but the repair remains unexecuted in protected execution and no recovery is claimed. The correction is count-stable.
+
+Functional development evidence remains controller **400/400 PASS**, shared structure **95/95 PASS**, and Prettier, Node syntax, and diff integrity PASS.
+
+Current repaired source facts before this append are:
+
+- Controller: **131,777 bytes**; SHA-256 `12425795f01ea4c723a514ebcf1664bd939dd2381ea950a685fb6e42f2cbd147`; Git blob `88202502447ebfddc0b7fc476b7821404151dd74`.
+- Controller test: **175,348 bytes**; SHA-256 `1bc53a0bd6ff0af57bb21f9a64d645f54708346d91da47e801fc4350475213bb`; Git blob `4e8e97b24a84c5a72e14a9fa439cedee759f24a7`.
+- Shared structure test: **76,446 bytes**; SHA-256 `cb950e40caf83d768052909c7f4553fb7c4732c238de4b216af8237499b38fca`; Git blob `786917046c0f41b458bfe84170a8e958da685f7e`.
+
+Final targets remain activation **100/100**, readiness **8/8**, focused **603/603**, the phase-specific required ledger **483**, audit-policy unit **588/588**, portable **273/273**, shared **682/682**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,759/2,759**. These targets and the downstream mechanical pins remain pending.
+
+PR #94 remains draft/HOLD. No protected recovery, acquisition, live controller execution, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. All existing prohibitions remain unchanged, and Valentina must mechanically refresh the activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-15 — PR #94 SIMCTL spawn diagnostic v1.3 development checkpoint
+
+Protected execution on exact head `a721ff8df68f621b3eb4afcddd168ab52567f38f` produced a sanitized diagnostic receipt with primary code `PRECONDITION_SIMCTL_FIND_SPAWN`, invocation count **0**, download `NOT_ATTEMPTED`, minimum `NOT_RUN`, no runtime or disk evidence, no retention, and no fallback. That receipt is preserved only as historical diagnosis of the retired generic spawn category. It does not establish recovery, simulator acquisition, or runtime success.
+
+Catalina's architecture gate for `PR94-IOS-SIMCTL-SPAWN-DIAGNOSTIC-v1.3` is PASS, and Natalia's independent security gate is **64/64 STRICT PASS-TO-IMPLEMENT**. The bounded repository/test change pins the exact Xcode 16.2 `xcrun`, holds and revalidates its executable identity, and replaces the generic spawn result with one closed executable-identity code and six closed spawn categories. Functional development evidence is controller **412/412 PASS** and shared structure **100/100 PASS**.
+
+Current frozen source facts before this append are:
+
+- Controller: **138,001 bytes**; SHA-256 `b341b58c07492b7a5450753c67c33366cbd793b007ae7955957b5fb7dcd23579`; Git blob `5400ac205a1598e83f6058891a863ecf52f3c87a`.
+- Controller test: **181,835 bytes**; SHA-256 `29eda1edfa606264db650a0c7557dcf435334155d62f40eccee3ce6f200383bb`; Git blob `41fb5f926c96d870e8531f0cbf6e7028189f0cef`.
+- Shared structure test: **80,538 bytes**; SHA-256 `71791a4fdf60c4eb97be45f18157f3565a9d42adcc323a4b7191b0fa2d18d725`; Git blob `c00966608b05a12c4c3a2e29728da0881b2c6e48`.
+- Activation guard before its final mechanical manifest pin: **105,977 bytes**; SHA-256 `3ce8910bb0e5fda00025473d2dc1f402422b88b3d80fb41657b9c3290cafd24e`; Git blob `58b8d86669d701f69131dba645f7a0feaeecd496`.
+
+Final targets are activation **100/100**, readiness **8/8**, focused **620/620**, the phase-specific required ledger **500**, audit-policy unit **600/600**, portable **273/273**, shared **687/687**, installed-tree **1/1**, API **381/381**, web **834/834**, and full repository **2,776/2,776**. Sanitizer semantic **43/43**, isolated readiness **150/150**, and static checks remain supporting requirements. These final gates and the exact six-path manifest remain pending mechanical pins.
+
+PR #94 remains draft/HOLD. No protected rerun, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. Workflow, `scripts/ios-ci.sh`, the summarizer and its test, dependencies, and lockfiles remain byte-identical.
+
+## 2026-11-16 — PR #94 SIMCTL spawn diagnostic v1.3 formatter supersession
+
+This append preserves the preceding v1.3 checkpoint as historical development evidence and supersedes only its four source identities after the required formatter pass. No behavior, authority, protected execution, or recovery claim changed. Final functional evidence remains controller **412/412 PASS** and shared structure **100/100 PASS**.
+
+The formatter-stable source facts are:
+
+- Controller: **137,977 bytes**; SHA-256 `1d8a91f5eb81ce003e485af7c58effad047bebbf40e3097a5a6e4fe5bd28ec14`; Git blob `5f26ea395886431bcd6517acd6f2f9d7d3a51234`.
+- Controller test: **181,835 bytes**; SHA-256 `7cebec379071b594abc95e6948f92907789914e4974096397ff80b32d8b73c73`; Git blob `3413fcc9c123b27fd277c66f9f15f3af9ace2906`.
+- Shared structure test: **80,576 bytes**; SHA-256 `902d984ab60bc035054aceba9dc63019896bbd1d045fd9345464774731608627`; Git blob `19c0c1d3277def1e7eaebf06ca7a7cd1ccb82ac1`.
+- Activation guard before its final mechanical manifest pin: **105,977 bytes**; SHA-256 `a30691f96d00ad6b781dd493f8ce10c81c1f4aadaff44e35f894b1987ec5574f`; Git blob `5dee30784ac0339b922c36b79d59548304d251ff`.
+
+The final repository-only development gates are audit-policy unit **600/600 PASS**, portable **273/273 PASS**, installed-tree **1/1 PASS**, shared **687/687 PASS**, isolated readiness **150/150 PASS**, API **381/381 PASS**, web **834/834 PASS**, and full repository **2,776/2,776 PASS**. Lint and typecheck PASS. The readiness/activation handoff pins and final exact-six manifest remain mechanical work after this append.
+
+PR #94 remains draft/HOLD. The `a721ff8` protected receipt remains historical diagnosis only. No protected rerun, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry.
+
+## 2026-11-16 — PR #94 SIMCTL spawn diagnostic v1.3 listener-order supersession
+
+This true-EOF append explicitly supersedes the pre-repair formatter-source record's statement that no behavior changed. Listener-before-lifecycle ordering was materially corrected in repository/test bytes, with an adversarial fixture covering the repaired ordering. The repair is count-stable: controller **412/412 PASS** and shared structure **100/100 PASS**.
+
+Exact repaired source identities are:
+
+- Controller: **137,977 bytes**; SHA-256 `f07d3ba75a73f725cdb91c5a95e75dd873ada708f3f7fd0480e78ff5974b3d92`; Git blob `3ba34cff3d7c82ef812fea08ed732a2056072ae3`.
+- Controller test: **182,168 bytes**; SHA-256 `7e1bc745fc04e30f3de8a6351e034f7a8d9dbb436470b9cbf0a27065b1137eb6`; Git blob `525f1019e7b9a61c925ccb13fc805596f994f500`.
+- Shared structure test: **80,884 bytes**; SHA-256 `b2867d64e06e8c6d2cf8f1ab1e98c9b28b93547e827fd9acd198ecef23b8e87a`; Git blob `64b92e92847efa448b3fa79f5926f823c0c71e2f`.
+
+The existing bounded repository/test authority is unchanged; no broader authority is created. PR #94 remains draft/HOLD. The repair has no protected execution or recovery evidence and makes no acquisition, live diagnostic, simulator installation, production, runtime-success, retry, stage, commit, push, ready, or merge claim. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.4 record
+
+Protected evidence from exact head `1c1464ea0d5807313802d269f82facef84f523d7`, run `43772642056`, artifact `14185291221`, remains historical diagnosis only. Its `receipt.json` is **1,449 bytes** with SHA-256 `10b92b3e820aed560a7563e44be3c49a605018b85d626b8e9e3ab23d27bf8775` and records `PRECONDITION_REJECTED` / `PRECONDITION_SIMCTL_FIND_EXECUTABLE_IDENTITY`, invocation count **0**, no acquisition or runtime action, and cleanup `NONE` / `NOT_REQUIRED`. Current iOS succeeded, minimum iOS failed, and the aggregate skipped; the overall protected rollup is **12 success / 1 failure / 1 skipped**. The executable-identity subtype is not provable from that receipt, and no recovery is claimed.
+
+Catalina's `PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.4` architecture gate is **64/64 PASS**, and Natalia's security and privacy gate is **64/64 PASS**. Schema **2** adds no fields and exposes no raw identity. The exact closed executable-identity codes are:
+
+1. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT`
+2. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_TYPE`
+3. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_OWNER`
+4. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_MODE`
+5. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_SIZE`
+6. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_REALPATH`
+7. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_OPEN`
+8. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT`
+9. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT`
+10. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_POSTSETTLEMENT_DRIFT`
+11. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_CLOSE`
+
+The repository/test-only scope remains the same exact six paths: this handoff, the shared structure test, activation guard, readiness guard, controller, and controller test. Functional development evidence is controller **428/428 PASS**, shared structure **108/108 PASS**, and format, syntax, and diff integrity PASS.
+
+Current frozen source facts before this append are:
+
+- Controller: **142,239 bytes**; SHA-256 `bd5644f8a46b1dcd43fc9e3d60f006cc925bd037e3b0c1c2aa5cc2d34bebb58b`; Git blob `42121be695f8ef4d40238f787a74f7efbd30d027`.
+- Controller test: **195,954 bytes**; SHA-256 `156ba96f7881f67e92fc11d9b73083545735aa8a304c14b3cd88308c1de01f76`; Git blob `462892e57f45359abfac992ef590518212921e8c`.
+- Shared structure test: **88,985 bytes**; SHA-256 `ab8abbf2b8ee8c8073dcbee0ba3874babb77151594b51513e290b30fc1690b9e`; Git blob `1e73fc64a3fdce7088b5c981e21ecbfc5ad202c5`.
+
+The v1.4 diagnostic remains unexecuted. At most one no-retry protected diagnostic execution may occur only after future mechanical pins and all applicable gates pass. PR #94 remains draft/HOLD. No protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.4 architecture-label supersession
+
+Catalina amended close precedence to Natalia as: **HOLD > first identity-stage failure > CLOSE (only when spawn was invoked and no earlier identity failure exists) > prior nonidentity result**. No close behavior change is required.
+
+The sole label correction is that an initial named-to-held tuple mismatch is now `PRECONDITION_SIMCTL_FIND_EXECUTABLE_PRESPAWN_DRIFT`. `PRECONDITION_SIMCTL_FIND_EXECUTABLE_FSTAT` remains reserved for an `fstat` throw, malformed result, or invalid type. This correction changes no closed code, code cardinality, schema, authority, or execution boundary.
+
+Current formatter-stable source identities are:
+
+- Controller: **142,254 bytes**; SHA-256 `4186b07230826224bb29fa1b80abdce5d52968d65dae4492440459388d8fceb8`; Git blob `86c3ea50da2335d0f8fba0cd3ba860e93ef241b1`.
+- Controller test: **195,972 bytes**; SHA-256 `e2458513c474be77d4169e1bd5d5689eb520c3a8572a65ada4a78080907c8983`; Git blob `b25c6e21553cfdb17ec81c42f198671bda90e164`.
+- Shared structure test: **88,994 bytes**; SHA-256 `b36271e35ce8dc045ef0396b5c4a40919143fc012be770b311056c250b03b07a`; Git blob `7a898bccb29910cef2434c536659cafd37363bbd`.
+
+Functional counts remain controller **428/428 PASS** and shared structure **108/108 PASS**; format, syntax, and diff integrity PASS. The v1.4 diagnostic remains unexecuted. PR #94 remains draft/HOLD, and no protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh the downstream pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN documented-interface diagnostic v1.5 record
+
+Official-source provenance is bounded to Apple's documented interface. Technical Note TN2339, published in 2014 and updated in 2017, documents `xcrun` as the `/usr/bin` shim. Apple's current Configuring command-line tools settings documentation and Xcode command-line reference, observed **2026-11-16**, corroborate `xcrun` and `DEVELOPER_DIR`; TN3147 provides an example. This record makes no claim that a bundle-local executable is missing or forbidden.
+
+Protected v1.4 evidence from exact head `d2ba16c09392289b66a7ba26f47ba2468b2e64ec`, run `43784914905`, artifact `14189594106`, remains historical diagnosis only. Its receipt is **1,446 bytes** with SHA-256 `3ad052f522cfa4b57d65546026bb28547792ba267a51eb0fefab062d2b8afb71`, records `PRECONDITION_SIMCTL_FIND_EXECUTABLE_LSTAT`, and has invocation count **0** with no acquisition or runtime action. The cause within that LSTAT stage remains unknown; no `ENOENT` conclusion or recovery claim is made.
+
+The v1.5 repository/test contract binds exact executable path `/usr/bin/xcrun`, keeps `DEVELOPER_DIR` pinned, and uses mode `PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.5`. Catalina's architecture gate is **52/52 PASS**, Natalia's security and privacy gate is **52/52 PASS**, and Gabriela's provenance gate is **8/8 PASS**.
+
+The scope remains exactly six paths: this handoff, the shared structure test, activation guard, readiness guard, controller, and controller test. Functional development evidence is controller **428/428 PASS** and shared structure **108/108 PASS**.
+
+Current frozen source identities before this append are:
+
+- Controller: **142,232 bytes**; SHA-256 `dbbd8a0064a5b19c4f22e224806360079985a650b66a7c63352b8da7cdd01d2b`; Git blob `d1b4458a562226781f6625117fee5e6b3781b0fa`.
+- Controller test: **197,127 bytes**; SHA-256 `c89c3bb101ca9d1db479fa645d81e4f9cd69d92fdb8315422178b26b0fa56b2f`; Git blob `99db9ab58b1507515c540af5ca720605e66ef7c8`.
+- Shared structure test: **89,528 bytes**; SHA-256 `b016da0ab08c3b7e3ad8f1323a29f40dd2fed4008c6d5b5f6f808e6add89aaac`; Git blob `e9230387656c1e05bee015030ea9de65ee8553c1`.
+
+The v1.5 diagnostic remains unexecuted. PR #94 remains draft/HOLD. No protected recovery, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded by this entry. Valentina must mechanically refresh activation, readiness, handoff, and final manifest pins after this append freezes.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.5 serialized-mode supersession
+
+The v1.5 contract PR94-IOS-XCRUN-IDENTITY-DIAGNOSTIC-v1.5 binds receipt diagnosticMode PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5.
+
+This true-EOF append explicitly supersedes line 3457's use of the architecture label as the serialized mode. It changes no functional behavior, code, schema, authority, or evidence count. The v1.5 diagnostic remains unexecuted; PR #94 remains draft/HOLD; and no protected execution, recovery, acquisition, live diagnostic, simulator installation, production or runtime success, retry, stage, commit, push, ready, or merge is authorized or recorded.
+
+## 2026-11-16 — PR #94 XCRUN identity diagnostic v1.5 protected-run record
+
+Protected run `43797213642`, attempt **1**, executed on exact head `5817425e97e036c0855c8c00b7defbfa46bf5bdc`. The minimum job is `133068638703`. Artifact `14194787766` has a name containing the exact head and expires **2026-11-23**.
+
+The extracted `receipt.json` is **1,441 bytes** with SHA-256 `73e93216d2e63baaf5b1fc79baed58b6e4ae23a422b694ed61025d3afa2300c8`. The uploaded artifact ZIP/log is **858 bytes** with ZIP SHA-256 `c638f99fa4aee1824540feaa683c73c0f8d5d447bd636b3eca47d7a595ff70e8`; this ZIP identity is distinct from the receipt identity.
+
+The schema **2** receipt binds diagnostic mode `PR94_IOS_XCODE_PRECONDITION_DIAGNOSTIC_V1_5`, Xcode **16.2** build `16C5032a`, `PRECONDITION_REJECTED` with `READY`, cleanup `NONE` / `NOT_REQUIRED`, invocation count **0**, download `NOT_ATTEMPTED`, minimum `NOT_RUN`, runtime and disk evidence null or zero, and retained and fallback flags false. Invocation count **0** does not mean zero precondition subprocesses.
+
+The protected rollup is **12 success / 1 intentional diagnostic failure / 1 aggregate skipped**. CI is **9/9 PASS**, both auth workflows are **2/2 PASS**, and current iOS PASS.
+
+The diagnostic objective is achieved: held `/usr/bin/xcrun` identity validation and contained `simctl` discovery passed. This evidence establishes no acquisition, installed iOS 17.5 runtime, minimum-iOS execution, recovery, protected-green phase, or merge claim. PR #94 remains draft/HOLD, and the next activation contract is separately gated.
+
+Minimum job 133068638703 ran 2026-11-16T03:16:47Z–03:16:57Z; its failing diagnostic step ran 03:16:50Z–03:16:54Z, and artifact 14194787766 was created at 03:16:55Z.
+
+Exact-head outcome gates are Catalina 16/16 PASS, Natalia 24/24 PASS, and Renata 26/26 PASS.
+
+## 2026-11-16 — PR #94 v1.5 receipt-code wording supersession
+
+This true-EOF correction supersedes the earlier clause saying the receipt records `PRECONDITION_REJECTED` “with `READY`”. The exact corrected wording is: records state `PRECONDITION_REJECTED` with primary failure code `PRECONDITION_XCODE_DIAGNOSTIC_READY`.
+
+## 2026-11-16 — PR #94 v1.5 records-topology repair
+
+The frozen architecture is `PR94-V1.5-RECORDS-TOPOLOGY-v1`. On exact records commit `8982998958e0edb8c49d30c7c053efb88e1b88fb`, tree `3d43d750`, direct parent `5817425e`, and subject `docs(ci): record xcrun diagnostic outcome`, the shared postcommit suite passed **692/695**. The exactly three failures are mechanical records topology only: the activation current ten-path manifest, activation explicit direct-child topology, and readiness suffix pin. The records suite passed **108/108**. No functional or runtime defect was found.
+
+The repair scope is exactly `docs/DEVELOPMENT_HANDOFF.md`, the activation test, and the readiness test. The future repair commit must be a direct child with exact subject `test(ci): bind xcrun diagnostic records topology`. Exact current source pins and the final manifest remain pending Valentina's mechanical frozen-byte handoff and will not be inferred here.
+
+PR #94 remains draft/HOLD. This record makes no protected recovery, acquisition, runtime, ready, or merge claim and authorizes no stage, commit, push, protected execution, or external action.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1 — authorized design; execution pending
+
+- Packet ID: `PR94-IOS17-RUNTIME-ACTIVATION-v1`.
+- Authority: existing bounded Option A; exactly one Apple/Xcode-managed no-retry iOS 17.5 arm64 runtime acquisition after all repository gates; no broader network/runtime/production authority.
+- Base: commit `71b8ef0ebe5c1ce3a3305606715f1cbee128c11d`, tree `d423980bfb098b798df15f90522eafa4b9f5208b`.
+- Scope: exactly six mode-`100644` paths; workflow `3b1dc703dca499a5f365f4059ca0f40efdca63b4` and ios-ci `0b84abbd35ebc8e3ca28ec672ca513b288fec94b` are unchanged protected inputs.
+- Behavior: removes diagnostic READY/mode authority; preserves pinned Xcode `/usr/bin/xcrun` identity boundary; enables exactly one `/Applications/Xcode_16.2.app/Contents/Developer/usr/bin/xcodebuild -downloadPlatform iOS -buildVersion 17.5 -architectureVariant arm64`; preserves finite disk/time/output bounds, strict runtime verification, cleanup, receipt privacy, and fail-closed HOLD semantics.
+- Receipt rule: schema `2`; `diagnosticMode` is always null; invocation-`0` observed tuple is null; invocation-`1` observed tuple is exactly `16.2` / `16C5032a`.
+- Candidate exact-six: rows `6`, source bytes `898780`, manifest bytes `749`, SHA-256 `50ae3efda136bacc846318c52485102208770305caa980914359a8a166e0ff2f`.
+- Candidate exact-eight: rows `8`, source bytes `922667`, manifest bytes `940`, SHA-256 `1557b3f28751bc81655f7535d40be34f20f697bb289aae3d15ffcc63bcfe78a0`.
+- Counts: controller `428`; structure `108`; activation `100`; readiness `8`; focused `644`; ledger `524`; audit `616`; portable `273`; installed-tree `1`; shared `695`; API `381`; web `834`; full `2800`.
+- Status: `PRECONDITION_HOLD_NO_GET` remains for every action except the one gated Apple/Xcode acquisition above; PR stays draft/HOLD until protected minimum, current, and aggregate are green and receipt/cleanup evidence passes independent audit.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1 — reviewedCandidate manifest supersession
+
+The earlier recorded reviewedCandidate exact-six SHA-256 `50ae3efda136bacc846318c52485102208770305caa980914359a8a166e0ff2f` and exact-eight SHA-256 `1557b3f28751bc81655f7535d40be34f20f697bb289aae3d15ffcc63bcfe78a0` are retired as non-authoritative. A later count-stable activation-pin correction changed the reviewed bytes, and the earlier recorded manifest byte counts **749** and **940** were noncanonical; the canonical manifest byte counts are **731** and **916**.
+
+The immediately-pre-supersession authoritative external reviewedCandidate manifests are exact-six rows **6**, source bytes **900,730**, manifest bytes **731**, SHA-256 `37b416baa1e79170569253eb3992e029530878a46ef69fbf14019cc67ffc6477`; and exact-eight rows **8**, source bytes **924,617**, manifest bytes **916**, SHA-256 `ce25e60c02199ab67274ded21505fee2908bcb360526550fdf3c8fa0f005f6c4`. The corrected activation identity is **128,336 bytes**, SHA-256 `dc4a9558284b09a8bf847bc190d37a1728405afbf09643b903ac7cec9d6ce004`, Git blob `d99a762869c4268d3ea2bccee41738fb30813d91`.
+
+These are external reviewedCandidate bindings, not a handoff self-hash. Final exact-six and exact-eight manifests must be mechanically re-pinned after this append. No other content, authority, runtime, stage, commit, or push is changed or authorized by this supersession.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1.0.1 runtime-privacy supersession
+
+PR94-IOS17-RUNTIME-ACTIVATION-v1.0.1-RUNTIME-PRIVACY supersedes the earlier phrase “no runtime identifier retained after cleanup” with the stronger exact rule: no receipt ever serializes runtimeIdentifier; normalized version/build are retained iff postAcquireExactRuntimeCount is exactly one; runtimeRetained independently reports unproved or positive postcleanup cardinality. This changes no runtime cleanup authority, schema version, acquisition authority, command, retry, or protected input.
+
+Exact current functional identities/evidence: controller **139,295 bytes**, SHA-256 `e63655a7380b2c7e180efe873f374f091801b278c6103b2f944f8aa728b520a9`, Git blob prefix `2f26b909`; controller test **202,352 bytes**, SHA-256 `51fd6bc035efd68c16b3e45f9b1da298c8df5c21cab4666373eac7ca8e110df7`, Git blob prefix `17bcd7c3`; shared structure test **91,410 bytes**, SHA-256 `2dda0b9805e89da33ad7f52b963f0959583c5ab40589b55e14eea48d0e677342`, Git blob prefix `ed061ea1`; activation pre-repin **128,336 bytes**, SHA-256 prefix `5b644609`, Git blob prefix `8ad6f6c4`. Current evidence is controller **428/428 PASS**, structure **108/108 PASS**, Prettier **PASS**, and Node syntax **PASS**. These are current functional and pre-repin identities only; final manifests are not inferred by this append.
+
+## 2026-11-16 — PR94 iOS 17.5 runtime activation v1.0.1 receipt-construction correction
+
+`PR94-IOS17-RUNTIME-ACTIVATION-v1.0.1-RUNTIME-PRIVACY` requires every receipt to serialize `runtimeIdentifier: null`. It retains normalized runtime evidence only when `postAcquireExactRuntimeCount === 1`, using the exact construction literals `runtimeVersion: postAcquireExactRuntimeCount === 1 ? "17.5" : null` and `runtimeBuild: postAcquireExactRuntimeCount === 1 ? "21F79" : null`.
+
+This corrects the rejected optional-runtime construction that derived those fields from `runtime?.version` and `runtime?.build`. That derivation was not truthful for the closed `POST_RUNTIME_IDENTITY` and `POST_RUNTIME_STORAGE_VOLUME` failure paths: one exact iOS 17.5 / `21F79` row can already be counted while `validatePostInventory` throws before assigning its returned row to the internal `runtime` deletion-authority object. The corrected receipt therefore records the already normalized version/build evidence from the exact count while continuing to redact the runtime identifier. The internal identifier remains memory-only cleanup authority and is never serialized.
+
+This correction changes no schema version, field order, acquisition command, invocation cardinality, retry policy, network authority, runtime cleanup authority, HOLD precedence, protected workflow, `ios-ci.sh`, dependency, timeout, disk ceiling, or production boundary. Counts remain controller **428**, structure **108**, activation **100**, readiness **8**, focused **644**, ledger **524**, audit **616**, portable **273**, installed-tree **1**, shared **695**, API **381**, web **834**, and full **2800**.
+
+Final controller, controller-test, structure, activation, readiness, handoff, exact-six, and exact-eight identities remain pending the frozen-byte mechanical pin pass and must not be inferred by this append. PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
+
+## 2026-11-18 — PR94 activation v1.0.1 canonical-manifest grammar supersession
+
+This true-EOF append preserves the prior records as historical evidence and supersedes only their canonical-manifest labels. The previously recorded exact-six / exact-eight manifest byte counts **749 / 940** and **731 / 916**, together with every digest derived from either incomplete grammar, are retired as non-authoritative. The **731 / 916** form omitted the Git blob identity field. The **749 / 940** form is not produced by the repository’s authoritative canonicalizer. Neither form may be used for candidate, commit, receipt, readiness, or merge claims.
+
+The authoritative canonical row grammar is exactly `${path}\0${byteCount}\0${sha256}\0${gitBlobSha1}\n`: UTF-8 repo-relative path; byte `0x00`; unsigned unpadded decimal file-byte count; byte `0x00`; lowercase full 64-hex SHA-256 of the file bytes; byte `0x00`; lowercase full 40-hex Git blob SHA-1 computed over `blob ${byteCount}\0` followed by the same file bytes; and byte `0x0a`. Rows contain no BOM or CR. Paths are ordered by unsigned UTF-8 byte order. This grammar is defined by `docs/2026-11-13_r4b_addtype_contract_self_test_activation_v1.md`, implemented by `canonicalManifest` / `canonicalManifestAt` in `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`, and enforced by the held-manifest implementation in `scripts/r4b-evidence/root-only-closure-addtype-contract-self-test-executor-v1.mjs`.
+
+The immediate-pre-append authoritative external exact-six order is `docs/DEVELOPMENT_HANDOFF.md`; `packages/shared/src/ios-foundation-structure.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts`; `scripts/ios-runtime-bootstrap.mjs`; `scripts/ios-runtime-bootstrap.test.mjs`. It is rows **6**, source bytes **907,428**, manifest bytes **977**, SHA-256 `b5d66d6e406f697d392c9b715d8d22d40a84842d5a1f103528224378441b69ca`.
+
+The immediate-pre-append authoritative external exact-eight order is `.github/workflows/ios.yml`; `docs/DEVELOPMENT_HANDOFF.md`; `packages/shared/src/ios-foundation-structure.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-contract-self-test-activation.test.ts`; `packages/shared/src/sprint-6-r4b-addtype-postmain-readiness.test.ts`; `scripts/ios-ci.sh`; `scripts/ios-runtime-bootstrap.mjs`; `scripts/ios-runtime-bootstrap.test.mjs`. It is rows **8**, source bytes **931,315**, manifest bytes **1,244**, SHA-256 `5a4481d3aabe8f54f894666e2891683a0b0daee80bcd4972e3d2e7af6518c49b`.
+
+These values bind the bytes immediately before this append and are not a self-hash of the resulting handoff. Final post-append and post-pin exact-six and exact-eight identities remain pending, must be recomputed externally with the same four-field grammar after all mechanical handoff, activation, and readiness pins stabilize, and must not be embedded into a covered member.
+
+This supersession changes no activation behavior, receipt schema, runtime privacy rule, acquisition command, invocation cardinality, retry policy, network authority, cleanup authority, HOLD precedence, timeout, disk ceiling, protected workflow, `ios-ci.sh`, dependency, test count, or production boundary. PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
+
+## 2026-11-18 — PR94 activation v1.0.1 final pre-commit candidate evidence
+
+This true-EOF candidate-evidence record preserves all prior history and is not a handoff self-hash. The worktreeConfig Option A repair completed successfully with abbreviated identity prefixes common `d20653ad…`, main `bc6c44e1…`, and backup `a56903f1…`; no residue or locks remain.
+
+The final case07g fixture-reuse repair preserves the default **5 seconds**, case43 uses **30 seconds**, and the focused suite is **644/644 PASS**. Exactly one full session, `74180`, ran with no retry: audit **616** + portable **273** + installed-tree **1** + shared **695** + API **381** + web **834** = **2800/2800 PASS**.
+
+Format, lint, typecheck, Node syntax, Bash syntax, Git porcelain, and diff are **PASS**. Shared and API builds are **PASS**. Web compile, typecheck, and static generation succeeded, but the local command exited **1** solely because of the CI-suppressed agent security nudge on pinned Next.js **16.4.2**. The protected Build remains authoritative; a separate dependency upgrade is outside this candidate.
+
+The immediate-pre-append external four-field exact-six binding is rows **6**, source bytes **910,957**, manifest bytes **977**, SHA-256 `0e6747a28f2499a918eb1a2fb5917d9ec42183718e6d0e0887a11901b944938b`. The immediate-pre-append external four-field exact-eight binding is rows **8**, source bytes **934,844**, manifest bytes **1,244**, SHA-256 `566f8360bd111ad1c7aa675d847f9fbbe62ffda4e67212af6fec993c8c2704a2`. These values bind the bytes immediately before this append and are not a self-hash. Final post-append and post-pin exact-six and exact-eight identities remain pending, must be recomputed externally, and must not be inferred by this record.
+
+PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
+
+## 2026-11-18 — PR94 holistic activation-test timeout policy
+
+This true-EOF records-only entry preserves all prior history, is not a handoff self-hash, and supersedes the prior final-candidate readiness only to the extent that Elana found the case38 timeout.
+
+The exact holistic activation-test timeout policy is: case09 changes from **20 seconds** to **30 seconds**; cases11, 25, 33, and 44 add **30-second** timeouts; cases10, 38, and 43 remain **30 seconds**; case23 remains **90 seconds**; and case07g remains at the default **5 seconds**. There is no body, assertion, helper, constant, count, runtime, or authority change.
+
+The recorded gates are policy **8/8 PASS**, activation **100/100 PASS**, readiness **8/8 PASS**, focused **644/644 PASS**, Prettier **PASS**, and diff **PASS**. The activation functional identity is **128,385 bytes**, SHA-256 `d46efb441ea49f4e75daae08d3852821e143704833b994d2c2be897ad20ecffc`, Git blob `df47bae80d2c9a3250acd21cf91a96d82cf7f398`.
+
+The immediate-pre-append external four-field exact-six binding is rows **6**, source bytes **912,987**, manifest bytes **977**, SHA-256 `31a70e60684445205f655cf75f43ee853b9b0e921f01f184184352118623fda4`. The immediate-pre-append external four-field exact-eight binding is rows **8**, source bytes **936,874**, manifest bytes **1,244**, SHA-256 `04f0010a2bfc5e0d9a9c22d0af7d86958d876164a0616d3fed82e43f5491e389`. These values bind the bytes immediately before this append and are not a self-hash. Final post-append and post-pin exact-six and exact-eight identities remain pending, must be recomputed externally, and must not be inferred by this record.
+
+PR #94 remains draft/HOLD. No runtime execution, acquisition, simulator installation, stage, commit, push, ready, merge, production, signing, store, spend, credential, or external-account action is performed or authorized by this record.
